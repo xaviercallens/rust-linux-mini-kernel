@@ -1,0 +1,94 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/af_inet",
+    "crates/af_inet6",
+    "crates/anycast",
+    "crates/arp",
+    "crates/bpf_tcp_ca",
+    "crates/calipso",
+    "crates/cipso_ipv4",
+    "crates/datagram",
+    "crates/devinet",
+    "crates/esp4",
+    "crates/esp4_offload",
+    "crates/esp6",
+    "crates/esp6_offload",
+    "crates/exthdrs",
+    "crates/exthdrs_core",
+    "crates/exthdrs_offload",
+    "crates/fib6_notifier",
+    "crates/fib6_rules",
+    "crates/fib_frontend",
+    "crates/fib_notifier",
+    "crates/fib_rules",
+    "crates/fib_semantics",
+    "crates/fib_trie",
+    "crates/fou",
+    "crates/fou6",
+    "crates/gre_demux",
+    "crates/gre_offload",
+    "crates/icmp",
+    "crates/igmp",
+    "crates/inet6_connection_sock",
+    "crates/inet6_hashtables",
+    "crates/inet_connection_sock",
+    "crates/ip6_checksum",
+    "crates/ip6_fib",
+    "crates/ip6_flowlabel",
+    "crates/ip6_gre",
+    "crates/ip6_icmp",
+    "crates/ip6_input",
+    "crates/ip6_offload",
+    "crates/ip6_output",
+    "crates/ip6_tunnel",
+    "crates/ip6_udp_tunnel",
+    "crates/ip6_vti",
+    "crates/ip6mr",
+    "crates/ipcomp6",
+    "crates/ipv6_sockglue",
+    "crates/mcast",
+    "crates/mcast_snoop",
+    "crates/mip6",
+    "crates/ndisc",
+    "crates/netfilter",
+    "crates/output_core",
+    "crates/ping",
+    "crates/raw",
+    "crates/reassembly",
+    "crates/route",
+    "crates/rpl",
+    "crates/seg6",
+    "crates/seg6_hmac",
+    "crates/seg6_iptunnel",
+    "crates/seg6_local",
+    "crates/sit",
+    "crates/syncookies",
+    "crates/sysctl_net_ipv6",
+    "crates/tcp_ipv6",
+    "crates/tcpv6_offload",
+    "crates/tunnel6",
+    "crates/udp",
+    "crates/udp_offload",
+    "crates/udplite",
+    "crates/xfrm6_input",
+    "crates/xfrm6_output",
+    "crates/xfrm6_policy",
+    "crates/xfrm6_protocol",
+    "crates/xfrm6_state",
+    "crates/xfrm6_tunnel",
+]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2021"
+authors = ["Rust Linux Mini Kernel Contributors"]
+license = "GPL-2.0"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+lto = true
