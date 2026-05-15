@@ -1,0 +1,22 @@
+[package]
+name = "net_core_hwbm"
+version = "0.1.0"
+edition = "2021"
+authors = ["Socrate Agora Pipeline"]
+
+[dependencies]
+libc = "0.2"
+
+[features]
+default = []
+kernel-mode = []
+
+[lib]
+name = "hwbm"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib"]
+
+[package.metadata]
+category = "net/core"
+kernel-subsystem = "networking"
+original-name = "hwbm"

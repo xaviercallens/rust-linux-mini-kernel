@@ -1,0 +1,22 @@
+[package]
+name = "net_ipv4_udp_tunnel_nic"
+version = "0.1.0"
+edition = "2021"
+authors = ["Socrate Agora Pipeline"]
+
+[dependencies]
+libc = "0.2"
+
+[features]
+default = []
+kernel-mode = []
+
+[lib]
+name = "udp_tunnel_nic"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib"]
+
+[package.metadata]
+category = "net/ipv4"
+kernel-subsystem = "networking"
+original-name = "udp_tunnel_nic"

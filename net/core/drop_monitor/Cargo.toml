@@ -1,0 +1,22 @@
+[package]
+name = "net_core_drop_monitor"
+version = "0.1.0"
+edition = "2021"
+authors = ["Socrate Agora Pipeline"]
+
+[dependencies]
+libc = "0.2"
+
+[features]
+default = []
+kernel-mode = []
+
+[lib]
+name = "drop_monitor"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib"]
+
+[package.metadata]
+category = "net/core"
+kernel-subsystem = "networking"
+original-name = "drop_monitor"

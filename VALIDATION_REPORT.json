@@ -1,0 +1,27 @@
+{
+  "structure": {
+    "Cargo.toml": true,
+    "Makefile": true,
+    "README.md": true,
+    "kernel/lib.rs": true,
+    "net/core": true,
+    "net/ipv4": true,
+    "tests/integration_test.rs": true
+  },
+  "modules": {
+    "core": 51,
+    "ipv4": 78,
+    "total": 129
+  },
+  "syntax": {
+    "success": 0,
+    "failed": 10,
+    "total": 10,
+    "sample_size": 10
+  },
+  "cargo": {
+    "success": 130,
+    "failed": 0,
+    "total": 130
+  }
+}
