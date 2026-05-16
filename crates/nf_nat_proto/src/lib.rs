@@ -128,9 +128,21 @@ pub struct nf_conntrack_tuple_proto {
 // Function prototypes for external functions
 extern "C" {
     fn skb_ensure_writable(skb: *mut c_void, len: c_uint) -> c_int;
-    fn inet_proto_csum_replace2(check: *mut u16, skb: *mut c_void, old: u16, new: u16, pseudo: bool);
+    fn inet_proto_csum_replace2(
+        check: *mut u16,
+        skb: *mut c_void,
+        old: u16,
+        new: u16,
+        pseudo: bool,
+    );
     fn sctp_compute_cksum(skb: *mut c_void, hdroff: c_uint) -> u32;
-    fn nf_csum_update(skb: *mut c_void, iphdroff: c_uint, check: *mut u16, t: *const nf_conntrack_tuple, maniptype: c_int);
+    fn nf_csum_update(
+        skb: *mut c_void,
+        iphdroff: c_uint,
+        check: *mut u16,
+        t: *const nf_conntrack_tuple,
+        maniptype: c_int,
+    );
 }
 
 // Internal functions
@@ -145,29 +157,29 @@ fn __udp_manip_pkt(
     unsafe {
         let hdr = &mut *hdr;
         let tuple = &*tuple;
-        
+
         let newport = if maniptype == NF_NAT_MANIP_SRC {
             (*tuple.src.u.udp).wrapping_cast::<u16>()
         } else {
             (*tuple.dst.u.udp).wrapping_cast::<u16>()
         };
-        
+
         let portptr = if maniptype == NF_NAT_MANIP_SRC {
             &mut hdr.source
         } else {
             &mut hdr.dest
         };
-        
+
         if do_csum {
             nf_csum_update(skb, iphdroff, &mut hdr.check, tuple, maniptype);
             inet_proto_csum_replace2(&mut hdr.check, skb, *portptr, newport, false);
-            
+
             // SAFETY: Checksum validation follows C standard
             if hdr.check == 0 {
                 *hdr.check = 0xBABE; // CSUM_MANGLED_0 equivalent
             }
         }
-        
+
         *portptr = newport;
     }
 }
@@ -183,7 +195,7 @@ fn udp_manip_pkt(
         if skb_ensure_writable(skb, hdroff + core::mem::size_of::<udphdr>()) != 0 {
             return false;
         }
-        
+
         let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut udphdr;
         __udp_manip_pkt(skb, iphdroff, hdr, tuple, maniptype, (*hdr).check != 0);
         true
@@ -202,7 +214,7 @@ fn udplite_manip_pkt(
         if skb_ensure_writable(skb, hdroff + core::mem::size_of::<udphdr>()) != 0 {
             return false;
         }
-        
+
         let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut udphdr;
         __udp_manip_pkt(skb, iphdroff, hdr, tuple, maniptype, true);
         true
@@ -230,29 +242,32 @@ fn sctp_manip_pkt(
     unsafe {
         #[cfg(feature = "sctp")]
         {
-            let hdrsize = if skb.add(iphdroff as usize).add(hdroff as usize).add(8) <= skb.add(iphdroff as usize).add(hdroff as usize).add(8) {
+            let hdrsize = if skb.add(iphdroff as usize).add(hdroff as usize).add(8)
+                <= skb.add(iphdroff as usize).add(hdroff as usize).add(8)
+            {
                 8
             } else {
                 core::mem::size_of::<sctphdr>() as c_uint
             };
-            
+
             if skb_ensure_writable(skb, hdroff + hdrsize) != 0 {
                 return false;
             }
-            
+
             let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut sctphdr;
-            
+
             if maniptype == NF_NAT_MANIP_SRC {
                 (*hdr).source = (*tuple).src.u.sctp;
             } else {
                 (*hdr).dest = (*tuple).dst.u.sctp;
             }
-            
+
             if hdrsize < core::mem::size_of::<sctphdr>() as c_uint {
                 return true;
             }
-            
-            if (*skb).ip_summed != 1 { // CHECKSUM_PARTIAL
+
+            if (*skb).ip_summed != 1 {
+                // CHECKSUM_PARTIAL
                 (*hdr).checksum = sctp_compute_cksum(skb, hdroff);
                 (*skb).ip_summed = 0; // CHECKSUM_NONE
             }
@@ -269,37 +284,39 @@ fn tcp_manip_pkt(
     maniptype: c_int,
 ) -> bool {
     unsafe {
-        let hdrsize = if skb.add(iphdroff as usize).add(hdroff as usize).add(8) <= skb.add(iphdroff as usize).add(hdroff as usize).add(8) {
+        let hdrsize = if skb.add(iphdroff as usize).add(hdroff as usize).add(8)
+            <= skb.add(iphdroff as usize).add(hdroff as usize).add(8)
+        {
             8
         } else {
             core::mem::size_of::<tcphdr>() as c_uint
         };
-        
+
         if skb_ensure_writable(skb, hdroff + hdrsize) != 0 {
             return false;
         }
-        
+
         let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut tcphdr;
-        
+
         let newport = if maniptype == NF_NAT_MANIP_SRC {
             (*tuple).src.u.tcp
         } else {
             (*tuple).dst.u.tcp
         };
-        
+
         let portptr = if maniptype == NF_NAT_MANIP_SRC {
             &mut (*hdr).source
         } else {
             &mut (*hdr).dest
         };
-        
+
         let oldport = *portptr;
         *portptr = newport;
-        
+
         if hdrsize < core::mem::size_of::<tcphdr>() as c_uint {
             return true;
         }
-        
+
         nf_csum_update(skb, iphdroff, &mut (*hdr).check, tuple, maniptype);
         inet_proto_csum_replace2(&mut (*hdr).check, skb, oldport, newport, false);
         true
@@ -316,37 +333,39 @@ fn dccp_manip_pkt(
     unsafe {
         #[cfg(feature = "dccp")]
         {
-            let hdrsize = if skb.add(iphdroff as usize).add(hdroff as usize).add(8) <= skb.add(iphdroff as usize).add(hdroff as usize).add(8) {
+            let hdrsize = if skb.add(iphdroff as usize).add(hdroff as usize).add(8)
+                <= skb.add(iphdroff as usize).add(hdroff as usize).add(8)
+            {
                 8
             } else {
                 core::mem::size_of::<dccp_hdr>() as c_uint
             };
-            
+
             if skb_ensure_writable(skb, hdroff + hdrsize) != 0 {
                 return false;
             }
-            
+
             let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut dccp_hdr;
-            
+
             let newport = if maniptype == NF_NAT_MANIP_SRC {
                 (*tuple).src.u.dccp
             } else {
                 (*tuple).dst.u.dccp
             };
-            
+
             let portptr = if maniptype == NF_NAT_MANIP_SRC {
                 &mut (*hdr).dccph_sport
             } else {
                 &mut (*hdr).dccph_dport
             };
-            
+
             let oldport = *portptr;
             *portptr = newport;
-            
+
             if hdrsize < core::mem::size_of::<dccp_hdr>() as c_uint {
                 return true;
             }
-            
+
             nf_csum_update(skb, iphdroff, &mut (*hdr).dccph_checksum, tuple, maniptype);
             inet_proto_csum_replace2(&mut (*hdr).dccph_checksum, skb, oldport, newport, false);
         }
@@ -365,13 +384,19 @@ fn icmp_manip_pkt(
         if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmphdr>()) != 0 {
             return false;
         }
-        
+
         let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut icmphdr;
         let hdr = &mut *hdr;
-        
+
         match hdr.type_ {
             8 | 0 | 13 | 14 | 15 | 16 | 17 | 18 => {
-                inet_proto_csum_replace2(&mut hdr.checksum, skb, hdr.un[0], (*tuple).src.u.icmp, false);
+                inet_proto_csum_replace2(
+                    &mut hdr.checksum,
+                    skb,
+                    hdr.un[0],
+                    (*tuple).src.u.icmp,
+                    false,
+                );
                 hdr.un[0] = (*tuple).src.u.icmp;
             }
             _ => return true,
@@ -391,12 +416,18 @@ fn icmpv6_manip_pkt(
         if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmp6hdr>()) != 0 {
             return false;
         }
-        
+
         let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut icmp6hdr;
         nf_csum_update(skb, iphdroff, &mut (*hdr).icmp6_cksum, tuple, maniptype);
-        
+
         if (*hdr).icmp6_type == 128 || (*hdr).icmp6_type == 129 {
-            inet_proto_csum_replace2(&mut (*hdr).icmp6_cksum, skb, (*hdr).icmp6_identifier, (*tuple).src.u.icmp, false);
+            inet_proto_csum_replace2(
+                &mut (*hdr).icmp6_cksum,
+                skb,
+                (*hdr).icmp6_identifier,
+                (*tuple).src.u.icmp,
+                false,
+            );
             (*hdr).icmp6_identifier = (*tuple).src.u.icmp;
         }
         true
@@ -416,14 +447,14 @@ fn gre_manip_pkt(
             if skb_ensure_writable(skb, hdroff + 8) != 0 {
                 return false;
             }
-            
+
             let greh = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut u8;
             let greh = greh as *mut u16;
-            
+
             if maniptype != NF_NAT_MANIP_DST {
                 return true;
             }
-            
+
             match (*greh as u16) & 0x8000 {
                 0x0000 => {
                     // GREv0 - no NAT
@@ -476,19 +507,19 @@ pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
     if skb.is_null() || target.is_null() {
         return -22; // EINVAL
     }
-    
+
     if skb_ensure_writable(skb, iphdroff + core::mem::size_of::<iphdr>()) != 0 {
         return -12; // ENOMEM
     }
-    
+
     let iph = (skb.add(iphdroff as usize)) as *mut iphdr;
     let iph = &mut *iph;
     let hdroff = iphdroff + (iph.ihl as c_uint) * 4;
-    
+
     if !l4proto_manip_pkt(skb, iphdroff, hdroff, target, maniptype) {
         return -12; // ENOMEM
     }
-    
+
     // Update IP header checksum
     if maniptype == NF_NAT_MANIP_SRC {
         // SAFETY: Valid pointer and data
@@ -497,7 +528,7 @@ pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
         // SAFETY: Valid pointer and data
         inet_proto_csum_replace4(&mut iph.check, skb, iph.daddr, (*target).dst.u3.ip);
     }
-    
+
     0 // Success
 }
 
@@ -510,7 +541,7 @@ pub const ENOSYS: c_int = -38;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_udp_manipulation() {
         // This would require a real skb buffer to test

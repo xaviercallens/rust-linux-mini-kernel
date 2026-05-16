@@ -118,9 +118,7 @@ struct Mutex {
 /// # Safety
 /// - `tuple` must be a valid pointer to nf_conntrack_tuple
 #[no_mangle]
-pub unsafe extern "C" fn helper_hash(
-    tuple: *const nf_conntrack_tuple,
-) -> c_uint {
+pub unsafe extern "C" fn helper_hash(tuple: *const nf_conntrack_tuple) -> c_uint {
     if tuple.is_null() {
         return 0;
     }
@@ -147,7 +145,7 @@ pub unsafe extern "C" fn __nf_ct_helper_find(
 
     let h = helper_hash(tuple);
     let head = &mut *nf_ct_helper_hash.offset(h as isize);
-    
+
     let mut node = (*head).first;
     while !node.is_null() {
         let helper = container_of!(node, nf_conntrack_helper, hnode);
@@ -182,24 +180,24 @@ pub unsafe extern "C" fn __nf_conntrack_helper_find(
         while !node.is_null() {
             let helper = container_of!(node, nf_conntrack_helper, hnode);
             let helper = &*helper;
-            
+
             // Compare names
             if strcmp(name, helper.name) != 0 {
                 node = (*node).next;
                 continue;
             }
-            
+
             // Check L3 protocol
             if helper.tuple.src_l3num != 0 && helper.tuple.src_l3num != l3num {
                 node = (*node).next;
                 continue;
             }
-            
+
             // Check protocol number
             if helper.tuple.dst.protonum == protonum {
                 return helper;
             }
-            
+
             node = (*node).next;
         }
         i += 1;
@@ -222,25 +220,25 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
     }
 
     rcu_read_lock();
-    
+
     let h = __nf_conntrack_helper_find(name, l3num, protonum);
-    
+
     // Module loading logic
     if h.is_null() {
         rcu_read_unlock();
         // Module request logic would go here
         return ptr::null_mut();
     }
-    
+
     if !try_module_get((*h).me) {
         return ptr::null_mut();
     }
-    
+
     if !refcount_inc_not_zero(&(*h).refcnt) {
         module_put((*h).me);
         return ptr::null_mut();
     }
-    
+
     rcu_read_unlock();
     h
 }
@@ -250,9 +248,7 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
 /// # Safety
 /// - `helper` must be a valid pointer to nf_conntrack_helper
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_helper_put(
-    helper: *mut nf_conntrack_helper,
-) {
+pub unsafe extern "C" fn nf_conntrack_helper_put(helper: *mut nf_conntrack_helper) {
     if !helper.is_null() {
         refcount_dec(&(*helper).refcnt);
         module_put((*helper).me);

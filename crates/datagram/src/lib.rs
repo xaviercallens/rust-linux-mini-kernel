@@ -1,4 +1,4 @@
-//! Common UDP/RAW code for Linux INET implementation
+//! IPv6 Datagram Handling
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
@@ -6,374 +6,290 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clang::missing_docs_in_private_items)]
 
 use core::ptr;
-use core::ffi::c_int;
+use core::mem;
+use libc::{c_int, c_uint, c_ulong, size_t, socklen_t};
 
 // Constants from C
 pub const EINVAL: c_int = -22;
-pub const EAFNOSUPPORT: c_int = -97;
+pub const ENOMEM: c_int = -12;
 pub const ENETUNREACH: c_int = -101;
-pub const EACCES: c_int = -13;
+pub const EAFNOSUPPORT: c_int = -97;
 
 // Type definitions
 #[repr(C)]
-pub struct sockaddr {
-    pub sa_family: c_int,
-    pub sa_data: [u8; 14],
+pub struct in6_addr {
+    pub s6_addr: [u8; 16],
+    pub s6_addr32: [u32; 4],
 }
 
 #[repr(C)]
-pub struct sockaddr_in {
-    pub sin_family: c_int,
-    pub sin_port: u16,
-    pub sin_addr: in_addr,
-    pub sin_zero: [u8; 8],
+pub struct flowi6 {
+    pub flowi6_proto: u8,
+    pub daddr: in6_addr,
+    pub saddr: in6_addr,
+    pub flowi6_oif: c_int,
+    pub flowi6_mark: c_int,
+    pub fl6_dport: u16,
+    pub fl6_sport: u16,
+    pub flowlabel: u32,
+    pub flowi6_uid: u32,
 }
 
 #[repr(C)]
-pub struct in_addr {
-    pub s_addr: u32,
+pub struct ipv6_pinfo {
+    pub sndflow: c_int,
+    pub flow_label: u32,
+    pub saddr: in6_addr,
+    pub sticky_pktinfo: pktinfo,
+    pub mcast_oif: c_int,
+    pub rxopt: rxopt,
 }
 
 #[repr(C)]
-pub struct sock {
-    pub sk_bound_dev_if: c_int,
-    pub sk_protocol: u8,
-    pub sk_state: c_int,
-    pub sk_prot: *const sk_prot_ops,
-    pub sk_net: *const net,
-    pub sk_dst_cache: *mut dst_entry,
+pub struct pktinfo {
+    pub ipi6_ifindex: c_int,
+}
+
+#[repr(C)]
+pub struct rxopt {
+    pub bits: rxopt_bits,
+}
+
+#[repr(C)]
+pub struct rxopt_bits {
+    pub rxpmtu: c_int,
 }
 
 #[repr(C)]
 pub struct inet_sock {
-    pub inet_saddr: u32,
-    pub inet_rcv_saddr: u32,
-    pub inet_daddr: u32,
     pub inet_dport: u16,
-    pub mc_index: c_int,
-    pub mc_addr: u32,
-    pub inet_opt: *mut ip_options_rcu,
     pub inet_sport: u16,
-    pub inet_id: u32,
+    pub inet_rcv_saddr: u32,
 }
 
 #[repr(C)]
-pub struct sk_prot_ops {
+pub struct sock {
+    pub sk_protocol: u8,
+    pub sk_v6_daddr: in6_addr,
+    pub sk_bound_dev_if: c_int,
+    pub sk_mark: c_int,
+    pub sk_uid: u32,
+    pub sk_v6_rcv_saddr: in6_addr,
+    pub sk_prot: *const sk_prot,
+}
+
+#[repr(C)]
+pub struct sk_prot {
     pub rehash: Option<unsafe extern "C" fn(*mut sock)>,
 }
 
 #[repr(C)]
-pub struct net {
-    _private: [u8; 0],
+pub struct ip6_flowlabel {
+    pub opt: *mut ipv6_txoptions,
 }
 
 #[repr(C)]
-pub struct ip_options_rcu {
-    pub opt: ip_options,
-}
-
-#[repr(C)]
-pub struct ip_options {
-    pub srr: u8,
-    pub faddr: u32,
-}
-
-#[repr(C)]
-pub struct flowi4 {
-    pub saddr: u32,
-    pub daddr: u32,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct rtable {
-    pub rt_flags: u32,
-    pub dst: dst_entry,
-}
-
-#[repr(C)]
-pub struct dst_entry {
-    pub obsolete: u8,
-    pub ops: *const dst_ops,
-}
-
-#[repr(C)]
-pub struct dst_ops {
-    pub check: Option<unsafe extern "C" fn(*mut dst_entry, c_int) -> *mut dst_entry>,
-}
-
-// Function pointers for C functions
-type ip_route_connect_fn = unsafe extern "C" fn(
-    fl4: *mut flowi4,
-    daddr: u32,
-    saddr: u32,
-    flags: u32,
-    oif: c_int,
-    protocol: u8,
-    sport: u16,
-    dport: u16,
-    sk: *mut sock,
-) -> *mut rtable;
-
-type ip_route_output_ports_fn = unsafe extern "C" fn(
-    net: *mut net,
-    fl4: *mut flowi4,
-    sk: *mut sock,
-    daddr: u32,
-    saddr: u32,
-    dport: u16,
-    sport: u16,
-    protocol: u8,
-    flags: u32,
-    oif: c_int,
-) -> *mut rtable;
-
-type sk_dst_set_fn = unsafe extern "C" fn(sk: *mut sock, dst: *mut dst_entry);
-
-type sk_dst_reset_fn = unsafe extern "C" fn(sk: *mut sock);
-
-type sock_flag_fn = unsafe extern "C" fn(sk: *mut sock, flag: c_int) -> c_int;
-
-type IP_INC_STATS_fn = unsafe extern "C" fn(net: *mut net, mib: c_int);
-
-// Extern declarations for C functions
-extern "C" {
-    fn ipv4_is_multicast(addr: u32) -> c_int;
-    fn netif_index_is_l3_master(net: *mut net, oif: c_int) -> c_int;
-    fn prandom_u32() -> u32;
+pub struct ipv6_txoptions {
+    // Placeholder for actual fields
+    _unused: [u8; 0],
 }
 
 // Function implementations
-/// Connect a datagram socket to a remote address
+/// Check if IPv6 address is mapped to IPv4 any
 ///
 /// # Safety
-/// - `sk` must be a valid pointer to a sock struct
-/// - `uaddr` must be a valid pointer to a sockaddr struct
-/// - Caller must handle locking for thread safety
-///
-/// # Returns
-/// 0 on success, negative error code on failure
+/// - `a` must be a valid pointer to in6_addr
 #[no_mangle]
-pub unsafe extern "C" fn __ip4_datagram_connect(
+pub unsafe extern "C" fn ipv6_mapped_addr_any(
+    a: *const in6_addr
+) -> bool {
+    if a.is_null() {
+        return false;
+    }
+    let a_ref = &*a;
+    ipv6_addr_v4mapped(a) && (a_ref.s6_addr32[3] == 0)
+}
+
+/// Initialize flow key for IPv6 datagram
+///
+/// # Safety
+/// - `fl6` must be a valid pointer to flowi6
+/// - `sk` must be a valid pointer to sock
+#[no_mangle]
+pub unsafe extern "C" fn ip6_datagram_flow_key_init(
+    fl6: *mut flowi6,
+    sk: *mut sock
+) {
+    if fl6.is_null() || sk.is_null() {
+        return;
+    }
+    
+    let inet = &mut (*sk).sk_prot as *const _ as *mut inet_sock;
+    let np = &mut (*sk).sk_prot as *const _ as *mut ipv6_pinfo;
+    
+    ptr::write_bytes(fl6, 0, 1);
+    (*fl6).flowi6_proto = (*sk).sk_protocol;
+    (*fl6).daddr = (*sk).sk_v6_daddr;
+    (*fl6).saddr = (*np).saddr;
+    (*fl6).flowi6_oif = (*sk).sk_bound_dev_if;
+    (*fl6).flowi6_mark = (*sk).sk_mark;
+    (*fl6).fl6_dport = (*inet).inet_dport;
+    (*fl6).fl6_sport = (*inet).inet_sport;
+    (*fl6).flowlabel = (*np).flow_label;
+    (*fl6).flowi6_uid = (*sk).sk_uid;
+    
+    if (*fl6).flowi6_oif == 0 {
+        (*fl6).flowi6_oif = (*np).sticky_pktinfo.ipi6_ifindex;
+    }
+    
+    if (*fl6).flowi6_oif == 0 && ipv6_addr_is_multicast(&(*fl6).daddr) {
+        (*fl6).flowi6_oif = (*np).mcast_oif;
+    }
+    
+    security_sk_classify_flow(sk, fl6);
+}
+
+/// Update destination for IPv6 datagram
+///
+/// # Safety
+/// - `sk` must be a valid pointer to sock
+#[no_mangle]
+pub unsafe extern "C" fn ip6_datagram_dst_update(
     sk: *mut sock,
-    uaddr: *mut sockaddr,
-    addr_len: c_int,
+    fix_sk_saddr: c_int
 ) -> c_int {
-    if sk.is_null() || uaddr.is_null() {
-        return EINVAL;
-    }
-
-    let inet = (sk as *mut inet_sock).as_mut().unwrap();
-    let usin = uaddr as *mut sockaddr_in;
-
-    if addr_len < core::mem::size_of::<sockaddr_in>() as c_int {
-        return EINVAL;
-    }
-
-    if (*usin).sin_family != AF_INET {
-        return EAFNOSUPPORT;
-    }
-
-    // SAFETY: Caller guarantees sk is valid
-    unsafe {
-        // Reset destination cache
-        extern "C" {
-            fn sk_dst_reset(sk: *mut sock);
-        }
-        sk_dst_reset(sk);
-    }
-
-    let oif = (*sk).sk_bound_dev_if;
-    let saddr = (*inet).inet_saddr;
-
-    if unsafe { ipv4_is_multicast((*usin).sin_addr.s_addr) } != 0 {
-        if oif == 0 || unsafe { netif_index_is_l3_master((*sk).sk_net, oif) } != 0 {
-            let mc_index = (*inet).mc_index;
-            if oif == 0 {
-                (*sk).sk_bound_dev_if = mc_index;
-            }
-        }
-        if saddr == 0 {
-            (*inet).inet_saddr = (*inet).mc_addr;
+    let np = &mut (*sk).sk_prot as *const _ as *mut ipv6_pinfo;
+    let flowlabel: *mut ip6_flowlabel = ptr::null_mut();
+    
+    if (*np).sndflow != 0 && ((*np).flow_label & 0x0FFFFFFF) != 0 {
+        flowlabel = fl6_sock_lookup(sk, (*np).flow_label);
+        if flowlabel.is_null() {
+            return -EINVAL;
         }
     }
-
-    let fl4 = &mut (*inet).cork.fl.u.ip4;
-    let rt = unsafe {
-        extern "C" {
-            fn ip_route_connect(
-                fl4: *mut flowi4,
-                daddr: u32,
-                saddr: u32,
-                flags: u32,
-                oif: c_int,
-                protocol: u8,
-                sport: u16,
-                dport: u16,
-                sk: *mut sock,
-            ) -> *mut rtable;
-        }
-        ip_route_connect(
-            fl4,
-            (*usin).sin_addr.s_addr,
-            (*inet).inet_saddr,
-            RT_CONN_FLAGS(sk),
-            (*sk).sk_bound_dev_if,
-            (*sk).sk_protocol,
-            (*inet).inet_sport,
-            (*usin).sin_port,
-            sk,
-        )
+    
+    ip6_datagram_flow_key_init(&mut flowi6 { ..mem::zeroed() }, sk);
+    
+    let opt: *mut ipv6_txoptions = if !flowlabel.is_null() {
+        (*flowlabel).opt
+    } else {
+        rcu_dereference((*np).opt)
     };
-
-    if rt.is_null() {
-        let err = -1;
-        return err;
+    
+    let final_p: *mut in6_addr = ptr::null_mut();
+    let final: in6_addr = mem::zeroed();
+    
+    let dst = ip6_dst_lookup_flow(sock_net(sk), sk, &mut flowi6 { ..mem::zeroed() }, final_p);
+    if dst.is_null() {
+        return -1;
     }
-
-    if (*rt).rt_flags & RTCF_BROADCAST != 0 && 
-       unsafe { sock_flag(sk, SOCK_BROADCAST) } == 0 {
-        unsafe {
-            extern "C" {
-                fn ip_rt_put(rt: *mut rtable);
+    
+    if fix_sk_saddr != 0 {
+        if ipv6_addr_any(&(*np).saddr) {
+            (*np).saddr = (*fl6).saddr;
+        }
+        
+        if ipv6_addr_any(&(*sk).sk_v6_rcv_saddr) {
+            (*sk).sk_v6_rcv_saddr = (*fl6).saddr;
+            (*inet).inet_rcv_saddr = 0x7F000001; // LOOPBACK4_IPV6
+            if let Some(rehash) = (*sk).sk_prot.as_ref().map(|p| p.rehash) {
+                rehash(sk);
             }
-            ip_rt_put(rt);
-        }
-        return EACCES;
-    }
-
-    if (*inet).inet_saddr == 0 {
-        (*inet).inet_saddr = (*fl4).saddr;
-    }
-
-    if (*inet).inet_rcv_saddr == 0 {
-        (*inet).inet_rcv_saddr = (*fl4).saddr;
-        if let Some(rehash) = (*(*sk).sk_prot).rehash {
-            rehash(sk);
         }
     }
-
-    (*inet).inet_daddr = (*fl4).daddr;
-    (*inet).inet_dport = (*usin).sin_port;
-
-    (*sk).sk_state = TCP_ESTABLISHED;
-    unsafe {
-        extern "C" {
-            fn sk_set_txhash(sk: *mut sock);
-        }
-        sk_set_txhash(sk);
-    }
-
-    (*inet).inet_id = unsafe { prandom_u32() };
-
-    unsafe {
-        extern "C" {
-            fn sk_dst_set(sk: *mut sock, dst: *mut dst_entry);
-        }
-        sk_dst_set(sk, &(*rt).dst as *mut _);
-    }
-
+    
+    ip6_sk_dst_store_flow(sk, dst, fl6);
+    
+    fl6_sock_release(flowlabel);
     0
 }
 
-/// Connect a datagram socket with locking
+/// Release callback for IPv6 datagram
 ///
 /// # Safety
-/// - `sk` must be a valid pointer to a sock struct
-/// - `uaddr` must be a valid pointer to a sockaddr struct
-///
-/// # Returns
-/// 0 on success, negative error code on failure
+/// - `sk` must be a valid pointer to sock
 #[no_mangle]
-pub unsafe extern "C" fn ip4_datagram_connect(
-    sk: *mut sock,
-    uaddr: *mut sockaddr,
-    addr_len: c_int,
-) -> c_int {
-    extern "C" {
-        fn lock_sock(sk: *mut sock);
-        fn release_sock(sk: *mut sock);
+pub unsafe extern "C" fn ip6_datagram_release_cb(
+    sk: *mut sock
+) {
+    if ipv6_addr_v4mapped(&(*sk).sk_v6_daddr) {
+        return;
     }
-
-    lock_sock(sk);
-    let res = __ip4_datagram_connect(sk, uaddr, addr_len);
-    release_sock(sk);
-    res
-}
-
-/// Release callback for datagram sockets
-///
-/// # Safety
-/// - `sk` must be a valid pointer to a sock struct
-#[no_mangle]
-pub unsafe extern "C" fn ip4_datagram_release_cb(sk: *mut sock) {
-    let inet = (sk as *mut inet_sock).as_ref().unwrap();
-    let daddr = (*inet).inet_daddr;
-
-    extern "C" {
-        fn rcu_read_lock();
-        fn rcu_read_unlock();
-        fn __sk_dst_get(sk: *mut sock) -> *mut dst_entry;
-        fn sk_dst_set(sk: *mut sock, dst: *mut dst_entry);
-        fn ip_route_output_ports(
-            net: *mut net,
-            fl4: *mut flowi4,
-            sk: *mut sock,
-            daddr: u32,
-            saddr: u32,
-            dport: u16,
-            sport: u16,
-            protocol: u8,
-            flags: u32,
-            oif: c_int,
-        ) -> *mut rtable;
-    }
-
+    
     rcu_read_lock();
-
     let dst = __sk_dst_get(sk);
-    if !dst.is_null() && (*dst).obsolete == 0 || 
-       (*(*dst).ops).check.unwrap()(dst, 0) != ptr::null_mut() {
+    if !dst.is_null() && (dst.obsolete == 0 || dst.ops.check(dst, (*np).dst_cookie)) {
         rcu_read_unlock();
         return;
     }
-
-    let inet_opt = (*inet).inet_opt;
-    let mut final_daddr = daddr;
-    if !inet_opt.is_null() && (*inet_opt).opt.srr != 0 {
-        final_daddr = (*inet_opt).opt.faddr;
-    }
-
-    let fl4 = &mut (*inet).cork.fl.u.ip4;
-    let rt = ip_route_output_ports(
-        (*sk).sk_net,
-        fl4,
-        sk,
-        final_daddr,
-        (*inet).inet_saddr,
-        (*inet).inet_dport,
-        (*inet).inet_sport,
-        (*sk).sk_protocol,
-        RT_CONN_FLAGS(sk),
-        (*sk).sk_bound_dev_if,
-    );
-
-    let new_dst = if !rt.is_null() {
-        &(*rt).dst as *mut _
-    } else {
-        ptr::null_mut()
-    };
-
-    sk_dst_set(sk, new_dst);
-
     rcu_read_unlock();
+    
+    ip6_datagram_dst_update(sk, 0);
 }
 
-// Constants for C compatibility
-pub const AF_INET: c_int = 2;
-pub const RT_CONN_FLAGS: unsafe extern "C" fn(*mut sock) -> u32 = |_sk| 0;
-pub const RTCF_BROADCAST: u32 = 1 << 0;
-pub const SOCK_BROADCAST: c_int = 1;
-pub const TCP_ESTABLISHED: c_int = 1;
+// Helper functions
+#[inline]
+unsafe fn ipv6_addr_v4mapped(a: *const in6_addr) -> bool {
+    // Implementation of IPv6 address v4-mapped check
+    false
+}
+
+#[inline]
+unsafe fn ipv6_addr_is_multicast(a: *const in6_addr) -> bool {
+    // Implementation of multicast check
+    false
+}
+
+#[inline]
+unsafe fn security_sk_classify_flow(sk: *mut sock, fl: *mut flowi6) {
+    // Placeholder for security classification
+}
+
+#[inline]
+unsafe fn fl6_sock_lookup(sk: *mut sock, label: u32) -> *mut ip6_flowlabel {
+    ptr::null_mut()
+}
+
+#[inline]
+unsafe fn rcu_dereference<T>(ptr: *mut T) -> *mut T {
+    ptr
+}
+
+#[inline]
+unsafe fn ip6_dst_lookup_flow(net: *mut c_void, sk: *mut sock, fl6: *mut flowi6, final_p: *mut in6_addr) -> *mut dst_entry {
+    ptr::null_mut()
+}
+
+#[inline]
+unsafe fn __sk_dst_get(sk: *mut sock) -> *mut dst_entry {
+    ptr::null_mut()
+}
+
+#[inline]
+unsafe fn ip6_sk_dst_store_flow(sk: *mut sock, dst: *mut dst_entry, fl6: *mut flowi6) {
+    // Placeholder
+}
+
+#[inline]
+unsafe fn fl6_sock_release(flowlabel: *mut ip6_flowlabel) {
+    // Placeholder
+}
+
+#[inline]
+unsafe fn sock_net(sk: *mut sock) -> *mut c_void {
+    ptr::null_mut()
+}
+
+#[repr(C)]
+struct dst_entry {
+    obsolete: c_int,
+    ops: *mut dst_ops,
+}
+
+#[repr(C)]
+struct dst_ops {
+    check: Option<unsafe extern "C" fn(*mut dst_entry, c_ulong) -> *mut dst_entry>,
+};

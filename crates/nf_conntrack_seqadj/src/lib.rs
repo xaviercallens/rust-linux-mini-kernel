@@ -7,11 +7,11 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::ffi::size_t;
+use core::ptr;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -64,7 +64,13 @@ extern "C" {
     fn skb_network_header(skb: *mut sk_buff) -> *mut c_void;
     fn ip_hdrlen(skb: *mut sk_buff) -> c_int;
     fn skb_ensure_writable(skb: *mut sk_buff, len: c_int) -> c_int;
-    fn inet_proto_csum_replace4(csum: *mut u16, skb: *mut sk_buff, old: *mut c_void, new: *mut c_void, pseudo: c_int);
+    fn inet_proto_csum_replace4(
+        csum: *mut u16,
+        skb: *mut sk_buff,
+        old: *mut c_void,
+        new: *mut c_void,
+        pseudo: c_int,
+    );
 }
 
 // Constants from C
@@ -88,11 +94,7 @@ pub const ENOMEM: c_int = -12;
 /// # Returns
 /// 0 on success, -EINVAL if parameters invalid
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_seqadj_init(
-    ct: *mut nf_conn,
-    ctinfo: c_int,
-    off: c_int,
-) -> c_int {
+pub unsafe extern "C" fn nf_ct_seqadj_init(ct: *mut nf_conn, ctinfo: c_int, off: c_int) -> c_int {
     if ct.is_null() {
         return EINVAL;
     }
@@ -154,8 +156,9 @@ pub unsafe extern "C" fn nf_ct_seqadj_set(
 
     // SAFETY: Lock is held by caller
     unsafe {
-        if (*this_way).offset_before == (*this_way).offset_after ||
-           before((*this_way).correction_pos, seq) {
+        if (*this_way).offset_before == (*this_way).offset_after
+            || before((*this_way).correction_pos, seq)
+        {
             (*this_way).correction_pos = seq;
             (*this_way).offset_before = (*this_way).offset_after;
             (*this_way).offset_after += off;
@@ -217,13 +220,19 @@ pub unsafe extern "C" fn nf_ct_sack_block_adjust(
     let mut current_off = sackoff;
     while current_off < sackend {
         let sack = (skb as *mut u8).offset(current_off as isize) as *mut tcp_sack_block_wire;
-        let new_start_seq = if after(ntohl((*sack).start_seq) - (*seq).offset_before, (*seq).correction_pos) {
+        let new_start_seq = if after(
+            ntohl((*sack).start_seq) - (*seq).offset_before,
+            (*seq).correction_pos,
+        ) {
             htonl(ntohl((*sack).start_seq) - (*seq).offset_after)
         } else {
             htonl(ntohl((*sack).start_seq) - (*seq).offset_before)
         };
 
-        let new_end_seq = if after(ntohl((*sack).end_seq) - (*seq).offset_before, (*seq).correction_pos) {
+        let new_end_seq = if after(
+            ntohl((*sack).end_seq) - (*seq).offset_before,
+            (*seq).correction_pos,
+        ) {
             htonl(ntohl((*sack).end_seq) - (*seq).offset_after)
         } else {
             htonl(ntohl((*sack).end_seq) - (*seq).offset_before)
@@ -282,16 +291,25 @@ pub unsafe extern "C" fn nf_ct_sack_adjust(
             TCPOPT_NOP => {
                 optoff += 1;
                 continue;
-            },
+            }
             _ => {
                 let len = *op.offset(1) as c_int;
                 if optoff + len > optend || len < 2 {
                     return 0;
                 }
 
-                if (*op) == TCPOPT_SACK && len >= 2 + TCPOLEN_SACK_PERBLOCK && (len - 2) % TCPOLEN_SACK_PERBLOCK == 0 {
+                if (*op) == TCPOPT_SACK
+                    && len >= 2 + TCPOLEN_SACK_PERBLOCK
+                    && (len - 2) % TCPOLEN_SACK_PERBLOCK == 0
+                {
                     unsafe {
-                        nf_ct_sack_block_adjust(skb, (*ct).tcph, optoff + 2, optoff + len, &mut (*seqadj).seq[!dir]);
+                        nf_ct_sack_block_adjust(
+                            skb,
+                            (*ct).tcph,
+                            optoff + 2,
+                            optoff + len,
+                            &mut (*seqadj).seq[!dir],
+                        );
                     }
                 }
                 optoff += len;
@@ -351,7 +369,10 @@ pub unsafe extern "C" fn nf_ct_seq_adjust(
         (*tcph).seq = newseq;
 
         if (*tcph).ack != 0 {
-            if after(ntohl((*tcph).ack_seq) - (*other_way).offset_before, (*other_way).correction_pos) {
+            if after(
+                ntohl((*tcph).ack_seq) - (*other_way).offset_before,
+                (*other_way).correction_pos,
+            ) {
                 ackoff = (*other_way).offset_after;
             } else {
                 ackoff = (*other_way).offset_before;
@@ -377,11 +398,7 @@ pub unsafe extern "C" fn nf_ct_seq_adjust(
 /// # Returns
 /// s32 offset value
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_seq_offset(
-    ct: *mut nf_conn,
-    dir: c_int,
-    seq: u32,
-) -> c_int {
+pub unsafe extern "C" fn nf_ct_seq_offset(ct: *mut nf_conn, dir: c_int, seq: u32) -> c_int {
     if ct.is_null() {
         return 0;
     }

@@ -9,8 +9,8 @@
 
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::ptr;
 use core::mem;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -117,9 +117,9 @@ fn ip6_sublist_rcv_finish(head: *mut core::ffi::c_void) {
 
 fn ip6_can_use_hint(skb: *const sk_buff, hint: *const sk_buff) -> bool {
     unsafe {
-        !hint.is_null() && 
-        skb_dst(skb).is_null() &&
-        ipv6_addr_equal(&ipv6_hdr(skb).daddr, &ipv6_hdr(hint).daddr)
+        !hint.is_null()
+            && skb_dst(skb).is_null()
+            && ipv6_addr_equal(&ipv6_hdr(skb).daddr, &ipv6_hdr(hint).daddr)
     }
 }
 
@@ -150,7 +150,16 @@ pub unsafe extern "C" fn ipv6_rcv(
     if skb.is_null() {
         return NET_RX_DROP;
     }
-    NF_HOOK(NFPROTO_IPV6, NF_INET_PRE_ROUTING, net, ptr::null_mut(), skb, dev, ptr::null_mut(), ip6_rcv_finish)
+    NF_HOOK(
+        NFPROTO_IPV6,
+        NF_INET_PRE_ROUTING,
+        net,
+        ptr::null_mut(),
+        skb,
+        dev,
+        ptr::null_mut(),
+        ip6_rcv_finish,
+    )
 }
 
 #[no_mangle]
@@ -162,7 +171,7 @@ pub unsafe extern "C" fn ipv6_list_rcv(
     let mut curr_dev = ptr::null_mut();
     let mut curr_net = ptr::null_mut();
     let mut sublist = ListHead::new();
-    
+
     // List processing implementation
 }
 

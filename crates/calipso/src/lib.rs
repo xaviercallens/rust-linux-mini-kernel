@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -92,10 +92,11 @@ pub unsafe extern "C" fn calipso_map_cache_hash(key: *const u8, key_len: c_uint)
 /// - Must be called before any other cache operations
 #[no_mangle]
 pub unsafe extern "C" fn calipso_cache_init() -> c_int {
-    let cache = libc::calloc(CALIPSO_CACHE_BUCKETS as size_t, 
-                            core::mem::size_of::<calipso_map_cache_bkt>() as size_t) 
-        as *mut calipso_map_cache_bkt;
-    
+    let cache = libc::calloc(
+        CALIPSO_CACHE_BUCKETS as size_t,
+        core::mem::size_of::<calipso_map_cache_bkt>() as size_t,
+    ) as *mut calipso_map_cache_bkt;
+
     if cache.is_null() {
         return ENOMEM;
     }
@@ -118,17 +119,18 @@ pub unsafe extern "C" fn calipso_cache_init() -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn calipso_cache_invalidate() {
     let mut cache = calipso_cache as *mut calipso_map_cache_bkt;
-    
+
     for _ in 0..CALIPSO_CACHE_BUCKETS {
         spin_lock_bh(&(*cache).lock);
         let mut entry = (*cache).list.next;
         while entry != &mut (*cache).list {
-            let entry_ptr = (entry as *mut list_head).offset_from(&(*cache).list) as *mut calipso_map_cache_entry;
+            let entry_ptr = (entry as *mut list_head).offset_from(&(*cache).list)
+                as *mut calipso_map_cache_entry;
             let next = (*entry).next;
-            
+
             list_del(entry);
             calipso_cache_entry_free(entry_ptr);
-            
+
             entry = next;
         }
         (*cache).size = 0;
@@ -146,7 +148,7 @@ pub unsafe extern "C" fn calipso_cache_invalidate() {
 pub unsafe extern "C" fn calipso_cache_check(
     key: *const u8,
     key_len: c_uint,
-    secattr: *mut netlbl_lsm_secattr
+    secattr: *mut netlbl_lsm_secattr,
 ) -> c_int {
     if !calipso_cache_enabled() {
         return ENOENT;
@@ -155,48 +157,50 @@ pub unsafe extern "C" fn calipso_cache_check(
     let hash = calipso_map_cache_hash(key, key_len);
     let bkt = hash & (CALIPSO_CACHE_BUCKETS - 1) as c_uint;
     let cache = calipso_cache.offset(bkt as isize);
-    
+
     spin_lock_bh(&(*cache).lock);
-    
+
     let mut entry = (*cache).list.next;
     let mut prev_entry: *mut calipso_map_cache_entry = ptr::null_mut();
-    
+
     while entry != &mut (*cache).list {
-        let entry_ptr = (entry as *mut list_head).offset_from(&(*cache).list) as *mut calipso_map_cache_entry;
-        
-        if (*entry_ptr).hash == hash &&
-           (*entry_ptr).key_len == key_len &&
-           ptr::read_unaligned(key).eq_slice((*entry_ptr).key, key_len as usize) {
-            
+        let entry_ptr =
+            (entry as *mut list_head).offset_from(&(*cache).list) as *mut calipso_map_cache_entry;
+
+        if (*entry_ptr).hash == hash
+            && (*entry_ptr).key_len == key_len
+            && ptr::read_unaligned(key).eq_slice((*entry_ptr).key, key_len as usize)
+        {
             (*entry_ptr).activity += 1;
             refcount_inc(&(*(*entry_ptr).lsm_data).refcount);
             (*secattr).cache = (*entry_ptr).lsm_data;
             (*secattr).flags |= 1; // NETLBL_SECATTR_CACHE
-            (*secattr).type_ = 2;  // NETLBL_NLTYPE_CALIPSO
-            
+            (*secattr).type_ = 2; // NETLBL_NLTYPE_CALIPSO
+
             if prev_entry.is_null() {
                 spin_unlock_bh(&(*cache).lock);
                 return 0;
             }
-            
+
             if (*prev_entry).activity > 0 {
                 (*prev_entry).activity -= 1;
             }
-            
-            if (*entry_ptr).activity > (*prev_entry).activity &&
-               (*entry_ptr).activity - (*prev_entry).activity > CALIPSO_CACHE_REORDERLIMIT as c_uint {
-                
+
+            if (*entry_ptr).activity > (*prev_entry).activity
+                && (*entry_ptr).activity - (*prev_entry).activity
+                    > CALIPSO_CACHE_REORDERLIMIT as c_uint
+            {
                 list_move(entry, prev_entry.offset(-1) as *mut list_head);
             }
-            
+
             spin_unlock_bh(&(*cache).lock);
             return 0;
         }
-        
+
         prev_entry = entry_ptr;
         entry = (*entry).next;
     }
-    
+
     spin_unlock_bh(&(*cache).lock);
     -ENOENT
 }
@@ -209,49 +213,54 @@ pub unsafe extern "C" fn calipso_cache_check(
 #[no_mangle]
 pub unsafe extern "C" fn calipso_cache_add(
     calipso_ptr: *const u8,
-    secattr: *const netlbl_lsm_secattr
+    secattr: *const netlbl_lsm_secattr,
 ) -> c_int {
     if !calipso_cache_enabled() || calipso_cache_bucketsize() <= 0 {
         return 0;
     }
-    
+
     let calipso_ptr_len = *calipso_ptr.add(1) as c_uint;
-    let entry = libc::calloc(1, core::mem::size_of::<calipso_map_cache_entry>()) 
+    let entry = libc::calloc(1, core::mem::size_of::<calipso_map_cache_entry>())
         as *mut calipso_map_cache_entry;
-    
+
     if entry.is_null() {
         return ENOMEM;
     }
-    
+
     (*entry).key = libc::malloc(calipso_ptr_len as size_t) as *mut u8;
     if (*entry).key.is_null() {
         libc::free(entry as *mut c_void);
         return ENOMEM;
     }
-    
-    ptr::copy_nonoverlapping(calipso_ptr.offset(2), (*entry).key, calipso_ptr_len as usize);
+
+    ptr::copy_nonoverlapping(
+        calipso_ptr.offset(2),
+        (*entry).key,
+        calipso_ptr_len as usize,
+    );
     (*entry).key_len = calipso_ptr_len;
     (*entry).hash = calipso_map_cache_hash(calipso_ptr, calipso_ptr_len);
     refcount_inc(&(*(*secattr).cache).refcount);
     (*entry).lsm_data = (*secattr).cache;
-    
+
     let bkt = (*entry).hash & (CALIPSO_CACHE_BUCKETS - 1) as c_uint;
     let cache = calipso_cache.offset(bkt as isize);
-    
+
     spin_lock_bh(&(*cache).lock);
-    
+
     if (*cache).size < calipso_cache_bucketsize() {
         list_add(&(*entry).list, &(*cache).list);
         (*cache).size += 1;
     } else {
-        let old_entry = (list_last(&(*cache).list) as *mut list_head).offset_from(&(*cache).list) as *mut calipso_map_cache_entry;
+        let old_entry = (list_last(&(*cache).list) as *mut list_head).offset_from(&(*cache).list)
+            as *mut calipso_map_cache_entry;
         list_del(list_last(&(*cache).list));
         calipso_cache_entry_free(old_entry);
         list_add(&(*entry).list, &(*cache).list);
     }
-    
+
     spin_unlock_bh(&(*cache).lock);
-    
+
     0
 }
 
@@ -287,7 +296,7 @@ unsafe fn calipso_cache_bucketsize() -> c_int {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_cache_init() {
         unsafe {

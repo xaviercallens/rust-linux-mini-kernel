@@ -65,7 +65,7 @@ static TCP_CONNTACKS: [[c_uint; 11]; 12] = {
     table[0][7] = TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint;
     table[0][8] = TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint;
     table[0][9] = TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as c_uint;
-    
+
     // Reply direction transitions
     table[1][0] = TcpConntrack::TCP_CONNTRACK_IGNORE as c_uint;
     table[1][1] = TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as c_uint;
@@ -77,7 +77,7 @@ static TCP_CONNTACKS: [[c_uint; 11]; 12] = {
     table[1][7] = TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint;
     table[1][8] = TcpConntrack::TCP_CONNTRACK_IGNORE as c_uint;
     table[1][9] = TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as c_uint;
-    
+
     table
 };
 
@@ -107,16 +107,16 @@ pub unsafe extern "C" fn tcp_print_conntrack(s: *mut c_void, ct: *mut c_void) {
     if s.is_null() || ct.is_null() {
         return;
     }
-    
+
     // SAFETY: Caller guarantees valid pointers
     let state = (*ct).cast::<TcpConntrack>().read();
     let name = tcp_conntrack_names[state as usize];
-    
+
     // SAFETY: seq_printf is a valid kernel function
     extern "C" {
         fn seq_printf(s: *mut c_void, fmt: *const c_char, ...) -> c_int;
     }
-    
+
     let fmt = "%s ".as_ptr() as *const c_char;
     seq_printf(s, fmt, name);
 }
@@ -126,10 +126,10 @@ pub unsafe extern "C" fn get_conntrack_index(tcph: *const TcpHdr) -> c_uint {
     if tcph.is_null() {
         return TcpBitSet::TCP_NONE_SET as c_uint;
     }
-    
+
     // SAFETY: Caller guarantees valid pointer
     let flags = *tcph;
-    
+
     if flags.rst != 0 {
         TcpBitSet::TCP_RST_SET as c_uint
     } else if flags.syn != 0 {
@@ -167,7 +167,7 @@ static TCP_CONNTRACK_NAMES: [*const c_char; 11] = {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_get_conntrack_index() {
         let mut tcph = TcpHdr {
@@ -178,19 +178,22 @@ mod tests {
             doff: 0,
         };
         assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_SYN_SET as c_uint);
-        
+
         tcph.ack = 1;
-        assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_SYNACK_SET as c_uint);
-        
+        assert_eq!(
+            get_conntrack_index(&tcph),
+            TcpBitSet::TCP_SYNACK_SET as c_uint
+        );
+
         tcph.syn = 0;
         tcph.ack = 0;
         tcph.fin = 1;
         assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_FIN_SET as c_uint);
-        
+
         tcph.fin = 0;
         tcph.ack = 1;
         assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_ACK_SET as c_uint);
-        
+
         tcph.ack = 0;
         tcph.rst = 1;
         assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_RST_SET as c_uint);

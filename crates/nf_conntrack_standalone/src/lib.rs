@@ -8,14 +8,14 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::c_void;
+use core::ffi::c_char;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_ulong;
 use core::ffi::c_ulonglong;
-use core::ffi::c_char;
-use core::ptr;
+use core::ffi::c_void;
 use core::mem;
+use core::ptr;
 
 // Constants from C
 pub const NFPROTO_IPV4: u16 = 2;
@@ -105,12 +105,17 @@ pub unsafe extern "C" fn print_tuple(
 ) {
     // SAFETY: Function is called with valid pointers as per contract
     let l3num = (*tuple).src_l3num;
-    
+
     match l3num {
         NFPROTO_IPV4 => {
             let src_ip = (*tuple).src.u3.ip;
             let dst_ip = (*tuple).dst.u3.ip;
-            seq_printf(s, b"src=%pI4 dst=%pI4 ", &src_ip as *const _ as *const c_void, &dst_ip as *const _ as *const c_void);
+            seq_printf(
+                s,
+                b"src=%pI4 dst=%pI4 ",
+                &src_ip as *const _ as *const c_void,
+                &dst_ip as *const _ as *const c_void,
+            );
         }
         NFPROTO_IPV6 => {
             let src_ip6 = (*tuple).src.u3.ip6.as_ptr();
@@ -121,7 +126,7 @@ pub unsafe extern "C" fn print_tuple(
     }
 
     let l4proto_num = (*l4proto).l4proto;
-    
+
     match l4proto_num {
         IPPROTO_ICMP => {
             let icmp_type = (*tuple).dst.u.icmp.type_;

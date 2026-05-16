@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -264,7 +264,7 @@ pub unsafe extern "C" fn cipso_v4_cache_check(
                 // Update secattr
                 (*secattr).cache = (*entry_ptr).lsm_data;
                 (*secattr).flags |= 1; // NETLBL_SECATTR_CACHE
-                (*secattr).type_ = 2;  // NETLBL_NLTYPE_CIPSOV4
+                (*secattr).type_ = 2; // NETLBL_NLTYPE_CIPSOV4
 
                 // Release spinlock
                 extern "C" {
@@ -319,7 +319,10 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
     extern "C" {
         fn kmalloc(size: size_t, flags: c_int) -> *mut c_void;
     }
-    let entry_ptr = kmalloc(core::mem::size_of::<cipso_v4_map_cache_entry>() as size_t, 0);
+    let entry_ptr = kmalloc(
+        core::mem::size_of::<cipso_v4_map_cache_entry>() as size_t,
+        0,
+    );
     if entry_ptr.is_null() {
         return ENOMEM;
     }

@@ -87,7 +87,9 @@ unsafe fn proto_handlers(protocol: u8) -> *mut *mut xfrm6_protocol {
     match protocol {
         IPPROTO_ESP => &esp6_handlers as *mut AtomicPtr<xfrm6_protocol> as *mut *mut xfrm6_protocol,
         IPPROTO_AH => &ah6_handlers as *mut AtomicPtr<xfrm6_protocol> as *mut *mut xfrm6_protocol,
-        IPPROTO_COMP => &ipcomp6_handlers as *mut AtomicPtr<xfrm6_protocol> as *mut *mut xfrm6_protocol,
+        IPPROTO_COMP => {
+            &ipcomp6_handlers as *mut AtomicPtr<xfrm6_protocol> as *mut *mut xfrm6_protocol
+        }
         _ => ptr::null_mut(),
     }
 }
@@ -100,8 +102,11 @@ pub unsafe extern "C" fn xfrm6_rcv_cb(skb: *mut c_void, protocol: u8, err: c_int
         return 0;
     }
 
-    let mut handler = (*head).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut());
-    
+    let mut handler = (*head)
+        .as_ref()
+        .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+        .unwrap_or(ptr::null_mut());
+
     while !handler.is_null() {
         let ret = ((*(*handler).cb_handler)(skb, err));
         if ret <= 0 {
@@ -114,13 +119,21 @@ pub unsafe extern "C" fn xfrm6_rcv_cb(skb: *mut c_void, protocol: u8, err: c_int
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_rcv_encap(skb: *mut c_void, nexthdr: c_int, spi: u32, encap_type: c_int) -> c_int {
+pub unsafe extern "C" fn xfrm6_rcv_encap(
+    skb: *mut c_void,
+    nexthdr: c_int,
+    spi: u32,
+    encap_type: c_int,
+) -> c_int {
     let head = proto_handlers(nexthdr as u8);
     let mut ret = 0;
 
     if !head.is_null() {
-        let mut handler = (*head).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut());
-        
+        let mut handler = (*head)
+            .as_ref()
+            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+            .unwrap_or(ptr::null_mut());
+
         while !handler.is_null() {
             ret = ((*(*handler).input_handler)(skb, nexthdr, spi, encap_type));
             if ret != -EINVAL {
@@ -132,13 +145,16 @@ pub unsafe extern "C" fn xfrm6_rcv_encap(skb: *mut c_void, nexthdr: c_int, spi: 
 
     // Send ICMPv6 destination unreachable
     icmpv6_send(skb, ICMPV6_DEST_UNREACH, ICMPV6_PORT_UNREACH, 0);
-    
+
     kfree_skb(skb);
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_protocol_register(handler: *mut xfrm6_protocol, protocol: u8) -> c_int {
+pub unsafe extern "C" fn xfrm6_protocol_register(
+    handler: *mut xfrm6_protocol,
+    protocol: u8,
+) -> c_int {
     let head = proto_handlers(protocol);
     if head.is_null() || netproto(protocol).is_null() {
         return EINVAL;
@@ -148,7 +164,10 @@ pub unsafe extern "C" fn xfrm6_protocol_register(handler: *mut xfrm6_protocol, p
     mutex.lock();
 
     let mut pprev = head;
-    let mut t = (*pprev).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut());
+    let mut t = (*pprev)
+        .as_ref()
+        .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+        .unwrap_or(ptr::null_mut());
     let mut add_netproto = t.is_null();
     let mut ret = 0;
 
@@ -161,7 +180,10 @@ pub unsafe extern "C" fn xfrm6_protocol_register(handler: *mut xfrm6_protocol, p
             break;
         }
         pprev = &mut (*t).next;
-        t = (*pprev).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut());
+        t = (*pprev)
+            .as_ref()
+            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+            .unwrap_or(ptr::null_mut());
     }
 
     if ret == 0 {
@@ -182,7 +204,10 @@ pub unsafe extern "C" fn xfrm6_protocol_register(handler: *mut xfrm6_protocol, p
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_protocol_deregister(handler: *mut xfrm6_protocol, protocol: u8) -> c_int {
+pub unsafe extern "C" fn xfrm6_protocol_deregister(
+    handler: *mut xfrm6_protocol,
+    protocol: u8,
+) -> c_int {
     let head = proto_handlers(protocol);
     if head.is_null() || netproto(protocol).is_null() {
         return EINVAL;
@@ -192,7 +217,10 @@ pub unsafe extern "C" fn xfrm6_protocol_deregister(handler: *mut xfrm6_protocol,
     mutex.lock();
 
     let mut pprev = head;
-    let mut t = (*pprev).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut());
+    let mut t = (*pprev)
+        .as_ref()
+        .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+        .unwrap_or(ptr::null_mut());
     let mut ret = ENOENT;
 
     while !t.is_null() {
@@ -202,16 +230,25 @@ pub unsafe extern "C" fn xfrm6_protocol_deregister(handler: *mut xfrm6_protocol,
             break;
         }
         pprev = &mut (*t).next;
-        t = (*pprev).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut());
+        t = (*pprev)
+            .as_ref()
+            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+            .unwrap_or(ptr::null_mut());
     }
 
     mutex.unlock();
 
     if ret == 0 {
-        let empty = (*head).as_ref().map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol).unwrap_or(ptr::null_mut()).is_null();
+        let empty = (*head)
+            .as_ref()
+            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
+            .unwrap_or(ptr::null_mut())
+            .is_null();
         if empty {
             if inet6_del_protocol(netproto(protocol), protocol) < 0 {
-                pr_err(b"xfrm6_protocol_deregister: can't remove protocol\n".as_ptr() as *const c_char);
+                pr_err(
+                    b"xfrm6_protocol_deregister: can't remove protocol\n".as_ptr() as *const c_char,
+                );
                 ret = EAGAIN;
             }
         }

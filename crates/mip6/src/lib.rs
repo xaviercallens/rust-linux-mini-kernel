@@ -148,18 +148,18 @@ pub unsafe extern "C" fn mip6_padn(data: *mut u8, padlen: c_uint) -> *mut u8 {
     if data.is_null() {
         return ptr::null_mut();
     }
-    
+
     if padlen == 1 {
         ptr::write(data, IPV6_TLV_PAD1);
     } else if padlen > 1 {
         ptr::write(data, IPV6_TLV_PADN);
         ptr::write(data.add(1), (padlen - 2) as u8);
-        
+
         if padlen > 2 {
             ptr::write_bytes(data.add(2), 0, (padlen - 2) as usize);
         }
     }
-    
+
     data.add(padlen as usize)
 }
 
@@ -197,35 +197,44 @@ pub extern "C" fn mip6_mh_len(type_: c_int) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn mip6_mh_filter(sk: *mut c_void, skb: *mut c_void) -> c_int {
     let mut _hdr: ip6_mh = mem::zeroed();
-    let mh = skb_header_pointer(skb, skb_transport_offset(skb), mem::size_of_val(&_hdr), &_hdr as *mut _ as *mut c_void);
-    
+    let mh = skb_header_pointer(
+        skb,
+        skb_transport_offset(skb),
+        mem::size_of_val(&_hdr),
+        &_hdr as *mut _ as *mut c_void,
+    );
+
     if mh.is_null() {
         return -1;
     }
-    
+
     let mh = mh as *const ip6_mh;
     let header_len = (((*mh).ip6mh_hdrlen + 1) << 3) as usize;
-    
+
     if header_len > (*skb as *mut skbuff).len {
         return -1;
     }
-    
+
     if (*mh).ip6mh_hdrlen < mip6_mh_len((*mh).ip6mh_type as c_int) {
         // Log error
-        mip6_param_prob(skb, 0, 
-            (offsetof(ip6_mh, ip6mh_hdrlen) + 
-             (*skb as *mut skbuff).network_header_len) as c_int);
+        mip6_param_prob(
+            skb,
+            0,
+            (offsetof(ip6_mh, ip6mh_hdrlen) + (*skb as *mut skbuff).network_header_len) as c_int,
+        );
         return -1;
     }
-    
+
     if (*mh).ip6mh_proto != IPPROTO_NONE as u8 {
         // Log error
-        mip6_param_prob(skb, 0, 
-            (offsetof(ip6_mh, ip6mh_proto) + 
-             (*skb as *mut skbuff).network_header_len) as c_int);
+        mip6_param_prob(
+            skb,
+            0,
+            (offsetof(ip6_mh, ip6mh_proto) + (*skb as *mut skbuff).network_header_len) as c_int,
+        );
         return -1;
     }
-    
+
     0
 }
 
@@ -235,28 +244,30 @@ pub unsafe extern "C" fn mip6_mh_filter(sk: *mut c_void, skb: *mut c_void) -> c_
 /// - `stamp` must be valid ktime value
 /// - `src` and `dst` must be valid in6_addr pointers
 #[no_mangle]
-pub unsafe extern "C" fn mip6_report_rl_allow(stamp: u64, 
-                                             dst: *const in6_addr, 
-                                             src: *const in6_addr, 
-                                             iif: c_int) -> c_int {
+pub unsafe extern "C" fn mip6_report_rl_allow(
+    stamp: u64,
+    dst: *const in6_addr,
+    src: *const in6_addr,
+    iif: c_int,
+) -> c_int {
     let allow = 0;
-    
+
     spin_lock_bh(&mut (*(&mut mip6_report_rl as *mut _)).lock);
-    
-    if (*(&mip6_report_rl as *const _)).stamp != stamp ||
-       (*(&mip6_report_rl as *const _)).iif != iif ||
-       !ipv6_addr_equal(&(*(&mip6_report_rl as *const _)).src, src) ||
-       !ipv6_addr_equal(&(*(&mip6_report_rl as *const _)).dst, dst) {
-        
+
+    if (*(&mip6_report_rl as *const _)).stamp != stamp
+        || (*(&mip6_report_rl as *const _)).iif != iif
+        || !ipv6_addr_equal(&(*(&mip6_report_rl as *const _)).src, src)
+        || !ipv6_addr_equal(&(*(&mip6_report_rl as *const _)).dst, dst)
+    {
         (*(&mut mip6_report_rl as *mut _)).stamp = stamp;
         (*(&mut mip6_report_rl as *mut _)).iif = iif;
         (*(&mut mip6_report_rl as *mut _)).src = *src;
         (*(&mut mip6_report_rl as *mut _)).dst = *dst;
         allow = 1;
     }
-    
+
     spin_unlock_bh(&mut (*(&mut mip6_report_rl as *mut _)).lock);
-    
+
     allow
 }
 
@@ -351,10 +362,12 @@ pub extern "C" fn spin_unlock_bh(lock: *mut spinlock_t) {
 }
 
 #[no_mangle]
-pub extern "C" fn km_report(net: *mut c_void, 
-                            proto: c_int, 
-                            sel: *mut c_void, 
-                            addr: *mut c_void) -> c_int {
+pub extern "C" fn km_report(
+    net: *mut c_void,
+    proto: c_int,
+    sel: *mut c_void,
+    addr: *mut c_void,
+) -> c_int {
     // Implementation would report to KM
     0
 }
@@ -384,14 +397,14 @@ pub extern "C" fn xs_net(x: *mut xfrm_state) -> *mut c_void {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_padlen() {
         assert_eq!(calc_padlen(10, 16), 6);
         assert_eq!(calc_padlen(16, 16), 16);
         assert_eq!(calc_padlen(17, 16), 15);
     }
-    
+
     #[test]
     fn test_mh_len() {
         assert_eq!(mip6_mh_len(IP6_MH_TYPE_BRR as c_int), 0);

@@ -7,8 +7,8 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::all)]
 
-use core::ptr;
 use core::mem;
+use core::ptr;
 
 // Constants from C
 pub const NEXTHDR_HOP: u8 = 0;
@@ -54,12 +54,12 @@ pub struct frag_hdr {
 /// true if extension header, false otherwise
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_ext_hdr(nexthdr: u8) -> bool {
-    (nexthdr == NEXTHDR_HOP) ||
-    (nexthdr == NEXTHDR_ROUTING) ||
-    (nexthdr == NEXTHDR_FRAGMENT) ||
-    (nexthdr == NEXTHDR_AUTH) ||
-    (nexthdr == NEXTHDR_NONE) ||
-    (nexthdr == NEXTHDR_DEST)
+    (nexthdr == NEXTHDR_HOP)
+        || (nexthdr == NEXTHDR_ROUTING)
+        || (nexthdr == NEXTHDR_FRAGMENT)
+        || (nexthdr == NEXTHDR_AUTH)
+        || (nexthdr == NEXTHDR_NONE)
+        || (nexthdr == NEXTHDR_DEST)
 }
 
 /// Calculate length of authentication header
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
     while ipv6_ext_hdr(nexthdr) {
         let mut _hdr: ipv6_opt_hdr = mem::zeroed();
         let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &_hdr as *mut _);
-        
+
         if hp.is_null() {
             return -1;
         }
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
                 skb,
                 start + mem::offset_of!(frag_hdr, frag_off) as _,
                 mem::size_of_val(&_frag_off) as _,
-                &_frag_off as *mut _
+                &_frag_off as *mut _,
             ) as *mut u16;
 
             if frag_off.is_null() {
@@ -157,15 +157,11 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
 /// # Returns
 /// Offset to TLV or -1 on error
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_find_tlv(
-    skb: *const c_void,
-    offset: c_int,
-    type_: c_int,
-) -> c_int {
+pub unsafe extern "C" fn ipv6_find_tlv(skb: *const c_void, offset: c_int, type_: c_int) -> c_int {
     let nh = skb_network_header(skb);
     let packet_len = skb_tail_pointer(skb) as usize - nh as usize;
     let mut offset = offset as usize;
-    
+
     if offset + 2 > packet_len {
         return -1;
     }
@@ -224,15 +220,16 @@ pub unsafe extern "C" fn ipv6_find_hdr(
     let mut start = skb_network_offset(skb) as c_int + mem::size_of::<ipv6hdr>() as c_int;
     let mut nexthdr = (*ipv6_hdr(skb)).nexthdr;
     let mut found = 0;
-    
+
     if !fragoff.is_null() {
         *fragoff = 0;
     }
 
     if !offset.is_null() && *offset != 0 {
         let mut _ip6: ipv6hdr = mem::zeroed();
-        let ip6 = skb_header_pointer(skb, *offset, mem::size_of_val(&_ip6) as _, &_ip6 as *mut _) as *const ipv6hdr;
-        
+        let ip6 = skb_header_pointer(skb, *offset, mem::size_of_val(&_ip6) as _, &_ip6 as *mut _)
+            as *const ipv6hdr;
+
         if ip6.is_null() || (*ip6).version != 6 {
             return EBADMSG;
         }
@@ -243,8 +240,9 @@ pub unsafe extern "C" fn ipv6_find_hdr(
 
     loop {
         let mut _hdr: ipv6_opt_hdr = mem::zeroed();
-        let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &_hdr as *mut _) as *const ipv6_opt_hdr;
-        
+        let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &_hdr as *mut _)
+            as *const ipv6_opt_hdr;
+
         if hp.is_null() {
             return EBADMSG;
         }
@@ -260,8 +258,9 @@ pub unsafe extern "C" fn ipv6_find_hdr(
 
         if nexthdr == NEXTHDR_ROUTING {
             let mut _rh: ipv6_rt_hdr = mem::zeroed();
-            let rh = skb_header_pointer(skb, start, mem::size_of_val(&_rh) as _, &_rh as *mut _) as *const ipv6_rt_hdr;
-            
+            let rh = skb_header_pointer(skb, start, mem::size_of_val(&_rh) as _, &_rh as *mut _)
+                as *const ipv6_rt_hdr;
+
             if rh.is_null() {
                 return EBADMSG;
             }
@@ -281,7 +280,7 @@ pub unsafe extern "C" fn ipv6_find_hdr(
                 skb,
                 start + mem::offset_of!(frag_hdr, frag_off) as _,
                 mem::size_of_val(&_frag_off) as _,
-                &_frag_off as *mut _
+                &_frag_off as *mut _,
             ) as *mut u16;
 
             if frag_off.is_null() {
@@ -362,7 +361,7 @@ pub unsafe extern "C" fn skb_header_pointer(
     if ptr.is_null() {
         return ptr;
     }
-    
+
     // SAFETY: Copy data from skb to buffer
     ptr::copy_nonoverlapping(ptr, data, size as usize);
     data

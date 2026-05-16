@@ -6,8 +6,8 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::mem::size_of;
+use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
 
 // Constants from C
@@ -35,7 +35,9 @@ struct NlaPolicy {
 
 #[repr(C)]
 struct NfCtnlTimeout {
-    nlattr_to_obj: Option<unsafe extern "C" fn(tb: *mut *mut nlattr, net: *mut c_void, data: *mut c_void) -> c_int>,
+    nlattr_to_obj: Option<
+        unsafe extern "C" fn(tb: *mut *mut nlattr, net: *mut c_void, data: *mut c_void) -> c_int,
+    >,
     obj_to_nlattr: Option<unsafe extern "C" fn(skb: *mut c_void, data: *const c_void) -> c_int>,
     nlattr_max: c_int,
     obj_size: size_t,
@@ -81,9 +83,7 @@ extern "C" {
 
 // Function implementations
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_generic_init_net(
-    net: *mut c_void,
-) {
+pub unsafe extern "C" fn nf_conntrack_generic_init_net(net: *mut c_void) {
     let gn = nf_generic_pernet(net);
     (*gn).timeout = nf_ct_generic_timeout();
 }
@@ -96,24 +96,24 @@ pub unsafe extern "C" fn generic_timeout_nlattr_to_obj(
 ) -> c_int {
     let gn = nf_generic_pernet(net);
     let timeout = data as *mut c_uint;
-    
+
     // SAFETY: Caller guarantees valid net pointer
     let gn_timeout = &mut (*gn).timeout;
-    
+
     if timeout.is_null() {
         timeout = gn_timeout as *mut c_uint;
     }
-    
+
     let attr_index = CTA_TIMEOUT_GENERIC_TIMEOUT as isize;
     let attr = *tb.offset(attr_index);
-    
+
     if !attr.is_null() {
         let value = nla_get_be32(attr);
         *timeout = libc::ntohl(value) * HZ as u32;
     } else {
         *timeout = *gn_timeout;
     }
-    
+
     0
 }
 
@@ -124,17 +124,21 @@ pub unsafe extern "C" fn generic_timeout_obj_to_nlattr(
 ) -> c_int {
     let timeout = data as *const c_uint;
     let timeout_val = *timeout;
-    
+
     // SAFETY: Caller guarantees valid skb pointer
-    if nla_put_be32(skb, CTA_TIMEOUT_GENERIC_TIMEOUT, libc::htonl(timeout_val / HZ as u32)) != 0 {
+    if nla_put_be32(
+        skb,
+        CTA_TIMEOUT_GENERIC_TIMEOUT,
+        libc::htonl(timeout_val / HZ as u32),
+    ) != 0
+    {
         return ENOSPC;
     }
-    
+
     0
 }
 
 // Constants
 #[no_mangle]
-pub static nf_ct_generic_timeout: unsafe extern "C" fn() -> c_uint = || -> c_uint {
-    600 * HZ as u32
-};
+pub static nf_ct_generic_timeout: unsafe extern "C" fn() -> c_uint =
+    || -> c_uint { 600 * HZ as u32 };

@@ -131,21 +131,24 @@ pub unsafe extern "C" fn nf_nat_ftp_hook(
     0
 }
 
-static search: [ftp_search; 2] = [ftp_search {
-    pattern: b"PORT\0" as *const u8,
-    plen: 4,
-    skip: b' ',
-    term: b'\r',
-    ftptype: nf_ct_ftp_type { _private: [0; 0] },
-    getnum: try_rfc959,
-}, ftp_search {
-    pattern: b"EPRT\0" as *const u8,
-    plen: 4,
-    skip: b' ',
-    term: b'\r',
-    ftptype: nf_ct_ftp_type { _private: [0; 0] },
-    getnum: try_eprt,
-}];
+static search: [ftp_search; 2] = [
+    ftp_search {
+        pattern: b"PORT\0" as *const u8,
+        plen: 4,
+        skip: b' ',
+        term: b'\r',
+        ftptype: nf_ct_ftp_type { _private: [0; 0] },
+        getnum: try_rfc959,
+    },
+    ftp_search {
+        pattern: b"EPRT\0" as *const u8,
+        plen: 4,
+        skip: b' ',
+        term: b'\r',
+        ftptype: nf_ct_ftp_type { _private: [0; 0] },
+        getnum: try_eprt,
+    },
+];
 
 #[repr(C)]
 struct spinlock_t {
@@ -254,11 +257,7 @@ pub unsafe extern "C" fn find_pattern(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn find_nl_seq(
-    seq: u32,
-    info: *const nf_ct_ftp_master,
-    dir: c_int,
-) -> c_int {
+pub unsafe extern "C" fn find_nl_seq(seq: u32, info: *const nf_ct_ftp_master, dir: c_int) -> c_int {
     // Implementation would go here
     0
 }

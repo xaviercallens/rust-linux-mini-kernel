@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -156,11 +156,7 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_ts_off(net: *const c_void, skb: *const sk_buff) -> u32 {
     let ipv6_hdr = (*skb).ipv6_hdr;
-    secure_tcpv6_ts_off(
-        net,
-        ipv6_hdr.daddr.s6_addr32,
-        ipv6_hdr.saddr.s6_addr32,
-    )
+    secure_tcpv6_ts_off(net, ipv6_hdr.daddr.s6_addr32, ipv6_hdr.saddr.s6_addr32)
 }
 
 /// Pre-connect processing for IPv6
@@ -169,8 +165,13 @@ pub unsafe extern "C" fn tcp_v6_init_ts_off(net: *const c_void, skb: *const sk_b
 /// - `sk` must be a valid pointer to sock
 /// - `uaddr` must be a valid pointer to sockaddr
 #[no_mangle]
-pub unsafe extern "C" fn tcp_v6_pre_connect(sk: *mut sock, uaddr: *mut sockaddr, addr_len: c_int) -> c_int {
-    if addr_len < 28 { // SIN6_LEN_RFC2133
+pub unsafe extern "C" fn tcp_v6_pre_connect(
+    sk: *mut sock,
+    uaddr: *mut sockaddr,
+    addr_len: c_int,
+) -> c_int {
+    if addr_len < 28 {
+        // SIN6_LEN_RFC2133
         return EINVAL;
     }
     // Implementation of sock_owned_by_me and BPF_CGROUP_RUN_PROG_INET6_CONNECT
@@ -184,7 +185,11 @@ pub unsafe extern "C" fn tcp_v6_pre_connect(sk: *mut sock, uaddr: *mut sockaddr,
 /// - `sk` must be a valid pointer to sock
 /// - `uaddr` must be a valid pointer to sockaddr
 #[no_mangle]
-pub unsafe extern "C" fn tcp_v6_connect(sk: *mut sock, uaddr: *mut sockaddr, addr_len: c_int) -> c_int {
+pub unsafe extern "C" fn tcp_v6_connect(
+    sk: *mut sock,
+    uaddr: *mut sockaddr,
+    addr_len: c_int,
+) -> c_int {
     let usin = uaddr as *mut sockaddr_in6;
     let inet = (*sk).inet_sk; // Assuming inet_sk is a field
     let icsk = (*sk).icsk; // Assuming icsk is a field
@@ -196,7 +201,8 @@ pub unsafe extern "C" fn tcp_v6_connect(sk: *mut sock, uaddr: *mut sockaddr, add
         return EINVAL;
     }
 
-    if (*usin).sin6_family != 10 { // AF_INET6
+    if (*usin).sin6_family != 10 {
+        // AF_INET6
         return EAFNOSUPPORT;
     }
 
@@ -221,7 +227,14 @@ pub unsafe extern "C" fn tcp_v6_mtu_reduced(sk: *mut sock) {
 /// # Safety
 /// - `skb` must be a valid pointer to sk_buff
 #[no_mangle]
-pub unsafe extern "C" fn tcp_v6_err(skb: *mut sk_buff, opt: *mut c_void, type_: c_int, code: c_int, offset: c_int, info: u32) -> c_int {
+pub unsafe extern "C" fn tcp_v6_err(
+    skb: *mut sk_buff,
+    opt: *mut c_void,
+    type_: c_int,
+    code: c_int,
+    offset: c_int,
+    info: u32,
+) -> c_int {
     // Implementation would go here
     0
 }

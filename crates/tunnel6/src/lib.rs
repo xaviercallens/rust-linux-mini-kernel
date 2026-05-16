@@ -7,10 +7,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -50,7 +50,8 @@ pub struct xfrm_input_afinfo {
 // Define function pointer types for handler callbacks
 pub type handler_func = unsafe extern "C" fn(*mut c_void) -> c_int;
 pub type cb_handler_func = unsafe extern "C" fn(*mut c_void, c_int) -> c_int;
-pub type err_handler_func = unsafe extern "C" fn(*mut c_void, *mut inet6_skb_parm, u8, u8, c_int, u32) -> c_int;
+pub type err_handler_func =
+    unsafe extern "C" fn(*mut c_void, *mut inet6_skb_parm, u8, u8, c_int, u32) -> c_int;
 
 // Define the xfrm6_tunnel struct with #[repr(C)] for ABI compatibility
 #[repr(C)]
@@ -131,10 +132,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_mpls_supported() -> c_int {
 
 // Implementation of xfrm6_tunnel_register
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_tunnel_register(
-    handler: *mut xfrm6_tunnel,
-    family: c_int,
-) -> c_int {
+pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, family: c_int) -> c_int {
     let mut ret: c_int = EEXIST;
     let priority = (*handler).priority;
 

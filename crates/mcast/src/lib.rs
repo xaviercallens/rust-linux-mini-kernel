@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -122,11 +122,11 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
 
     let mut lnk = &mut (*np).ipv6_mc_list;
     while let Some(mc_lst) = ptr::read(lnk) {
-        if (ifindex == 0 || (*mc_lst).ifindex == ifindex) &&
-           ipv6_addr_equal(&(*mc_lst).addr, addr) {
+        if (ifindex == 0 || (*mc_lst).ifindex == ifindex) && ipv6_addr_equal(&(*mc_lst).addr, addr)
+        {
             // Remove from list
             *lnk = (*mc_lst).next;
-            
+
             let dev = __dev_get_by_index(net, (*mc_lst).ifindex);
             if !dev.is_null() {
                 let idev = __in6_dev_get(dev);
@@ -138,15 +138,18 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
             // Free memory
             atomic_sub(
                 size_of::<ipv6_mc_socklist>() as c_int,
-                &mut (*sk).sk_omem_alloc
+                &mut (*sk).sk_omem_alloc,
             );
-            ptr::write(mc_lst, ipv6_mc_socklist {
-                next: ptr::null_mut(),
-                addr: in6_addr { s6_addr: [0; 16] },
-                ifindex: 0,
-                sfmode: 0,
-                sflist: ptr::null_mut(),
-            });
+            ptr::write(
+                mc_lst,
+                ipv6_mc_socklist {
+                    next: ptr::null_mut(),
+                    addr: in6_addr { s6_addr: [0; 16] },
+                    ifindex: 0,
+                    sfmode: 0,
+                    sflist: ptr::null_mut(),
+                },
+            );
             return 0;
         }
         lnk = &mut (*mc_lst).next;
@@ -166,20 +169,12 @@ pub unsafe extern "C" fn ipv6_dev_mc_inc(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_dev_mc_dec(
-    dev: *mut net_device,
-    addr: *const in6_addr,
-) {
+pub unsafe extern "C" fn ipv6_dev_mc_dec(dev: *mut net_device, addr: *const in6_addr) {
     // Placeholder implementation - actual logic depends on device driver
 }
 
 // Internal functions
-fn __ipv6_sock_mc_join(
-    sk: *mut sock,
-    ifindex: c_int,
-    addr: *const in6_addr,
-    mode: c_int,
-) -> c_int {
+fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mode: c_int) -> c_int {
     // Validate inputs
     if sk.is_null() || addr.is_null() {
         return -EINVAL;
@@ -196,8 +191,7 @@ fn __ipv6_sock_mc_join(
     // Check for existing entry
     let mut pmc = (*np).ipv6_mc_list;
     while !pmc.is_null() {
-        if (ifindex == 0 || (*pmc).ifindex == ifindex) &&
-           ipv6_addr_equal(&(*pmc).addr, addr) {
+        if (ifindex == 0 || (*pmc).ifindex == ifindex) && ipv6_addr_equal(&(*pmc).addr, addr) {
             return -EADDRINUSE;
         }
         pmc = (*pmc).next;
@@ -239,7 +233,9 @@ fn __ipv6_sock_mc_join(
         if !idev.is_null() {
             let err = __ipv6_dev_mc_inc(idev, addr, mode);
             if err != 0 {
-                unsafe { libc::free(mc_lst as *mut c_void); }
+                unsafe {
+                    libc::free(mc_lst as *mut c_void);
+                }
                 return err;
             }
         }

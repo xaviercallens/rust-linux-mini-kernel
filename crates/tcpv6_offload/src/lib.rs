@@ -4,11 +4,11 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_void;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -54,10 +54,13 @@ type netdev_features_t = u32;
 
 // Function implementations
 #[no_mangle]
-pub unsafe extern "C" fn tcp6_gro_receive(head: *mut core::ffi::c_void, skb: *mut sk_buff) -> *mut sk_buff {
+pub unsafe extern "C" fn tcp6_gro_receive(
+    head: *mut core::ffi::c_void,
+    skb: *mut sk_buff,
+) -> *mut sk_buff {
     // SAFETY: Caller guarantees valid skb pointer
     let cb = NAPI_GRO_CB(skb);
-    
+
     if cb.flush == 0 && skb_gro_checksum_validate(skb, IPPROTO_TCP, ip6_gro_compute_pseudo) != 0 {
         // SAFETY: Valid pointer access
         (*cb).flush = 1;
@@ -71,43 +74,46 @@ pub unsafe extern "C" fn tcp6_gro_receive(head: *mut core::ffi::c_void, skb: *mu
 pub unsafe extern "C" fn tcp6_gro_complete(skb: *mut sk_buff, thoff: c_int) -> c_int {
     let iph = ipv6_hdr(skb);
     let th = tcp_hdr(skb);
-    
+
     // SAFETY: Valid pointer access
     (*th).check = !tcp_v6_check(
-        (*skb).len.wrapping_sub(thoff as u32), 
-        &(*iph).saddr, 
-        &(*iph).daddr, 
-        0
+        (*skb).len.wrapping_sub(thoff as u32),
+        &(*iph).saddr,
+        &(*iph).daddr,
+        0,
     );
-    
+
     // SAFETY: skb_shinfo is valid for write
     (*skb_shinfo(skb)).gso_type |= SKB_GSO_TCPV6;
-    
+
     tcp_gro_complete(skb)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn tcp6_gso_segment(skb: *mut sk_buff, features: netdev_features_t) -> *mut sk_buff {
+pub unsafe extern "C" fn tcp6_gso_segment(
+    skb: *mut sk_buff,
+    features: netdev_features_t,
+) -> *mut sk_buff {
     let shinfo = skb_shinfo(skb);
-    
+
     if (*shinfo).gso_type & SKB_GSO_TCPV6 == 0 {
         return ERR_PTR(EINVAL);
     }
-    
+
     if !pskb_may_pull(skb, core::mem::size_of::<tcphdr>() as _) {
         return ERR_PTR(EINVAL);
     }
-    
+
     if (*skb).ip_summed != CHECKSUM_PARTIAL {
         let ipv6h = ipv6_hdr(skb);
         let th = tcp_hdr(skb);
-        
+
         // Set up pseudo header
         (*th).check = 0;
         (*skb).ip_summed = CHECKSUM_PARTIAL;
         __tcp_v6_send_check(skb, &(*ipv6h).saddr, &(*ipv6h).daddr);
     }
-    
+
     tcp_gso_segment(skb, features)
 }
 
@@ -131,7 +137,11 @@ unsafe fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut napi_gro_cb {
 }
 
 #[inline]
-unsafe fn skb_gro_checksum_validate(skb: *mut sk_buff, proto: c_int, pseudo: extern "C" fn(*mut sk_buff) -> c_int) -> c_int {
+unsafe fn skb_gro_checksum_validate(
+    skb: *mut sk_buff,
+    proto: c_int,
+    pseudo: extern "C" fn(*mut sk_buff) -> c_int,
+) -> c_int {
     // Stub implementation - actual implementation would be complex
     0
 }
@@ -179,7 +189,12 @@ unsafe fn __tcp_v6_send_check(skb: *mut sk_buff, saddr: *const [u8; 16], daddr: 
 }
 
 #[inline]
-unsafe fn tcp_v6_check(len: u32, saddr: *const [u8; 16], daddr: *const [u8; 16], old_checksum: u32) -> u32 {
+unsafe fn tcp_v6_check(
+    len: u32,
+    saddr: *const [u8; 16],
+    daddr: *const [u8; 16],
+    old_checksum: u32,
+) -> u32 {
     // Stub implementation - actual implementation would compute TCP checksum
     0
 }

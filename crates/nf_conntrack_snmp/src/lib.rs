@@ -85,7 +85,12 @@ pub unsafe extern "C" fn snmp_conntrack_help(
 ) -> c_int {
     // Call broadcast helper
     extern "C" {
-        fn nf_conntrack_broadcast_help(skb: *mut c_void, ct: *mut NfConn, ctinfo: c_int, timeout: c_uint);
+        fn nf_conntrack_broadcast_help(
+            skb: *mut c_void,
+            ct: *mut NfConn,
+            ctinfo: c_int,
+            timeout: c_uint,
+        );
     }
     nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout);
 
@@ -113,9 +118,7 @@ static mut helper: NfConntrackHelper = NfConntrackHelper {
         src: NfConntrackTupleSrc {
             l3num: NFPROTO_IPV4,
             u: NfConntrackTupleSrcUnion {
-                udp: NfConntrackTupleUdp {
-                    port: SNMP_PORT,
-                },
+                udp: NfConntrackTupleUdp { port: SNMP_PORT },
             },
         },
         dst: NfConntrackTupleDst {
@@ -132,7 +135,7 @@ static mut helper: NfConntrackHelper = NfConntrackHelper {
 pub unsafe extern "C" fn nf_conntrack_snmp_init() -> c_int {
     // Set timeout in expect policy
     exp_policy.timeout = timeout;
-    
+
     // Register helper
     extern "C" {
         fn nf_conntrack_helper_register(helper: *mut NfConntrackHelper) -> c_int;

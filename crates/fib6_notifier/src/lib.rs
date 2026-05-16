@@ -7,10 +7,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
+use core::ptr;
 
 // Constants from C
 pub const AF_INET6: c_int = 10;
@@ -50,9 +50,16 @@ struct fib_notifier_ops {
 
 // Function pointers for FFI compatibility
 extern "C" {
-    fn call_fib_notifier(nb: *mut notifier_block, event_type: c_int, info: *mut fib_notifier_info) -> c_int;
+    fn call_fib_notifier(
+        nb: *mut notifier_block,
+        event_type: c_int,
+        info: *mut fib_notifier_info,
+    ) -> c_int;
     fn call_fib_notifiers(net: *mut net, event_type: c_int, info: *mut fib_notifier_info) -> c_int;
-    fn fib_notifier_ops_register(ops: *const fib_notifier_ops, net: *mut net) -> *mut fib_notifier_ops;
+    fn fib_notifier_ops_register(
+        ops: *const fib_notifier_ops,
+        net: *mut net,
+    ) -> *mut fib_notifier_ops;
     fn fib_notifier_ops_unregister(ops: *mut fib_notifier_ops);
     fn fib6_tables_seq_read(net: *mut net) -> c_uint;
     fn fib6_rules_seq_read(net: *mut net) -> c_uint;

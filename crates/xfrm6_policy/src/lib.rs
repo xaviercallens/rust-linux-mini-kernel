@@ -8,9 +8,9 @@
 #![allow(non_snake_case)]
 #![allow(clang::too_many_arguments)]
 
-use core::ffi::c_void;
 use core::ffi::c_int;
 use core::ffi::c_uint;
+use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::ptr::null_mut;
@@ -81,63 +81,53 @@ pub struct ListHead {
 #[repr(C)]
 pub struct dst_ops {
     pub family: c_int,
-    pub update_pmtu: Option<unsafe extern "C" fn(
-        dst: *mut dst_entry,
-        sk: *mut c_void,
-        skb: *mut c_void,
-        mtu: u32,
-        confirm_neigh: bool,
-    )>,
-    pub redirect: Option<unsafe extern "C" fn(
-        dst: *mut dst_entry,
-        sk: *mut c_void,
-        skb: *mut c_void,
-    )>,
-    pub cow_metrics: Option<unsafe extern "C" fn(
-        dst: *mut dst_entry,
-        new_metrics: *mut c_void,
-    ) -> *mut dst_entry>,
-    pub destroy: Option<unsafe extern "C" fn(
-        dst: *mut dst_entry,
-    )>,
-    pub ifdown: Option<unsafe extern "C" fn(
-        dst: *mut dst_entry,
-        dev: *mut net_device,
-        unregister: c_int,
-    )>,
-    pub local_out: Option<unsafe extern "C" fn(
-        skb: *mut c_void,
-    ) -> c_int>,
+    pub update_pmtu: Option<
+        unsafe extern "C" fn(
+            dst: *mut dst_entry,
+            sk: *mut c_void,
+            skb: *mut c_void,
+            mtu: u32,
+            confirm_neigh: bool,
+        ),
+    >,
+    pub redirect:
+        Option<unsafe extern "C" fn(dst: *mut dst_entry, sk: *mut c_void, skb: *mut c_void)>,
+    pub cow_metrics: Option<
+        unsafe extern "C" fn(dst: *mut dst_entry, new_metrics: *mut c_void) -> *mut dst_entry,
+    >,
+    pub destroy: Option<unsafe extern "C" fn(dst: *mut dst_entry)>,
+    pub ifdown:
+        Option<unsafe extern "C" fn(dst: *mut dst_entry, dev: *mut net_device, unregister: c_int)>,
+    pub local_out: Option<unsafe extern "C" fn(skb: *mut c_void) -> c_int>,
     pub gc_thresh: c_int,
 }
 
 #[repr(C)]
 pub struct xfrm_policy_afinfo {
     pub dst_ops: *const dst_ops,
-    pub dst_lookup: Option<unsafe extern "C" fn(
-        net: *mut net,
-        tos: c_int,
-        oif: c_int,
-        saddr: *const xfrm_address_t,
-        daddr: *const xfrm_address_t,
-        mark: u32,
-    ) -> *mut dst_entry>,
-    pub get_saddr: Option<unsafe extern "C" fn(
-        net: *mut net,
-        oif: c_int,
-        saddr: *mut xfrm_address_t,
-        daddr: *const xfrm_address_t,
-        mark: u32,
-    ) -> c_int>,
-    pub fill_dst: Option<unsafe extern "C" fn(
-        xdst: *mut xfrm_dst,
-        dev: *mut net_device,
-        fl: *const c_void,
-    ) -> c_int>,
-    pub blackhole_route: Option<unsafe extern "C" fn(
-        dst: *mut dst_entry,
-        net: *mut net,
-    )>,
+    pub dst_lookup: Option<
+        unsafe extern "C" fn(
+            net: *mut net,
+            tos: c_int,
+            oif: c_int,
+            saddr: *const xfrm_address_t,
+            daddr: *const xfrm_address_t,
+            mark: u32,
+        ) -> *mut dst_entry,
+    >,
+    pub get_saddr: Option<
+        unsafe extern "C" fn(
+            net: *mut net,
+            oif: c_int,
+            saddr: *mut xfrm_address_t,
+            daddr: *const xfrm_address_t,
+            mark: u32,
+        ) -> c_int,
+    >,
+    pub fill_dst: Option<
+        unsafe extern "C" fn(xdst: *mut xfrm_dst, dev: *mut net_device, fl: *const c_void) -> c_int,
+    >,
+    pub blackhole_route: Option<unsafe extern "C" fn(dst: *mut dst_entry, net: *mut net)>,
 }
 
 #[repr(C)]
@@ -187,12 +177,12 @@ pub unsafe extern "C" fn xfrm6_dst_lookup(
     }
 
     let dst = ip6_route_output(net, null_mut(), &fl6);
-    
+
     if (*dst).error != 0 {
         dst_release(dst);
         return dst;
     }
-    
+
     dst
 }
 
@@ -212,15 +202,9 @@ pub unsafe extern "C" fn xfrm6_get_saddr(
     if dst.is_null() {
         return EHOSTUNREACH;
     }
-    
+
     let dev = (*(*dst).idev).dev;
-    ipv6_dev_get_saddr(
-        dev_net(dev),
-        dev,
-        &(*daddr).in6,
-        0,
-        &mut (*saddr).in6,
-    );
+    ipv6_dev_get_saddr(dev_net(dev), dev, &(*daddr).in6, 0, &mut (*saddr).in6);
     dst_release(dst);
     0
 }
@@ -237,13 +221,13 @@ pub unsafe extern "C" fn xfrm6_fill_dst(
 ) -> c_int {
     (*xdst).u.dev = dev;
     dev_hold(dev);
-    
+
     (*xdst).u.rt6.rt6i_idev = in6_dev_get(dev);
     if (*xdst).u.rt6.rt6i_idev.is_null() {
         dev_put(dev);
         return ENODEV;
     }
-    
+
     let rt = (*xdst).route as *mut rt6_info;
     (*xdst).u.rt6.rt6i_flags = (*rt).rt6i_flags & (0x01 | 0x02); // RTF_ANYCAST | RTF_LOCAL
     (*xdst).u.rt6.rt6i_gateway = (*rt).rt6i_gateway;
@@ -252,7 +236,7 @@ pub unsafe extern "C" fn xfrm6_fill_dst(
     INIT_LIST_HEAD(&mut (*xdst).u.rt6.rt6i_uncached);
     rt6_uncached_list_add(&mut (*xdst).u.rt6);
     atomic_inc(&mut (*dev_net(dev)).ipv6.rt6_stats.fib_rt_uncache);
-    
+
     0
 }
 
@@ -270,7 +254,7 @@ pub unsafe extern "C" fn xfrm6_update_pmtu(
 ) {
     let xdst = dst as *mut xfrm_dst;
     let path = (*xdst).route;
-    
+
     if let Some(update_pmtu) = (*(*dst).ops).update_pmtu {
         update_pmtu(path, sk, skb, mtu, confirm_neigh);
     }
@@ -281,14 +265,10 @@ pub unsafe extern "C" fn xfrm6_update_pmtu(
 /// # Safety
 /// - `dst` must be valid pointer to xfrm_dst
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_redirect(
-    dst: *mut dst_entry,
-    sk: *mut c_void,
-    skb: *mut c_void,
-) {
+pub unsafe extern "C" fn xfrm6_redirect(dst: *mut dst_entry, sk: *mut c_void, skb: *mut c_void) {
     let xdst = dst as *mut xfrm_dst;
     let path = (*xdst).route;
-    
+
     if let Some(redirect) = (*(*dst).ops).redirect {
         redirect(path, sk, skb);
     }
@@ -299,21 +279,19 @@ pub unsafe extern "C" fn xfrm6_redirect(
 /// # Safety
 /// - `dst` must be valid pointer to xfrm_dst
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_dst_destroy(
-    dst: *mut dst_entry,
-) {
+pub unsafe extern "C" fn xfrm6_dst_destroy(dst: *mut dst_entry) {
     let xdst = dst as *mut xfrm_dst;
-    
+
     if !(*xdst).u.rt6.rt6i_idev.is_null() {
         in6_dev_put((*xdst).u.rt6.rt6i_idev);
     }
-    
+
     dst_destroy_metrics_generic(dst);
-    
+
     if !(*xdst).u.rt6.rt6i_uncached_list.is_null() {
         rt6_uncached_list_del(&mut (*xdst).u.rt6);
     }
-    
+
     xfrm_dst_destroy(dst);
 }
 
@@ -330,27 +308,27 @@ pub unsafe extern "C" fn xfrm6_dst_ifdown(
     if unregister == 0 {
         return;
     }
-    
+
     let xdst = dst as *mut xfrm_dst;
     if (*(*xdst).u.rt6.rt6i_idev).dev == dev {
         let loopback_idev = in6_dev_get(dev_net(dev).loopback_dev);
         let mut current_xdst = xdst;
-        
+
         loop {
             in6_dev_put((*current_xdst).u.rt6.rt6i_idev);
             (*current_xdst).u.rt6.rt6i_idev = loopback_idev;
             in6_dev_hold(loopback_idev);
-            
+
             let child = xfrm_dst_child(&(*current_xdst).u.dst);
             if child.is_null() || (*child).xfrm.is_null() {
                 break;
             }
             current_xdst = child as *mut xfrm_dst;
         }
-        
+
         __in6_dev_put(loopback_idev);
     }
-    
+
     xfrm_dst_ifdown(dst, dev);
 }
 

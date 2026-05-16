@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void};
@@ -49,7 +49,8 @@ pub struct DccpStateNames {
 // State transition table
 #[repr(C)]
 pub struct DccpStateTable {
-    table: [[[c_int; CT_DCCP_INVALID as usize + 1]; DCCP_PKT_SYNCACK as usize + 1]; CT_DCCP_ROLE_SERVER as usize + 1],
+    table: [[[c_int; CT_DCCP_INVALID as usize + 1]; DCCP_PKT_SYNCACK as usize + 1];
+        CT_DCCP_ROLE_SERVER as usize + 1],
 }
 
 // Predefined state transition table (simplified for brevity)
@@ -125,15 +126,15 @@ pub unsafe extern "C" fn dccp_get_next_state(
     if role < 0 || role > CT_DCCP_ROLE_SERVER as c_int {
         return CT_DCCP_INVALID;
     }
-    
+
     if pkt_type < 0 || pkt_type > DCCP_PKT_SYNCACK as c_int {
         return CT_DCCP_INVALID;
     }
-    
+
     if current_state < 0 || current_state > CT_DCCP_INVALID as c_int {
         return CT_DCCP_INVALID;
     }
-    
+
     // SAFETY: All bounds checked above
     *DCCP_STATE_TABLE.table[role as usize][pkt_type as usize][current_state as usize]
 }
@@ -148,30 +149,26 @@ pub unsafe extern "C" fn dccp_get_next_state(
 /// # Returns
 /// true (1) if connection tracking initialized, false (0) otherwise
 #[no_mangle]
-pub unsafe extern "C" fn dccp_new(
-    ct: *mut c_void,
-    skb: *const c_void,
-    dh: *const c_void,
-) -> c_int {
+pub unsafe extern "C" fn dccp_new(ct: *mut c_void, skb: *const c_void, dh: *const c_void) -> c_int {
     if ct.is_null() || skb.is_null() || dh.is_null() {
         return 0;
     }
-    
+
     // Example implementation - actual logic would be more complex
     // SAFETY: Caller guarantees pointers are valid
     let pkt_type = (*dh as *const u8).offset(0) as c_int; // Simplified packet type extraction
-    
+
     // Get initial state based on packet type
     let initial_state = if pkt_type == DCCP_PKT_REQUEST {
         CT_DCCP_REQUEST
     } else {
         CT_DCCP_INVALID
     };
-    
+
     // Set state in connection tracking struct
     // SAFETY: Caller guarantees ct is valid and properly aligned
     ptr::write(ct as *mut c_int, initial_state);
-    
+
     1 // Success
 }
 
@@ -183,36 +180,27 @@ pub const ENOSYS: c_int = -38;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_state_transitions() {
         // Test client role, REQUEST packet, NONE state
         unsafe {
-            let next_state = dccp_get_next_state(
-                CT_DCCP_ROLE_CLIENT,
-                DCCP_PKT_REQUEST,
-                CT_DCCP_NONE,
-            );
+            let next_state =
+                dccp_get_next_state(CT_DCCP_ROLE_CLIENT, DCCP_PKT_REQUEST, CT_DCCP_NONE);
             assert_eq!(next_state, CT_DCCP_REQUEST);
         }
-        
+
         // Test server role, RESPONSE packet, REQUEST state
         unsafe {
-            let next_state = dccp_get_next_state(
-                CT_DCCP_ROLE_SERVER,
-                DCCP_PKT_RESPONSE,
-                CT_DCCP_REQUEST,
-            );
+            let next_state =
+                dccp_get_next_state(CT_DCCP_ROLE_SERVER, DCCP_PKT_RESPONSE, CT_DCCP_REQUEST);
             assert_eq!(next_state, CT_DCCP_RESPOND);
         }
-        
+
         // Test invalid state transition
         unsafe {
-            let next_state = dccp_get_next_state(
-                CT_DCCP_ROLE_CLIENT,
-                DCCP_PKT_RESPONSE,
-                CT_DCCP_NONE,
-            );
+            let next_state =
+                dccp_get_next_state(CT_DCCP_ROLE_CLIENT, DCCP_PKT_RESPONSE, CT_DCCP_NONE);
             assert_eq!(next_state, CT_DCCP_INVALID);
         }
     }

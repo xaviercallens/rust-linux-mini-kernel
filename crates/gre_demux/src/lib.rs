@@ -48,7 +48,8 @@ pub struct erspan_base_hdr {
 
 // Global state
 static GREPROTO_MAX: usize = 256; // Assuming this is defined in C
-static gre_proto: [AtomicPtr<gre_protocol>; GREPROTO_MAX] = unsafe { [AtomicPtr::new(ptr::null_mut()); GREPROTO_MAX] };
+static gre_proto: [AtomicPtr<gre_protocol>; GREPROTO_MAX] =
+    unsafe { [AtomicPtr::new(ptr::null_mut()); GREPROTO_MAX] };
 
 // Function implementations
 /// Add a GRE protocol handler
@@ -60,10 +61,7 @@ static gre_proto: [AtomicPtr<gre_protocol>; GREPROTO_MAX] = unsafe { [AtomicPtr:
 /// # Returns
 /// 0 on success, -EINVAL if version invalid, -EBUSY if already registered
 #[no_mangle]
-pub unsafe extern "C" fn gre_add_protocol(
-    proto: *const gre_protocol,
-    version: u8,
-) -> c_int {
+pub unsafe extern "C" fn gre_add_protocol(proto: *const gre_protocol, version: u8) -> c_int {
     if version as usize >= GREPROTO_MAX {
         return EINVAL;
     }
@@ -91,10 +89,7 @@ pub unsafe extern "C" fn gre_add_protocol(
 /// # Returns
 /// 0 on success, -EINVAL if version invalid, -EBUSY if not registered
 #[no_mangle]
-pub unsafe extern "C" fn gre_del_protocol(
-    proto: *const gre_protocol,
-    version: u8,
-) -> c_int {
+pub unsafe extern "C" fn gre_del_protocol(proto: *const gre_protocol, version: u8) -> c_int {
     if version as usize >= GREPROTO_MAX {
         return EINVAL;
     }
@@ -136,7 +131,7 @@ pub unsafe extern "C" fn gre_parse_header(
 ) -> c_int {
     let skb = skb as *mut u8;
     let nhs = nhs as usize;
-    
+
     // Check minimum header size
     if !pskb_may_pull(skb, (nhs + core::mem::size_of::<gre_base_hdr>()) as usize) {
         return EINVAL;
@@ -199,9 +194,13 @@ pub unsafe extern "C" fn gre_parse_header(
     (*tpi).hdr_len = hdr_len as u16;
 
     // ERSPAN handling
-    if ((*greh).protocol == htons(ETH_P_ERSPAN) && hdr_len != 4) ||
-       (*greh).protocol == htons(ETH_P_ERSPAN2) {
-        if !pskb_may_pull(skb, (nhs + hdr_len + core::mem::size_of::<erspan_base_hdr>()) as usize) {
+    if ((*greh).protocol == htons(ETH_P_ERSPAN) && hdr_len != 4)
+        || (*greh).protocol == htons(ETH_P_ERSPAN2)
+    {
+        if !pskb_may_pull(
+            skb,
+            (nhs + hdr_len + core::mem::size_of::<erspan_base_hdr>()) as usize,
+        ) {
             return EINVAL;
         }
 
@@ -292,17 +291,40 @@ unsafe fn rcu_read_unlock() {}
 unsafe fn rcu_dereference<T>(ptr: *const AtomicPtr<T>) -> *const T {
     ptr::null()
 }
-unsafe fn pskb_may_pull(skb: *mut u8, len: usize) -> bool { true }
-unsafe fn skb_checksum_simple_validate(skb: *mut c_void) -> bool { true }
+unsafe fn pskb_may_pull(skb: *mut u8, len: usize) -> bool {
+    true
+}
+unsafe fn skb_checksum_simple_validate(skb: *mut c_void) -> bool {
+    true
+}
 unsafe fn skb_checksum_try_convert(skb: *mut c_void, proto: c_int, cb: unsafe extern "C" fn()) {}
 unsafe fn null_compute_pseudo() {}
-unsafe fn skb_header_pointer(skb: *mut c_void, offset: usize, size: usize, data: *mut c_void) -> *mut c_void { ptr::null_mut() }
-unsafe fn gre_flags_to_tnl_flags(flags: u16) -> u16 { flags }
-unsafe fn gre_calc_hlen(flags: u16) -> usize { 4 }
-unsafe fn get_session_id(ershdr: *const erspan_base_hdr) -> u32 { (*ershdr).session_id }
-unsafe fn cpu_to_be32(x: u32) -> u32 { x }
-unsafe fn htons(x: u16) -> u16 { x }
-unsafe fn inet_add_protocol(proto: *const net_protocol, num: c_int) -> c_int { 0 }
+unsafe fn skb_header_pointer(
+    skb: *mut c_void,
+    offset: usize,
+    size: usize,
+    data: *mut c_void,
+) -> *mut c_void {
+    ptr::null_mut()
+}
+unsafe fn gre_flags_to_tnl_flags(flags: u16) -> u16 {
+    flags
+}
+unsafe fn gre_calc_hlen(flags: u16) -> usize {
+    4
+}
+unsafe fn get_session_id(ershdr: *const erspan_base_hdr) -> u32 {
+    (*ershdr).session_id
+}
+unsafe fn cpu_to_be32(x: u32) -> u32 {
+    x
+}
+unsafe fn htons(x: u16) -> u16 {
+    x
+}
+unsafe fn inet_add_protocol(proto: *const net_protocol, num: c_int) -> c_int {
+    0
+}
 unsafe fn inet_del_protocol(proto: *const net_protocol, num: c_int) {}
 unsafe fn goto_drop(skb: *mut c_void) {
     // SAFETY: Kernel function to free skb
@@ -313,7 +335,7 @@ unsafe fn goto_drop(skb: *mut c_void) {
 #[cfg(feature = "kernel_module")]
 mod module {
     use super::*;
-    
+
     #[no_mangle]
     pub static gre_init: unsafe extern "C" fn() -> c_int = super::gre_init;
     #[no_mangle]

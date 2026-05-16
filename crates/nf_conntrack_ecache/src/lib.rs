@@ -141,7 +141,7 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
         while !n.is_null() {
             let h = n as *mut nf_conntrack_tuple_hash;
             let ct = nf_ct_tuplehash_to_ctrack(h);
-            
+
             if !nf_ct_is_confirmed(ct) {
                 n = (*n).cast::<hlist_nulls_node>().offset(1);
                 continue;
@@ -189,32 +189,33 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
 fn ecache_work(work: *mut delayed_work) {
     let cnet = work.offset(-mem::size_of::<nf_conntrack_net>() as isize) as *mut nf_conntrack_net;
     let ctnet = (*cnet).ct_net;
-    
+
     unsafe {
         local_bh_disable();
-        
+
         let mut delay = -1 as c_int;
         let mut cpu = 0;
-        
-        while cpu < 1 { // for_each_possible_cpu
+
+        while cpu < 1 {
+            // for_each_possible_cpu
             let pcpu = (*ctnet).offset(cpu as isize);
             let ret = ecache_work_evict_list(pcpu);
-            
+
             match ret {
                 retry_state::STATE_CONGESTED => {
                     delay = ECACHE_RETRY_WAIT as c_int;
                     break;
-                },
+                }
                 retry_state::STATE_RESTART => {
                     delay = 0;
-                },
+                }
                 _ => {}
             }
             cpu += 1;
         }
-        
+
         local_bh_enable();
-        
+
         (*ctnet).ecache_dwork_pending = delay > 0;
         if delay >= 0 {
             schedule_delayed_work(work, delay as u32);
@@ -228,41 +229,45 @@ pub unsafe extern "C" fn nf_conntrack_eventmask_report(
     eventmask: c_uint,
     ct: *mut nf_conn,
     portid: u32,
-    report: c_int
+    report: c_int,
 ) -> c_int {
     let mut ret = 0;
     let net = nf_ct_net(ct);
-    
+
     rcu_read_lock();
-    
+
     let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
     if notify.is_null() {
         rcu_read_unlock();
         return 0;
     }
-    
+
     let e = nf_ct_ecache_find(ct);
     if e.is_null() {
         rcu_read_unlock();
         return 0;
     }
-    
+
     if nf_ct_is_confirmed(ct) {
         let mut item = nf_ct_event {
             ct,
-            portid: if (*e).portid != 0 { (*e).portid } else { portid },
+            portid: if (*e).portid != 0 {
+                (*e).portid
+            } else {
+                portid
+            },
             report,
         };
         let missed = if (*e).portid != 0 { 0 } else { (*e).missed };
-        
+
         if !((eventmask | missed) & (*e).ctmask as c_uint) {
             rcu_read_unlock();
             return 0;
         }
-        
+
         let notify_fcn = (*notify).fcn;
         ret = (notify_fcn)(eventmask | missed, &mut item);
-        
+
         if ret < 0 || missed != 0 {
             spin_lock_bh(ct);
             if ret < 0 {
@@ -280,7 +285,7 @@ pub unsafe extern "C" fn nf_conntrack_eventmask_report(
             spin_unlock_bh(ct);
         }
     }
-    
+
     rcu_read_unlock();
     ret
 }
@@ -292,43 +297,47 @@ pub unsafe extern "C" fn nf_ct_deliver_cached_events(ct: *mut nf_conn) {
     let mut events = 0;
     let mut missed = 0;
     let mut ret = 0;
-    let mut item = nf_ct_event { ct, portid: 0, report: 0 };
-    
+    let mut item = nf_ct_event {
+        ct,
+        portid: 0,
+        report: 0,
+    };
+
     rcu_read_lock();
-    
+
     let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
     if notify.is_null() {
         rcu_read_unlock();
         return;
     }
-    
+
     if !nf_ct_is_confirmed(ct) || nf_ct_is_dying(ct) {
         rcu_read_unlock();
         return;
     }
-    
+
     let e = nf_ct_ecache_find(ct);
     if e.is_null() {
         rcu_read_unlock();
         return;
     }
-    
+
     events = xchg(&(*e).cache, 0);
     missed = (*e).missed;
-    
+
     if !((events | missed) & (*e).ctmask as c_uint) {
         rcu_read_unlock();
         return;
     }
-    
+
     let notify_fcn = (*notify).fcn;
     ret = (notify_fcn)(events | missed, &mut item);
-    
+
     if ret == 0 && missed == 0 {
         rcu_read_unlock();
         return;
     }
-    
+
     spin_lock_bh(ct);
     if ret < 0 {
         (*e).missed |= events as u16;
@@ -336,7 +345,7 @@ pub unsafe extern "C" fn nf_ct_deliver_cached_events(ct: *mut nf_conn) {
         (*e).missed &= !missed as u16;
     }
     spin_unlock_bh(ct);
-    
+
     rcu_read_unlock();
 }
 
@@ -344,16 +353,16 @@ pub unsafe extern "C" fn nf_ct_deliver_cached_events(ct: *mut nf_conn) {
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_register_notifier(
     net: *mut c_void,
-    new: *mut nf_ct_event_notifier
+    new: *mut nf_ct_event_notifier,
 ) -> c_int {
     mutex_lock(&NF_CT_ECACHE_MUTEX);
-    
+
     let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
     if !notify.is_null() {
         mutex_unlock(&NF_CT_ECACHE_MUTEX);
         return -EBUSY;
     }
-    
+
     rcu_assign_pointer((*net).ct.nf_conntrack_event_cb, new);
     mutex_unlock(&NF_CT_ECACHE_MUTEX);
     0
@@ -363,14 +372,14 @@ pub unsafe extern "C" fn nf_conntrack_register_notifier(
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_unregister_notifier(
     net: *mut c_void,
-    new: *mut nf_ct_event_notifier
+    new: *mut nf_ct_event_notifier,
 ) {
     mutex_lock(&NF_CT_ECACHE_MUTEX);
-    
+
     let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
     BUG_ON(notify != new);
     RCU_INIT_POINTER((*net).ct.nf_conntrack_event_cb, ptr::null_mut());
-    
+
     mutex_unlock(&NF_CT_ECACHE_MUTEX);
     synchronize_rcu();
 }

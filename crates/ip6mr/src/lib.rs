@@ -101,7 +101,9 @@ pub struct rhashtable_params {
     key_offset: usize,
     key_len: usize,
     nelem_hint: usize,
-    obj_cmpfn: Option<unsafe extern "C" fn(arg: *const rhashtable_compare_arg, ptr: *const c_void) -> c_int>,
+    obj_cmpfn: Option<
+        unsafe extern "C" fn(arg: *const rhashtable_compare_arg, ptr: *const c_void) -> c_int,
+    >,
     automatic_shrinking: bool,
 }
 
@@ -143,88 +145,86 @@ pub unsafe extern "C" fn ip6mr_hash_cmp(
 ) -> c_int {
     let cmparg = &*(arg as *const mfc6_cache_cmp_arg);
     let c = &*(ptr as *const mfc6_cache);
-    
-    if !ipv6_addr_equal(&c.mf6c_origin, &cmparg.mf6c_origin) ||
-       !ipv6_addr_equal(&c.mf6c_mcastgrp, &cmparg.mf6c_mcastgrp) {
+
+    if !ipv6_addr_equal(&c.mf6c_origin, &cmparg.mf6c_origin)
+        || !ipv6_addr_equal(&c.mf6c_mcastgrp, &cmparg.mf6c_mcastgrp)
+    {
         return 1;
     }
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_addr_equal(
-    a: *const in6_addr,
-    b: *const in6_addr,
-) -> bool {
+pub unsafe extern "C" fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool {
     let a = &*a;
     let b = &*b;
     a.s6_addr == b.s6_addr
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_new_table(
-    net: *mut net,
-    id: u32,
-) -> *mut mr_table {
+pub unsafe extern "C" fn ip6mr_new_table(net: *mut net, id: u32) -> *mut mr_table {
     let net = &*net;
-    
+
     // Check if table already exists
     let mrt = ip6mr_get_table(net, id);
     if !mrt.is_null() {
         return mrt;
     }
-    
+
     // Allocate new table
-    let mrt = mr_table_alloc(net, id, &ip6mr_mr_table_ops, Some(ipmr_expire_process), Some(ip6mr_new_table_set));
+    let mrt = mr_table_alloc(
+        net,
+        id,
+        &ip6mr_mr_table_ops,
+        Some(ipmr_expire_process),
+        Some(ip6mr_new_table_set),
+    );
     if mrt.is_null() {
         return ptr::null_mut();
     }
-    
+
     mrt
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_free_table(
-    mrt: *mut mr_table,
-) {
+pub unsafe extern "C" fn ip6mr_free_table(mrt: *mut mr_table) {
     if mrt.is_null() {
         return;
     }
-    
+
     del_timer_sync(&mut (*mrt).ipmr_expire_timer);
-    mroute_clean_tables(mrt, MRT6_FLUSH_MIFS | MRT6_FLUSH_MIFS_STATIC |
-                        MRT6_FLUSH_MFC | MRT6_FLUSH_MFC_STATIC);
+    mroute_clean_tables(
+        mrt,
+        MRT6_FLUSH_MIFS | MRT6_FLUSH_MIFS_STATIC | MRT6_FLUSH_MFC | MRT6_FLUSH_MFC_STATIC,
+    );
     rhltable_destroy(&mut (*mrt).mfc_hash);
     ptr::write_volatile(mrt, mem::zeroed());
     free(mrt as *mut c_void);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_get_table(
-    net: *mut net,
-    id: u32,
-) -> *mut mr_table {
+pub unsafe extern "C" fn ip6mr_get_table(net: *mut net, id: u32) -> *mut mr_table {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     {
         let mut mrt: *mut mr_table = ptr::null_mut();
         let mut pos = ptr::null_mut();
-        
+
         loop {
             pos = ip6mr_mr_table_iter(net, mrt);
             if pos.is_null() {
                 break;
             }
-            
+
             if (*pos).id == id {
                 return pos;
             }
-            
+
             mrt = pos;
         }
-        
+
         return ptr::null_mut();
     }
-    
+
     #[cfg(not(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES))]
     {
         return (*net).ipv6.mrt6;
@@ -232,10 +232,7 @@ pub unsafe extern "C" fn ip6mr_get_table(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_mr_table_iter(
-    net: *mut net,
-    mrt: *mut mr_table,
-) -> *mut mr_table {
+pub unsafe extern "C" fn ip6mr_mr_table_iter(net: *mut net, mrt: *mut mr_table) -> *mut mr_table {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     {
         if mrt.is_null() {
@@ -243,7 +240,7 @@ pub unsafe extern "C" fn ip6mr_mr_table_iter(
         }
         return (*mrt).list.next as *mut mr_table;
     }
-    
+
     #[cfg(not(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES))]
     {
         if mrt.is_null() {
@@ -254,12 +251,12 @@ pub unsafe extern "C" fn ip6mr_mr_table_iter(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_rule_default(
-    rule: *const fib_rule,
-) -> bool {
+pub unsafe extern "C" fn ip6mr_rule_default(rule: *const fib_rule) -> bool {
     let rule = &*rule;
-    fib_rule_matchall(rule) && rule.action == FR_ACT_TO_TBL && 
-    rule.table == RT6_TABLE_DFLT && !rule.l3mdev
+    fib_rule_matchall(rule)
+        && rule.action == FR_ACT_TO_TBL
+        && rule.table == RT6_TABLE_DFLT
+        && !rule.l3mdev
 }
 
 // Helper functions (simplified for example)
@@ -276,52 +273,41 @@ pub unsafe extern "C" fn mr_table_alloc(
     if mrt.is_null() {
         return ptr::null_mut();
     }
-    
+
     // Initialize fields
     (*mrt).id = id;
     // ... initialize other fields
-    
+
     if let Some(set) = new_table_set {
         set(mrt, net);
     }
-    
+
     mrt
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn del_timer_sync(
-    timer: *mut timer_list,
-) {
+pub unsafe extern "C" fn del_timer_sync(timer: *mut timer_list) {
     // Placeholder for actual timer deletion
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mroute_clean_tables(
-    mrt: *mut mr_table,
-    flags: c_int,
-) {
+pub unsafe extern "C" fn mroute_clean_tables(mrt: *mut mr_table, flags: c_int) {
     // Placeholder for actual table cleaning
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rhltable_destroy(
-    table: *mut rhltable,
-) {
+pub unsafe extern "C" fn rhltable_destroy(table: *mut rhltable) {
     // Placeholder for hash table destruction
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn alloc(
-    size: usize,
-) -> *mut c_void {
+pub unsafe extern "C" fn alloc(size: usize) -> *mut c_void {
     // Placeholder for kernel memory allocation
     libc::malloc(size)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free(
-    ptr: *mut c_void,
-) {
+pub unsafe extern "C" fn free(ptr: *mut c_void) {
     // Placeholder for kernel memory free
     libc::free(ptr);
 }
@@ -339,17 +325,12 @@ const _: () = {};
 
 // SAFETY: These functions are called from the kernel and must be marked unsafe
 #[no_mangle]
-pub unsafe extern "C" fn ipmr_expire_process(
-    t: *mut timer_list,
-) {
+pub unsafe extern "C" fn ipmr_expire_process(t: *mut timer_list) {
     // Implementation would handle timer expiration
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_new_table_set(
-    mrt: *mut mr_table,
-    net: *mut net,
-) {
+pub unsafe extern "C" fn ip6mr_new_table_set(mrt: *mut mr_table, net: *mut net) {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     {
         list_add_tail_rcu(&(*mrt).list, &(*net).ipv6.mr6_tables);
@@ -357,10 +338,7 @@ pub unsafe extern "C" fn ip6mr_new_table_set(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn list_add_tail_rcu(
-    new: *mut list_head,
-    head: *mut list_head,
-) {
+pub unsafe extern "C" fn list_add_tail_rcu(new: *mut list_head, head: *mut list_head) {
     // Placeholder for list operations
 }
 

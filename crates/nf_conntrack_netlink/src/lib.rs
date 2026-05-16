@@ -5,7 +5,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -52,7 +52,8 @@ pub struct nf_conntrack_tuple_src_u3 {
 
 #[repr(C)]
 pub struct nf_conntrack_l4proto {
-    tuple_to_nlattr: Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
+    tuple_to_nlattr:
+        Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
 }
 
 #[repr(C)]
@@ -154,8 +155,9 @@ pub unsafe extern "C" fn ipv4_tuple_to_nlattr(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    if nla_put_in_addr(skb, CTA_IP_V4_SRC, (*tuple).src.u3.ip) != 0 ||
-       nla_put_in_addr(skb, CTA_IP_V4_DST, (*tuple).dst.u3.ip) != 0 {
+    if nla_put_in_addr(skb, CTA_IP_V4_SRC, (*tuple).src.u3.ip) != 0
+        || nla_put_in_addr(skb, CTA_IP_V4_DST, (*tuple).dst.u3.ip) != 0
+    {
         return -EMSGSIZE;
     }
     0
@@ -174,8 +176,9 @@ pub unsafe extern "C" fn ipv6_tuple_to_nlattr(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    if nla_put_in6_addr(skb, CTA_IP_V6_SRC, &(*tuple).src.u3.in6) != 0 ||
-       nla_put_in6_addr(skb, CTA_IP_V6_DST, &(*tuple).dst.u3.in6) != 0 {
+    if nla_put_in6_addr(skb, CTA_IP_V6_SRC, &(*tuple).src.u3.in6) != 0
+        || nla_put_in6_addr(skb, CTA_IP_V6_DST, &(*tuple).dst.u3.in6) != 0
+    {
         return -EMSGSIZE;
     }
     0
@@ -230,7 +233,7 @@ pub unsafe extern "C" fn ctnetlink_dump_tuples(
     let mut ret: c_int = 0;
     rcu_read_lock();
     ret = ctnetlink_dump_tuples_ip(skb, tuple);
-    
+
     if ret >= 0 {
         let l4proto = nf_ct_l4proto_find((*tuple).dst.protonum);
         if !l4proto.is_null() {
@@ -274,10 +277,7 @@ pub unsafe extern "C" fn ctnetlink_dump_zone_id(
 /// # Returns
 /// 0 on success, -EMSGSIZE if message too large
 #[no_mangle]
-pub unsafe extern "C" fn ctnetlink_dump_status(
-    skb: *mut sk_buff,
-    ct: *const nf_conn,
-) -> c_int {
+pub unsafe extern "C" fn ctnetlink_dump_status(skb: *mut sk_buff, ct: *const nf_conn) -> c_int {
     if nla_put_be32(skb, CTA_STATUS, htonl((*ct).status)) != 0 {
         return -EMSGSIZE;
     }
@@ -342,10 +342,10 @@ fn htons(x: u16) -> u16 {
 
 #[inline]
 fn htonl(x: u32) -> u32 {
-    ((x & 0x000000ff) << 24) |
-    ((x & 0x0000ff00) << 8)  |
-    ((x & 0x00ff0000) >> 8)  |
-    ((x & 0xff000000) >> 24)
+    ((x & 0x000000ff) << 24)
+        | ((x & 0x0000ff00) << 8)
+        | ((x & 0x00ff0000) >> 8)
+        | ((x & 0xff000000) >> 24)
 }
 
 // Tests (conditional compilation)

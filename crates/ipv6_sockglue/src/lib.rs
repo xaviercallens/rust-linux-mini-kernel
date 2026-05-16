@@ -10,8 +10,8 @@
 
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::ptr;
 use core::mem;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -45,7 +45,7 @@ struct ipv6_txoptions {
 #[repr(C)]
 struct group_source_req {
     gsr_interface: u32,
-    gsr_group: [u8; 16], // sockaddr_in6
+    gsr_group: [u8; 16],  // sockaddr_in6
     gsr_source: [u8; 16], // sockaddr_in6
 }
 
@@ -54,7 +54,7 @@ struct group_filter {
     gf_interface: u32,
     gf_fmode: u32,
     gf_numsrc: u32,
-    gf_group: [u8; 16], // sockaddr_in6
+    gf_group: [u8; 16],  // sockaddr_in6
     gf_slist: *const u8, // sockaddr_in6 array
 }
 
@@ -76,11 +76,21 @@ extern "C" {
     fn sock_hold(sk: *mut sock);
     fn sock_put(sk: *mut sock);
     fn copy_from_sockptr(to: *mut c_void, from: *const c_void, len: size_t) -> c_int;
-    fn ip6_mc_source(add: c_int, omode: c_int, sk: *mut sock, greqs: *mut group_source_req) -> c_int;
+    fn ip6_mc_source(
+        add: c_int,
+        omode: c_int,
+        sk: *mut sock,
+        greqs: *mut group_source_req,
+    ) -> c_int;
     fn ip6_mc_msfilter(sk: *mut sock, gsf: *mut group_filter, slist: *const c_void) -> c_int;
     fn ipv6_sock_mc_join(sk: *mut sock, ifindex: u32, addr: *const u8) -> c_int;
     fn ipv6_sock_mc_drop(sk: *mut sock, ifindex: u32, addr: *const u8) -> c_int;
-    fn ip6_mroute_setsockopt(sk: *mut sock, optname: c_int, optval: *const c_void, optlen: c_int) -> c_int;
+    fn ip6_mroute_setsockopt(
+        sk: *mut sock,
+        optname: c_int,
+        optval: *const c_void,
+        optlen: c_int,
+    ) -> c_int;
     fn rtnl_lock();
     fn rtnl_unlock();
 }
@@ -101,16 +111,28 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut sock, sel: c_int) -> c_int {
     let sk_type = unsafe { (*sk).sk_type }; // Placeholder - actual field depends on sock struct
     let inet_num = unsafe { (*sk).inet_num }; // Placeholder - actual field depends on sock struct
 
-    if sk_type != 1 /* SOCK_RAW */ || inet_num != 255 /* IPPROTO_RAW */ {
+    if sk_type != 1 /* SOCK_RAW */ || inet_num != 255
+    /* IPPROTO_RAW */
+    {
         return ENOPROTOOPT;
     }
 
     let new_ra: *mut ip6_ra_chain = if sel >= 0 {
-        let ptr = kmalloc(mem::size_of::<ip6_ra_chain>() as size_t, 0x20 /* GFP_KERNEL */);
+        let ptr = kmalloc(
+            mem::size_of::<ip6_ra_chain>() as size_t,
+            0x20, /* GFP_KERNEL */
+        );
         if ptr.is_null() {
             return ENOMEM;
         }
-        ptr::write(ptr as *mut ip6_ra_chain, ip6_ra_chain { sk, sel, next: ptr::null_mut() });
+        ptr::write(
+            ptr as *mut ip6_ra_chain,
+            ip6_ra_chain {
+                sk,
+                sel,
+                next: ptr::null_mut(),
+            },
+        );
         ptr as *mut ip6_ra_chain
     } else {
         ptr::null_mut()
@@ -155,7 +177,10 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut sock, sel: c_int) -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_update_options(sk: *mut sock, opt: *mut ipv6_txoptions) -> *mut ipv6_txoptions {
+pub unsafe extern "C" fn ipv6_update_options(
+    sk: *mut sock,
+    opt: *mut ipv6_txoptions,
+) -> *mut ipv6_txoptions {
     if sk.is_null() || opt.is_null() {
         return ptr::null_mut();
     }
@@ -204,7 +229,12 @@ pub unsafe extern "C" fn do_ipv6_setsockopt(
 
     let mut val: c_int = 0;
     if !optval.is_null() && optlen >= mem::size_of::<c_int>() as c_int {
-        if copy_from_sockptr(&mut val as *mut c_int as *mut c_void, optval, mem::size_of::<c_int>()) != 0 {
+        if copy_from_sockptr(
+            &mut val as *mut c_int as *mut c_void,
+            optval,
+            mem::size_of::<c_int>(),
+        ) != 0
+        {
             return EFAULT;
         }
     }
@@ -248,7 +278,11 @@ pub unsafe extern "C" fn do_ipv6_setsockopt(
 }
 
 // Helper functions
-unsafe fn copy_group_source_from_sockptr(greqs: *mut group_source_req, optval: *const c_void, optlen: c_int) -> c_int {
+unsafe fn copy_group_source_from_sockptr(
+    greqs: *mut group_source_req,
+    optval: *const c_void,
+    optlen: c_int,
+) -> c_int {
     if optval.is_null() || greqs.is_null() {
         return EINVAL;
     }
@@ -257,7 +291,12 @@ unsafe fn copy_group_source_from_sockptr(greqs: *mut group_source_req, optval: *
         return EINVAL;
     }
 
-    if copy_from_sockptr(greqs as *mut c_void, optval, mem::size_of::<group_source_req>() as size_t) != 0 {
+    if copy_from_sockptr(
+        greqs as *mut c_void,
+        optval,
+        mem::size_of::<group_source_req>() as size_t,
+    ) != 0
+    {
         return EFAULT;
     }
 

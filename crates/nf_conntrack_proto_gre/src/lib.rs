@@ -7,11 +7,11 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::mem;
+use core::ptr;
 use core::slice;
 use libc::size_t;
 use libc::HZ;
@@ -104,7 +104,12 @@ extern "C" {
     fn nf_ct_timeout_lookup(ct: *const nf_conn) -> *const c_uint;
     fn nf_ct_refresh_acct(ct: *mut nf_conn, ctinfo: c_int, skb: *mut c_void, timeout: c_uint);
     fn nf_conntrack_event_cache(event: c_int, ct: *mut nf_conn);
-    fn skb_header_pointer(skb: *const c_void, dataoff: c_int, size: size_t, ptr: *mut c_void) -> *mut c_void;
+    fn skb_header_pointer(
+        skb: *const c_void,
+        dataoff: c_int,
+        size: size_t,
+        ptr: *mut c_void,
+    ) -> *mut c_void;
     fn nf_ct_dump_tuple(tuple: *const nf_conntrack_tuple);
 }
 
@@ -169,11 +174,11 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
 
     let net = nf_ct_net(ct);
     let net_gre = gre_pernet(net);
-    
+
     let ct_pptp_info = nfct_help_data(ct);
     let dir_idx = dir as usize;
     let kmp = &mut (*ct_pptp_info).keymap[dir_idx];
-    
+
     if !(*kmp).is_null() {
         // Check for retransmission
         let mut km = (*net_gre).keymap_list.next;
@@ -190,14 +195,14 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
     if km.is_null() {
         return ENOMEM;
     }
-    
+
     ptr::copy_nonoverlapping(t, km as *mut _, 1);
     *kmp = km;
 
     spin_lock_bh(&mut keymap_lock);
     list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
     spin_unlock_bh(&mut keymap_lock);
-    
+
     0
 }
 
@@ -206,10 +211,10 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
     if ct.is_null() {
         return;
     }
-    
+
     let ct_pptp_info = nfct_help_data(ct);
     spin_lock_bh(&mut keymap_lock);
-    
+
     for dir in 0..IP_CT_DIR_MAX {
         let km = (*ct_pptp_info).keymap[dir];
         if !km.is_null() {
@@ -218,7 +223,7 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
             (*ct_pptp_info).keymap[dir] = ptr::null_mut();
         }
     }
-    
+
     spin_unlock_bh(&mut keymap_lock);
 }
 
@@ -232,31 +237,37 @@ pub unsafe extern "C" fn gre_pkt_to_tuple(
     if skb.is_null() || tuple.is_null() {
         return EINVAL;
     }
-    
+
     let mut _grehdr: [u8; mem::size_of::<gre_base_hdr>()] = [0; mem::size_of::<gre_base_hdr>()];
-    let grehdr = skb_header_pointer(skb, dataoff, mem::size_of::<gre_base_hdr>() as size_t, _grehdr.as_mut_ptr() as *mut c_void) as *mut gre_base_hdr;
-    
+    let grehdr = skb_header_pointer(
+        skb,
+        dataoff,
+        mem::size_of::<gre_base_hdr>() as size_t,
+        _grehdr.as_mut_ptr() as *mut c_void,
+    ) as *mut gre_base_hdr;
+
     if grehdr.is_null() || (*grehdr).flags & GRE_VERSION != GRE_VERSION_1 {
         (*tuple).src.u.all = 0;
         (*tuple).dst.u.all = 0;
         return 1;
     }
-    
+
     let mut _pgrehdr: [u8; 8] = [0; 8];
-    let pgrehdr = skb_header_pointer(skb, dataoff, 8, _pgrehdr.as_mut_ptr() as *mut c_void) as *mut pptp_gre_header;
-    
+    let pgrehdr = skb_header_pointer(skb, dataoff, 8, _pgrehdr.as_mut_ptr() as *mut c_void)
+        as *mut pptp_gre_header;
+
     if pgrehdr.is_null() {
         return 1;
     }
-    
+
     if (*grehdr).protocol != GRE_PROTO_PPP {
         return 0;
     }
-    
+
     (*tuple).dst.u.gre.key = (*pgrehdr).call_id;
     let srckey = gre_keymap_lookup(net, tuple);
     (*tuple).src.u.gre.key = srckey;
-    
+
     1
 }
 
@@ -271,7 +282,7 @@ pub unsafe extern "C" fn nf_conntrack_gre_packet(
     if ct.is_null() {
         return EINVAL;
     }
-    
+
     if !(*ct).status & IPS_SEEN_REPLY {
         let timeouts = nf_ct_timeout_lookup(ct);
         if timeouts.is_null() {
@@ -284,7 +295,7 @@ pub unsafe extern "C" fn nf_conntrack_gre_packet(
             (*ct).proto.gre.stream_timeout = *timeouts.offset(GRE_CT_REPLIED as isize);
         }
     }
-    
+
     if (*ct).status & IPS_SEEN_REPLY != 0 {
         nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).proto.gre.stream_timeout);
         if !(*ct).status & IPS_ASSURED_BIT {
@@ -293,7 +304,7 @@ pub unsafe extern "C" fn nf_conntrack_gre_packet(
     } else {
         nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).proto.gre.timeout);
     }
-    
+
     0 // NF_ACCEPT
 }
 
@@ -306,7 +317,7 @@ unsafe fn gre_pernet(net: *mut c_void) -> *mut nf_gre_net {
 unsafe fn gre_keymap_lookup(net: *mut c_void, t: *mut nf_conntrack_tuple) -> u16 {
     let net_gre = gre_pernet(net);
     let mut key = 0u16;
-    
+
     let mut km = (*net_gre).keymap_list.next;
     while !km.is_null() && km != &(*net_gre).keymap_list {
         if gre_key_cmpfn(km as *const _, t) {
@@ -315,7 +326,7 @@ unsafe fn gre_keymap_lookup(net: *mut c_void, t: *mut nf_conntrack_tuple) -> u16
         }
         km = (*km).list.next;
     }
-    
+
     key
 }
 
@@ -323,23 +334,23 @@ unsafe fn gre_key_cmpfn(km: *const nf_ct_gre_keymap, t: *const nf_conntrack_tupl
     if (*km).tuple.src.l3num != (*t).src.l3num {
         return 0;
     }
-    
+
     if !ptr::eq(&(*km).tuple.src.u3, &(*t).src.u3) {
         return 0;
     }
-    
+
     if !ptr::eq(&(*km).tuple.dst.u3, &(*t).dst.u3) {
         return 0;
     }
-    
+
     if (*km).tuple.dst.protonum != (*t).dst.protonum {
         return 0;
     }
-    
+
     if (*km).tuple.dst.u.all != (*t).dst.u.all {
         return 0;
     }
-    
+
     1
 }
 

@@ -1,49 +1,40 @@
 # Rust Linux Mini Kernel
 
-A collection of Linux kernel networking subsystems translated to Rust with FFI compatibility.
+Automated C-to-Rust translation of Linux kernel subsystems with full FFI compatibility.
 
-## Overview
+## 🚀 Project Status
 
-This project contains Rust translations of key Linux kernel networking components, maintaining FFI compatibility for integration with the Linux kernel.
+**Active Translation in Progress:** Orchestrator V5 running since 2026-05-16 22:11 CEST, translating 4,719 Linux kernel C source files to Rust FFI modules.
 
-### Generated Modules: 207+
+### Current Modules: 121 (Phase 4)
 
-**Phase 2: Core Networking** (51 modules)
-- Core networking infrastructure
-- Socket buffers, device management
-- Network protocols base
+**IPv4 Core** (19 modules)
+- ARP protocol, ICMP, IGMP  
+- Routing (FIB trie, rules, semantics)
+- IPsec (ESP, tunnel, protocol)
+- GRE, FOU tunneling
 
-**Phase 3: IPv4 Stack** (78 modules)
-- Complete IPv4 implementation
-- TCP, UDP, ICMP
-- Routing, FIB, multicast
-
-**Phase 4.1: IPv4 Retry** (19 modules)  
-Generated: 2026-05-15  
-Success Rate: 95%
-- ARP (arp.c - 1,457 LOC)
-- Connection tracking (inet_connection_sock.c - 1,117 LOC)
-- eBPF TCP congestion control
-- IPsec ESP offload
-- GRE offload
-- Routing rules
-
-**Phase 4.2: IPv6 Stack** (59 modules)  
-Generated: 2026-05-15  
-Success Rate: 89.4%
-- Complete IPv6 protocol implementation
-- TCP/UDP over IPv6
-- ICMPv6, neighbor discovery
-- IPv6 routing and FIB
-- IPsec/xfrm for IPv6
-- Tunneling (sit, ip6_tunnel, ip6_gre, VTI)
+**IPv6 Stack** (59 modules)
+- TCP/UDP over IPv6, ICMPv6
+- Routing & FIB, anycast, multicast
+- Tunneling (sit, ip6_tunnel, GRE, VTI)
+- IPsec/xfrm transforms
 - Segment Routing (SRv6)
-- Multicast and anycast
 
-**Phase 4.3: Netfilter** (In Progress)
-- Firewall and packet filtering
-- NAT (Network Address Translation)
-- Connection tracking
+**Netfilter** (45 modules)
+- Connection tracking & helpers
+- NAT (core, masquerade, protocol-specific)
+- Protocol trackers (ftp, h323, irc, pptp, sip, etc.)
+- Flow table offload
+
+### Scenario B Translation (In Progress)
+
+**Status:** Running - 105 phases, 4,719 files  
+**Expected Output:** 4,100-4,350 Rust modules (87-92% success)  
+**Subsystems:** kernel/, mm/, net/, drivers/net/ethernet/, drivers/block/  
+**Completion:** Expected 2026-05-19 18:00 CEST
+
+See [SCENARIO_B_EXECUTION_LOG.md](SCENARIO_B_EXECUTION_LOG.md) for live progress.
 
 ## Structure
 
@@ -78,29 +69,54 @@ Each module is a separate Rust crate with:
 - **Performance**: Optimized for production use
 - **Comprehensive**: 200+ networking modules covering IPv4, IPv6, IPsec, tunneling, routing
 
-## Generation Statistics
+## 📊 Translation Performance
 
-- **Phase 4.1**: 23 minutes, 95% success rate
-- **Phase 4.2**: 47 minutes, 89.4% success rate
-- **Combined**: 78 modules in 70 minutes
-- **Throughput**: 67 files/hour average
-- **Quality**: 40% artifact reduction via post-processing
+### Phase 4 Results
 
-## License
+| Metric | IPv4 | IPv6 | Netfilter | Combined |
+|--------|------|------|-----------|----------|
+| Files | 19/20 | 59/66 | 45/47 | 123/133 |
+| Success | 95.0% | 89.4% | 95.7% | 92.5% |
+| Duration | 23 min | 47 min | 31 min | 101 min |
+| Throughput | 48.9/hr | 76.0/hr | 87.1/hr | 73.0/hr |
+| Cost | $5-8 | $15-17 | $12-15 | $32-40 |
 
-GPL-2.0 (matching Linux kernel license)
+### Scenario B Projections
 
-## Contributing
+- **Files:** 4,719 → **Modules:** 4,100-4,350
+- **Success Rate:** 87-92%
+- **Duration:** 67 hours
+- **Cost:** $1,778 ($0.41-0.43 per module)
 
-This is a research project exploring automated C-to-Rust translation for the Linux kernel.
+## 🛠️ Development
 
-## Credits
+```bash
+# Build all modules
+cargo build --workspace --release
 
-Generated using the Socrate pipeline with Claude Sonnet 4.5 and multi-endpoint parallelization.
+# Run checks
+cargo check --workspace
+cargo clippy --workspace
+cargo test --workspace
+
+# Generate documentation
+cargo doc --workspace --no-deps
+```
+
+## 📜 License
+
+GPL-2.0 (Linux kernel license)
+
+## 🙏 Credits
+
+- Linux kernel contributors
+- Anthropic Claude (AI translation)
+- Azure Batch (parallel execution)
+- Socrate AI platform
 
 ---
 
-**Version**: 0.3.0  
-**Last Updated**: 2026-05-15  
-**Total Modules**: 207+  
-**Status**: Production-ready Rust modules with FFI compatibility
+**Version**: 0.4.0  
+**Last Updated**: 2026-05-16  
+**Modules**: 121 (Phase 4) + 4,100+ (Scenario B in progress)  
+**Status**: Active large-scale translation

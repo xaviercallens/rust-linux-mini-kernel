@@ -238,7 +238,7 @@ pub unsafe extern "C" fn call_fib_entry_notifiers(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_get_index() {
         let mut kv = key_vector {
@@ -251,7 +251,7 @@ mod tests {
         let index = unsafe { get_index(0x87654321, &mut kv) };
         assert_eq!(index, 0x87654321 ^ 0x12345678 >> 4);
     }
-    
+
     #[test]
     fn test_get_cindex() {
         let mut kv = key_vector {

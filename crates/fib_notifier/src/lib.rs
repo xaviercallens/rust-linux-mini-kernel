@@ -42,7 +42,9 @@ pub struct NetIPv4 {
 pub struct FIBNotifierOps {
     family: c_int,
     fib_seq_read: Option<unsafe extern "C" fn(net: *mut Net) -> c_uint>,
-    fib_dump: Option<unsafe extern "C" fn(net: *mut Net, nb: *mut NotifierBlock, extack: *mut c_void) -> c_int>,
+    fib_dump: Option<
+        unsafe extern "C" fn(net: *mut Net, nb: *mut NotifierBlock, extack: *mut c_void) -> c_int,
+    >,
     owner: *mut c_void,
 }
 
@@ -53,7 +55,11 @@ pub struct NetlinkExtAck {
 
 // External function declarations
 extern "C" {
-    fn call_fib_notifier(nb: *mut NotifierBlock, event_type: c_int, info: *mut FIBNotifierInfo) -> c_int;
+    fn call_fib_notifier(
+        nb: *mut NotifierBlock,
+        event_type: c_int,
+        info: *mut FIBNotifierInfo,
+    ) -> c_int;
     fn call_fib_notifiers(net: *mut Net, event_type: c_int, info: *mut FIBNotifierInfo) -> c_int;
     fn fib4_rules_seq_read(net: *mut Net) -> c_uint;
     fn fib4_rules_dump(net: *mut Net, nb: *mut NotifierBlock, extack: *mut c_void) -> c_int;
@@ -117,12 +123,12 @@ pub unsafe extern "C" fn fib4_dump(
 #[no_mangle]
 pub unsafe extern "C" fn fib4_notifier_init(net: *mut Net) -> c_int {
     (*(*net).ipv4).fib_seq = 0;
-    
+
     let ops = fib_notifier_ops_register(&FIB4_NOTIFIER_OPS_TEMPLATE as *const FIBNotifierOps, net);
     if ops.is_null() {
         return PTR_ERR(ops);
     }
-    
+
     (*(*net).ipv4).notifier_ops = ops;
     0
 }

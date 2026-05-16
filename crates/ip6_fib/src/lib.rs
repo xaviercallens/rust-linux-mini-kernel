@@ -161,7 +161,7 @@ pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_t
     if !table.is_null() {
         (*table).tb6_id = id;
         (*table).tb6_root.fn_flags = 0x1 | 0x2 | 0x4; // RTN_ROOT | RTN_TL_ROOT | RTN_RTINFO
-        // inet_peer_base_init(&table->tb6_peers);
+                                                      // inet_peer_base_init(&table->tb6_peers);
     }
     table
 }
@@ -174,11 +174,11 @@ pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_t
 #[no_mangle]
 pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_table {
     let mut tb = ptr::null_mut::<fib6_table>();
-    
+
     if id == 0 {
         id = 0x100; // RT6_TABLE_MAIN
     }
-    
+
     tb = fib6_get_table(net, id);
     if tb.is_null() {
         tb = fib6_alloc_table(net, id);
@@ -199,14 +199,14 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
     let mut tb: *mut fib6_table = ptr::null_mut();
     let mut head: *mut hlist_head = ptr::null_mut();
     let h: usize;
-    
+
     if id == 0 {
         id = 0x100; // RT6_TABLE_MAIN
     }
-    
+
     h = (id & (FIB6_TABLE_HASHSZ - 1)) as usize;
     head = &mut (*net).ipv6.fib_table_hash[h];
-    
+
     // hlist_for_each_entry_rcu(tb, head, tb6_hlist)
     tb = ptr::null_mut();
     tb
@@ -221,13 +221,13 @@ pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
     let f6i = ptr::null_mut::<fib6_info>();
     if !f6i.is_null() {
         // WARN_ON(f6i->fib6_node);
-        
+
         if !(*f6i).nh.is_null() {
             // nexthop_put((*f6i).nh);
         } else {
             // fib6_nh_release((*f6i).fib6_nh);
         }
-        
+
         // ip_fib_metrics_put((*f6i).fib6_metrics);
         // kfree(f6i);
     }
@@ -242,12 +242,12 @@ pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
 pub unsafe extern "C" fn fib6_info_alloc(gfp_flags: c_int, with_fib6_nh: bool) -> *mut fib6_info {
     let sz: size_t;
     let f6i: *mut fib6_info;
-    
+
     sz = core::mem::size_of::<fib6_info>() as size_t;
     if with_fib6_nh {
         sz += core::mem::size_of::<fib6_nh>() as size_t;
     }
-    
+
     f6i = ptr::null_mut();
     if !f6i.is_null() {
         // INIT_LIST_HEAD(&f6i->fib6_siblings);
@@ -264,7 +264,7 @@ pub unsafe extern "C" fn fib6_info_alloc(gfp_flags: c_int, with_fib6_nh: bool) -
 #[no_mangle]
 pub unsafe extern "C" fn fib6_update_sernum(net: *mut net, f6i: *mut fib6_info) {
     let fn_ptr: *mut fib6_node;
-    
+
     if !f6i.is_null() {
         fn_ptr = (*f6i).fib6_node;
         if !fn_ptr.is_null() {
@@ -281,14 +281,17 @@ pub unsafe extern "C" fn fib6_update_sernum(net: *mut net, f6i: *mut fib6_info) 
 pub unsafe extern "C" fn fib6_new_sernum(net: *mut net) -> c_int {
     let mut old: c_int = 0;
     let mut new: c_int = 0;
-    
+
     loop {
         old = (*net).ipv6.fib6_sernum.load(Ordering::Relaxed);
         new = if old < INT_MAX { old + 1 } else { 1 };
-        
-        if (*net).ipv6.fib6_sernum.compare_exchange(
-            old, new, Ordering::Relaxed, Ordering::Relaxed
-        ).is_ok() {
+
+        if (*net)
+            .ipv6
+            .fib6_sernum
+            .compare_exchange(old, new, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
             break;
         }
     }

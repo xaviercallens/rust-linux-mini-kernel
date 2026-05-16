@@ -4,13 +4,13 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
-use core::ffi::c_void;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_ulong;
+use core::ffi::c_void;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -67,8 +67,12 @@ extern "C" {
     fn ipv6_local_rxpmtu(sk: *mut sock, fl: *mut flowi6, mtu: c_uint);
     fn ipv6_local_error(sk: *mut sock, code: c_int, fl: *mut flowi6, mtu: c_uint);
     fn xfrm_output(sk: *mut sock, skb: *mut sk_buff) -> c_int;
-    fn ip6_fragment(net: *mut net, sk: *mut sock, skb: *mut sk_buff, 
-                    okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int) -> c_int;
+    fn ip6_fragment(
+        net: *mut net,
+        sk: *mut sock,
+        skb: *mut sk_buff,
+        okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int,
+    ) -> c_int;
     fn dst_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int;
     fn xfrm_local_error(skb: *mut sk_buff, mtu: c_uint) -> c_int;
     fn kfree_skb(skb: *mut sk_buff);
@@ -80,10 +84,17 @@ extern "C" {
     fn inner_ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
     fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
     fn xfrm6_local_dontfrag(sk: *mut sock) -> c_int;
-    fn NF_HOOK_COND(proto: c_int, hook: c_int, net: *mut net, sk: *mut sock, 
-                    skb: *mut sk_buff, indev: *mut c_void, outdev: *mut c_void, 
-                    okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int, 
-                    cond: c_int) -> c_int;
+    fn NF_HOOK_COND(
+        proto: c_int,
+        hook: c_int,
+        net: *mut net,
+        sk: *mut sock,
+        skb: *mut sk_buff,
+        indev: *mut c_void,
+        outdev: *mut c_void,
+        okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int,
+        cond: c_int,
+    ) -> c_int;
 }
 
 // Function implementations
@@ -118,7 +129,7 @@ pub unsafe extern "C" fn xfrm6_local_rxpmtu(skb: *mut sk_buff, mtu: c_uint) {
         daddr: (*ipv6_hdr(skb)).daddr,
         fl6_dport: 0, // Not used in this context
     };
-    
+
     ipv6_local_rxpmtu(sk, &mut fl6);
 }
 
@@ -135,13 +146,13 @@ pub unsafe extern "C" fn xfrm6_local_error(skb: *mut sk_buff, mtu: c_uint) {
     } else {
         ipv6_hdr(skb)
     };
-    
+
     let fl6 = flowi6 {
         fl6_dport: (*inet_sk(sk)).inet_dport,
         daddr: (*hdr).daddr,
         flowi6_oif: 0, // Not used in this context
     };
-    
+
     ipv6_local_error(sk, EMSGSIZE, &mut fl6, mtu);
 }
 
@@ -154,7 +165,7 @@ fn __xfrm6_output_finish(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_i
 fn __xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int {
     let dst = unsafe { skb_dst(skb) };
     let x = unsafe { (*dst).xfrm };
-    
+
     // CONFIG_NETFILTER handling
     #[cfg(CONFIG_NETFILTER)]
     {
@@ -165,22 +176,20 @@ fn __xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int {
             }
         }
     }
-    
+
     if unsafe { (*x).props.mode } != XFRM_MODE_TUNNEL {
         return unsafe { xfrm_output(sk, skb) };
     }
-    
+
     let protocol = unsafe { (*skb).protocol };
     let mtu = if protocol == htons(ETH_P_IPV6) as c_int {
         unsafe { ip6_skb_dst_mtu(skb) }
     } else {
         unsafe { dst_mtu(dst) }
     };
-    
-    let toobig = unsafe {
-        (*skb).len > mtu && skb_is_gso(skb) == 0
-    };
-    
+
+    let toobig = unsafe { (*skb).len > mtu && skb_is_gso(skb) == 0 };
+
     if toobig && unsafe { xfrm6_local_dontfrag((*skb).sk) } != 0 {
         unsafe {
             xfrm6_local_rxpmtu(skb, mtu);
@@ -194,23 +203,17 @@ fn __xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int {
             return -EMSGSIZE;
         }
     }
-    
+
     if toobig || unsafe { dst_allfrag(dst) } != 0 {
-        return unsafe {
-            ip6_fragment(net, sk, skb, __xfrm6_output_finish)
-        };
+        return unsafe { ip6_fragment(net, sk, skb, __xfrm6_output_finish) };
     }
-    
+
     unsafe { xfrm_output(sk, skb) }
 }
 
 /// Main xfrm6 output function with netfilter hook
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_output(
-    net: *mut net,
-    sk: *mut sock,
-    skb: *mut sk_buff,
-) -> c_int {
+pub unsafe extern "C" fn xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int {
     NF_HOOK_COND(
         NFPROTO_IPV6,
         NF_INET_POST_ROUTING,
@@ -220,7 +223,7 @@ pub unsafe extern "C" fn xfrm6_output(
         (*skb).dev as *mut c_void,
         (*skb_dst(skb)).dev as *mut c_void,
         __xfrm6_output,
-        !((*IP6CB(skb)).flags & IP6SKB_REROUTED)
+        !((*IP6CB(skb)).flags & IP6SKB_REROUTED),
     )
 }
 

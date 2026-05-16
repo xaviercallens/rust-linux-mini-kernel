@@ -141,11 +141,7 @@ pub unsafe extern "C" fn dummy_ip6_datagram_recv_ctl(
 /// # Safety
 /// This function is a compatibility stub and should not be called directly.
 #[no_mangle]
-pub unsafe extern "C" fn dummy_icmpv6_err_convert(
-    type_: u8,
-    code: u8,
-    err: *mut c_int,
-) -> c_int {
+pub unsafe extern "C" fn dummy_icmpv6_err_convert(type_: u8, code: u8, err: *mut c_int) -> c_int {
     -EAFNOSUPPORT
 }
 
@@ -186,11 +182,7 @@ pub unsafe extern "C" fn dummy_ipv6_chk_addr(
 /// - `msg` must be a valid message header
 /// - Caller must ensure proper synchronization
 #[no_mangle]
-pub unsafe extern "C" fn ping_v6_sendmsg(
-    sk: *mut sock,
-    msg: *mut msghdr,
-    len: size_t,
-) -> c_int {
+pub unsafe extern "C" fn ping_v6_sendmsg(sk: *mut sock, msg: *mut msghdr, len: size_t) -> c_int {
     let inet = inet_sk(sk);
     let np = inet6_sk(sk);
     let mut user_icmph: icmp6hdr = mem::zeroed();
@@ -204,7 +196,13 @@ pub unsafe extern "C" fn ping_v6_sendmsg(
     let mut ipc6: ipcm6_cookie = mem::zeroed();
 
     // SAFETY: ping_common_sendmsg is a kernel function that fills user_icmph
-    err = ping_common_sendmsg(10, msg, len, &mut user_icmph as *mut _, core::mem::size_of_val(&user_icmph)) as c_int;
+    err = ping_common_sendmsg(
+        10,
+        msg,
+        len,
+        &mut user_icmph as *mut _,
+        core::mem::size_of_val(&user_icmph),
+    ) as c_int;
     if err < 0 {
         return err;
     }
@@ -243,9 +241,10 @@ pub unsafe extern "C" fn ping_v6_sendmsg(
     }
 
     let addr_type = ipv6_addr_type(daddr);
-    if (ipv6_addr_needs_scope_id(addr_type) != 0 && oif == 0) ||
-       (addr_type & (1 << 30) != 0) ||
-       (oif != 0 && (*sk).sk_bound_dev_if != 0 && oif != (*sk).sk_bound_dev_if) {
+    if (ipv6_addr_needs_scope_id(addr_type) != 0 && oif == 0)
+        || (addr_type & (1 << 30) != 0)
+        || (oif != 0 && (*sk).sk_bound_dev_if != 0 && oif != (*sk).sk_bound_dev_if)
+    {
         return -EINVAL;
     }
 
@@ -300,11 +299,7 @@ pub unsafe extern "C" fn ping_v6_sendmsg(
         1,
     );
     if err < 0 {
-        ICMP6_INC_STATS(
-            sock_net(sk),
-            (*rt).rt6i_idev,
-            ICMP6_MIB_OUTERRORS,
-        );
+        ICMP6_INC_STATS(sock_net(sk), (*rt).rt6i_idev, ICMP6_MIB_OUTERRORS);
         ip6_flush_pending_frames(sk);
     } else {
         icmpv6_push_pending_frames(
@@ -357,7 +352,7 @@ pub static mut pingv6_protosw: inet_protosw = inet_protosw {
 #[cfg(feature = "proc_fs")]
 mod proc {
     use super::*;
-    
+
     #[no_mangle]
     pub unsafe extern "C" fn ping_v6_seq_start(seq: *mut c_void, pos: *mut loff_t) -> *mut c_void {
         ping_seq_start(seq, pos, 10)

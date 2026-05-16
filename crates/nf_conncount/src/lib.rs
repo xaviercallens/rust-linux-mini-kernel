@@ -97,7 +97,7 @@ pub struct nf_conncount_rb {
 pub struct nf_conncount_data {
     pub keylen: c_uint,
     pub root: [rb_root; CONNCOUNT_SLOTS],
-    pub net: *mut c_void, // struct net
+    pub net: *mut c_void,     // struct net
     pub gc_work: *mut c_void, // struct work_struct
     pub pending_trees: [c_ulong; (CONNCOUNT_SLOTS as usize + 63) / 64],
     pub gc_tree: c_uint,
@@ -117,19 +117,10 @@ extern "C" {
         zone: *const nf_conntrack_zone,
         tuple: *const nf_conntrack_tuple,
     ) -> *const nf_conntrack_tuple_hash;
-    fn nf_ct_tuple_equal(
-        a: *const nf_conntrack_tuple,
-        b: *const nf_conntrack_tuple,
-    ) -> c_int;
+    fn nf_ct_tuple_equal(a: *const nf_conntrack_tuple, b: *const nf_conntrack_tuple) -> c_int;
     fn nf_ct_zone_id(zone: *const nf_conntrack_zone, dir: c_int) -> c_int;
-    fn nf_ct_zone_equal(
-        a: *const nf_conn,
-        zone: *const nf_conntrack_zone,
-        dir: c_int,
-    ) -> c_int;
-    fn nf_ct_tuplehash_to_ctrack(
-        h: *const nf_conntrack_tuple_hash,
-    ) -> *mut nf_conn;
+    fn nf_ct_zone_equal(a: *const nf_conn, zone: *const nf_conntrack_zone, dir: c_int) -> c_int;
+    fn nf_ct_tuplehash_to_ctrack(h: *const nf_conntrack_tuple_hash) -> *mut nf_conn;
     fn nf_ct_put(ct: *mut nf_conn);
     fn kmem_cache_alloc(cachep: *mut c_void, flags: c_int) -> *mut c_void;
     fn kmem_cache_free(cachep: *mut c_void, objp: *mut c_void);
@@ -168,8 +159,7 @@ extern "C" {
 pub unsafe extern "C" fn already_closed(conn: *const nf_conn) -> c_int {
     if nf_ct_protonum(conn) == IPPROTO_TCP {
         let state = nf_ct_tcp_state(conn);
-        (state == TCP_CONNTRACK_TIME_WAIT) as c_int
-            | (state == TCP_CONNTRACK_CLOSE) as c_int
+        (state == TCP_CONNTRACK_TIME_WAIT) as c_int | (state == TCP_CONNTRACK_CLOSE) as c_int
     } else {
         0
     }
@@ -180,11 +170,7 @@ pub unsafe extern "C" fn already_closed(conn: *const nf_conn) -> c_int {
 /// # Safety
 /// - `a` and `b` must be valid pointers to u32 arrays of length `klen`
 #[no_mangle]
-pub unsafe extern "C" fn key_diff(
-    a: *const u32,
-    b: *const u32,
-    klen: c_uint,
-) -> c_int {
+pub unsafe extern "C" fn key_diff(a: *const u32, b: *const u32, klen: c_uint) -> c_int {
     let a_slice = slice::from_raw_parts(a, klen as usize);
     let b_slice = slice::from_raw_parts(b, klen as usize);
     a_slice.cmp(b_slice) as c_int
@@ -196,10 +182,7 @@ pub unsafe extern "C" fn key_diff(
 /// - `list` must be a valid pointer to nf_conncount_list with held lock
 /// - `conn` must be a valid pointer to nf_conncount_tuple in list
 #[no_mangle]
-pub unsafe extern "C" fn conn_free(
-    list: *mut nf_conncount_list,
-    conn: *mut nf_conncount_tuple,
-) {
+pub unsafe extern "C" fn conn_free(list: *mut nf_conncount_list, conn: *mut nf_conncount_tuple) {
     (*list).count = (*list).count.checked_sub(1).unwrap();
     list_del(&mut (*conn).node);
     kmem_cache_free(conncount_conn_cachep(), conn as *mut c_void);
@@ -223,12 +206,12 @@ pub unsafe extern "C" fn find_or_evict(
     let b = (*conn).jiffies32;
     let a = jiffies() as u32;
     let age = a.wrapping_sub(b);
-    
+
     if (*conn).cpu == raw_smp_processor_id() || age >= 2 {
         conn_free(list, conn);
         return ptr::null();
     }
-    
+
     ptr::null()
 }
 
@@ -246,52 +229,52 @@ pub unsafe extern "C" fn __nf_conncount_add(
     let mut collect = 0;
     let mut conn: *mut nf_conncount_tuple = ptr::null_mut();
     let mut conn_n: *mut nf_conncount_tuple = ptr::null_mut();
-    
+
     // Iterate through list entries
     while !conn.is_null() && collect < CONNCOUNT_GC_MAX_NODES {
         let found = find_or_evict(net, list, conn);
         if found.is_null() {
-            if nf_ct_tuple_equal(&(*conn).tuple, tuple) && 
-               nf_ct_zone_id(&(*conn).zone, 0) == nf_ct_zone_id(zone, 0) {
+            if nf_ct_tuple_equal(&(*conn).tuple, tuple)
+                && nf_ct_zone_id(&(*conn).zone, 0) == nf_ct_zone_id(zone, 0)
+            {
                 return 0;
             }
             collect += 1;
             continue;
         }
-        
+
         let found_ct = nf_ct_tuplehash_to_ctrack(found);
-        if nf_ct_tuple_equal(&(*conn).tuple, tuple) && 
-           nf_ct_zone_equal(found_ct, zone, 0) {
+        if nf_ct_tuple_equal(&(*conn).tuple, tuple) && nf_ct_zone_equal(found_ct, zone, 0) {
             nf_ct_put(found_ct);
             return 0;
         }
-        
+
         if already_closed(found_ct) != 0 {
             nf_ct_put(found_ct);
             conn_free(list, conn);
             collect += 1;
             continue;
         }
-        
+
         nf_ct_put(found_ct);
     }
-    
+
     if (*list).count > core::u32::MAX as c_uint {
         return -EOVERFLOW;
     }
-    
+
     conn = kmem_cache_alloc(conncount_conn_cachep(), 1) as *mut nf_conncount_tuple;
     if conn.is_null() {
         return -ENOMEM;
     }
-    
+
     (*conn).tuple = *tuple;
     (*conn).zone = *zone;
     (*conn).cpu = raw_smp_processor_id();
     (*conn).jiffies32 = jiffies() as u32;
     list_add_tail(&mut (*conn).node, &mut (*list).head);
     (*list).count += 1;
-    
+
     0
 }
 
@@ -317,9 +300,7 @@ pub unsafe extern "C" fn nf_conncount_add(
 /// # Safety
 /// - `list` must be a valid pointer to nf_conncount_list
 #[no_mangle]
-pub unsafe extern "C" fn nf_conncount_list_init(
-    list: *mut nf_conncount_list,
-) {
+pub unsafe extern "C" fn nf_conncount_list_init(list: *mut nf_conncount_list) {
     spin_lock_init((*list).list_lock);
     (*list).head.next = &mut (*list).head as *mut _ as *mut list_head;
     (*list).head.prev = &mut (*list).head as *mut _ as *mut list_head;
@@ -339,18 +320,18 @@ pub unsafe extern "C" fn nf_conncount_gc_list(
     let mut collected = 0;
     let mut conn: *mut nf_conncount_tuple = ptr::null_mut();
     let mut conn_n: *mut nf_conncount_tuple = ptr::null_mut();
-    
+
     if spin_trylock((*list).list_lock) == 0 {
         return 0;
     }
-    
+
     while !conn.is_null() && collected < CONNCOUNT_GC_MAX_NODES {
         let found = find_or_evict(net, list, conn);
         if found.is_null() {
             collected += 1;
             continue;
         }
-        
+
         let found_ct = nf_ct_tuplehash_to_ctrack(found);
         if already_closed(found_ct) != 0 {
             nf_ct_put(found_ct);
@@ -358,10 +339,10 @@ pub unsafe extern "C" fn nf_conncount_gc_list(
             collected += 1;
             continue;
         }
-        
+
         nf_ct_put(found_ct);
     }
-    
+
     let ret = (*list).count == 0;
     spin_unlock((*list).list_lock);
     ret as c_int

@@ -143,12 +143,7 @@ static mut search: [SearchPattern; 6] = [
 
 // Helper functions
 extern "C" {
-    fn skb_find_text(
-        skb: *mut c_void,
-        from: c_uint,
-        to: c_uint,
-        ts: *mut ts_config,
-    ) -> c_uint;
+    fn skb_find_text(skb: *mut c_void, from: c_uint, to: c_uint, ts: *mut ts_config) -> c_uint;
 
     fn nf_ct_refresh(ct: *mut nf_conn, skb: *mut c_void, timeout: c_uint);
 
@@ -169,15 +164,9 @@ extern "C" {
 
     fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
 
-    fn nf_conntrack_helpers_register(
-        helpers: *mut nf_conntrack_helper,
-        nhelpers: c_int,
-    ) -> c_int;
+    fn nf_conntrack_helpers_register(helpers: *mut nf_conntrack_helper, nhelpers: c_int) -> c_int;
 
-    fn nf_conntrack_helpers_unregister(
-        helpers: *mut nf_conntrack_helper,
-        nhelpers: c_int,
-    );
+    fn nf_conntrack_helpers_unregister(helpers: *mut nf_conntrack_helper, nhelpers: c_int);
 
     fn textsearch_prepare(
         algo: *const u8,
@@ -243,11 +232,8 @@ pub unsafe extern "C" fn amanda_help(
         }
         pbuf[len] = 0;
 
-        let port = u16::from_str_radix(
-            core::str::from_utf8_unchecked(&pbuf[..len]),
-            10,
-        )
-        .map_or(0, |n| n as u16);
+        let port = u16::from_str_radix(core::str::from_utf8_unchecked(&pbuf[..len]), 10)
+            .map_or(0, |n| n as u16);
         if port == 0 || len > 5 {
             break;
         }
@@ -351,12 +337,7 @@ unsafe fn nf_ct_l3num(ct: *mut nf_conn) -> u8 {
 }
 
 #[inline]
-unsafe fn skb_copy_bits(
-    skb: *mut c_void,
-    offset: c_uint,
-    to: *mut u8,
-    len: c_int,
-) -> c_int {
+unsafe fn skb_copy_bits(skb: *mut c_void, offset: c_uint, to: *mut u8, len: c_int) -> c_int {
     // Simplified implementation - actual implementation would copy from skb
     0
 }

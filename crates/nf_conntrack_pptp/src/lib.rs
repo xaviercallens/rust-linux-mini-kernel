@@ -1,17 +1,17 @@
 //! Connection tracking support for PPTP (Point to Point Tunneling Protocol).
-//! 
+//!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::ffi::size_t;
 use core::mem::size_of;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -125,14 +125,25 @@ pub struct nf_ct_pptp_master {
 }
 
 // Function pointer types
-pub type nf_nat_pptp_hook_outbound_t = 
-    unsafe extern "C" fn(*mut c_void, *mut nf_conn, c_int, c_uint, *mut PptpControlHeader, *mut pptp_ctrl_union) -> c_int;
-pub type nf_nat_pptp_hook_inbound_t = 
-    unsafe extern "C" fn(*mut c_void, *mut nf_conn, c_int, c_uint, *mut PptpControlHeader, *mut pptp_ctrl_union) -> c_int;
-pub type nf_nat_pptp_hook_exp_gre_t = 
+pub type nf_nat_pptp_hook_outbound_t = unsafe extern "C" fn(
+    *mut c_void,
+    *mut nf_conn,
+    c_int,
+    c_uint,
+    *mut PptpControlHeader,
+    *mut pptp_ctrl_union,
+) -> c_int;
+pub type nf_nat_pptp_hook_inbound_t = unsafe extern "C" fn(
+    *mut c_void,
+    *mut nf_conn,
+    c_int,
+    c_uint,
+    *mut PptpControlHeader,
+    *mut pptp_ctrl_union,
+) -> c_int;
+pub type nf_nat_pptp_hook_exp_gre_t =
     unsafe extern "C" fn(*mut nf_conntrack_expect, *mut nf_conntrack_expect);
-pub type nf_nat_pptp_hook_expectfn_t = 
-    unsafe extern "C" fn(*mut nf_conn, *mut nf_conntrack_expect);
+pub type nf_nat_pptp_hook_expectfn_t = unsafe extern "C" fn(*mut nf_conn, *mut nf_conntrack_expect);
 
 // Exported symbols
 static mut nf_nat_pptp_hook_outbound: nf_nat_pptp_hook_outbound_t = ptr::null_mut();
@@ -155,10 +166,7 @@ static nf_pptp_lock: spinlock_t = spinlock_t { _private: [] };
 /// - `ct` must be a valid pointer to nf_conn
 /// - `exp` must be a valid pointer to nf_conntrack_expect
 #[no_mangle]
-pub unsafe extern "C" fn pptp_expectfn(
-    ct: *mut nf_conn,
-    exp: *mut nf_conntrack_expect,
-) {
+pub unsafe extern "C" fn pptp_expectfn(ct: *mut nf_conn, exp: *mut nf_conntrack_expect) {
     if ct.is_null() || exp.is_null() {
         return;
     }
@@ -168,15 +176,16 @@ pub unsafe extern "C" fn pptp_expectfn(
     (*ct).proto.gre.stream_timeout = PPTP_GRE_STREAM_TIMEOUT;
 
     let nf_nat_pptp_expectfn = nf_nat_pptp_hook_expectfn;
-    if !nf_nat_pptp_expectfn.is_null() && (*ct).master.is_some() && (*(*ct).master).status & 1 != 0 {
+    if !nf_nat_pptp_expectfn.is_null() && (*ct).master.is_some() && (*(*ct).master).status & 1 != 0
+    {
         nf_nat_pptp_expectfn(ct, exp);
     } else {
         let mut inv_t: nf_conntrack_tuple = core::mem::zeroed();
         let mut exp_other: *mut nf_conntrack_expect = ptr::null_mut();
-        
+
         // SAFETY: nf_ct_invert_tuple is kernel API
         nf_ct_invert_tuple(&mut inv_t, &(*exp).tuple);
-        
+
         // SAFETY: nf_ct_expect_find_get is kernel API
         exp_other = nf_ct_expect_find_get(ptr::null_mut(), ptr::null_mut(), &inv_t);
         if !exp_other.is_null() {
@@ -198,31 +207,23 @@ pub unsafe extern "C" fn pptp_destroy_siblings(ct: *mut nf_conn) {
 
     let ct_pptp_info = nfct_help_data(ct);
     let mut t: nf_conntrack_tuple = core::mem::zeroed();
-    
+
     // Original direction (PNS->PAC)
     let dir = 0; // IP_CT_DIR_ORIGINAL
-    ptr::copy_nonoverlapping(
-        &(*ct).tuplehash[dir].tuple,
-        &mut t,
-        1
-    );
+    ptr::copy_nonoverlapping(&(*ct).tuplehash[dir].tuple, &mut t, 1);
     t.dst.protonum = IPPROTO_GRE;
     t.src.u3.gre.key = (*ct_pptp_info).pns_call_id;
     t.dst.u3.gre.key = (*ct_pptp_info).pac_call_id;
-    
+
     destroy_sibling_or_exp(ptr::null_mut(), ct, &t);
-    
+
     // Reply direction (PAC->PNS)
     let dir = 1; // IP_CT_DIR_REPLY
-    ptr::copy_nonoverlapping(
-        &(*ct).tuplehash[dir].tuple,
-        &mut t,
-        1
-    );
+    ptr::copy_nonoverlapping(&(*ct).tuplehash[dir].tuple, &mut t, 1);
     t.dst.protonum = IPPROTO_GRE;
     t.src.u3.gre.key = (*ct_pptp_info).pac_call_id;
     t.dst.u3.gre.key = (*ct_pptp_info).pns_call_id;
-    
+
     destroy_sibling_or_exp(ptr::null_mut(), ct, &t);
 }
 
@@ -246,7 +247,7 @@ pub unsafe extern "C" fn pptp_inbound_pkt(
 
     let info = nfct_help_data(ct);
     let msg = ntohs((*ctlh).messageType);
-    
+
     match msg {
         PPTP_START_SESSION_REPLY => {
             if info.sstate < PPTP_SESSION_REQUESTED {
@@ -257,7 +258,7 @@ pub unsafe extern "C" fn pptp_inbound_pkt(
             } else {
                 (*info).sstate = PPTP_SESSION_ERROR;
             }
-        },
+        }
         PPTP_STOP_SESSION_REPLY => {
             if info.sstate > PPTP_SESSION_STOPREQ {
                 return EINVAL;
@@ -267,10 +268,10 @@ pub unsafe extern "C" fn pptp_inbound_pkt(
             } else {
                 (*info).sstate = PPTP_SESSION_ERROR;
             }
-        },
+        }
         _ => return EINVAL,
     }
-    
+
     0
 }
 
@@ -283,7 +284,7 @@ pub unsafe extern "C" fn nf_ct_invert_tuple(
     if inv_t.is_null() || tuple.is_null() {
         return;
     }
-    
+
     // SAFETY: Kernel API to invert tuple
     // Implementation would mirror kernel's nf_ct_invert_tuple
 }
@@ -299,16 +300,12 @@ pub unsafe extern "C" fn nf_ct_expect_find_get(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_unexpect_related(
-    exp: *mut nf_conntrack_expect,
-) {
+pub unsafe extern "C" fn nf_ct_unexpect_related(exp: *mut nf_conntrack_expect) {
     // SAFETY: Kernel API to unexpect related connection
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_expect_put(
-    exp: *mut nf_conntrack_expect,
-) {
+pub unsafe extern "C" fn nf_ct_expect_put(exp: *mut nf_conntrack_expect) {
     // SAFETY: Kernel API to release expectation
 }
 
@@ -332,16 +329,12 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(
-    ct: *mut nf_conn,
-) {
+pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
     // SAFETY: Kernel API to destroy GRE keymap
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nfct_help_data(
-    ct: *mut nf_conn,
-) -> *mut nf_ct_pptp_master {
+pub unsafe extern "C" fn nfct_help_data(ct: *mut nf_conn) -> *mut nf_ct_pptp_master {
     // SAFETY: Kernel API to get helper data
     let offset = 0; // Offset from nf_conn to helper data
     let ptr = ct as *mut u8;
@@ -384,18 +377,12 @@ extern "C" {
         zone: *mut c_void,
         tuple: *const nf_conntrack_tuple,
     ) -> *mut c_void;
-    
-    fn nf_ct_tuplehash_to_ctrack(
-        h: *mut c_void,
-    ) -> *mut nf_conn;
-    
-    fn nf_ct_kill(
-        ct: *mut nf_conn,
-    );
-    
-    fn nf_ct_put(
-        ct: *mut nf_conn,
-    );
+
+    fn nf_ct_tuplehash_to_ctrack(h: *mut c_void) -> *mut nf_conn;
+
+    fn nf_ct_kill(ct: *mut nf_conn);
+
+    fn nf_ct_put(ct: *mut nf_conn);
 }
 
 // Tests (conditional compilation)

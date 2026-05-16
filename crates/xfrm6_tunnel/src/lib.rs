@@ -8,11 +8,11 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::mem;
+use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 
 // Constants from C
@@ -96,8 +96,14 @@ struct xfrm_type {
 #[repr(C)]
 struct xfrm6_tunnel {
     handler: extern "C" fn(skb: *mut sk_buff) -> c_int,
-    err_handler: extern "C" fn(skb: *mut sk_buff, opt: *mut c_void, 
-                             type_: c_int, code: c_int, offset: c_int, info: u32) -> c_int,
+    err_handler: extern "C" fn(
+        skb: *mut sk_buff,
+        opt: *mut c_void,
+        type_: c_int,
+        code: c_int,
+        offset: c_int,
+        info: u32,
+    ) -> c_int,
     priority: c_int,
 }
 
@@ -143,14 +149,14 @@ unsafe fn xfrm6_tunnel_pernet(net: *mut net) -> *mut xfrm6_tunnel_net {
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_spi_hash_byaddr(addr: *const xfrm_address_t) -> c_uint {
     let mut h: c_uint = 0;
-    
+
     // Simple hash implementation (simplified from Linux's ipv6_addr_hash)
     let addr = &(*addr).addr as *const [u8; 16] as *const u8;
     for i in 0..16 {
         h = h.wrapping_add(*addr.add(i) as c_uint);
         h = h.wrapping_mul(0x1e35a7bd);
     }
-    
+
     h ^= h >> 16;
     h ^= h >> 8;
     h & (XFRM6_TUNNEL_SPI_BYADDR_HSIZE - 1)
@@ -168,31 +174,35 @@ pub unsafe extern "C" fn xfrm6_tunnel_spi_hash_byspi(spi: u32) -> c_uint {
 /// - `net` must be a valid pointer to network namespace
 /// - `saddr` must be a valid pointer to xfrm_address_t
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_tunnel_spi_lookup(net: *mut net, saddr: *const xfrm_address_t) -> u32 {
+pub unsafe extern "C" fn xfrm6_tunnel_spi_lookup(
+    net: *mut net,
+    saddr: *const xfrm_address_t,
+) -> u32 {
     let mut spi: u32 = 0;
-    
+
     // SAFETY: RCU read-side critical section
     rcu_read_lock_bh();
     {
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
-        
+
         let head = &xfrm6_tn.spi_byaddr[h as usize];
         let mut node = head.first;
-        
+
         while !node.is_null() {
-            let x6spi = (node as *mut xfrm6_tunnel_spi).offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
-            
+            let x6spi = (node as *mut xfrm6_tunnel_spi)
+                .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
+
             if xfrm6_addr_equal(&(*x6spi).addr, saddr) {
                 spi = (*x6spi).spi;
                 break;
             }
-            
+
             node = (*node).next;
         }
     }
     rcu_read_unlock_bh();
-    
+
     spi
 }
 
@@ -204,34 +214,35 @@ pub unsafe extern "C" fn xfrm6_tunnel_spi_lookup(net: *mut net, saddr: *const xf
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_address_t) -> u32 {
     let mut spi: u32 = 0;
-    
+
     // SAFETY: Spinlock held during critical section
     spin_lock_bh(&mut xfrm6_tunnel_spi_lock);
     {
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
-        
+
         let head = &xfrm6_tn.spi_byaddr[h as usize];
         let mut node = head.first;
-        
+
         while !node.is_null() {
-            let x6spi = (node as *mut xfrm6_tunnel_spi).offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
-            
+            let x6spi = (node as *mut xfrm6_tunnel_spi)
+                .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
+
             if xfrm6_addr_equal(&(*x6spi).addr, saddr) {
                 (*x6spi).refcnt.fetch_add(1, Ordering::Relaxed);
                 spi = (*x6spi).spi;
                 break;
             }
-            
+
             node = (*node).next;
         }
-        
+
         if spi == 0 {
             spi = __xfrm6_tunnel_alloc_spi(net, saddr);
         }
     }
     spin_unlock_bh(&mut xfrm6_tunnel_spi_lock);
-    
+
     spi
 }
 
@@ -247,28 +258,29 @@ pub unsafe extern "C" fn xfrm6_tunnel_free_spi(net: *mut net, saddr: *mut xfrm_a
     {
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
-        
+
         let head = &xfrm6_tn.spi_byaddr[h as usize];
         let mut node = head.first;
         let mut prev: *mut *mut hlist_node = head.first as *mut *mut hlist_node;
-        
+
         while !node.is_null() {
-            let x6spi = (node as *mut xfrm6_tunnel_spi).offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
-            
+            let x6spi = (node as *mut xfrm6_tunnel_spi)
+                .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
+
             if xfrm6_addr_equal(&(*x6spi).addr, saddr) {
                 if (*x6spi).refcnt.fetch_sub(1, Ordering::Relaxed) == 1 {
                     // Remove from both hash tables
                     let list_byaddr = &mut (*x6spi).list_byaddr;
                     let list_byspi = &mut (*x6spi).list_byspi;
-                    
+
                     hlist_del_rcu(list_byaddr);
                     hlist_del_rcu(list_byspi);
-                    
+
                     call_rcu(&mut (*x6spi).rcu_head, x6spi_destroy_rcu);
                 }
                 break;
             }
-            
+
             prev = (*node).next as *mut *mut hlist_node;
             node = *prev;
         }
@@ -285,20 +297,21 @@ pub unsafe extern "C" fn xfrm6_tunnel_free_spi(net: *mut net, saddr: *mut xfrm_a
 pub unsafe extern "C" fn __xfrm6_tunnel_spi_check(net: *mut net, spi: u32) -> c_int {
     let xfrm6_tn = xfrm6_tunnel_pernet(net);
     let h = xfrm6_tunnel_spi_hash_byspi(spi);
-    
+
     let head = &xfrm6_tn.spi_byspi[h as usize];
     let mut node = head.first;
-    
+
     while !node.is_null() {
-        let x6spi = (node as *mut xfrm6_tunnel_spi).offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byspi) as isize);
-        
+        let x6spi = (node as *mut xfrm6_tunnel_spi)
+            .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byspi) as isize);
+
         if (*x6spi).spi == spi {
             return -1;
         }
-        
+
         node = (*node).next;
     }
-    
+
     h as c_int
 }
 
@@ -308,24 +321,27 @@ pub unsafe extern "C" fn __xfrm6_tunnel_spi_check(net: *mut net, spi: u32) -> c_
 /// - `net` must be a valid pointer to network namespace
 /// - `saddr` must be a valid pointer to xfrm_address_t
 #[no_mangle]
-pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_address_t) -> u32 {
+pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
+    net: *mut net,
+    saddr: *mut xfrm_address_t,
+) -> u32 {
     let xfrm6_tn = xfrm6_tunnel_pernet(net);
     let mut spi: u32 = 0;
     let mut index: c_int = -1;
-    
+
     if xfrm6_tn.spi < XFRM6_TUNNEL_SPI_MIN || xfrm6_tn.spi >= XFRM6_TUNNEL_SPI_MAX {
         xfrm6_tn.spi = XFRM6_TUNNEL_SPI_MIN;
     } else {
         xfrm6_tn.spi += 1;
     }
-    
+
     for spi in xfrm6_tn.spi..=XFRM6_TUNNEL_SPI_MAX {
         index = __xfrm6_tunnel_spi_check(net, spi);
         if index >= 0 {
             break;
         }
     }
-    
+
     if index < 0 {
         for spi in XFRM6_TUNNEL_SPI_MIN..xfrm6_tn.spi {
             index = __xfrm6_tunnel_spi_check(net, spi);
@@ -334,28 +350,32 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfr
             }
         }
     }
-    
+
     if index >= 0 {
         xfrm6_tn.spi = spi;
-        
+
         // Allocate new SPI entry
         let x6spi = kmem_cache_alloc(xfrm6_tunnel_spi_kmem, 0) as *mut xfrm6_tunnel_spi;
         if !x6spi.is_null() {
             ptr::copy_nonoverlapping(saddr, &mut (*x6spi).addr, mem::size_of::<xfrm_address_t>());
             (*x6spi).spi = spi;
             (*x6spi).refcnt.store(1, Ordering::Relaxed);
-            
+
             // Add to hash tables
             let h_byspi = xfrm6_tunnel_spi_hash_byspi(spi);
-            hlist_add_head_rcu(&mut (*x6spi).list_byspi, 
-                              &mut xfrm6_tn.spi_byspi[h_byspi as usize]);
-            
+            hlist_add_head_rcu(
+                &mut (*x6spi).list_byspi,
+                &mut xfrm6_tn.spi_byspi[h_byspi as usize],
+            );
+
             let h_byaddr = xfrm6_tunnel_spi_hash_byaddr(&(*x6spi).addr);
-            hlist_add_head_rcu(&mut (*x6spi).list_byaddr, 
-                              &mut xfrm6_tn.spi_byaddr[h_byaddr as usize]);
+            hlist_add_head_rcu(
+                &mut (*x6spi).list_byaddr,
+                &mut xfrm6_tn.spi_byaddr[h_byaddr as usize],
+            );
         }
     }
-    
+
     spi
 }
 
@@ -365,40 +385,45 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfr
 /// - `head` must be a valid pointer to rcu_head
 #[no_mangle]
 pub unsafe extern "C" fn x6spi_destroy_rcu(head: *mut rcu_head) {
-    let x6spi = (head as *mut xfrm6_tunnel_spi).offset(-mem::offset_of!(xfrm6_tunnel_spi, rcu_head) as isize);
+    let x6spi = (head as *mut xfrm6_tunnel_spi)
+        .offset(-mem::offset_of!(xfrm6_tunnel_spi, rcu_head) as isize);
     kmem_cache_free(xfrm6_tunnel_spi_kmem, x6spi as *mut c_void);
 }
 
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_init() -> c_int {
-    xfrm6_tunnel_spi_kmem = kmem_cache_create("xfrm6_tunnel_spi", 
-                                            mem::size_of::<xfrm6_tunnel_spi>() as size_t, 
-                                            0, 0, ptr::null_mut());
+    xfrm6_tunnel_spi_kmem = kmem_cache_create(
+        "xfrm6_tunnel_spi",
+        mem::size_of::<xfrm6_tunnel_spi>() as size_t,
+        0,
+        0,
+        ptr::null_mut(),
+    );
     if xfrm6_tunnel_spi_kmem.is_null() {
         return -12; // -ENOMEM
     }
-    
+
     let rv = register_pernet_subsys(&mut xfrm6_tunnel_net_ops);
     if rv < 0 {
         return rv;
     }
-    
+
     let rv = xfrm_register_type(&mut xfrm6_tunnel_type, 10 /* AF_INET6 */);
     if rv < 0 {
         return rv;
     }
-    
+
     let rv = xfrm6_tunnel_register(&mut xfrm6_tunnel_handler, 10 /* AF_INET6 */);
     if rv < 0 {
         return rv;
     }
-    
+
     let rv = xfrm6_tunnel_register(&mut xfrm46_tunnel_handler, 2 /* AF_INET */);
     if rv < 0 {
         return rv;
     }
-    
+
     0
 }
 
@@ -422,7 +447,13 @@ extern "C" {
     fn spin_unlock_bh(lock: *mut spinlock_t);
     fn hlist_add_head_rcu(node: *mut hlist_node, head: *mut hlist_head);
     fn hlist_del_rcu(node: *mut hlist_node);
-    fn kmem_cache_create(name: *const c_char, size: size_t, align: size_t, flags: c_int, ctor: *mut c_void) -> *mut c_void;
+    fn kmem_cache_create(
+        name: *const c_char,
+        size: size_t,
+        align: size_t,
+        flags: c_int,
+        ctor: *mut c_void,
+    ) -> *mut c_void;
     fn kmem_cache_free(slab: *mut c_void, obj: *mut c_void);
     fn register_pernet_subsys(ops: *mut pernet_operations) -> c_int;
     fn xfrm_register_type(t: *mut xfrm_type, family: c_int) -> c_int;
@@ -463,14 +494,16 @@ pub static xfrm46_tunnel_handler: xfrm6_tunnel = xfrm6_tunnel {
 // Internal functions
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_init_state(x: *mut xfrm_state) -> c_int {
-    if (*x).props.mode != 2 /* XFRM_MODE_TUNNEL */ {
+    if (*x).props.mode != 2
+    /* XFRM_MODE_TUNNEL */
+    {
         return -22; // -EINVAL
     }
-    
+
     if !(*x).encap.is_null() {
         return -22; // -EINVAL
     }
-    
+
     (*x).props.header_len = mem::size_of::<ipv6hdr>() as c_int;
     0
 }
@@ -504,8 +537,14 @@ pub unsafe extern "C" fn xfrm6_tunnel_rcv(skb: *mut sk_buff) -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_tunnel_err(skb: *mut sk_buff, opt: *mut c_void, 
-                                        type_: c_int, code: c_int, offset: c_int, info: u32) -> c_int {
+pub unsafe extern "C" fn xfrm6_tunnel_err(
+    skb: *mut sk_buff,
+    opt: *mut c_void,
+    type_: c_int,
+    code: c_int,
+    offset: c_int,
+    info: u32,
+) -> c_int {
     0
 }
 
@@ -535,8 +574,12 @@ pub unsafe extern "C" fn IP6CB(skb: *mut sk_buff) -> *mut ip6cb {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_rcv_spi(skb: *mut sk_buff, proto: c_int, spi: u32, 
-                                      mark: *mut c_void) -> c_int {
+pub unsafe extern "C" fn xfrm6_rcv_spi(
+    skb: *mut sk_buff,
+    proto: c_int,
+    spi: u32,
+    mark: *mut c_void,
+) -> c_int {
     0
 }
 

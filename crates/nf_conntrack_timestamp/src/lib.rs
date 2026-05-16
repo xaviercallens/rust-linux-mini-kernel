@@ -9,8 +9,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use core::ffi::{c_char, c_int};
 use core::ptr;
-use core::ffi::{c_int, c_char};
 
 // Kernel constants
 const EINVAL: c_int = -22;
@@ -74,14 +74,14 @@ pub unsafe extern "C" fn nf_conntrack_tstamp_pernet_init(net: *mut net) {
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_tstamp_init() -> c_int {
     let ret = unsafe { nf_ct_extend_register(&tstamp_extend) };
-    
+
     if ret < 0 {
         // SAFETY: Error message is valid C string
         unsafe {
             pr_err(b"Unable to register extension\n".as_ptr() as *const c_char);
         }
     }
-    
+
     ret
 }
 
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn nf_conntrack_tstamp_fini() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_extension_size() {
         assert!(core::mem::size_of::<nf_conn_tstamp>() > 0);

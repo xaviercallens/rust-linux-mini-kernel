@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -67,7 +67,8 @@ pub struct neigh_table {
     pub family: c_int,
     pub key_len: c_int,
     pub protocol: c_int,
-    pub hash: extern "C" fn(pkey: *const c_void, dev: *const net_device, hash_rnd: *mut c_uint) -> c_int,
+    pub hash:
+        extern "C" fn(pkey: *const c_void, dev: *const net_device, hash_rnd: *mut c_uint) -> c_int,
     pub key_eq: extern "C" fn(neigh: *const neighbour, pkey: *const c_void) -> c_int,
     pub constructor: extern "C" fn(neigh: *mut neighbour) -> c_int,
     pub pconstructor: extern "C" fn(n: *mut c_void) -> c_int,
@@ -171,7 +172,9 @@ pub static mut nd_tbl: neigh_table = neigh_table {
     proxy_redo: pndisc_redo,
     is_multicast: ndisc_is_multicast,
     allow_add: ndisc_allow_add,
-    id: [b'n', b'd', b'i', b's', b'c', b'_', b'c', b'a', b'c', b'h', b'e', 0, 0, 0, 0, 0],
+    id: [
+        b'n', b'd', b'i', b's', b'c', b'_', b'c', b'a', b'c', b'h', b'e', 0, 0, 0, 0, 0,
+    ],
     parms: ptr::null_mut(),
     gc_interval: 30 * 100,
     gc_thresh1: 128,
@@ -189,17 +192,12 @@ pub unsafe extern "C" fn ndisc_hash(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_key_eq(
-    neigh: *const neighbour,
-    pkey: *const c_void,
-) -> c_int {
+pub unsafe extern "C" fn ndisc_key_eq(neigh: *const neighbour, pkey: *const c_void) -> c_int {
     neigh_key_eq128(neigh, pkey)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_constructor(
-    neigh: *mut neighbour,
-) -> c_int {
+pub unsafe extern "C" fn ndisc_constructor(neigh: *mut neighbour) -> c_int {
     let addr = unsafe { &(*neigh).primary_key as *const [u8; 16] as *const in6_addr };
     let dev = unsafe { (*neigh).dev };
     let in6_dev = in6_dev_get(dev);
@@ -262,74 +260,51 @@ pub unsafe extern "C" fn ndisc_hashfn(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_key_eq128(
-    neigh: *const neighbour,
-    pkey: *const c_void,
-) -> c_int {
+pub unsafe extern "C" fn neigh_key_eq128(neigh: *const neighbour, pkey: *const c_void) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn in6_dev_get(
-    dev: *mut net_device,
-) -> *mut c_void {
+pub unsafe extern "C" fn in6_dev_get(dev: *mut net_device) -> *mut c_void {
     // Implementation would go here
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn in6_dev_put(
-    in6_dev: *mut c_void,
-) {
+pub unsafe extern "C" fn in6_dev_put(in6_dev: *mut c_void) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_parms_clone(
-    parms: *mut c_void,
-) -> *mut c_void {
+pub unsafe extern "C" fn neigh_parms_clone(parms: *mut c_void) -> *mut c_void {
     // Implementation would go here
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn __neigh_parms_put(
-    parms: *mut c_void,
-) {
+pub unsafe extern "C" fn __neigh_parms_put(parms: *mut c_void) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_addr_is_multicast(
-    addr: *const in6_addr,
-) -> c_int {
+pub unsafe extern "C" fn ipv6_addr_is_multicast(addr: *const in6_addr) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_eth_mc_map(
-    addr: *const in6_addr,
-    buf: *mut u8,
-) {
+pub unsafe extern "C" fn ipv6_eth_mc_map(addr: *const in6_addr, buf: *mut u8) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_arcnet_mc_map(
-    addr: *const in6_addr,
-    buf: *mut u8,
-) {
+pub unsafe extern "C" fn ipv6_arcnet_mc_map(addr: *const in6_addr, buf: *mut u8) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_ib_mc_map(
-    addr: *const in6_addr,
-    broadcast: *const u8,
-    buf: *mut u8,
-) {
+pub unsafe extern "C" fn ipv6_ib_mc_map(addr: *const in6_addr, broadcast: *const u8, buf: *mut u8) {
     // Implementation would go here
 }
 
@@ -344,40 +319,29 @@ pub unsafe extern "C" fn ipv6_ipgre_mc_map(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pndisc_constructor(
-    n: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn pndisc_constructor(n: *mut c_void) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pndisc_destructor(
-    n: *mut c_void,
-) {
+pub unsafe extern "C" fn pndisc_destructor(n: *mut c_void) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pndisc_redo(
-    skb: *mut c_void,
-) {
+pub unsafe extern "C" fn pndisc_redo(skb: *mut c_void) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_is_multicast(
-    pkey: *const c_void,
-) -> c_int {
+pub unsafe extern "C" fn ndisc_is_multicast(pkey: *const c_void) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_allow_add(
-    dev: *const net_device,
-    extack: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn ndisc_allow_add(dev: *const net_device, extack: *mut c_void) -> c_int {
     // Implementation would go here
     0
 }
@@ -436,41 +400,29 @@ pub static ndisc_direct_ops: ndisc_direct_ops = ndisc_direct_ops {
 
 // Helper functions (these would be defined in the actual implementation)
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_solicit(
-    neigh: *mut neighbour,
-    skb: *mut c_void,
-) {
+pub unsafe extern "C" fn ndisc_solicit(neigh: *mut neighbour, skb: *mut c_void) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_error_report(
-    neigh: *mut neighbour,
-    skb: *mut c_void,
-) {
+pub unsafe extern "C" fn ndisc_error_report(neigh: *mut neighbour, skb: *mut c_void) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_resolve_output(
-    skb: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn neigh_resolve_output(skb: *mut c_void) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_connected_output(
-    skb: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn neigh_connected_output(skb: *mut c_void) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_direct_output(
-    skb: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn neigh_direct_output(skb: *mut c_void) -> c_int {
     // Implementation would go here
     0
 }

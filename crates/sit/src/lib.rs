@@ -1,13 +1,13 @@
 //! IPv6 over IPv4 tunnel device - Simple Internet Transition (SIT)
-//! 
+//!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t, __be32, __u32};
+use libc::{__be32, __u32, c_int, c_uint, c_void, size_t};
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -91,9 +91,7 @@ pub struct sit_net {
 /// # Returns
 /// 0 on success, error code on failure
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_init(
-    dev: *mut net_device,
-) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_init(dev: *mut net_device) -> c_int {
     // Implementation would go here
     0
 }
@@ -103,9 +101,7 @@ pub unsafe extern "C" fn ipip6_tunnel_init(
 /// # Safety
 /// - `dev` must be a valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_setup(
-    dev: *mut net_device,
-) {
+pub unsafe extern "C" fn ipip6_tunnel_setup(dev: *mut net_device) {
     // Implementation would go here
 }
 
@@ -114,9 +110,7 @@ pub unsafe extern "C" fn ipip6_tunnel_setup(
 /// # Safety
 /// - `dev` must be a valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_dev_free(
-    dev: *mut net_device,
-) {
+pub unsafe extern "C" fn ipip6_dev_free(dev: *mut net_device) {
     // Implementation would go here
 }
 
@@ -172,10 +166,7 @@ pub unsafe extern "C" fn ipip6_bucket(
 /// - `sitn` must be valid pointer to sit_net
 /// - `t` must be valid pointer to ip_tunnel
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_unlink(
-    sitn: *mut sit_net,
-    t: *mut ip_tunnel,
-) {
+pub unsafe extern "C" fn ipip6_tunnel_unlink(sitn: *mut sit_net, t: *mut ip_tunnel) {
     // Implementation would go here
 }
 
@@ -185,10 +176,7 @@ pub unsafe extern "C" fn ipip6_tunnel_unlink(
 /// - `sitn` must be valid pointer to sit_net
 /// - `t` must be valid pointer to ip_tunnel
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_link(
-    sitn: *mut sit_net,
-    t: *mut ip_tunnel,
-) {
+pub unsafe extern "C" fn ipip6_tunnel_link(sitn: *mut sit_net, t: *mut ip_tunnel) {
     // Implementation would go here
 }
 
@@ -198,10 +186,7 @@ pub unsafe extern "C" fn ipip6_tunnel_link(
 /// - `dev` must be valid pointer to net_device
 /// - `sitn` must be valid pointer to sit_net
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(
-    dev: *mut net_device,
-    sitn: *mut sit_net,
-) {
+pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(dev: *mut net_device, sitn: *mut sit_net) {
     // Implementation would go here
 }
 
@@ -210,9 +195,7 @@ pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(
 /// # Safety
 /// - `dev` must be valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_create(
-    dev: *mut net_device,
-) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_create(dev: *mut net_device) -> c_int {
     // Implementation would go here
     0
 }
@@ -252,10 +235,7 @@ pub unsafe extern "C" fn __ipip6_tunnel_locate_prl(
 /// - `dev` must be valid pointer to net_device
 /// - `ifr` must be valid pointer to ifreq
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_get_prl(
-    dev: *mut net_device,
-    ifr: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_get_prl(dev: *mut net_device, ifr: *mut c_void) -> c_int {
     // Implementation would go here
     0
 }
@@ -281,10 +261,7 @@ pub unsafe extern "C" fn ipip6_tunnel_add_prl(
 /// - `t` must be valid pointer to ip_tunnel
 /// - `a` must be valid pointer to ip_tunnel_prl or null
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_del_prl(
-    t: *mut ip_tunnel,
-    a: *mut ip_tunnel_prl,
-) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_del_prl(t: *mut ip_tunnel, a: *mut ip_tunnel_prl) -> c_int {
     // Implementation would go here
     0
 }
@@ -301,9 +278,7 @@ const INADDR_ANY: u32 = 0; // 0.0.0.0
 /// # Safety
 /// - `dev` must be valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn dev_to_sit_net(
-    dev: *mut net_device,
-) -> *mut sit_net {
+pub unsafe extern "C" fn dev_to_sit_net(dev: *mut net_device) -> *mut sit_net {
     // Implementation would go here
     ptr::null_mut()
 }

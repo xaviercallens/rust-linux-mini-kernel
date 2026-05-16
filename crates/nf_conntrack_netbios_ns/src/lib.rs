@@ -9,8 +9,8 @@
 #![allow(unused_variables)]
 
 use core::ffi::c_void;
-use core::ptr;
 use core::mem;
+use core::ptr;
 
 // Constants from C
 const NMBD_PORT: u16 = 137;
@@ -91,15 +91,8 @@ static mut exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
 };
 
 // Function implementations
-extern "C" fn netbios_ns_help(
-    skb: *mut c_void,
-    protoff: u32,
-    ct: *mut c_void,
-    ctinfo: u32,
-) -> i32 {
-    unsafe {
-        nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout)
-    }
+extern "C" fn netbios_ns_help(skb: *mut c_void, protoff: u32, ct: *mut c_void, ctinfo: u32) -> i32 {
+    unsafe { nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout) }
 }
 
 // Extern declarations for kernel functions
@@ -120,7 +113,7 @@ pub extern "C" fn nf_conntrack_netbios_ns_init() -> i32 {
     unsafe {
         // SAFETY: exp_policy is valid and properly initialized
         exp_policy.timeout = timeout;
-        
+
         // Register the helper
         nf_conntrack_helper_register(&mut helper)
     }

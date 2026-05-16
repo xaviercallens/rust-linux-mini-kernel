@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn unsolicited_report_interval(in_dev: *mut in_device) -> 
     // Check if V1 or V2 is seen
     let v1_seen = IGMP_V1_SEEN(in_dev);
     let v2_seen = IGMP_V2_SEEN(in_dev);
-    
+
     if v1_seen || v2_seen {
         interval_ms = IN_DEV_CONF_GET(in_dev, IGMPV2_UNSOLICITED_REPORT_INTERVAL);
     } else {
@@ -101,17 +101,17 @@ unsafe fn IGMP_V1_SEEN(in_dev: *mut in_device) -> bool {
     if force_version == 1 {
         return true;
     }
-    
+
     let in_dev_force_version = IN_DEV_CONF_GET(in_dev, FORCE_IGMP_VERSION);
     if in_dev_force_version == 1 {
         return true;
     }
-    
+
     let mr_v1_seen = (*in_dev).mr_v1_seen;
     if !mr_v1_seen.is_null() && time_before(jiffies(), mr_v1_seen) {
         return true;
     }
-    
+
     false
 }
 
@@ -126,17 +126,17 @@ unsafe fn IGMP_V2_SEEN(in_dev: *mut in_device) -> bool {
     if force_version == 2 {
         return true;
     }
-    
+
     let in_dev_force_version = IN_DEV_CONF_GET(in_dev, FORCE_IGMP_VERSION);
     if in_dev_force_version == 2 {
         return true;
     }
-    
+
     let mr_v2_seen = (*in_dev).mr_v2_seen;
     if !mr_v2_seen.is_null() && time_before(jiffies(), mr_v2_seen) {
         return true;
     }
-    
+
     false
 }
 
@@ -187,19 +187,19 @@ pub unsafe extern "C" fn igmp_stop_timer(im: *mut ip_mc_list) {
     if im.is_null() {
         return;
     }
-    
+
     // SAFETY: Caller guarantees im is valid
     let lock = &mut (*im).lock;
     spin_lock_bh(lock);
-    
+
     if del_timer(&mut (*im).timer) {
         atomic_dec(&mut (*im).refcnt);
     }
-    
+
     (*im).tm_running = 0;
     (*im).reporter = 0;
     (*im).unsolicit_count = 0;
-    
+
     spin_unlock_bh(lock);
 }
 

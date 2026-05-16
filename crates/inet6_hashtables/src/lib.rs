@@ -7,10 +7,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_void;
 use core::ffi::size_t;
+use core::ptr;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -92,7 +92,13 @@ pub unsafe extern "C" fn inet6_ehashfn(
     let lhash = (*laddr).s6_addr32[3];
     let fhash = __ipv6_addr_jhash(faddr, ipv6_hash_secret);
 
-    __inet6_ehashfn(lhash, lport, fhash, fport, inet6_ehash_secret + net_hash_mix(net))
+    __inet6_ehashfn(
+        lhash,
+        lport,
+        fhash,
+        fport,
+        inet6_ehash_secret + net_hash_mix(net),
+    )
 }
 
 #[no_mangle]
@@ -166,18 +172,13 @@ pub unsafe extern "C" fn inet6_lookup(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn inet6_hash_connect(
-    death_row: *mut c_void,
-    sk: *mut sock,
-) -> c_int {
+pub unsafe extern "C" fn inet6_hash_connect(death_row: *mut c_void, sk: *mut sock) -> c_int {
     // Implementation would follow C logic
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn inet6_hash(
-    sk: *mut sock,
-) -> c_int {
+pub unsafe extern "C" fn inet6_hash(sk: *mut sock) -> c_int {
     // Implementation would follow C logic
     0
 }
@@ -205,10 +206,7 @@ unsafe fn compute_score(
 }
 
 #[inline]
-unsafe fn __ipv6_addr_jhash(
-    addr: *const in6_addr,
-    secret: u32,
-) -> u32 {
+unsafe fn __ipv6_addr_jhash(addr: *const in6_addr, secret: u32) -> u32 {
     // Simplified hash implementation
     if addr.is_null() {
         return 0;
@@ -218,21 +216,13 @@ unsafe fn __ipv6_addr_jhash(
 }
 
 #[inline]
-unsafe fn __inet6_ehashfn(
-    lhash: u32,
-    lport: u16,
-    fhash: u32,
-    fport: u16,
-    secret: u32,
-) -> u32 {
+unsafe fn __inet6_ehashfn(lhash: u32, lport: u16, fhash: u32, fport: u16, secret: u32) -> u32 {
     // Simplified hash function
     lhash ^ (lport as u32) ^ fhash ^ (fport as u32) ^ secret
 }
 
 #[inline]
-unsafe fn net_hash_mix(
-    net: *const c_void,
-) -> u32 {
+unsafe fn net_hash_mix(net: *const c_void) -> u32 {
     // Simplified mix function
     0xdeadbeef
 }

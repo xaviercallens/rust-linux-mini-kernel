@@ -107,9 +107,7 @@ pub struct dst_entry {
 /// # Returns
 /// Headroom size in bytes
 #[no_mangle]
-pub unsafe extern "C" fn seg6_lwt_headroom(
-    tuninfo: *const seg6_iptunnel_encap,
-) -> usize {
+pub unsafe extern "C" fn seg6_lwt_headroom(tuninfo: *const seg6_iptunnel_encap) -> usize {
     if tuninfo.is_null() {
         return 0;
     }
@@ -119,18 +117,21 @@ pub unsafe extern "C" fn seg6_lwt_headroom(
 
     match mode {
         0 => {} // SEG6_IPTUN_MODE_INLINE
-        1 => { // SEG6_IPTUN_MODE_ENCAP
+        1 => {
+            // SEG6_IPTUN_MODE_ENCAP
             head = mem::size_of::<ipv6hdr>();
         }
-        2 => { // SEG6_IPTUN_MODE_L2ENCAP
+        2 => {
+            // SEG6_IPTUN_MODE_L2ENCAP
             return 0;
         }
         _ => {}
     }
 
-    let hdrlen = (*tuninfo).srh.as_ref().map_or(0, |srh| {
-        ((srh.hdrlen as usize) + 1) << 3
-    });
+    let hdrlen = (*tuninfo)
+        .srh
+        .as_ref()
+        .map_or(0, |srh| ((srh.hdrlen as usize) + 1) << 3);
 
     hdrlen + head
 }
@@ -220,10 +221,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
 /// # Returns
 /// 0 on success, error code otherwise
 #[no_mangle]
-pub unsafe extern "C" fn seg6_do_srh_inline(
-    skb: *mut sk_buff,
-    osrh: *mut ipv6_sr_hdr,
-) -> c_int {
+pub unsafe extern "C" fn seg6_do_srh_inline(skb: *mut sk_buff, osrh: *mut ipv6_sr_hdr) -> c_int {
     if skb.is_null() || osrh.is_null() {
         return EINVAL;
     }
@@ -242,7 +240,11 @@ pub unsafe extern "C" fn seg6_do_srh_inline(
     }
 
     skb_pull(skb, mem::size_of::<ipv6hdr>() as c_int);
-    skb_postpull_rcsum(skb, skb_network_header(skb), mem::size_of::<ipv6hdr>() as c_int);
+    skb_postpull_rcsum(
+        skb,
+        skb_network_header(skb),
+        mem::size_of::<ipv6hdr>() as c_int,
+    );
 
     skb_push(skb, mem::size_of::<ipv6hdr>() as c_int + hdrlen as c_int);
     skb_reset_network_header(skb);
@@ -251,7 +253,11 @@ pub unsafe extern "C" fn seg6_do_srh_inline(
     let hdr = ipv6_hdr(skb);
     let oldhdr = &*oldhdr;
 
-    memmove(hdr as *mut c_void, oldhdr as *const c_void, mem::size_of::<ipv6hdr>());
+    memmove(
+        hdr as *mut c_void,
+        oldhdr as *const c_void,
+        mem::size_of::<ipv6hdr>(),
+    );
 
     let isrh = (hdr as *mut u8).offset(mem::size_of::<ipv6hdr>() as isize) as *mut ipv6_sr_hdr;
     ptr::copy_nonoverlapping(osrh, isrh, hdrlen);
@@ -422,7 +428,7 @@ mod tests {
             mode: 1, // ENCAP
             srh: ptr::null_mut(),
         };
-        
+
         let result = unsafe { super::seg6_lwt_headroom(&tuninfo) };
         assert!(result > 0);
     }

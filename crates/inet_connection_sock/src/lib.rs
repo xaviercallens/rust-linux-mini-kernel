@@ -7,11 +7,11 @@
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
 
-use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::mem;
+use core::ptr;
 use core::slice;
 
 // Constants from C header files
@@ -121,8 +121,8 @@ pub unsafe extern "C" fn ipv6_rcv_saddr_equal(
             if sk1_rcv_saddr == sk2_rcv_saddr {
                 return true;
             }
-            return (match_sk1_wildcard && sk1_rcv_saddr == 0) ||
-                (match_sk2_wildcard && sk2_rcv_saddr == 0);
+            return (match_sk1_wildcard && sk1_rcv_saddr == 0)
+                || (match_sk2_wildcard && sk2_rcv_saddr == 0);
         }
         return false;
     }
@@ -132,13 +132,17 @@ pub unsafe extern "C" fn ipv6_rcv_saddr_equal(
         return true;
     }
 
-    if addr_type2 == IPV6_ADDR_ANY && match_sk2_wildcard &&
-        !(sk2_ipv6only && addr_type == IPV6_ADDR_MAPPED) {
+    if addr_type2 == IPV6_ADDR_ANY
+        && match_sk2_wildcard
+        && !(sk2_ipv6only && addr_type == IPV6_ADDR_MAPPED)
+    {
         return true;
     }
 
-    if addr_type == IPV6_ADDR_ANY && match_sk1_wildcard &&
-        !(sk1_ipv6only && addr_type2 == IPV6_ADDR_MAPPED) {
+    if addr_type == IPV6_ADDR_ANY
+        && match_sk1_wildcard
+        && !(sk1_ipv6only && addr_type2 == IPV6_ADDR_MAPPED)
+    {
         return true;
     }
 
@@ -163,8 +167,8 @@ pub unsafe extern "C" fn ipv4_rcv_saddr_equal(
         if sk1_rcv_saddr == sk2_rcv_saddr {
             return true;
         }
-        return (match_sk1_wildcard && sk1_rcv_saddr == 0) ||
-            (match_sk2_wildcard && sk2_rcv_saddr == 0);
+        return (match_sk1_wildcard && sk1_rcv_saddr == 0)
+            || (match_sk2_wildcard && sk2_rcv_saddr == 0);
     }
     false
 }
@@ -258,19 +262,28 @@ pub unsafe extern "C" fn inet_csk_bind_conflict(
     // Implementation would iterate through tb->owners list
     // This is a simplified placeholder
     while !sk2.is_null() {
-        if sk != sk2 &&
-            (!(*sk).sk_bound_dev_if || !(*sk2).sk_bound_dev_if || (*sk).sk_bound_dev_if == (*sk2).sk_bound_dev_if) {
+        if sk != sk2
+            && (!(*sk).sk_bound_dev_if
+                || !(*sk2).sk_bound_dev_if
+                || (*sk).sk_bound_dev_if == (*sk2).sk_bound_dev_if)
+        {
             if reuse && (*sk2).sk_reuse != 0 && (*sk2).sk_state != TCP_LISTEN {
-                if (!relax ||
-                    (!reuseport_ok && reuseport && (*sk2).sk_reuseport != ptr::null() &&
-                     rcu_access_pointer((*sk).sk_reuseport_cb).is_null() &&
-                     ((*sk2).sk_state == TCP_TIME_WAIT || uid_eq(uid, sock_i_uid(sk2)))) &&
-                    inet_rcv_saddr_equal(sk, sk2, true)) {
+                if (!relax
+                    || (!reuseport_ok
+                        && reuseport
+                        && (*sk2).sk_reuseport != ptr::null()
+                        && rcu_access_pointer((*sk).sk_reuseport_cb).is_null()
+                        && ((*sk2).sk_state == TCP_TIME_WAIT || uid_eq(uid, sock_i_uid(sk2))))
+                        && inet_rcv_saddr_equal(sk, sk2, true))
+                {
                     return true;
                 }
-            } else if (!reuseport_ok || !reuseport || (*sk2).sk_reuseport.is_null() ||
-                     rcu_access_pointer((*sk).sk_reuseport_cb).is_some() ||
-                     ((*sk2).sk_state != TCP_TIME_WAIT && !uid_eq(uid, sock_i_uid(sk2)))) {
+            } else if (!reuseport_ok
+                || !reuseport
+                || (*sk2).sk_reuseport.is_null()
+                || rcu_access_pointer((*sk).sk_reuseport_cb).is_some()
+                || ((*sk2).sk_state != TCP_TIME_WAIT && !uid_eq(uid, sock_i_uid(sk2))))
+            {
                 if inet_rcv_saddr_equal(sk, sk2, true) {
                     return true;
                 }

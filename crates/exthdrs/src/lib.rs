@@ -4,7 +4,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -81,7 +81,12 @@ extern "C" {
     fn pskb_may_pull(skb: *mut c_void, len: c_int) -> bool;
     fn skb_cloned(skb: *mut c_void) -> bool;
     fn pskb_expand_head(skb: *mut c_void, headroom: c_int, tailroom: c_int, flags: c_int) -> bool;
-    fn xfrm6_input_addr(skb: *mut c_void, dst: *mut c_void, src: *mut c_void, proto: c_int) -> c_int;
+    fn xfrm6_input_addr(
+        skb: *mut c_void,
+        dst: *mut c_void,
+        src: *mut c_void,
+        proto: c_int,
+    ) -> c_int;
     fn __IP6_INC_STATS(net: *mut net, idev: *mut inet6_dev, mib: c_int);
     fn __skb_tunnel_rx(skb: *mut c_void, dev: *mut c_void, net: *mut net);
     fn netif_rx(skb: *mut c_void);
@@ -151,7 +156,11 @@ pub unsafe extern "C" fn ip6_parse_tlv(
     let mut padlen = 0;
     let mut tlv_count = 0;
     let disallow_unknowns = max_count < 0;
-    let max_count = if disallow_unknowns { -max_count } else { max_count };
+    let max_count = if disallow_unknowns {
+        -max_count
+    } else {
+        max_count
+    };
 
     if skb.transport_offset() + len > skb.headlen() {
         kfree_skb(skb);
@@ -162,7 +171,8 @@ pub unsafe extern "C" fn ip6_parse_tlv(
     len -= 2;
 
     while len > 0 {
-        let optlen = if *nh[off] == 0 { // IPV6_TLV_PAD1
+        let optlen = if *nh[off] == 0 {
+            // IPV6_TLV_PAD1
             padlen += 1;
             if padlen > 7 {
                 kfree_skb(skb);
@@ -179,7 +189,8 @@ pub unsafe extern "C" fn ip6_parse_tlv(
                 return false;
             }
 
-            if nh[off] == 0 { // IPV6_TLV_PADN
+            if nh[off] == 0 {
+                // IPV6_TLV_PADN
                 padlen += optlen;
                 if padlen > 7 {
                     kfree_skb(skb);
@@ -234,8 +245,9 @@ pub unsafe extern "C" fn ipv6_destopt_rcv(skb: *mut c_void) -> c_int {
     let net = dev_net((*skb).dev);
     let extlen = ((*(skb.transport_header() as *mut u8))[1] + 1) << 3;
 
-    if !pskb_may_pull(skb, skb.transport_offset() + 8) || 
-       !pskb_may_pull(skb, skb.transport_offset() + extlen) {
+    if !pskb_may_pull(skb, skb.transport_offset() + 8)
+        || !pskb_may_pull(skb, skb.transport_offset() + extlen)
+    {
         __IP6_INC_STATS(net, idev, 0); // IPSTATS_MIB_INHDRERRORS
         kfree_skb(skb);
         return -1;
@@ -247,8 +259,12 @@ pub unsafe extern "C" fn ipv6_destopt_rcv(skb: *mut c_void) -> c_int {
     }
 
     (*opt).lastopt = (*opt).dst1 = skb.network_header_len();
-    
-    if ip6_parse_tlv(tlvprocdestopt_lst.as_ptr(), skb, (*net).ipv6.max_dst_opts_cnt) {
+
+    if ip6_parse_tlv(
+        tlvprocdestopt_lst.as_ptr(),
+        skb,
+        (*net).ipv6.max_dst_opts_cnt,
+    ) {
         (*skb).transport_header += extlen;
         let opt = IP6CB(skb);
         (*opt).nhoff = (*opt).dst1;
@@ -319,7 +335,7 @@ pub unsafe extern "C" fn ipv6_dest_hao(skb: *mut c_void, optoff: c_int) -> bool 
 pub unsafe extern "C" fn seg6_update_csum(skb: *mut c_void) {
     let hdr = skb.transport_header() as *mut ipv6_sr_hdr;
     let addr = (*hdr).segments.add((*hdr).segments_left);
-    
+
     // Actual checksum update logic would go here...
 }
 
@@ -330,9 +346,9 @@ pub unsafe extern "C" fn ipv6_srh_rcv(skb: *mut c_void) -> c_int {
     let net = dev_net((*skb).dev);
     let hdr = skb.transport_header() as *mut ipv6_sr_hdr;
     let idev = __in6_dev_get((*skb).dev);
-    
+
     // Simplified implementation - actual code would handle SRH processing...
-    
+
     1
 }
 

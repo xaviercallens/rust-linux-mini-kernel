@@ -81,34 +81,46 @@ fn mangle_contents(
     unsafe {
         // SAFETY: Caller guarantees skb is valid and writable
         let data = skb_network_header(skb).offset(dataoff as isize);
-        
+
         // Move post-replacement data
         let src = data.offset(match_offset as isize + match_len as isize);
         let dst = data.offset(match_offset as isize + rep_len as isize);
-        let len = (skb_tail_pointer(skb) as usize - (data as usize + match_offset as usize + match_len as usize)) as usize;
-        
+        let len = (skb_tail_pointer(skb) as usize
+            - (data as usize + match_offset as usize + match_len as usize))
+            as usize;
+
         ptr::copy_nonoverlapping(src, dst, len);
-        
+
         // Copy replacement buffer
-        ptr::copy(rep_buffer, data.offset(match_offset as isize), rep_len as usize);
-        
+        ptr::copy(
+            rep_buffer,
+            data.offset(match_offset as isize),
+            rep_len as usize,
+        );
+
         // Update skb length
         if rep_len > match_len {
             // Extend packet
             skb_put(skb, (rep_len - match_len) as usize);
         } else {
             // Shrink packet
-            __skb_trim(skb, (skb as *mut sk_buff).as_ref().unwrap().len + (rep_len - match_len) as usize);
+            __skb_trim(
+                skb,
+                (skb as *mut sk_buff).as_ref().unwrap().len + (rep_len - match_len) as usize,
+            );
         }
-        
+
         // Update IP headers if needed
-        if nf_ct_l3num((*skb as *mut sk_buff).as_ref().unwrap().nfct as *mut nf_conn) == NFPROTO_IPV4 {
+        if nf_ct_l3num((*skb as *mut sk_buff).as_ref().unwrap().nfct as *mut nf_conn)
+            == NFPROTO_IPV4
+        {
             let ip_hdr = skb_network_header(skb);
             (*ip_hdr.offset(2) as *mut u16) = ((*skb as *mut sk_buff).as_ref().unwrap().len) as u16;
             ip_send_check(ip_hdr as *mut u8);
         } else {
             let ipv6_hdr = skb_network_header(skb);
-            (*ipv6_hdr.offset(40) as *mut u16) = ((*skb as *mut sk_buff).as_ref().unwrap().len - 40) as u16;
+            (*ipv6_hdr.offset(40) as *mut u16) =
+                ((*skb as *mut sk_buff).as_ref().unwrap().len - 40) as u16;
         }
     }
 }
@@ -127,34 +139,55 @@ pub unsafe extern "C" fn __nf_nat_mangle_tcp_packet(
     adjust: c_int,
 ) -> c_int {
     let skb_ref = &mut *skb;
-    
+
     // Ensure packet is writable
     if skb_ensure_writable(skb, skb_ref.len) != 0 {
         return EINVAL;
     }
-    
+
     // Check if we need to expand the skb
     if rep_len > match_len {
-        let tailroom = skb_ref.len - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize);
+        let tailroom =
+            skb_ref.len - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize);
         if (rep_len - match_len) as usize > tailroom {
             if enlarge_skb(skb, (rep_len - match_len) as usize) != 1 {
                 return ENOMEM;
             }
         }
     }
-    
+
     let tcph = (skb as *mut u8).offset(protoff as isize) as *mut u8;
-    
+
     let oldlen = skb_ref.len - protoff as usize;
-    mangle_contents(skb, protoff + (*tcph.offset(12) as u32 * 4) as c_uint, match_offset, match_len, rep_buffer, rep_len);
-    
+    mangle_contents(
+        skb,
+        protoff + (*tcph.offset(12) as u32 * 4) as c_uint,
+        match_offset,
+        match_len,
+        rep_buffer,
+        rep_len,
+    );
+
     let datalen = skb_ref.len - protoff as usize;
-    nf_nat_csum_recalc(skb, nf_ct_l3num(ct), IPPROTO_TCP, tcph as *mut c_void, &mut (*tcph.offset(16) as *mut u16), datalen as c_int, oldlen as c_int);
-    
+    nf_nat_csum_recalc(
+        skb,
+        nf_ct_l3num(ct),
+        IPPROTO_TCP,
+        tcph as *mut c_void,
+        &mut (*tcph.offset(16) as *mut u16),
+        datalen as c_int,
+        oldlen as c_int,
+    );
+
     if adjust != 0 && rep_len != match_len {
-        nf_ct_seqadj_set(ct, ctinfo, tcph as *mut c_void, (rep_len - match_len) as c_int);
+        nf_ct_seqadj_set(
+            ct,
+            ctinfo,
+            tcph as *mut c_void,
+            (rep_len - match_len) as c_int,
+        );
     }
-    
+
     0
 }
 
@@ -171,38 +204,54 @@ pub unsafe extern "C" fn nf_nat_mangle_udp_packet(
     rep_len: c_uint,
 ) -> c_int {
     let skb_ref = &mut *skb;
-    
+
     // Ensure packet is writable
     if skb_ensure_writable(skb, skb_ref.len) != 0 {
         return EINVAL;
     }
-    
+
     // Check if we need to expand the skb
     if rep_len > match_len {
-        let tailroom = skb_ref.len - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize);
+        let tailroom =
+            skb_ref.len - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize);
         if (rep_len - match_len) as usize > tailroom {
             if enlarge_skb(skb, (rep_len - match_len) as usize) != 1 {
                 return ENOMEM;
             }
         }
     }
-    
+
     let udph = (skb as *mut u8).offset(protoff as isize) as *mut u8;
-    
+
     let oldlen = skb_ref.len - protoff as usize;
-    mangle_contents(skb, protoff + 8, match_offset, match_len, rep_buffer, rep_len);
-    
+    mangle_contents(
+        skb,
+        protoff + 8,
+        match_offset,
+        match_len,
+        rep_buffer,
+        rep_len,
+    );
+
     // Update UDP length
     let datalen = skb_ref.len - protoff as usize;
     (*udph.offset(4) as *mut u16) = datalen as u16;
-    
+
     // Handle checksum
     if (*udph.offset(6) as *mut u16) == 0 && (*skb).ip_summed != 1 {
         return 0;
     }
-    
-    nf_nat_csum_recalc(skb, nf_ct_l3num(ct), IPPROTO_UDP, udph as *mut c_void, &mut (*udph.offset(6) as *mut u16), datalen as c_int, oldlen as c_int);
-    
+
+    nf_nat_csum_recalc(
+        skb,
+        nf_ct_l3num(ct),
+        IPPROTO_UDP,
+        udph as *mut c_void,
+        &mut (*udph.offset(6) as *mut u16),
+        datalen as c_int,
+        oldlen as c_int,
+    );
+
     0
 }
 
@@ -210,32 +259,35 @@ pub unsafe extern "C" fn nf_nat_mangle_udp_packet(
 #[no_mangle]
 pub unsafe extern "C" fn enlarge_skb(skb: *mut sk_buff, extra: usize) -> c_int {
     let skb_ref = &mut *skb;
-    
+
     if skb_ref.len + extra as usize > 65535 {
         return 0;
     }
-    
-    if pskb_expand_head(skb, 0, extra - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize), 0) != 0 {
+
+    if pskb_expand_head(
+        skb,
+        0,
+        extra - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize),
+        0,
+    ) != 0
+    {
         return 0;
     }
-    
+
     1
 }
 
 /// Setup NAT to follow master connection
 #[no_mangle]
-pub unsafe extern "C" fn nf_nat_follow_master(
-    ct: *mut nf_conn,
-    exp: *mut nf_conntrack_expect,
-) {
+pub unsafe extern "C" fn nf_nat_follow_master(ct: *mut nf_conn, exp: *mut nf_conntrack_expect) {
     let exp_ref = &mut *exp;
     let ct_ref = &mut *ct;
-    
+
     // Ensure this is a fresh connection
     if ct_ref.status & IPS_NAT_DONE_MASK != 0 {
         panic!("Connection already has NAT setup");
     }
-    
+
     // Setup source NAT
     let mut range = nf_nat_range2 {
         flags: 1, // NF_NAT_RANGE_MAP_IPS
@@ -245,7 +297,7 @@ pub unsafe extern "C" fn nf_nat_follow_master(
         max_proto: 0,
     };
     nf_nat_setup_info(ct, &mut range, 0); // NF_NAT_MANIP_SRC
-    
+
     // Setup destination NAT
     range.flags = 3; // NF_NAT_RANGE_MAP_IPS | NF_NAT_RANGE_PROTO_SPECIFIED
     range.min_proto = exp_ref.saved_proto;
@@ -282,7 +334,7 @@ mod tests {
                 rep_len: super::c_uint,
                 adjust: super::c_int,
             ) -> super::c_int;
-            
+
             fn nf_nat_mangle_udp_packet(
                 skb: *mut super::sk_buff,
                 ct: *mut super::nf_conn,
@@ -293,13 +345,10 @@ mod tests {
                 rep_buffer: *const super::c_void,
                 rep_len: super::c_uint,
             ) -> super::c_int;
-            
-            fn nf_nat_follow_master(
-                ct: *mut super::nf_conn,
-                exp: *mut super::nf_conntrack_expect,
-            );
+
+            fn nf_nat_follow_master(ct: *mut super::nf_conn, exp: *mut super::nf_conntrack_expect);
         }
-        
+
         // Just verify that the functions exist and have the right signatures
         // No actual execution since we need kernel environment
     }

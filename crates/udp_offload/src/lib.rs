@@ -10,8 +10,8 @@
 
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::ptr;
 use core::mem;
+use core::ptr;
 
 // Constants from C
 pub const IPPROTO_UDP: c_int = 17;
@@ -96,10 +96,7 @@ pub struct NapiGroCb {
 
 // Function implementations
 #[no_mangle]
-pub unsafe extern "C" fn udp6_ufo_fragment(
-    skb: *mut sk_buff,
-    features: u32,
-) -> *mut sk_buff {
+pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> *mut sk_buff {
     let segs = ptr::addr_of_mut!(*skb).segs;
     if segs.is_null() {
         return ptr::addr_of_mut!(*skb).segs;
@@ -147,10 +144,7 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn udp6_gro_receive(
-    head: *mut c_void,
-    skb: *mut sk_buff,
-) -> *mut sk_buff {
+pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
     let uh = udp_gro_udphdr(skb);
     if uh.is_null() {
         NAPI_GRO_CB(skb).flush = 1;
@@ -161,12 +155,9 @@ pub unsafe extern "C" fn udp6_gro_receive(
         return ptr::null_mut();
     }
 
-    if skb_gro_checksum_validate_zero_check(
-        skb,
-        IPPROTO_UDP,
-        (*uh).check,
-        ip6_gro_compute_pseudo,
-    ) != 0 {
+    if skb_gro_checksum_validate_zero_check(skb, IPPROTO_UDP, (*uh).check, ip6_gro_compute_pseudo)
+        != 0
+    {
         NAPI_GRO_CB(skb).flush = 1;
         return ptr::null_mut();
     }
@@ -192,12 +183,11 @@ pub unsafe extern "C" fn udp6_gro_receive(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn udp6_gro_complete(
-    skb: *mut sk_buff,
-    nhoff: c_int,
-) -> c_int {
+pub unsafe extern "C" fn udp6_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
     let ipv6h = ipv6_hdr(skb);
-    let uh = (skb.offset(nhoff as isize) as *mut udphdr).as_mut().unwrap();
+    let uh = (skb.offset(nhoff as isize) as *mut udphdr)
+        .as_mut()
+        .unwrap();
 
     if NAPI_GRO_CB(skb).is_flist != 0 && NAPI_GRO_CB(skb).encap_mark == 0 {
         (*uh).len = ((skb.len - nhoff as usize) as u16).to_be();
@@ -206,8 +196,10 @@ pub unsafe extern "C" fn udp6_gro_complete(
         (*shinfo).gso_type |= (1 << 1) | (1 << 2); // SKB_GSO_FRAGLIST | SKB_GSO_UDP_L4
         (*shinfo).gso_segs = NAPI_GRO_CB(skb).count;
 
-        if (*skb).ip_summed == 1 { // CHECKSUM_UNNECESSARY
-            if (*skb).csum_level < 2 { // SKB_MAX_CSUM_LEVEL
+        if (*skb).ip_summed == 1 {
+            // CHECKSUM_UNNECESSARY
+            if (*skb).csum_level < 2 {
+                // SKB_MAX_CSUM_LEVEL
                 (*skb).csum_level += 1;
             }
         } else {
@@ -280,12 +272,7 @@ extern "C" {
         sk: *mut c_void,
     ) -> *mut sk_buff;
     fn ip6_gro_compute_pseudo(...) -> u32;
-    fn udp_v6_check(
-        len: u16,
-        saddr: *const [u8; 16],
-        daddr: *const [u8; 16],
-        csum: u32,
-    ) -> u16;
+    fn udp_v6_check(len: u16, saddr: *const [u8; 16], daddr: *const [u8; 16], csum: u32) -> u16;
     fn udp_gro_complete(
         skb: *mut sk_buff,
         nhoff: c_int,

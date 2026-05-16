@@ -4,10 +4,10 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
 use core::ffi::c_int;
+use core::ptr;
 
 // Error codes from C
 pub const EINVAL: c_int = -22;
@@ -64,7 +64,7 @@ fn nf_do_netdev_egress(skb: *mut sk_buff, dev: *mut net_device) {
         // In C, skb_push is a macro that adjusts the data pointer
         // We don't need to implement it here as it's handled by the C ABI
         // Just call the function that would be called after skb_push
-        
+
         (*skb).dev = dev;
         (*skb).tstamp = 0;
         dev_queue_xmit(skb);
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn nft_fwd_dup_netdev_offload(
     ctx: *mut nft_offload_ctx,
     flow: *mut nft_flow_rule,
     id: c_int,
-    oif: c_int
+    oif: c_int,
 ) -> c_int {
     if ctx.is_null() || flow.is_null() {
         return EINVAL;
@@ -135,9 +135,9 @@ pub unsafe extern "C" fn nft_fwd_dup_netdev_offload(
     let entry = &mut (*flow).rule.entries[(*ctx).num_actions as usize];
     (*entry).id = id;
     (*entry).dev = dev;
-    
+
     (*ctx).num_actions += 1;
-    
+
     0
 }
 
