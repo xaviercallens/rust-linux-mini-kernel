@@ -88,11 +88,14 @@ ACR_NAME="rustkernel64044"
 IMAGE_NAME="codex-compiler:latest"
 
 echo "Building Docker image in ACR..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 az acr build \
     --registry "$ACR_NAME" \
     --image "$IMAGE_NAME" \
-    --file Dockerfile.codex \
-    .. \
+    --file azure_codex_compiler/Dockerfile.codex \
+    . \
     --no-logs
 
 echo "✅ Docker image built"
@@ -105,6 +108,7 @@ az container create \
     --resource-group "$RESOURCE_GROUP" \
     --name "$CONTAINER_NAME" \
     --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}" \
+    --os-type Linux \
     --cpu 4 \
     --memory 16 \
     --restart-policy Never \

@@ -1,0 +1,10 @@
+
+# Azure OpenAI credentials (sensitive)
+.azure_openai_credentials
+**/openai_credentials*
+*.key
+*.secret
+
+# Rust build artifacts
+/target/
+**/target/

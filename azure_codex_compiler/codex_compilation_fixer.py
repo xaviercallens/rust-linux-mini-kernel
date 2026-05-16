@@ -22,7 +22,7 @@ class AzureCodexCompilationFixer:
         self.workspace_root = Path(workspace_root)
         self.crates_dir = self.workspace_root / "crates"
         self.results_dir = self.workspace_root / "compilation_fixes"
-        self.results_dir.mkdir(exist_ok=True)
+        self.results_dir.mkdir(parents=True, exist_ok=True)
 
         # Azure OpenAI Codex endpoints
         self.endpoints = endpoints
@@ -423,7 +423,7 @@ Top Fixed Modules:
 
 def main():
     parser = argparse.ArgumentParser(description="Azure Codex Compilation Fixer")
-    parser.add_argument("--workspace", default="/Users/xcallens/rust-linux-mini-kernel",
+    parser.add_argument("--workspace", default=os.environ.get("WORKSPACE_ROOT", "/Users/xcallens/rust-linux-mini-kernel"),
                        help="Path to Rust workspace")
     parser.add_argument("--workers", type=int, default=3,
                        help="Number of parallel workers (endpoints)")
