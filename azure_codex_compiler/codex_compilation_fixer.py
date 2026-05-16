@@ -433,25 +433,24 @@ def main():
     args = parser.parse_args()
 
     # Azure OpenAI endpoints configuration
-    # TODO: Replace with actual endpoint credentials
     endpoints = [
         {
             "name": "endpoint-1",
             "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT_1", ""),
             "api_key": os.environ.get("AZURE_OPENAI_KEY_1", ""),
-            "deployment": "gpt-4"
+            "deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT_1", "gpt-4")
         },
         {
             "name": "endpoint-2",
             "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT_2", ""),
             "api_key": os.environ.get("AZURE_OPENAI_KEY_2", ""),
-            "deployment": "gpt-4"
+            "deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT_2", "gpt-4")
         },
         {
             "name": "endpoint-3",
             "endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT_3", ""),
             "api_key": os.environ.get("AZURE_OPENAI_KEY_3", ""),
-            "deployment": "gpt-4"
+            "deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT_3", "gpt-4")
         }
     ]
 
