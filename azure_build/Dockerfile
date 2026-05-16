@@ -32,11 +32,11 @@ RUN apt-get update && apt-get install -y \
 RUN rustup component add rustfmt clippy rust-src
 RUN rustup target add x86_64-unknown-linux-gnu
 
-# Install cargo tools
-RUN cargo install cargo-audit cargo-outdated cargo-watch hyperfine
+# Skip cargo tools due to edition2024 requirements in dependencies
+# hyperfine can be replaced with 'time' command for benchmarking
 
 # Install Python dependencies for analysis
-RUN pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --break-system-packages \
     pandas \
     matplotlib \
     seaborn \
