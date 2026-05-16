@@ -180,16 +180,13 @@ pub unsafe extern "C" fn nf_nat_ftp(
     let buflen = nf_nat_ftp_fmt_cmd(ct, type_, buffer.as_mut_ptr(), buffer.len() as size_t, &newaddr, port);
     
     if buflen <= 0 {
-        goto out;
     }
     
     if !nf_nat_mangle_tcp_packet(skb, ct, ctinfo, protoff, matchoff, matchlen, buffer.as_ptr(), buflen as c_int) {
-        goto out;
     }
     
     return NF_ACCEPT;
     
-    out:
     nf_ct_helper_log(skb, ct, b"cannot mangle packet\0".as_ptr() as *const u8);
     nf_ct_unexpect_related(exp);
     NF_DROP
@@ -341,6 +338,8 @@ unsafe fn write(buffer: *mut u8, buflen: size_t, args: &core::fmt::Arguments) ->
     core::fmt::Write::write_fmt(&mut writer, args).unwrap();
     writer.pos
 }
+
+#[repr(C)]
 
 struct BufferWriter {
     buffer: *mut u8,

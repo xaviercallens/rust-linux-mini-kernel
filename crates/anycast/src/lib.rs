@@ -178,7 +178,6 @@ pub unsafe extern "C" fn ipv6_sock_ac_join(
             ip6_rt_put(rt);
         } else if ishost != 0 {
             err = -EADDRNOTAVAIL;
-            goto error;
         } else {
             dev = __dev_get_by_flags(net, IFF_UP, IFF_UP | IFF_LOOPBACK);
         }
@@ -186,7 +185,6 @@ pub unsafe extern "C" fn ipv6_sock_ac_join(
 
     if dev.is_null() {
         err = -ENODEV;
-        goto error;
     }
 
     idev = __in6_dev_get(dev);
@@ -196,7 +194,6 @@ pub unsafe extern "C" fn ipv6_sock_ac_join(
         } else {
             err = -EADDRNOTAVAVAIL;
         }
-        goto error;
     }
 
     ishost = !(*idev).cnf.forwarding;
@@ -208,7 +205,6 @@ pub unsafe extern "C" fn ipv6_sock_ac_join(
             err = -EADDRNOTAVAIL;
         }
         if err != 0 {
-            goto error;
         }
     }
 
@@ -219,7 +215,6 @@ pub unsafe extern "C" fn ipv6_sock_ac_join(
         pac = ptr::null_mut();
     }
 
-error:
     if !pac.is_null() {
         sock_kfree_s(sk, pac, core::mem::size_of::<ipv6_ac_socklist>() as size_t);
     }

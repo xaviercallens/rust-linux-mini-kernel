@@ -242,7 +242,6 @@ pub unsafe extern "C" fn gue_udp_recv(
 
     let len = core::mem::size_of::<udphdr>() as size_t + core::mem::size_of::<guehdr>() as size_t;
     if !unsafe { pskb_may_pull(skb, len) } {
-        goto drop;
     }
 
     let guehdr = unsafe { &mut *(&udp_hdr(skb) as *const udphdr as *mut guehdr).offset(1) };
@@ -257,7 +256,6 @@ pub unsafe extern "C" fn gue_udp_recv(
             };
 
             if unsafe { fou_recv_pull(skb, fou, core::mem::size_of::<udphdr>() as size_t) } != 0 {
-                goto drop;
             }
 
             return -prot as c_int;
@@ -269,13 +267,11 @@ pub unsafe extern "C" fn gue_udp_recv(
     let len = len + optlen;
     
     if !unsafe { pskb_may_pull(skb, len) } {
-        goto drop;
     }
 
     let guehdr = unsafe { &mut *(&udp_hdr(skb) as *const udphdr as *mut guehdr).offset(1) };
     
     if unsafe { validate_gue_flags(guehdr, optlen) } != 0 {
-        goto drop;
     }
 
     let hdrlen = core::mem::size_of::<guehdr>() as size_t + optlen;
@@ -283,14 +279,12 @@ pub unsafe extern "C" fn gue_udp_recv(
     if unsafe { (*fou).family } == 0x02 { // AF_INET
         let ip = unsafe { ip_hdr(skb) };
         if ip.is_null() {
-            goto drop;
         }
         let tot_len = unsafe { (*ip).tot_len };
         unsafe { (*ip).tot_len = ((ntohs(tot_len) - len as u16) as u16).to_be() };
     } else if unsafe { (*fou).family } == 0x0a { // AF_INET6
         let ipv6 = unsafe { ipv6_hdr(skb) };
         if ipv6.is_null() {
-            goto drop;
         }
         let payload_len = unsafe { (*ipv6).payload_len };
         unsafe { (*ipv6).payload_len = ((ntohs(payload_len) - len as u16) as u16).to_be() };
@@ -310,7 +304,6 @@ pub unsafe extern "C" fn gue_udp_recv(
                 (*fou).flags & FOU_F_REMCSUM_NOPARTIAL != 0) };
             
             if new_guehdr.is_null() {
-                goto drop;
             }
             
             data = unsafe { &*new_guehdr as *const guehdr as *mut c_void }.offset(1);
@@ -327,12 +320,10 @@ pub unsafe extern "C" fn gue_udp_recv(
     unsafe { skb_reset_transport_header(skb) };
     
     if unsafe { iptunnel_pull_offloads(skb) } != 0 {
-        goto drop;
     }
 
     return -proto_ctype as c_int;
 
-drop:
     unsafe { kfree_skb(skb) };
     0
 }
@@ -361,7 +352,7 @@ pub unsafe extern "C" fn htons(x: u16) -> u16 {
 
 #[no_mangle]
 pub unsafe extern "C" fn __skb_pull(skb: *mut sk_buff, len: usize) {
-    // Implementation would modify skb->data
+    // Implementation would modify (*skb).data
 }
 
 #[no_mangle]

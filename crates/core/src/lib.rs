@@ -275,6 +275,8 @@ fn nf_hook_entries_free(e: *mut nf_hook_entries) {
     }
 }
 
+#[no_mangle]
+
 unsafe extern "C" fn __nf_hook_entries_free(h: *mut c_void) {
     let head = container_of(h, nf_hook_entries_rcu_head, head);
     libc::free((*head).allocation);
@@ -301,7 +303,9 @@ unsafe fn call_rcu(head: *mut c_void, func: extern "C" fn(*mut c_void)) {
 static dummy_ops: nf_hook_ops = nf_hook_ops {
     hook: accept_all,
     priority: INT_MIN,
-    priv: ptr::null_mut(),
+    priv: ptr::n
+#[no_mangle]
+ull_mut(),
 };
 
 unsafe extern "C" fn accept_all(

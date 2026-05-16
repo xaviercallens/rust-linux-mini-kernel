@@ -166,7 +166,6 @@ pub unsafe extern "C" fn inet6_create(
 
     // SAFETY: RCU read lock is held during list traversal
     unsafe {
-        lookup_protocol:
         loop {
             err = ESOCKTNOSUPPORT;
             let mut list_entry: *mut inet_protosw = ptr::null_mut();

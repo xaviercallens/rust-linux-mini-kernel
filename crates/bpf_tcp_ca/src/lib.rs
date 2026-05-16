@@ -323,7 +323,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_init_member(t: *const BtfType, member: *cons
         _ => {}
     }
     
-    if !btf_type_resolve_func_ptr(btf_vmlinux, (*member).type, ptr::null_mut()) {
+    if !btf_type_resolve_func_ptr(btf_vmlinux, (*member).type_field, ptr::null_mut()) {
         return 0;
     }
     

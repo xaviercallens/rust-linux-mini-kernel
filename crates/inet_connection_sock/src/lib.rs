@@ -259,7 +259,7 @@ pub unsafe extern "C" fn inet_csk_bind_conflict(
     let uid = sock_i_uid(sk);
 
     let mut sk2: *const sock = ptr::null();
-    // Implementation would iterate through tb->owners list
+    // Implementation would iterate through (*tb).owners list
     // This is a simplified placeholder
     while !sk2.is_null() {
         if sk != sk2

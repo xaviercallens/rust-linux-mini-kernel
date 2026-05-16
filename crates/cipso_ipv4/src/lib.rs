@@ -78,7 +78,7 @@ pub unsafe extern "C" fn cipso_v4_cache_entry_free(entry: *mut cipso_v4_map_cach
         netlbl_secattr_cache_free((*entry).lsm_data);
     }
 
-    // SAFETY: entry->key is valid if not null
+    // SAFETY: (*entry).key is valid if not null
     if !(*entry).key.is_null() {
         // Call kfree
         extern "C" {
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn cipso_v4_cache_check(
             // Check key content
             let mut match_found = true;
             for i in 0..key_len {
-                // SAFETY: key and entry->key are valid for key_len bytes
+                // SAFETY: key and (*entry).key are valid for key_len bytes
                 if *key.add(i as usize) != *(*entry_ptr).key.add(i as usize) {
                     match_found = false;
                     break;
@@ -336,7 +336,7 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
 
     // Copy key
     for i in 0..cipso_ptr_len {
-        // SAFETY: cipso_ptr and entry->key are valid for cipso_ptr_len bytes
+        // SAFETY: cipso_ptr and (*entry).key are valid for cipso_ptr_len bytes
         *(*entry).key.add(i as usize) = *cipso_ptr.add(i as usize);
     }
 
@@ -365,7 +365,7 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
     } else {
         // Remove last entry
         let old_entry = {
-            // SAFETY: bucket->list is valid
+            // SAFETY: (*bucket).list is valid
             let list = bucket.list;
             let entry = list as *mut cipso_v4_map_cache_entry;
             (*entry).list

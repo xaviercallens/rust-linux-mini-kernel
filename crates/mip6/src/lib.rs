@@ -289,25 +289,25 @@ pub static mut mip6_destopt_type: xfrm_type = xfrm_type {
 // Helper functions
 #[no_mangle]
 pub extern "C" fn skb_transport_offset(skb: *mut c_void) -> c_int {
-    // Implementation would access skb->transport_header
+    // Implementation would access (*skb).transport_header
     0
 }
 
 #[no_mangle]
 pub extern "C" fn skb_network_offset(skb: *mut c_void) -> c_int {
-    // Implementation would access skb->network_header
+    // Implementation would access (*skb).network_header
     0
 }
 
 #[no_mangle]
 pub extern "C" fn skb_push(skb: *mut c_void, offset: c_int) -> *mut c_void {
-    // Implementation would modify skb->data
+    // Implementation would modify (*skb).data
     skb
 }
 
 #[no_mangle]
 pub extern "C" fn skb_mac_header(skb: *mut c_void) -> *mut u8 {
-    // Implementation would access skb->mac_header
+    // Implementation would access (*skb).mac_header
     ptr::null_mut()
 }
 
@@ -319,13 +319,13 @@ pub extern "C" fn ipv6_hdr(skb: *mut c_void) -> *mut in6_addr {
 
 #[no_mangle]
 pub extern "C" fn skb_tail_pointer(skb: *mut c_void) -> *mut c_void {
-    // Implementation would access skb->tail
+    // Implementation would access (*skb).tail
     ptr::null_mut()
 }
 
 #[no_mangle]
 pub extern "C" fn skb_get_ktime(skb: *mut c_void) -> u64 {
-    // Implementation would access skb->tstamp
+    // Implementation would access (*skb).tstamp
     0
 }
 

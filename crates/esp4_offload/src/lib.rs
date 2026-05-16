@@ -159,8 +159,8 @@ pub unsafe extern "C" fn esp4_gro_receive(
             return ptr::null_mut();
         }
 
-        let net = dev_net(skb->dev);
-        let x = xfrm_state_lookup(net, skb->mark, 
+        let net = dev_net((*skb).dev);
+        let x = xfrm_state_lookup(net, (*skb).mark, 
                                   &ip_hdr(skb)->daddr, spi, IPPROTO_ESP, AF_INET);
         if x.is_null() {
             secpath_reset(skb);
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn esp4_gro_receive(
             return ptr::null_mut();
         }
 
-        skb->mark = xfrm_smark_get(skb->mark, x);
+        (*skb).mark = xfrm_smark_get((*skb).mark, x);
 
         (*sp).xvec[(*sp).len] = x;
         (*sp).len += 1;
@@ -329,11 +329,11 @@ pub unsafe extern "C" fn esp4_gso_segment(
     __skb_pull(skb, size_of::<ip_esp_hdr>() + crypto_aead_ivsize(aead));
     (*skb).encap_hdr_csum = 1;
 
-    let esp_features = if (!(skb->dev->gso_partial_features & NETIF_F_HW_ESP) &&
-         !(features & NETIF_F_HW_ESP)) || (*x).xso.dev != skb->dev {
+    let esp_features = if (!((*skb).dev->gso_partial_features & NETIF_F_HW_ESP) &&
+         !(features & NETIF_F_HW_ESP)) || (*x).xso.dev != (*skb).dev {
         features & !(NETIF_F_SG | NETIF_F_CSUM_MASK | NETIF_F_SCTP_CRC)
     } else if (!(features & NETIF_F_HW_ESP_TX_CSUM) &&
-             !(skb->dev->gso_partial_features & NETIF_F_HW_ESP_TX_CSUM)) {
+             !((*skb).dev->gso_partial_features & NETIF_F_HW_ESP_TX_CSUM)) {
         features & !(NETIF_F_CSUM_MASK | NETIF_F_SCTP_CRC)
     } else {
         features
@@ -375,8 +375,8 @@ pub unsafe extern "C" fn esp_xmit(
     }
     
     let hw_offload = if (!(features & NETIF_F_HW_ESP) &&
-         !(skb->dev->gso_partial_features & NETIF_F_HW_ESP)) ||
-        (*x).xso.dev != skb->dev {
+         !((*skb).dev->gso_partial_features & NETIF_F_HW_ESP)) ||
+        (*x).xso.dev != (*skb).dev {
         (*xo).flags |= CRYPTO_FALLBACK;
         false
     } else {

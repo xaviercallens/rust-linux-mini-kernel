@@ -288,7 +288,6 @@ pub unsafe extern "C" fn ip6_frag_queue(
 
     if fhdr.frag_off & htons(1) == 0 { // IP6_MF
         if end < fq.q.len || (fq.q.flags & (1 << 1) != 0 && end != fq.q.len) { // INET_FRAG_LAST_IN
-            goto discard_fq;
         }
         fq.q.flags |= 1 << 1; // INET_FRAG_LAST_IN
         fq.q.len = end;
@@ -299,22 +298,18 @@ pub unsafe extern "C" fn ip6_frag_queue(
         }
         if end > fq.q.len {
             if fq.q.flags & (1 << 1) != 0 { // INET_FRAG_LAST_IN
-                goto discard_fq;
             }
             fq.q.len = end;
         }
     }
 
     if end == offset {
-        goto discard_fq;
     }
 
     if !pskb_pull(skb, (fhdr as *mut _ as usize) - (skb.data as usize)) {
-        goto discard_fq;
     }
 
     if pskb_trim_rcsum(skb, end - offset) != 0 {
-        goto discard_fq;
     }
 
     let dev = skb.dev;
@@ -326,7 +321,6 @@ pub unsafe extern "C" fn ip6_frag_queue(
             return -EINVAL;
         }
         __IP6_INC_STATS(dev_net(skb_dst(skb)), ip6_dst_idev(skb_dst(skb)), 1); // IPSTATS_MIB_REASM_OVERLAPS
-        goto discard_fq;
     }
 
     if !dev.is_null() {
@@ -359,7 +353,6 @@ pub unsafe extern "C" fn ip6_frag_queue(
     skb_dst_drop(skb);
     -EINPROGRESS;
 
-discard_fq:
     inet_frag_kill(&mut fq.q);
     __IP6_INC_STATS(dev_net(skb_dst(skb)), ip6_dst_idev(skb_dst(skb)), 1); // IPSTATS_MIB_REASMFAILS
     kfree_skb(skb);

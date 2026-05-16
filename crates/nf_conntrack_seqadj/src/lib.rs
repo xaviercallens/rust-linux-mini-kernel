@@ -103,7 +103,7 @@ pub unsafe extern "C" fn nf_ct_seqadj_init(ct: *mut nf_conn, ctinfo: c_int, off:
         return 0;
     }
 
-    // Set the IPS_SEQ_ADJUST_BIT in ct->status
+    // Set the IPS_SEQ_ADJUST_BIT in (*ct).status
     unsafe { set_bit(0, &mut (*ct).status) };
 
     let seqadj = unsafe { nfct_seqadj(ct) };

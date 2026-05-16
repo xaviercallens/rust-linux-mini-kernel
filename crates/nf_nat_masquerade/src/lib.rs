@@ -288,6 +288,8 @@ pub unsafe extern "C" fn nf_nat_masquerade_ipv6(
 }
 
 // Device comparison functions
+#[no_mangle]
+
 unsafe extern "C" fn device_cmp(ct: *mut nf_conn, ifindex: *mut c_void) -> c_int {
     let ifindex_val = *(ifindex as *mut c_int);
     let nat = nf_ct_nat_ext_add(ct);
@@ -301,7 +303,9 @@ unsafe extern "C" fn device_cmp(ct: *mut nf_conn, ifindex: *mut c_void) -> c_int
     }
 }
 
-// Device event handler
+// Device
+#[no_mangle]
+ event handler
 unsafe extern "C" fn masq_device_event(
     this: *mut notifier_block,
     event: c_ulong,
@@ -320,7 +324,9 @@ unsafe extern "C" fn masq_device_event(
         );
     }
     
-    NOTIFY_DONE
+    NOTIFY_D
+#[no_mangle]
+ONE
 }
 
 // Inet event handler
@@ -346,7 +352,9 @@ unsafe extern "C" fn masq_inet_event(
             0
         );
     }
-    
+   
+#[no_mangle]
+ 
     NOTIFY_DONE
 }
 
@@ -381,7 +389,9 @@ unsafe extern "C" fn masq_inet6_event(
     
     module_put(THIS_MODULE);
     put_net(net);
-    NOTIFY_DONE
+ 
+#[no_mangle]
+   NOTIFY_DONE
 }
 
 // Registration functions
@@ -393,40 +403,33 @@ pub unsafe extern "C" fn nf_nat_masquerade_inet_register_notifiers() -> c_int {
     
     if masq_refcnt == c_int::max_value() {
         ret = -EOVERFLOW;
-        goto out_unlock;
     }
     
     masq_refcnt += 1;
     
     if masq_refcnt > 1 {
-        goto out_unlock;
     }
     
     ret = register_netdevice_notifier(&mut masq_dev_notifier);
     if ret != 0 {
-        goto err_dec;
     }
     
     ret = register_inetaddr_notifier(&mut masq_inet_notifier);
     if ret != 0 {
-        goto err_unregister;
     }
     
     ret = nf_nat_masquerade_ipv6_register_notifier();
     if ret != 0 {
-        goto err_unreg_inet;
     }
     
     mutex_unlock(&mut masq_mutex);
     return 0;
     
-err_unreg_inet:
     unregister_inetaddr_notifier(&mut masq_inet_notifier);
-err_unregister:
     unregister_netdevice_notifier(&mut masq_dev_notifier);
-err_dec:
-    masq_refcnt -= 1;
-out_unlock:
+    masq_r
+#[no_mangle]
+efcnt -= 1;
     mutex_unlock(&mut masq_mutex);
     ret
 }
@@ -437,7 +440,6 @@ pub unsafe extern "C" fn nf_nat_masquerade_inet_unregister_notifiers() {
     
     if masq_refcnt > 0 {
         masq_refcnt -= 1;
-        goto out_unlock;
     }
     
     unregister_netdevice_notifier(&mut masq_dev_notifier);

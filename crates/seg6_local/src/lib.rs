@@ -218,7 +218,7 @@ pub unsafe extern "C" fn seg6_lookup_any_nexthop(
     let hdr = ipv6_hdr(skb);
     let mut fl6 = Default::default();
     
-    fl6.flowi6_iif = (*skb).dev->ifindex;
+    fl6.flowi6_iif = (*skb).(*dev).ifindex;
     fl6.daddr = if !nhaddr.is_null() { (*nhaddr).s6_addr } else { (*hdr).daddr.s6_addr };
     fl6.saddr = (*hdr).saddr.s6_addr;
     fl6.flowlabel = ip6_flowinfo(hdr);
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn seg6_lookup_any_nexthop(
 
     let dev_flags = if !local_delivery { IFF_LOOPBACK } else { 0 };
     
-    if !dst.is_null() && ( (*dst).dev->flags & dev_flags ) != 0 && (*dst).error == 0 {
+    if !dst.is_null() && ( (*dst).(*dev).flags & dev_flags ) != 0 && (*dst).error == 0 {
         dst_release(dst);
         dst = ptr::null_mut();
     }
@@ -333,7 +333,7 @@ pub unsafe extern "C" fn input_action_end_dx2(skb: *mut sk_buff, slwt: *mut seg6
         return EINVAL;
     }
 
-    if (*odev).type != ARPHRD_ETHER {
+    if (*odev).type_field != ARPHRD_ETHER {
         kfree_skb(skb);
         return EINVAL;
     }

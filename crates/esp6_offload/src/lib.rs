@@ -203,17 +203,14 @@ pub unsafe extern "C" fn esp6_gro_receive(
     let mut spi: u32 = 0;
     let mut seq: u32 = 0;
     if xfrm_parse_spi(skb, IPPROTO_ESP, &mut spi, &mut seq) != 0 {
-        goto out;
     }
     
     if xo.is_null() || !(*xo).flags & (1 << 0) {
         let sp = secpath_set(skb);
         if sp.is_null() {
-            goto out;
         }
         
         if (*sp).len == XFRM_MAX_DEPTH {
-            goto out_reset;
         }
         
         let x = xfrm_state_lookup(
@@ -225,7 +222,6 @@ pub unsafe extern "C" fn esp6_gro_receive(
             AF_INET6,
         );
         if x.is_null() {
-            goto out_reset;
         }
         
         (*skb).mark = xfrm_smark_get((*skb).mark, x);
@@ -236,7 +232,6 @@ pub unsafe extern "C" fn esp6_gro_receive(
         
         xo = xfrm_offload(skb);
         if xo.is_null() {
-            goto out_reset;
         }
     }
     
@@ -244,7 +239,6 @@ pub unsafe extern "C" fn esp6_gro_receive(
     
     let nhoff = esp6_nexthdr_esp_offset(ipv6_hdr(skb), offset);
     if nhoff == 0 {
-        goto out;
     }
     
     (*IP6CB(skb)).nhoff = nhoff;
@@ -257,9 +251,7 @@ pub unsafe extern "C" fn esp6_gro_receive(
     
     return ptr::null_mut();
     
-out_reset:
     secpath_reset(skb);
-out:
     skb_push(skb, offset);
     (*NAPI_GRO_CB(skb)).same_flow = 0;
     (*NAPI_GRO_CB(skb)).flush = 1;

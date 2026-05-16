@@ -148,21 +148,21 @@ unsafe fn skb_gro_checksum_validate(
 
 #[inline]
 unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
-    // In real implementation, this would access skb->data
+    // In real implementation, this would access (*skb).data
     let data = (*skb).data; // Assuming data field exists
     data as *mut ipv6hdr
 }
 
 #[inline]
 unsafe fn tcp_hdr(skb: *mut sk_buff) -> *mut tcphdr {
-    // In real implementation, this would access skb->data + transport header offset
+    // In real implementation, this would access (*skb).data + transport header offset
     let data = (*skb).data; // Assuming data field exists
     data.add(40) as *mut tcphdr // IPv6 header is 40 bytes
 }
 
 #[inline]
 unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut skb_shared_info {
-    // In real implementation, this would point to skb->shares_info
+    // In real implementation, this would point to (*skb).shares_info
     let offset = 256; // Example offset - actual depends on sk_buff layout
     (skb as *mut u8).add(offset) as *mut skb_shared_info
 }

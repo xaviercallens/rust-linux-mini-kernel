@@ -259,26 +259,22 @@ pub unsafe extern "C" fn br_ip6_fragment(
 
     err = ip6_find_1stfragopt(skb, &mut prevhdr);
     if err < 0 {
-        goto blackhole;
     }
     hlen = err as u32;
     nexthdr = *prevhdr;
 
     mtu = (*(*skb).dev).mtu;
     if frag_max_size > mtu || frag_max_size < 1280 {
-        goto blackhole;
     }
 
     mtu = frag_max_size;
     if mtu < hlen + 20 + 8 {
-        goto blackhole;
     }
     mtu -= hlen + 20;
 
     frag_id = ipv6_select_ident(net, &(*ipv6_hdr(skb)).daddr, &(*ipv6_hdr(skb)).saddr);
 
     if (*skb).ip_summed == 1 && skb_checksum_help(skb) != 0 {
-        goto blackhole;
     }
 
     hroom = LL_RESERVED_SPACE((*skb).dev);
@@ -288,11 +284,9 @@ pub unsafe extern "C" fn br_ip6_fragment(
         let mut frag2: *mut sk_buff = ptr::null_mut();
 
         if first_len > hlen + mtu {
-            goto blackhole;
         }
 
         if skb_cloned(skb) != 0 {
-            goto slow_path;
         }
 
         // Walk frag list
@@ -301,7 +295,6 @@ pub unsafe extern "C" fn br_ip6_fragment(
 
         err = ip6_fraglist_init(skb, hlen, prevhdr, nexthdr, frag_id, &mut iter);
         if err < 0 {
-            goto blackhole;
         }
 
         loop {
@@ -327,27 +320,23 @@ pub unsafe extern "C" fn br_ip6_fragment(
         return err;
     }
 
-slow_path:
     ip6_frag_init(skb, hlen, mtu, (*(*skb).dev).needed_tailroom, LL_RESERVED_SPACE((*skb).dev), prevhdr, nexthdr, frag_id, &mut state);
 
     while state.left > 0 {
         let skb2 = ip6_frag_next(skb, &mut state);
         if skb2.is_null() {
             err = -ENOMEM;
-            goto blackhole;
         }
 
         (*skb2).tstamp = tstamp;
         err = output(net, sk, data, skb2);
         if err != 0 {
-            goto blackhole;
         }
     }
 
     consume_skb(skb);
     return err;
 
-blackhole:
     kfree_skb(skb);
     0
 }

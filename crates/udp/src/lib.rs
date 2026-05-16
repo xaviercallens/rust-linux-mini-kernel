@@ -391,7 +391,6 @@ pub unsafe extern "C" fn udpv6_recvmsg(
         return ipv6_recv_rxpmtu(sk, msg, len, addr_len);
     }
     
-    try_again:
     let mut off = sk_peek_offset(sk, flags);
     skb = __skb_recv_udp(sk, flags, noblock, &mut off, &mut err);
     if skb.is_null() {

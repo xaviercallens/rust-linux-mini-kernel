@@ -120,7 +120,6 @@ pub unsafe extern "C" fn icmpv6_ndo_send(
             if skb_shared(skb_in) != 0 {
                 cloned_skb = skb_clone(skb_in, 0); // GFP_ATOMIC is 0 in this context
                 if cloned_skb.is_null() {
-                    goto out;
                 }
                 skb_in = cloned_skb;
             }
@@ -129,13 +128,10 @@ pub unsafe extern "C" fn icmpv6_ndo_send(
             let network_header = skb_network_header(skb_in);
             let tail_pointer = skb_tail_pointer(skb_in);
             if network_header < skb_in as *mut c_void {
-                goto out;
             }
             if (network_header as usize + core::mem::size_of::<ipv6hdr>()) > tail_pointer as usize {
-                goto out;
             }
             if skb_ensure_writable(skb_in, skb_network_header(skb_in) as c_int) != 0 {
-                goto out;
             }
             
             // Get and modify source address
@@ -160,7 +156,6 @@ pub unsafe extern "C" fn icmpv6_ndo_send(
         __icmpv6_send(skb_in, type_, code, info, &mut parm as *mut _ as *const _);
     }
     
-out:
     if !cloned_skb.is_null() {
         consume_skb(cloned_skb);
     }

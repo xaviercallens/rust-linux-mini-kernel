@@ -192,7 +192,6 @@ pub unsafe extern "C" fn ipcomp6_tunnel_create(x: *mut xfrm_state) -> *mut xfrm_
     );
     
     if (*t).id.spi == 0 {
-        goto error;
     }
     
     ptr::copy_nonoverlapping(
@@ -225,14 +224,12 @@ pub unsafe extern "C" fn ipcomp6_tunnel_create(x: *mut xfrm_state) -> *mut xfrm_
     (*t).if_id = (*x).if_id;
     
     if xfrm_init_state(t) != 0 {
-        goto error;
     }
     
     atomic_set(&(*t).tunnel_users, 1);
     
     return t;
     
-    error:
     (*t).km.state = XFRM_STATE_DEAD;
     xfrm_state_put(t);
     return ptr::null_mut();

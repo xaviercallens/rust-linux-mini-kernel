@@ -197,8 +197,8 @@ pub extern "C" fn tftp_help(
     match opcode {
         TFTP_OPCODE_READ | TFTP_OPCODE_WRITE => {
             // RRQ and WRQ work the same way
-            unsafe { nf_ct_dump_tuple(&ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple) };
-            unsafe { nf_ct_dump_tuple(&ct->tuplehash[IP_CT_DIR_REPLY].tuple) };
+            unsafe { nf_ct_dump_tuple(&(*ct).tuplehash[IP_CT_DIR_ORIGINAL].tuple) };
+            unsafe { nf_ct_dump_tuple(&(*ct).tuplehash[IP_CT_DIR_REPLY].tuple) };
 
             // Allocate expectation
             exp = unsafe { nf_ct_expect_alloc(ct) };
@@ -214,27 +214,27 @@ pub extern "C" fn tftp_help(
             }
 
             // Initialize expectation
-            tuple = unsafe { &ct->tuplehash[IP_CT_DIR_REPLY].tuple };
+            tuple = unsafe { &(*ct).tuplehash[IP_CT_DIR_REPLY].tuple };
             unsafe {
                 nf_ct_expect_init(
                     exp,
                     NF_CT_EXPECT_CLASS_DEFAULT,
                     nf_ct_l3num(ct),
-                    &tuple->src.u3,
-                    &tuple->dst.u3,
+                    &(*tuple).src.u3,
+                    &(*tuple).dst.u3,
                     17, // IPPROTO_UDP
                     ptr::null_mut(),
-                    &tuple->dst.udp.port,
+                    &(*tuple).dst.udp.port,
                 );
             }
 
             // Log expectation
             unsafe { pr_debug(b"expect: \0".as_ptr() as *const c_char) };
-            unsafe { nf_ct_dump_tuple(&exp->tuple) };
+            unsafe { nf_ct_dump_tuple(&(*exp).tuple) };
 
             // NAT hook
             nf_nat_tftp = unsafe { rcu_dereference(nf_nat_tftp_hook) };
-            if nf_nat_tftp.is_some() && (ct->status & IPS_NAT_MASK) != 0 {
+            if nf_nat_tftp.is_some() && ((*ct).status & IPS_NAT_MASK) != 0 {
                 ret = nf_nat_tftp.unwrap()(
                     skb,
                     ctinfo,

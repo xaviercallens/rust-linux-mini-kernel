@@ -106,7 +106,7 @@ pub struct rcu_head {
 
 #[repr(C)]
 pub struct sk_buff {
-    cb: [u8; 512], // skb->cb size from Linux
+    cb: [u8; 512], // (*skb).cb size from Linux
     data: *mut u8,
     len: u32,
     transport_header: *mut u8,
@@ -301,15 +301,15 @@ pub unsafe extern "C" fn esp6_find_tcp_sk(x: *mut xfrm_state) -> *mut sock {
         return sk;
     }
     
-    spin_lock_bh(&x->lock);
+    spin_lock_bh(&(*x).lock);
     let sport = (*encap).encap_sport;
     let dport = (*encap).encap_dport;
-    let nsk = rcu_dereference_protected(x.encap_sk, lockdep_is_held(&x->lock));
+    let nsk = rcu_dereference_protected(x.encap_sk, lockdep_is_held(&(*x).lock));
     
     if !sk.is_null() && sk == nsk {
         let esk = libc::malloc(mem::size_of::<esp_tcp_sk>()) as *mut esp_tcp_sk;
         if esk.is_null() {
-            spin_unlock_bh(&x->lock);
+            spin_unlock_bh(&(*x).lock);
             return ptr::null_mut();
         }
         
@@ -317,11 +317,11 @@ pub unsafe extern "C" fn esp6_find_tcp_sk(x: *mut xfrm_state) -> *mut sock {
         (*esk).sk = sk;
         call_rcu(&(*esk).rcu, esp_free_tcp_sk);
     }
-    spin_unlock_bh(&x->lock);
+    spin_unlock_bh(&(*x).lock);
     
     let sk = __inet6_lookup_established(xs_net(x), &tcp_hashinfo, 
-                                        &x->id.daddr.in6, dport, 
-                                        &x->props.saddr.in6, 
+                                        &(*x).id.daddr.in6, dport, 
+                                        &(*x).props.saddr.in6, 
                                         ntohs(sport), 0, 0);
     
     if sk.is_null() {
@@ -333,8 +333,8 @@ pub unsafe extern "C" fn esp6_find_tcp_sk(x: *mut xfrm_state) -> *mut sock {
         return ptr::null_mut();
     }
     
-    spin_lock_bh(&x->lock);
-    let nsk = rcu_dereference_protected(x.encap_sk, lockdep_is_held(&x->lock));
+    spin_lock_bh(&(*x).lock);
+    let nsk = rcu_dereference_protected(x.encap_sk, lockdep_is_held(&(*x).lock));
     
     if (*encap).encap_sport != sport || (*encap).encap_dport != dport {
         sock_put(sk);
@@ -344,7 +344,7 @@ pub unsafe extern "C" fn esp6_find_tcp_sk(x: *mut xfrm_state) -> *mut sock {
     } else {
         rcu_assign_pointer(x.encap_sk, sk);
     }
-    spin_unlock_bh(&x->lock);
+    spin_unlock_bh(&(*x).lock);
     
     sk
 }

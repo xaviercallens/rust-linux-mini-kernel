@@ -136,6 +136,8 @@ pub unsafe extern "C" fn nf_conntrack_timeout_fini() {
 }
 
 // Internal functions
+#[no_mangle]
+
 unsafe extern "C" fn untimeout(ct: *mut nf_conn, timeout: *mut c_void) -> c_int {
     let timeout_ext = nf_ct_timeout_find(ct);
     if !timeout_ext.is_null() && (!timeout.is_null() || unsafe { (*timeout_ext).timeout == timeout }) {

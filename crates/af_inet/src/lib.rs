@@ -200,13 +200,11 @@ pub unsafe extern "C" fn inet_listen(sock: *mut socket, backlog: c_int) -> c_int
     lock_sock(sk);
     
     err = -EINVAL;
-    if (*sock).state != SS_UNCONNECTED || (*sock).type != SOCK_STREAM {
-        goto out;
+    if (*sock).state != SS_UNCONNECTED || (*sock).type_field != SOCK_STREAM {
     }
     
     old_state = (*sk).sk_state;
     if !((1 << old_state) & (TCPF_CLOSE | TCPF_LISTEN)) {
-        goto out;
     }
     
     (*sk).sk_max_ack_backlog = backlog;
@@ -223,13 +221,11 @@ pub unsafe extern "C" fn inet_listen(sock: *mut socket, backlog: c_int) -> c_int
         
         err = inet_csk_listen_start(sk, backlog);
         if err != 0 {
-            goto out;
         }
         tcp_call_bpf(sk, BPF_SOCK_OPS_TCP_LISTEN_CB, 0, ptr::null_mut());
     }
     err = 0;
     
-out:
     release_sock(sk);
     return err;
 }
@@ -261,10 +257,9 @@ pub unsafe extern "C" fn inet_create(
     
     (*sock).state = SS_UNCONNECTED;
     
-lookup_protocol:
     err = -ESOCKTNOSUPPORT;
     rcu_read_lock();
-    list_for_each_entry_rcu(answer, &inetsw[(*sock).type], list) {
+    list_for_each_entry_rcu(answer, &inetsw[(*sock).type_field], list) {
         err = 0;
         // Check the non-wild match
         if protocol == (*answer).protocol {
@@ -289,22 +284,19 @@ lookup_protocol:
             rcu_read_unlock();
             if try_loading_module == 1 {
                 request_module("net-pf-%d-proto-%d-type-%d",
-                               PF_INET, protocol, (*sock).type);
+                               PF_INET, protocol, (*sock).type_field);
             } else {
                 request_module("net-pf-%d-proto-%d",
                                PF_INET, protocol);
             }
             try_loading_module += 1;
-            goto lookup_protocol;
         } else {
-            goto out_rcu_unlock;
         }
     }
     
     err = -EPERM;
-    if (*sock).type == SOCK_RAW && kern == 0 &&
+    if (*sock).type_field == SOCK_RAW && kern == 0 &&
        !ns_capable((*net).user_ns, CAP_NET_RAW) {
-        goto out_rcu_unlock;
     }
     
     (*sock).ops = (*answer).ops;
@@ -317,7 +309,6 @@ lookup_protocol:
     err = -ENOBUFS;
     sk = sk_alloc(net, PF_INET, GFP_KERNEL, answer_prot, kern);
     if sk.is_null() {
-        goto out;
     }
     
     err = 0;
@@ -329,7 +320,7 @@ lookup_protocol:
     inet.is_icsk = (INET_PROTOSW_ICSK & answer_flags) != 0;
     inet.nodefrag = 0;
     
-    if (*sock).type == SOCK_RAW {
+    if (*sock).type_field == SOCK_RAW {
         inet.inet_num = protocol;
         if protocol == IPPROTO_RAW {
             inet.hdrincl = 1;
@@ -364,7 +355,6 @@ lookup_protocol:
         err = (*sk).sk_prot.hash(sk);
         if err != 0 {
             sk_common_release(sk);
-            goto out;
         }
     }
     
@@ -372,7 +362,6 @@ lookup_protocol:
         err = (*sk).sk_prot.init(sk);
         if err != 0 {
             sk_common_release(sk);
-            goto out;
         }
     }
     
@@ -380,30 +369,46 @@ lookup_protocol:
         err = BPF_CGROUP_RUN_PROG_INET_SOCK(sk);
         if err != 0 {
             sk_common_release(sk);
-            goto out;
         }
     }
     
-out:
     return err;
 }
 
 // Helper functions (would be implemented in C in the kernel)
+#[no_mangle]
+
 unsafe extern "C" fn __skb_queue_purge(queue: *mut skb_queue_head_t) {}
-unsafe extern "C" fn __kfree_skb(skb: *mut sk_buff) {}
+unsafe extern "C" fn __kfree_skb(skb: *m
+#[no_mangle]
+ut sk_buff) {}
 unsafe extern "C" fn sk_mem_reclaim(sk: *mut sock) {}
-unsafe extern "C" fn pr_err(fmt: *const c_char, ...) {}
+unsafe extern "C" fn pr_err
+#[no_mangle]
+(fmt: *const c_char, ...) {}
 unsafe extern "C" fn kfree(ptr: *mut c_void) {}
-unsafe extern "C" fn dst_release(dst: *mut dst_entry) {}
-unsafe extern "C" fn sk_refcnt_debug_dec(sk: *mut sock) {}
+unsafe extern 
+#[no_mangle]
+"C" fn dst_release(dst: *mut dst_entry) {}
+unsafe extern "C" fn sk_refcnt_debug_dec(sk: *mut s
+#[no_mangle]
+ock) {}
 unsafe extern "C" fn lock_sock(sk: *mut sock) {}
 unsafe extern "C" fn release_sock(sk: *mut sock) {}
-unsafe extern "C" fn inet_csk_listen_start(sk: *mut sock, backlog: c_int) -> c_int { 0 }
-unsafe extern "C" fn tcp_call_bpf(sk: *mut sock, cb: c_int, arg1: c_int, arg2: *mut c_void) {}
+unsafe extern "C" 
+#[no_mangle]
+fn inet_csk_listen_start(sk: *mut sock, backlog: c_int) -> c_int { 0 }
+unsafe extern "C" fn tcp_call_bpf(sk: *mut sock, cb: c_int, arg1: c_int, arg2: *mut c
+#[no_mangle]
+_void) {}
 unsafe extern "C" fn fastopen_queue_tune(sk: *mut sock, backlog: c_int) {}
 unsafe extern "C" fn tcp_fastopen_init_key_once(net: *mut net) {}
-unsafe extern "C" fn sk_alloc(net: *mut net, family: c_int, gfp: c_int, prot: *mut proto, kern: c_int) -> *mut sock { ptr::null_mut() }
-unsafe extern "C" fn sock_init_data(sock: *mut socket, sk: *mut sock) {}
+unsafe extern "C" fn sk_alloc(net: *m
+#[no_mangle]
+ut net, family: c_int, gfp: c_int, prot: *mut proto, kern: c_int) -> *mut sock { ptr::null_mut() }
+unsafe extern "C"
+#[no_mangle]
+ fn sock_init_data(sock: *mut socket, sk: *mut sock) {}
 unsafe extern "C" fn sk_common_release(sk: *mut sock) {}
 unsafe extern "C" fn BPF_CGROUP_RUN_PROG_INET_SOCK(sk: *mut sock) -> c_int { 0 }
 

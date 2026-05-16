@@ -210,8 +210,12 @@ static mut udplite6_protosw: inet_protosw = inet_protosw {
 };
 
 // Internal functions
+#[no_mangle]
+
 extern "C" fn udplitev6_rcv(skb: *mut sk_buff) -> c_int {
-    unsafe { __udp6_lib_rcv(skb, &mut udplite_table, IPPROTO_UDPLITE) }
+    unsafe { __udp6_lib_rcv(skb, &mut udplite_table, IPPROTO
+#[no_mangle]
+_UDPLITE) }
 }
 
 extern "C" fn udplitev6_err(
@@ -227,7 +231,9 @@ extern "C" fn udplitev6_err(
     }
 }
 
-// Initialization and cleanup functions
+// Initialization and cl
+#[no_mangle]
+eanup functions
 #[no_mangle]
 pub extern "C" fn udplitev6_init() -> c_int {
     let mut ret: c_int = 0;
@@ -241,7 +247,9 @@ pub extern "C" fn udplitev6_init() -> c_int {
         ret = inet6_register_protosw(&mut udplite6_protosw);
         if ret != 0 {
             inet6_del_protocol(&mut udplitev6_protocol, IPPROTO_UDPLITE);
-            return ret;
+            return ret
+#[no_mangle]
+;
         }
     }
 

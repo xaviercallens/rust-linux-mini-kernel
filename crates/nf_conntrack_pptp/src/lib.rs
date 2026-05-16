@@ -208,7 +208,7 @@ pub unsafe extern "C" fn pptp_destroy_siblings(ct: *mut nf_conn) {
     let ct_pptp_info = nfct_help_data(ct);
     let mut t: nf_conntrack_tuple = core::mem::zeroed();
 
-    // Original direction (PNS->PAC)
+    // Original direction ((*PNS).PAC)
     let dir = 0; // IP_CT_DIR_ORIGINAL
     ptr::copy_nonoverlapping(&(*ct).tuplehash[dir].tuple, &mut t, 1);
     t.dst.protonum = IPPROTO_GRE;
@@ -217,7 +217,7 @@ pub unsafe extern "C" fn pptp_destroy_siblings(ct: *mut nf_conn) {
 
     destroy_sibling_or_exp(ptr::null_mut(), ct, &t);
 
-    // Reply direction (PAC->PNS)
+    // Reply direction ((*PAC).PNS)
     let dir = 1; // IP_CT_DIR_REPLY
     ptr::copy_nonoverlapping(&(*ct).tuplehash[dir].tuple, &mut t, 1);
     t.dst.protonum = IPPROTO_GRE;

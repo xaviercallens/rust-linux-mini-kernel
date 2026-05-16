@@ -297,7 +297,6 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
         match (*up).encap_type {
             UDP_ENCAP_ESPINUDP => {
                 if len == 1 && *udpdata == 0xff {
-                    goto drop;
                 } else if len > size_of::<ip_esp_hdr>() && *udpdata32 != 0 {
                     len = size_of::<udphdr>();
                 } else {
@@ -306,7 +305,6 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
             },
             UDP_ENCAP_ESPINUDP_NON_IKE => {
                 if len == 1 && *udpdata == 0xff {
-                    goto drop;
                 } else if len > 2 * size_of::<u32>() + size_of::<ip_esp_hdr>() &&
                           *udpdata32 == 0 && *(udpdata32.offset(1)) == 0 {
                     len = size_of::<udphdr>() + 2 * size_of::<u32>();
@@ -316,7 +314,6 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
             },
             _ => {
                 if len == 1 && *udpdata == 0xff {
-                    goto drop;
                 } else if len > size_of::<ip_esp_hdr>() && *udpdata32 != 0 {
                     len = size_of::<udphdr>();
                 } else {
@@ -326,14 +323,12 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
         }
         
         if skb_unclone(skb, GFP_ATOMIC) != 0 {
-            goto drop;
         }
         
         let ip6h = ipv6_hdr(skb);
         (*ip6h).payload_len = (*ip6h).payload_len as u16 - len as u16;
         
         if (*skb).len < size_of::<ipv6hdr>() + len {
-            goto drop;
         }
         
         __skb_pull(skb, len);
@@ -341,7 +336,6 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
         
         return xfrm6_rcv_encap(skb, IPPROTO_ESP, 0, (*up).encap_type);
         
-        drop:
         kfree_skb(skb);
         0
     }
@@ -402,12 +396,10 @@ pub unsafe extern "C" fn xfrm6_input_addr(
     
     if sp.is_null() {
         XFRM_INC_STATS(net, LINUX_MIB_XFRMINERROR);
-        goto drop;
     }
     
     if 1 + (*sp).len == XFRM_MAX_DEPTH {
         XFRM_INC_STATS(net, LINUX_MIB_XFRMINBUFFERERROR);
-        goto drop;
     }
     
     for i in 0..3 {
@@ -448,7 +440,7 @@ pub unsafe extern "C" fn xfrm6_input_addr(
             (*x).km.state == XFRM_STATE_VALID &&
             xfrm_state_check_expire(x) == 0) {
             spin_unlock(&(*x).lock);
-            if (*x).type.input(x, skb) > 0 {
+            if (*x).type_field.input(x, skb) > 0 {
                 break;
             }
         } else {
@@ -462,7 +454,6 @@ pub unsafe extern "C" fn xfrm6_input_addr(
     if x.is_null() {
         XFRM_INC_STATS(net, LINUX_MIB_XFRMINNOSTATES);
         XFRM_AUDIT_STATE_NOTFOUND_SIMPLE(skb, AF_INET6);
-        goto drop;
     }
     
     (*sp).xvec[(*sp).len] = x;
@@ -475,7 +466,6 @@ pub unsafe extern "C" fn xfrm6_input_addr(
     
     return 1;
     
-    drop:
     -1
 }
 

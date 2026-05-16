@@ -127,14 +127,12 @@ pub unsafe extern "C" fn udp_sock_create6(
     // Create the socket
     err = sock_create_kern(net, 10 /* AF_INET6 */, 2 /* SOCK_DGRAM */, 0, &mut sock);
     if err < 0 {
-        goto error;
     }
 
     // Set IPv6 only if requested
     if (*cfg).ipv6_v6only {
         err = ip6_sock_set_v6only((*sock).sk, true);
         if err < 0 {
-            goto error;
         }
     }
 
@@ -142,7 +140,6 @@ pub unsafe extern "C" fn udp_sock_create6(
     if (*cfg).bind_ifindex != 0 {
         err = sock_bindtoindex((*sock).sk, (*cfg).bind_ifindex, true);
         if err < 0 {
-            goto error;
         }
     }
 
@@ -156,7 +153,6 @@ pub unsafe extern "C" fn udp_sock_create6(
     // Perform the bind
     err = kernel_bind(sock, udp6_addr, core::mem::size_of::<sockaddr_in6>());
     if err < 0 {
-        goto error;
     }
 
     // If peer port is specified, perform connect
@@ -174,7 +170,6 @@ pub unsafe extern "C" fn udp_sock_create6(
             0,
         );
         if err < 0 {
-            goto error;
         }
     }
 
@@ -185,7 +180,6 @@ pub unsafe extern "C" fn udp_sock_create6(
     *sockp = sock;
     return 0;
 
-error:
     if !sock.is_null() {
         // SAFETY: sock is valid pointer
         unsafe {

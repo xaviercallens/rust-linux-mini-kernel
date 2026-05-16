@@ -113,7 +113,7 @@ pub unsafe extern "C" fn nf_ct_unlink_expect_report(
 
     // SAFETY: These are kernel assertions
     // WARN_ON(!master_help);
-    // WARN_ON(timer_pending(&exp->timeout));
+    // WARN_ON(timer_pending(&(*exp).timeout));
 
     hlist_del_rcu(&mut (*exp).hnode);
     (*cnet).expect_count -= 1;

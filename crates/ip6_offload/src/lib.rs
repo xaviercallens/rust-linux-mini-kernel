@@ -148,7 +148,6 @@ pub unsafe extern "C" fn ipv6_gso_segment(skb: *mut sk_buff, features: netdev_fe
     nhoff = (*skb).network_header - (*skb).mac_header;
     
     if !pskb_may_pull(skb, core::mem::size_of::<ipv6hdr>() as c_int) {
-        goto out;
     }
     
     encap = SKB_GSO_CB(skb).encap_level > 0;
@@ -179,7 +178,6 @@ pub unsafe extern "C" fn ipv6_gso_segment(skb: *mut sk_buff, features: netdev_fe
     }
     
     if IS_ERR_OR_NULL(segs) {
-        goto out;
     }
     
     let mut gso_partial: c_int = 0;
@@ -218,7 +216,6 @@ pub unsafe extern "C" fn ipv6_gso_segment(skb: *mut sk_buff, features: netdev_fe
         }
     }
     
-out:
     segs
 }
 

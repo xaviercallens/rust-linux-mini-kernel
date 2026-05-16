@@ -91,6 +91,8 @@ static mut exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
 };
 
 // Function implementations
+#[no_mangle]
+
 extern "C" fn netbios_ns_help(skb: *mut c_void, protoff: u32, ct: *mut c_void, ctinfo: u32) -> i32 {
     unsafe { nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout) }
 }
@@ -107,7 +109,9 @@ extern "C" {
     ) -> i32;
 }
 
-// Module init/exit
+// Module init/exi
+#[no_mangle]
+t
 #[no_mangle]
 pub extern "C" fn nf_conntrack_netbios_ns_init() -> i32 {
     unsafe {
@@ -115,7 +119,9 @@ pub extern "C" fn nf_conntrack_netbios_ns_init() -> i32 {
         exp_policy.timeout = timeout;
 
         // Register the helper
-        nf_conntrack_helper_register(&mut helper)
+        nf_conntrack_helper_register(&mut h
+#[no_mangle]
+elper)
     }
 }
 

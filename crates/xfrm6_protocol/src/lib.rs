@@ -59,6 +59,8 @@ static mut ah6_handlers: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mu
 static mut ipcomp6_handlers: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
 
 // Mutex implementation (simplified for kernel compatibility)
+#[repr(C)]
+
 struct Mutex {
     // In real kernel code, this would use proper kernel mutexes
     // Here we use a simplified version for demonstration

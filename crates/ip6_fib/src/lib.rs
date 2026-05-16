@@ -161,7 +161,7 @@ pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_t
     if !table.is_null() {
         (*table).tb6_id = id;
         (*table).tb6_root.fn_flags = 0x1 | 0x2 | 0x4; // RTN_ROOT | RTN_TL_ROOT | RTN_RTINFO
-                                                      // inet_peer_base_init(&table->tb6_peers);
+                                                      // inet_peer_base_init(&(*table).tb6_peers);
     }
     table
 }
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
 pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
     let f6i = ptr::null_mut::<fib6_info>();
     if !f6i.is_null() {
-        // WARN_ON(f6i->fib6_node);
+        // WARN_ON((*f6i).fib6_node);
 
         if !(*f6i).nh.is_null() {
             // nexthop_put((*f6i).nh);
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn fib6_info_alloc(gfp_flags: c_int, with_fib6_nh: bool) -
 
     f6i = ptr::null_mut();
     if !f6i.is_null() {
-        // INIT_LIST_HEAD(&f6i->fib6_siblings);
+        // INIT_LIST_HEAD(&(*f6i).fib6_siblings);
         (*f6i).fib6_ref = AtomicU32::new(1);
     }
     f6i
@@ -306,9 +306,9 @@ pub unsafe extern "C" fn fib6_new_sernum(net: *mut net) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn fib6_walker_link(net: *mut net, w: *mut fib6_walker) {
     if !net.is_null() && !w.is_null() {
-        // write_lock_bh(&net->ipv6.fib6_walker_lock);
-        // list_add(&w->lh, &net->ipv6.fib6_walkers);
-        // write_unlock_bh(&net->ipv6.fib6_walker_lock);
+        // write_lock_bh(&(*net).ipv6.fib6_walker_lock);
+        // list_add(&(*w).lh, &(*net).ipv6.fib6_walkers);
+        // write_unlock_bh(&(*net).ipv6.fib6_walker_lock);
     }
 }
 
@@ -320,9 +320,9 @@ pub unsafe extern "C" fn fib6_walker_link(net: *mut net, w: *mut fib6_walker) {
 #[no_mangle]
 pub unsafe extern "C" fn fib6_walker_unlink(net: *mut net, w: *mut fib6_walker) {
     if !net.is_null() && !w.is_null() {
-        // write_lock_bh(&net->ipv6.fib6_walker_lock);
-        // list_del(&w->lh);
-        // write_unlock_bh(&net->ipv6.fib6_walker_lock);
+        // write_lock_bh(&(*net).ipv6.fib6_walker_lock);
+        // list_del(&(*w).lh);
+        // write_unlock_bh(&(*net).ipv6.fib6_walker_lock);
     }
 }
 
@@ -330,9 +330,9 @@ pub unsafe extern "C" fn fib6_walker_unlink(net: *mut net, w: *mut fib6_walker) 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_link_table(net: *mut net, tb: *mut fib6_table) {
     if !net.is_null() && !tb.is_null() {
-        // spin_lock_init(&tb->tb6_lock);
+        // spin_lock_init(&(*tb).tb6_lock);
         let h: usize = (*tb).tb6_id & (FIB6_TABLE_HASHSZ - 1) as u32;
-        // hlist_add_head_rcu(&tb->tb6_hlist, &net->ipv6.fib_table_hash[h]);
+        // hlist_add_head_rcu(&(*tb).tb6_hlist, &(*net).ipv6.fib_table_hash[h]);
     }
 }
 

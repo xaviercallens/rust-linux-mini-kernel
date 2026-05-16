@@ -199,46 +199,38 @@ pub unsafe extern "C" fn help(
 
     if dir == IP_CT_DIR_ORIGINAL {
         if datalen != mem::size_of::<sane_request>() as c_int {
-            goto out;
         }
 
         req = sb_ptr as *mut sane_request;
         if (*req).RPC_code != u32::to_be(SANE_NET_START as u32) {
             (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
-            goto out;
         }
 
         (*ct_sane_info).state = 1; // SANE_STATE_START_REQUESTED
-        goto out;
     }
 
     // Is it a reply to an uninteresting command?
     if (*ct_sane_info).state != 1 {
-        goto out;
     }
 
     (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
 
     if datalen < mem::size_of::<sane_reply_net_start>() as c_int {
         // pr_debug("NET_START reply too short\n");
-        goto out;
     }
 
     reply = sb_ptr as *mut sane_reply_net_start;
     if (*reply).status != u32::to_be(SANE_STATUS_SUCCESS as u32) {
-        // pr_debug("unsuccessful SANE_STATUS = %u\n", ntohl(reply->status));
-        goto out;
+        // pr_debug("unsuccessful SANE_STATUS = %u\n", ntohl((*reply).status));
     }
 
     if (*reply).zero != 0 {
-        goto out;
     }
 
     exp = nf_ct_expect_alloc(ct);
     if exp.is_null() {
         nf_ct_helper_log(skb, ct, "cannot alloc expectation" as *const c_char);
         ret = NF_DROP;
-        goto out;
     }
 
     tuple = &(*ct).tuplehash[0].tuple;
@@ -253,7 +245,7 @@ pub unsafe extern "C" fn help(
         &(*reply).port as *mut _,
     );
 
-    // nf_ct_dump_tuple(&exp->tuple);
+    // nf_ct_dump_tuple(&(*exp).tuple);
 
     // Can't expect this?  Best to drop packet now.
     if nf_ct_expect_related(exp, 0) != 0 {
@@ -263,7 +255,6 @@ pub unsafe extern "C" fn help(
 
     nf_ct_expect_put(exp);
 
-out:
     spin_unlock_bh(nf_sane_lock);
     ret
 }

@@ -213,7 +213,7 @@ extern "C" {
 // Helper to get UDP_SKB_CB pointer
 impl UDP_SKB_CB {
     fn new(skb: *mut sk_buff) -> *mut UDP_SKB_CB {
-        // In Linux, this is a skb->cb field - we use a helper function
+        // In Linux, this is a (*skb).cb field - we use a helper function
         // This is a simplified version for FFI compatibility
         (skb as *mut u8).add(128) as *mut UDP_SKB_CB
     }

@@ -89,19 +89,19 @@ pub unsafe extern "C" fn fib_nh_common_release(nhc: *mut fib_nh_common) {
         // SAFETY: Caller guarantees nhc is valid
         let nhc = &*nhc;
         if !nhc.nhc_dev.is_null() {
-            // dev_put(nhc->nhc_dev)
+            // dev_put((*nhc).nhc_dev)
             // Placeholder for actual dev_put implementation
         }
         if !nhc.nhc_lwtstate.is_null() {
-            // lwtstate_put(nhc->nhc_lwtstate)
+            // lwtstate_put((*nhc).nhc_lwtstate)
             // Placeholder for actual lwtstate_put implementation
         }
         if !nhc.nhc_pcpu_rth_output.is_null() {
-            // rt_fibinfo_free_cpus(nhc->nhc_pcpu_rth_output)
+            // rt_fibinfo_free_cpus((*nhc).nhc_pcpu_rth_output)
             // Placeholder for actual implementation
         }
         if !nhc.nhc_rth_input.is_null() {
-            // rt_fibinfo_free(&nhc->nhc_rth_input)
+            // rt_fibinfo_free(&(*nhc).nhc_rth_input)
             // Placeholder for actual implementation
         }
         // free_nh_exceptions(nhc)
@@ -126,7 +126,7 @@ pub unsafe extern "C" fn free_fib_info(fi: *mut fib_info) {
     }
     fib_info_cnt.store(cnt - 1, Ordering::Relaxed);
 
-    // call_rcu(&fi->rcu, free_fib_info_rcu);
+    // call_rcu(&(*fi).rcu, free_fib_info_rcu);
     // Placeholder for actual RCU implementation
     free_fib_info_rcu(&mut (*fi).rcu);
 }
@@ -166,10 +166,10 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
     let _ = 0; // Placeholder for spin_lock_bh
     
     if !fi.is_null() && (*fi).fib_treeref.fetch_sub(1, Ordering::Relaxed) == 1 {
-        // hlist_del(&fi->fib_hash);
-        // hlist_del(&fi->fib_lhash);
+        // hlist_del(&(*fi).fib_hash);
+        // hlist_del(&(*fi).fib_lhash);
         if !(*fi).nh.is_null() {
-            // list_del(&fi->nh_list);
+            // list_del(&(*fi).nh_list);
             // Placeholder for actual implementation
         } else {
             let fi_nhs = (*fi).fib_nhs;
@@ -178,7 +178,7 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
             for nhsel in 0..fi_nhs {
                 let nexthop_nh = (fib_nh as *mut _) as *mut fib_nh;
                 if !(*nexthop_nh).nh_common.nhc_dev.is_null() {
-                    // hlist_del(&nexthop_nh->nh_hash);
+                    // hlist_del(&(*nexthop_nh).nh_hash);
                     // Placeholder for actual implementation
                 }
             }

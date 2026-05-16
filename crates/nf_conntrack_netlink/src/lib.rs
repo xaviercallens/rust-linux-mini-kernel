@@ -52,7 +52,6 @@ pub struct nf_conntrack_tuple_src_u3 {
 
 #[repr(C)]
 pub struct nf_conntrack_l4proto {
-    tuple_to_nlattr:
         Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
 }
 
