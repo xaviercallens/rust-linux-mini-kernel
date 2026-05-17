@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
+  "timestamp": "2026-05-17T12:06:08.519653",
   "modules_completed": [],
   "modules_failed": [
     "gre_demux",
@@ -13,11 +13,14 @@
     "xfrm6_tunnel",
     "esp4",
     "gre_offload",
-    "nf_conntrack_tftp",
+    "nf_conntrack_tftp"
+  ],
+  "modules_pending": [
     "core",
     "tcpv6_offload",
     "route",
     "nf_nat_irc",
+    "kernel_types",
     "udp",
     "mcast",
     "nf_conntrack_expect",
@@ -53,9 +56,7 @@
     "ip6_output",
     "nf_conntrack_proto_icmp",
     "anycast",
-    "mip6"
-  ],
-  "modules_pending": [
+    "mip6",
     "xfrm6_input",
     "nf_conntrack_proto_icmpv6",
     "nf_conntrack_netlink",
@@ -128,6 +129,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 91.47025394439697,
+  "elapsed_time_seconds": 24.86336088180542,
   "git_commit_hash": null
 }

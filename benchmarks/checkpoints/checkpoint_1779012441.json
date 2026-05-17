@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
     "ip6_offload",
-    "inet6_hashtables"
-  ],
-  "modules_pending": [
+    "inet6_hashtables",
     "esp4_offload",
     "ping",
     "nf_conntrack_proto_gre",
@@ -38,7 +38,9 @@
     "nf_nat_amanda",
     "inet_connection_sock",
     "xfrm6_policy",
-    "fib_frontend",
+    "fib_frontend"
+  ],
+  "modules_pending": [
     "nf_nat_ftp",
     "ip6_tunnel",
     "tcp_ipv6",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 7.605956792831421,
+  "elapsed_time_seconds": 72.551442861557,
   "git_commit_hash": null
 }

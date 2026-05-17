@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -9,9 +11,7 @@
     "esp4_offload",
     "ping",
     "nf_conntrack_proto_gre",
-    "ip6_gre"
-  ],
-  "modules_pending": [
+    "ip6_gre",
     "xfrm6_tunnel",
     "esp4",
     "gre_offload",
@@ -50,7 +50,9 @@
     "fib_notifier",
     "nf_conntrack_proto_udp",
     "esp6_offload",
-    "nf_conntrack_acct",
+    "nf_conntrack_acct"
+  ],
+  "modules_pending": [
     "xfrm6_protocol",
     "ip6_output",
     "nf_conntrack_proto_icmp",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 14.797387838363647,
+  "elapsed_time_seconds": 96.05824995040894,
   "git_commit_hash": null
 }

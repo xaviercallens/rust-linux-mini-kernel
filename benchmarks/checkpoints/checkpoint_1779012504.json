@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -21,9 +23,7 @@
     "udp",
     "mcast",
     "nf_conntrack_expect",
-    "calipso"
-  ],
-  "modules_pending": [
+    "calipso",
     "tunnel6",
     "fib_semantics",
     "nf_conntrack_proto_dccp",
@@ -70,7 +70,9 @@
     "nf_conntrack_ftp",
     "ip6mr",
     "reassembly",
-    "icmp",
+    "icmp"
+  ],
+  "modules_pending": [
     "xfrm6_state",
     "nf_conntrack_timeout",
     "fib6_notifier",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 35.85701084136963,
+  "elapsed_time_seconds": 135.79638671875,
   "git_commit_hash": null
 }

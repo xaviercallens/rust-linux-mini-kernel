@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! IPv4 FIB Notifier Implementation
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -9,6 +7,8 @@ use kernel_types::*;
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
+
+use kernel_types::*;
 use core::ptr;
 use libc::{c_int, c_uint, c_void};
 

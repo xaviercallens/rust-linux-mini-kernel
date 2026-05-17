@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! IPv6 Extension Header GSO/GRO Offload Support
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -8,6 +6,8 @@ use kernel_types::*;
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
+
+use kernel_types::*;
 use core::ffi::c_int;
 
 // Constants from C

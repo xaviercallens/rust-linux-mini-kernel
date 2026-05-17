@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -61,9 +63,7 @@
     "nf_conntrack_snmp",
     "nf_conntrack_h323_main",
     "output_core",
-    "nf_conntrack_core"
-  ],
-  "modules_pending": [
+    "nf_conntrack_core",
     "nf_conntrack_broadcast",
     "ip6_icmp",
     "ip6_checksum",
@@ -86,7 +86,9 @@
     "nf_conntrack_seqadj",
     "udplite",
     "fou",
-    "esp6",
+    "esp6"
+  ],
+  "modules_pending": [
     "nf_conntrack_standalone",
     "igmp",
     "nf_nat_helper",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 105.4810438156128,
+  "elapsed_time_seconds": 167.91795372962952,
   "git_commit_hash": null
 }

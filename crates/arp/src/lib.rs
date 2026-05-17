@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! This module implements the Address Resolution Protocol (ARP) for IPv4 in the Linux kernel.
 //! 
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -8,6 +6,8 @@ use kernel_types::*;
 #![no_std]
 #![allow(non_camel_case_types)]  // For C-style type names
 
+
+use kernel_types::*;
 use core::ptr;
 use libc::{c_int, c_uint, c_ulong, size_t, c_void};
 

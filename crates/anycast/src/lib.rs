@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! Anycast support for IPv6
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -10,6 +8,8 @@ use kernel_types::*;
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
+
+use kernel_types::*;
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 

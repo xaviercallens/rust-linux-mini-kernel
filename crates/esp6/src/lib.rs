@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! IPv6 ESP (Encapsulating Security Payload) Implementation
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -10,6 +8,8 @@ use kernel_types::*;
 #![allow(non_snake_case)]
 #![allow(clang::too_many_arguments)]
 
+
+use kernel_types::*;
 use core::ptr;
 use core::mem;
 use core::ffi::c_void;

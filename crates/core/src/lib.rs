@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! Netfilter core hook management for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -9,6 +7,8 @@ use kernel_types::*;
 #![allow(non_camel_case_types)]
 #![allow(clang::too_many_arguments)]
 
+
+use kernel_types::*;
 use core::ffi::c_void;
 use core::ffi::c_int;
 use core::ffi::c_uint;

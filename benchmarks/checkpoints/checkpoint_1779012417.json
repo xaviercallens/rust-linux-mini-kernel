@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -24,7 +26,9 @@
     "calipso",
     "tunnel6",
     "fib_semantics",
-    "nf_conntrack_proto_dccp",
+    "nf_conntrack_proto_dccp"
+  ],
+  "modules_pending": [
     "nf_conntrack_h323_asn1",
     "sit",
     "ipv6_sockglue",
@@ -117,9 +121,7 @@
     "ip6_flowlabel",
     "nf_log_syslog",
     "nf_nat_core",
-    "nf_flow_table_inet"
-  ],
-  "modules_pending": [
+    "nf_flow_table_inet",
     "ip6_udp_tunnel",
     "fib_rules",
     "fib_trie",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 203.21605491638184,
+  "elapsed_time_seconds": 48.48887872695923,
   "git_commit_hash": null
 }

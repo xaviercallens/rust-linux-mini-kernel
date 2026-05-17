@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! IPv6 Datagram Handling
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -10,6 +8,8 @@ use kernel_types::*;
 #![allow(dead_code)]
 #![allow(clang::missing_docs_in_private_items)]
 
+
+use kernel_types::*;
 use core::ptr;
 use core::mem;
 use libc::{c_int, c_uint, c_ulong, size_t, socklen_t};

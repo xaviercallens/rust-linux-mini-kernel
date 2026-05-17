@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -20,7 +22,9 @@
     "nf_nat_irc",
     "udp",
     "mcast",
-    "nf_conntrack_expect",
+    "nf_conntrack_expect"
+  ],
+  "modules_pending": [
     "calipso",
     "tunnel6",
     "fib_semantics",
@@ -89,9 +93,7 @@
     "igmp",
     "nf_nat_helper",
     "ipcomp6",
-    "nf_conntrack_netbios_ns"
-  ],
-  "modules_pending": [
+    "nf_conntrack_netbios_ns",
     "nf_conntrack_proto",
     "nf_conntrack_amanda",
     "ndisc",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 154.17612481117249,
+  "elapsed_time_seconds": 40.501391887664795,
   "git_commit_hash": null
 }

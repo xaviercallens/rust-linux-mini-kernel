@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -73,9 +75,7 @@
     "nf_conntrack_timeout",
     "fib6_notifier",
     "devinet",
-    "ip6_input"
-  ],
-  "modules_pending": [
+    "ip6_input",
     "nf_conntrack_extend",
     "af_inet",
     "af_inet6",
@@ -98,7 +98,9 @@
     "nf_nat_proto",
     "nf_conntrack_proto_generic",
     "xfrm6_output",
-    "rpl",
+    "rpl"
+  ],
+  "modules_pending": [
     "nf_conntrack_irc",
     "arp",
     "nf_conntrack_proto_tcp",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 126.3376739025116,
+  "elapsed_time_seconds": 192.1032838821411,
   "git_commit_hash": null
 }

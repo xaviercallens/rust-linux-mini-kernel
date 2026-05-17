@@ -1,5 +1,3 @@
-use kernel_types::*;
-
 //! IPv6 extension header processing for the Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -9,6 +7,8 @@ use kernel_types::*;
 #![allow(non_camel_case_types)]
 #![allow(clippy::all)]
 
+
+use kernel_types::*;
 use core::mem;
 use core::ptr;
 

@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -60,7 +62,9 @@
     "nf_conntrack_proto_sctp",
     "nf_conntrack_snmp",
     "nf_conntrack_h323_main",
-    "output_core",
+    "output_core"
+  ],
+  "modules_pending": [
     "nf_conntrack_core",
     "nf_conntrack_broadcast",
     "ip6_icmp",
@@ -109,9 +113,7 @@
     "seg6_local",
     "exthdrs",
     "raw",
-    "datagram"
-  ],
-  "modules_pending": [
+    "datagram",
     "seg6_iptunnel",
     "exthdrs_core",
     "fou6",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 189.22847366333008,
+  "elapsed_time_seconds": 119.86427593231201,
   "git_commit_hash": null
 }

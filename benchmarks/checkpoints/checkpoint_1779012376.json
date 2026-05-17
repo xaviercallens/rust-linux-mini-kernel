@@ -1,11 +1,13 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
+  "timestamp": "2026-05-17T12:06:08.519653",
   "modules_completed": [],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
     "ip6_offload",
-    "inet6_hashtables",
+    "inet6_hashtables"
+  ],
+  "modules_pending": [
     "esp4_offload",
     "ping",
     "nf_conntrack_proto_gre",
@@ -18,6 +20,7 @@
     "tcpv6_offload",
     "route",
     "nf_nat_irc",
+    "kernel_types",
     "udp",
     "mcast",
     "nf_conntrack_expect",
@@ -49,9 +52,7 @@
     "nf_conntrack_proto_udp",
     "esp6_offload",
     "nf_conntrack_acct",
-    "xfrm6_protocol"
-  ],
-  "modules_pending": [
+    "xfrm6_protocol",
     "ip6_output",
     "nf_conntrack_proto_icmp",
     "anycast",
@@ -128,6 +129,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 84.52237892150879,
+  "elapsed_time_seconds": 8.111378908157349,
   "git_commit_hash": null
 }

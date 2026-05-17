@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -76,7 +78,9 @@
     "ip6_input",
     "nf_conntrack_extend",
     "af_inet",
-    "af_inet6",
+    "af_inet6"
+  ],
+  "modules_pending": [
     "bpf_tcp_ca",
     "cipso_ipv4",
     "nf_conntrack_timestamp",
@@ -113,9 +117,7 @@
     "seg6_iptunnel",
     "exthdrs_core",
     "fou6",
-    "nf_conntrack_ecache"
-  ],
-  "modules_pending": [
+    "nf_conntrack_ecache",
     "ip6_flowlabel",
     "nf_log_syslog",
     "nf_nat_core",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 196.27936673164368,
+  "elapsed_time_seconds": 151.71505999565125,
   "git_commit_hash": null
 }

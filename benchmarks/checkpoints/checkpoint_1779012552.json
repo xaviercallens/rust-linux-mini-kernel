@@ -1,6 +1,8 @@
 {
-  "timestamp": "2026-05-17T10:09:54.979728",
-  "modules_completed": [],
+  "timestamp": "2026-05-17T12:06:08.519653",
+  "modules_completed": [
+    "kernel_types"
+  ],
   "modules_failed": [
     "gre_demux",
     "nf_conntrack_pptp",
@@ -33,9 +35,7 @@
     "nf_conntrack_sane",
     "inet6_connection_sock",
     "nf_conntrack_helper",
-    "nf_nat_amanda"
-  ],
-  "modules_pending": [
+    "nf_nat_amanda",
     "inet_connection_sock",
     "xfrm6_policy",
     "fib_frontend",
@@ -94,7 +94,9 @@
     "nf_conntrack_netbios_ns",
     "nf_conntrack_proto",
     "nf_conntrack_amanda",
-    "ndisc",
+    "ndisc"
+  ],
+  "modules_pending": [
     "nf_nat_proto",
     "nf_conntrack_proto_generic",
     "xfrm6_output",
@@ -128,6 +130,6 @@
   ],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 56.61568784713745,
+  "elapsed_time_seconds": 184.03727173805237,
   "git_commit_hash": null
 }
