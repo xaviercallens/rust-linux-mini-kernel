@@ -22,7 +22,9 @@
     "nf_nat_irc",
     "udp",
     "mcast",
-    "nf_conntrack_expect",
+    "nf_conntrack_expect"
+  ],
+  "modules_pending": [
     "calipso",
     "tunnel6",
     "fib_semantics",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 43.01162672042847,
   "git_commit_hash": null
 }

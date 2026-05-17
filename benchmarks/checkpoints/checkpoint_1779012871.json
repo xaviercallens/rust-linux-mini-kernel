@@ -122,13 +122,14 @@
     "nf_flow_table_inet",
     "ip6_udp_tunnel",
     "fib_rules",
-    "fib_trie",
+    "fib_trie"
+  ],
+  "modules_pending": [
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 241.50575995445251,
   "git_commit_hash": null
 }

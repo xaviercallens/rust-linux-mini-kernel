@@ -11,8 +11,12 @@ pub use core::ffi::{c_int, c_uint, c_char, c_uchar, c_short, c_ushort, c_long, c
 
 // Standard types
 pub type size_t = usize;
+pub type ssize_t = isize;
 pub type c_size_t = usize;
 pub type socklen_t = u32;
+
+// Error codes
+pub const EINVAL: c_int = 22;
 
 // Network byte order types
 pub type __be16 = u16;
@@ -124,6 +128,33 @@ pub struct ip_esp_hdr {
 // ============================================================================
 // Socket Structures
 // ============================================================================
+
+/// Generic socket address
+#[repr(C)]
+pub struct sockaddr {
+    pub sa_family: c_ushort,
+    pub sa_data: [c_char; 14],
+}
+
+/// Base socket structure
+#[repr(C)]
+pub struct sock {
+    pub sk_family: c_ushort,
+    pub sk_type: c_ushort,
+    pub sk_protocol: c_ushort,
+    pub sk_state: c_uint,
+    pub sk_refcnt: c_int,
+}
+
+/// TCP socket
+#[repr(C)]
+pub struct tcp_sock {
+    pub inet: inet_sock,
+    pub snd_nxt: __u32,
+    pub rcv_nxt: __u32,
+    pub snd_wnd: __u32,
+    pub rcv_wnd: __u32,
+}
 
 /// Internet socket (base)
 #[repr(C)]
@@ -251,7 +282,7 @@ pub struct fib_rule {
 // Packet Buffer Structures
 // ============================================================================
 
-/// Socket buffer (packet buffer)
+/// Socket buffer (packet buffer) - also aliased as sk_buff
 #[repr(C)]
 pub struct skbuff {
     pub next: *mut skbuff,
@@ -363,3 +394,7 @@ pub struct xfrm_mode_skb_cb {
 pub struct u64_stats_sync {
     pub seq: c_uint,
 }
+
+// Type aliases for common kernel naming variations
+pub type sk_buff = skbuff;
+

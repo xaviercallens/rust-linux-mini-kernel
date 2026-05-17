@@ -46,7 +46,9 @@
     "nf_conncount",
     "syncookies",
     "netfilter",
-    "ip6_vti",
+    "ip6_vti"
+  ],
+  "modules_pending": [
     "fib_notifier",
     "nf_conntrack_proto_udp",
     "esp6_offload",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 90.55363583564758,
   "git_commit_hash": null
 }

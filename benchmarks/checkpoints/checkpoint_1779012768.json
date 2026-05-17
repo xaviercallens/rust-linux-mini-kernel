@@ -70,7 +70,9 @@
     "nf_conntrack_ftp",
     "ip6mr",
     "reassembly",
-    "icmp",
+    "icmp"
+  ],
+  "modules_pending": [
     "xfrm6_state",
     "nf_conntrack_timeout",
     "fib6_notifier",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 138.35332798957825,
   "git_commit_hash": null
 }

@@ -58,7 +58,9 @@
     "mip6",
     "xfrm6_input",
     "nf_conntrack_proto_icmpv6",
-    "nf_conntrack_netlink",
+    "nf_conntrack_netlink"
+  ],
+  "modules_pending": [
     "nf_conntrack_proto_sctp",
     "nf_conntrack_snmp",
     "nf_conntrack_h323_main",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 114.68599486351013,
   "git_commit_hash": null
 }

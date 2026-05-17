@@ -94,7 +94,9 @@
     "nf_conntrack_netbios_ns",
     "nf_conntrack_proto",
     "nf_conntrack_amanda",
-    "ndisc",
+    "ndisc"
+  ],
+  "modules_pending": [
     "nf_nat_proto",
     "nf_conntrack_proto_generic",
     "xfrm6_output",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 186.50914692878723,
   "git_commit_hash": null
 }

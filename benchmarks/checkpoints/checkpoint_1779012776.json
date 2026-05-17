@@ -74,7 +74,9 @@
     "xfrm6_state",
     "nf_conntrack_timeout",
     "fib6_notifier",
-    "devinet",
+    "devinet"
+  ],
+  "modules_pending": [
     "ip6_input",
     "nf_conntrack_extend",
     "af_inet",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 146.066636800766,
   "git_commit_hash": null
 }

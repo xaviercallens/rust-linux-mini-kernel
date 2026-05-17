@@ -42,7 +42,9 @@
     "nf_nat_ftp",
     "ip6_tunnel",
     "tcp_ipv6",
-    "seg6",
+    "seg6"
+  ],
+  "modules_pending": [
     "nf_conncount",
     "syncookies",
     "netfilter",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 82.64367079734802,
   "git_commit_hash": null
 }

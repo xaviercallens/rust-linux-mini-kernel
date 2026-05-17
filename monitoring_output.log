@@ -2,19 +2,23 @@
 📍 Press Ctrl+C to stop
 
 =================================
-🔍 Progress Monitor - 2026-05-17 12:08:56
+🔍 Progress Monitor - 2026-05-17 12:10:31
 =================================
-✅ Process running (PID: 61533
-61535)
+✅ Process running (PID: 68673)
+⏳ Waiting for first checkpoint...
+=================================
+🔍 Progress Monitor - 2026-05-17 12:15:31
+=================================
+❌ Monitor not running!
 
-📊 Progress Summary:
-   Timestamp: 2026-05-17T12:06:08.519653
-   Completed: 1/122 (0.8%)
-   Failed: 79
-   Pending: 42
-   Elapsed: 2.7 minutes
-   Estimated remaining: 1.4 minutes
+✅ Process completed or stopped
 
-✅ Successful modules:
-   - kernel_types
+=================================
+📊 FINAL RESULTS
+=================================
+✅ Successful: 1
+❌ Failed: 121
+📈 Success Rate: 0.8%
 
+📄 Check final report:
+   cat /Users/xcallens/rust-linux-mini-kernel/benchmarks/results/final_improvement_report.md

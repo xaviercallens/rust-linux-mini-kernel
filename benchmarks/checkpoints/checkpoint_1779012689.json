@@ -30,7 +30,9 @@
     "nf_conntrack_h323_asn1",
     "sit",
     "ipv6_sockglue",
-    "mcast_snoop",
+    "mcast_snoop"
+  ],
+  "modules_pending": [
     "nf_conntrack_sip",
     "nf_conntrack_sane",
     "inet6_connection_sock",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 59.12758469581604,
   "git_commit_hash": null
 }

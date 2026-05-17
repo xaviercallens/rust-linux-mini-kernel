@@ -50,7 +50,9 @@
     "fib_notifier",
     "nf_conntrack_proto_udp",
     "esp6_offload",
-    "nf_conntrack_acct",
+    "nf_conntrack_acct"
+  ],
+  "modules_pending": [
     "xfrm6_protocol",
     "ip6_output",
     "nf_conntrack_proto_icmp",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 98.41943287849426,
   "git_commit_hash": null
 }

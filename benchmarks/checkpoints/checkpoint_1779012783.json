@@ -78,7 +78,9 @@
     "ip6_input",
     "nf_conntrack_extend",
     "af_inet",
-    "af_inet6",
+    "af_inet6"
+  ],
+  "modules_pending": [
     "bpf_tcp_ca",
     "cipso_ipv4",
     "nf_conntrack_timestamp",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 153.81272506713867,
   "git_commit_hash": null
 }

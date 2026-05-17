@@ -26,7 +26,9 @@
     "calipso",
     "tunnel6",
     "fib_semantics",
-    "nf_conntrack_proto_dccp",
+    "nf_conntrack_proto_dccp"
+  ],
+  "modules_pending": [
     "nf_conntrack_h323_asn1",
     "sit",
     "ipv6_sockglue",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 51.05254578590393,
   "git_commit_hash": null
 }

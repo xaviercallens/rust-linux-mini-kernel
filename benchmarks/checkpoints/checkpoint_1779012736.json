@@ -54,7 +54,9 @@
     "xfrm6_protocol",
     "ip6_output",
     "nf_conntrack_proto_icmp",
-    "anycast",
+    "anycast"
+  ],
+  "modules_pending": [
     "mip6",
     "xfrm6_input",
     "nf_conntrack_proto_icmpv6",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 106.31767892837524,
   "git_commit_hash": null
 }

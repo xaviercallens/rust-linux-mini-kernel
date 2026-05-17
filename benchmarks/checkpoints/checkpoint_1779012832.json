@@ -102,7 +102,9 @@
     "nf_conntrack_irc",
     "arp",
     "nf_conntrack_proto_tcp",
-    "nf_log",
+    "nf_log"
+  ],
+  "modules_pending": [
     "exthdrs_offload",
     "udp_offload",
     "sysctl_net_ipv6",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 202.2969949245453,
   "git_commit_hash": null
 }

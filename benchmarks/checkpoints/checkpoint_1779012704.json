@@ -38,7 +38,9 @@
     "nf_nat_amanda",
     "inet_connection_sock",
     "xfrm6_policy",
-    "fib_frontend",
+    "fib_frontend"
+  ],
+  "modules_pending": [
     "nf_nat_ftp",
     "ip6_tunnel",
     "tcp_ipv6",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 74.83654689788818,
   "git_commit_hash": null
 }

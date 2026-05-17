@@ -34,7 +34,9 @@
     "nf_conntrack_sip",
     "nf_conntrack_sane",
     "inet6_connection_sock",
-    "nf_conntrack_helper",
+    "nf_conntrack_helper"
+  ],
+  "modules_pending": [
     "nf_nat_amanda",
     "inet_connection_sock",
     "xfrm6_policy",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 66.7841579914093,
   "git_commit_hash": null
 }

@@ -114,7 +114,9 @@
     "datagram",
     "seg6_iptunnel",
     "exthdrs_core",
-    "fou6",
+    "fou6"
+  ],
+  "modules_pending": [
     "nf_conntrack_ecache",
     "ip6_flowlabel",
     "nf_log_syslog",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 225.91329288482666,
   "git_commit_hash": null
 }

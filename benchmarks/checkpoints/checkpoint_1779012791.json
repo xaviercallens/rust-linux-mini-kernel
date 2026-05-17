@@ -82,7 +82,9 @@
     "bpf_tcp_ca",
     "cipso_ipv4",
     "nf_conntrack_timestamp",
-    "seg6_hmac",
+    "seg6_hmac"
+  ],
+  "modules_pending": [
     "nf_conntrack_seqadj",
     "udplite",
     "fou",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 162.02002882957458,
   "git_commit_hash": null
 }

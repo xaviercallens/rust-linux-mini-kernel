@@ -66,7 +66,9 @@
     "nf_conntrack_core",
     "nf_conntrack_broadcast",
     "ip6_icmp",
-    "ip6_checksum",
+    "ip6_checksum"
+  ],
+  "modules_pending": [
     "nf_conntrack_ftp",
     "ip6mr",
     "reassembly",
@@ -126,9 +128,8 @@
     "ip6_fib",
     "nf_nat_masquerade"
   ],
-  "modules_pending": [],
   "total_fixes": 0,
   "total_errors": 0,
-  "elapsed_time_seconds": 248.86507987976074,
+  "elapsed_time_seconds": 130.3359739780426,
   "git_commit_hash": null
 }
