@@ -7,7 +7,7 @@
 #![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
-use libc::{__be32, __u32, c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -16,18 +16,7 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub __in6_u: [u8; 16],
-}
-
-#[repr(C)]
-pub struct iphdr {
-    pub saddr: __be32,
-    pub daddr: __be32,
-    // ... other fields omitted for brevity
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_tunnel_parm {
     pub iph: iphdr,
     pub i_flags: __u32,
@@ -36,6 +25,7 @@ pub struct ip_tunnel_parm {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_tunnel_prl {
     pub addr: __be32,
     pub datalen: c_int,
@@ -43,6 +33,7 @@ pub struct ip_tunnel_prl {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_tunnel_prl_entry {
     pub addr: __be32,
     pub flags: c_int,
@@ -50,18 +41,7 @@ pub struct ip_tunnel_prl_entry {
 }
 
 #[repr(C)]
-pub struct net_device {
-    pub dev_addr: [u8; 4],
-    pub broadcast: [u8; 4],
-    pub flags: c_int,
-    pub ifindex: c_int,
-    pub name: [u8; IFNAMSIZ],
-    pub priv_flags: c_int,
-    pub rtnl_link_ops: *mut c_void,
-    // ... other fields omitted for brevity
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_tunnel {
     pub parms: ip_tunnel_parm,
     pub dev: *mut net_device,
@@ -72,6 +52,7 @@ pub struct ip_tunnel {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sit_net {
     pub tunnels_r_l: [*mut ip_tunnel; IP6_SIT_HASH_SIZE],
     pub tunnels_r: [*mut ip_tunnel; IP6_SIT_HASH_SIZE],
@@ -92,6 +73,10 @@ pub struct sit_net {
 /// 0 on success, error code on failure
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_init(dev: *mut net_device) -> c_int {
+    if dev.is_null() {
+        return -EINVAL;
+    }
+
     // Implementation would go here
     0
 }
@@ -102,6 +87,10 @@ pub unsafe extern "C" fn ipip6_tunnel_init(dev: *mut net_device) -> c_int {
 /// - `dev` must be a valid pointer to net_device
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_setup(dev: *mut net_device) {
+    if dev.is_null() {
+        return;
+    }
+
     // Implementation would go here
 }
 
@@ -111,6 +100,10 @@ pub unsafe extern "C" fn ipip6_tunnel_setup(dev: *mut net_device) {
 /// - `dev` must be a valid pointer to net_device
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_dev_free(dev: *mut net_device) {
+    if dev.is_null() {
+        return;
+    }
+
     // Implementation would go here
 }
 
@@ -128,6 +121,10 @@ pub unsafe extern "C" fn ipip6_tunnel_lookup(
     local: __be32,
     sifindex: c_int,
 ) -> *mut ip_tunnel {
+    if net.is_null() {
+        return ptr::null_mut();
+    }
+
     // Implementation would go here
     ptr::null_mut()
 }
@@ -142,6 +139,10 @@ pub unsafe extern "C" fn __ipip6_bucket(
     sitn: *mut sit_net,
     parms: *mut ip_tunnel_parm,
 ) -> *mut *mut ip_tunnel {
+    if sitn.is_null() || parms.is_null() {
+        return ptr::null_mut();
+    }
+
     // Implementation would go here
     ptr::null_mut()
 }
@@ -156,6 +157,10 @@ pub unsafe extern "C" fn ipip6_bucket(
     sitn: *mut sit_net,
     t: *mut ip_tunnel,
 ) -> *mut *mut ip_tunnel {
+    if sitn.is_null() || t.is_null() {
+        return ptr::null_mut();
+    }
+
     // Implementation would go here
     ptr::null_mut()
 }
@@ -167,6 +172,10 @@ pub unsafe extern "C" fn ipip6_bucket(
 /// - `t` must be valid pointer to ip_tunnel
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_unlink(sitn: *mut sit_net, t: *mut ip_tunnel) {
+    if sitn.is_null() || t.is_null() {
+        return;
+    }
+
     // Implementation would go here
 }
 
@@ -177,6 +186,10 @@ pub unsafe extern "C" fn ipip6_tunnel_unlink(sitn: *mut sit_net, t: *mut ip_tunn
 /// - `t` must be valid pointer to ip_tunnel
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_link(sitn: *mut sit_net, t: *mut ip_tunnel) {
+    if sitn.is_null() || t.is_null() {
+        return;
+    }
+
     // Implementation would go here
 }
 
@@ -187,6 +200,10 @@ pub unsafe extern "C" fn ipip6_tunnel_link(sitn: *mut sit_net, t: *mut ip_tunnel
 /// - `sitn` must be valid pointer to sit_net
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(dev: *mut net_device, sitn: *mut sit_net) {
+    if dev.is_null() || sitn.is_null() {
+        return;
+    }
+
     // Implementation would go here
 }
 
@@ -196,6 +213,10 @@ pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(dev: *mut net_device, sitn: *mut
 /// - `dev` must be valid pointer to net_device
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_create(dev: *mut net_device) -> c_int {
+    if dev.is_null() {
+        return -EINVAL;
+    }
+
     // Implementation would go here
     0
 }
@@ -211,6 +232,10 @@ pub unsafe extern "C" fn ipip6_tunnel_locate(
     parms: *mut ip_tunnel_parm,
     create: c_int,
 ) -> *mut ip_tunnel {
+    if net.is_null() || parms.is_null() {
+        return ptr::null_mut();
+    }
+
     // Implementation would go here
     ptr::null_mut()
 }
@@ -225,6 +250,10 @@ pub unsafe extern "C" fn __ipip6_tunnel_locate_prl(
     t: *mut ip_tunnel,
     addr: __be32,
 ) -> *mut ip_tunnel_prl_entry {
+    if t.is_null() {
+        return ptr::null_mut();
+    }
+
     // Implementation would go here
     ptr::null_mut()
 }
@@ -236,6 +265,10 @@ pub unsafe extern "C" fn __ipip6_tunnel_locate_prl(
 /// - `ifr` must be valid pointer to ifreq
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_get_prl(dev: *mut net_device, ifr: *mut c_void) -> c_int {
+    if dev.is_null() || ifr.is_null() {
+        return -EINVAL;
+    }
+
     // Implementation would go here
     0
 }
@@ -251,6 +284,10 @@ pub unsafe extern "C" fn ipip6_tunnel_add_prl(
     a: *mut ip_tunnel_prl,
     chg: c_int,
 ) -> c_int {
+    if t.is_null() || a.is_null() {
+        return -EINVAL;
+    }
+
     // Implementation would go here
     0
 }
@@ -262,6 +299,10 @@ pub unsafe extern "C" fn ipip6_tunnel_add_prl(
 /// - `a` must be valid pointer to ip_tunnel_prl or null
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_del_prl(t: *mut ip_tunnel, a: *mut ip_tunnel_prl) -> c_int {
+    if t.is_null() {
+        return -EINVAL;
+    }
+
     // Implementation would go here
     0
 }
@@ -279,6 +320,10 @@ const INADDR_ANY: u32 = 0; // 0.0.0.0
 /// - `dev` must be valid pointer to net_device
 #[no_mangle]
 pub unsafe extern "C" fn dev_to_sit_net(dev: *mut net_device) -> *mut sit_net {
+    if dev.is_null() {
+        return ptr::null_mut();
+    }
+
     // Implementation would go here
     ptr::null_mut()
 }

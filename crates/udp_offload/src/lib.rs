@@ -22,6 +22,7 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_buff {
     head: *mut u8,
     data: *mut u8,
@@ -40,6 +41,7 @@ pub struct sk_buff {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct skb_shared_info {
     data_len: usize,
     nr_frags: u16,
@@ -50,6 +52,7 @@ pub struct skb_shared_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6hdr {
     pub saddr: [u8; 16],
     pub daddr: [u8; 16],
@@ -57,6 +60,7 @@ pub struct ipv6hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct udphdr {
     source: u16,
     dest: u16,
@@ -65,6 +69,7 @@ pub struct udphdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct frag_hdr {
     nexthdr: u8,
     reserved: u16,
@@ -73,11 +78,13 @@ pub struct frag_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_offload {
     callbacks: net_offload_callbacks,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_offload_callbacks {
     gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
     gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
@@ -85,6 +92,7 @@ pub struct net_offload_callbacks {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct NapiGroCb {
     flush: c_int,
     is_ipv6: c_int,

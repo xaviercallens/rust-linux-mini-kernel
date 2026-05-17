@@ -6,7 +6,6 @@
 #![no_std]
 #![allow(non_camel_case_types)]  // For C-style type names
 
-
 use kernel_types::*;
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -21,68 +20,15 @@ pub const EAGAIN: c_int = -35;
 
 // Type definitions
 #[repr(C)]
-pub struct sk_buff {
-    // Opaque struct - actual fields defined in kernel headers
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct list_head {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct xfrm_state {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct xfrm_offload {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sec_path {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct iphdr {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ip_esp_hdr {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ip_beet_phdr {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct net_offload {
-    // Opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct xfrm_type_offload {
-    // Opaque struct
+#[derive(Copy, Clone)]
+pub struct skb_shared_info {
+    pub gso_type: u16,
     _private: [u8; 0],
 }
 
 // Function pointer types
-type gro_receive_t = extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff;
-type gso_segment_t = extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff;
+pub type gro_receive_t = extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff;
+pub type gso_segment_t = extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff;
 
 // Extern functions (declared in kernel headers)
 extern "C" {
@@ -91,8 +37,8 @@ extern "C" {
     fn xfrm_parse_spi(skb: *mut sk_buff, proto: c_int, spi: *mut u32, seq: *mut u32) -> c_int;
     fn xfrm_offload(skb: *mut sk_buff) -> *mut xfrm_offload;
     fn secpath_set(skb: *mut sk_buff) -> *mut sec_path;
-    fn xfrm_state_lookup(net: *mut c_void, mark: u32, 
-                         daddr: *mut xfrm_address_t, spi: u32, 
+    fn xfrm_state_lookup(net: *mut c_void, mark: u32,
+                         daddr: *mut xfrm_address_t, spi: u32,
                          proto: c_int, family: c_int) -> *mut xfrm_state;
     fn xfrm_smark_get(mark: u32, x: *mut xfrm_state) -> u32;
     fn secpath_reset(skb: *mut sk_buff);
@@ -107,22 +53,16 @@ extern "C" {
     fn skb_shinfo(skb: *mut sk_buff) -> *mut skb_shared_info;
     fn rcu_dereference<T>(ptr: *mut T) -> *mut T;
     fn inet_offloads(proto: c_int) -> *mut net_offload;
-    fn xfrm_register_type_offload(type: *mut xfrm_type_offload, family: c_int) -> c_int;
+    fn xfrm_register_type_offload(type_: *mut xfrm_type_offload, family: c_int) -> c_int;
     fn inet_add_offload(ops: *mut net_offload, proto: c_int) -> c_int;
-    fn xfrm_unregister_type_offload(type: *mut xfrm_type_offload, family: c_int);
+    fn xfrm_unregister_type_offload(type_: *mut xfrm_type_offload, family: c_int);
     fn inet_del_offload(ops: *mut net_offload, proto: c_int);
     fn kmalloc(size: size_t, flags: c_int) -> *mut c_void;
     fn kfree(ptr: *mut c_void);
 }
 
-type netdev_features_t = u32;
-type xfrm_address_t = [u8; 16];
-
-#[repr(C)]
-struct skb_shared_info {
-    gso_type: u16,
-    _private: [u8; 0],
-}
+pub type netdev_features_t = u32;
+pub type xfrm_address_t = [u8; 16];
 
 // Function implementations
 #[no_mangle]
@@ -135,7 +75,7 @@ pub unsafe extern "C" fn esp4_gro_receive(
         return ptr::null_mut();
     }
 
-    if pskb_pull(skb, offset) == ptr::null_mut() {
+    if pskb_pull(skb, offset).is_null() {
         return ptr::null_mut();
     }
 
@@ -162,8 +102,8 @@ pub unsafe extern "C" fn esp4_gro_receive(
         }
 
         let net = dev_net((*skb).dev);
-        let x = xfrm_state_lookup(net, (*skb).mark, 
-                                  &ip_hdr(skb)->daddr, spi, IPPROTO_ESP, AF_INET);
+        let x = xfrm_state_lookup(net, (*skb).mark,
+                                  &(*ip_hdr(skb)).daddr, spi, IPPROTO_ESP, AF_INET);
         if x.is_null() {
             secpath_reset(skb);
             skb_push(skb, offset);
@@ -235,10 +175,10 @@ pub unsafe extern "C" fn xfrm4_transport_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
-    let segs = ERR_PTR(EINVAL);
+    let mut segs = ERR_PTR(EINVAL);
     let xo = xfrm_offload(skb);
     let ops = rcu_dereference(inet_offloads((*xo).proto));
-    
+
     if !ops.is_null() && !((*ops).callbacks.gso_segment).is_null() {
         (*skb).transport_header += (*x).props.header_len;
         segs = (*ops).callbacks.gso_segment(skb, features);
@@ -253,12 +193,12 @@ pub unsafe extern "C" fn xfrm4_beet_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
-    let segs = ERR_PTR(EINVAL);
+    let mut segs = ERR_PTR(EINVAL);
     let xo = xfrm_offload(skb);
     let proto = (*xo).proto;
-    
+
     (*skb).transport_header += (*x).props.header_len;
-    
+
     if (*x).sel.family != AF_INET6 {
         if proto == IPPROTO_BEETPH {
             let ph = &(*skb).data as *const ip_beet_phdr;
@@ -270,15 +210,15 @@ pub unsafe extern "C" fn xfrm4_beet_gso_segment(
     } else {
         let mut frag: __be16 = 0;
         (*skb).transport_header += ipv6_skip_exthdr(skb, 0, &mut proto, &mut frag);
-        
+
         if proto == IPPROTO_TCP {
             (*skb_shinfo(skb)).gso_type |= SKB_GSO_TCPV4;
         }
     }
-    
+
     __skb_pull(skb, skb_transport_offset(skb));
     let ops = rcu_dereference(inet_offloads(proto));
-    
+
     if !ops.is_null() && !((*ops).callbacks.gso_segment).is_null() {
         segs = (*ops).callbacks.gso_segment(skb, features);
     }
@@ -353,15 +293,15 @@ pub unsafe extern "C" fn esp_input_tail(
 ) -> c_int {
     let aead = (*x).data;
     let xo = xfrm_offload(skb);
-    
+
     if !pskb_may_pull(skb, size_of::<ip_esp_hdr>() + crypto_aead_ivsize(aead)) {
         return EINVAL;
     }
-    
+
     if !(*xo).flags & CRYPTO_DONE {
         (*skb).ip_summed = CHECKSUM_NONE;
     }
-    
+
     return esp_input_done2(skb, 0);
 }
 
@@ -375,7 +315,7 @@ pub unsafe extern "C" fn esp_xmit(
     if xo.is_null() {
         return EINVAL;
     }
-    
+
     let hw_offload = if (!(features & NETIF_F_HW_ESP) &&
          !((*skb).dev->gso_partial_features & NETIF_F_HW_ESP)) ||
         (*x).xso.dev != (*skb).dev {
@@ -384,75 +324,74 @@ pub unsafe extern "C" fn esp_xmit(
     } else {
         true
     };
-    
+
     let aead = (*x).data;
     let alen = crypto_aead_authsize(aead);
     let blksize = ALIGN(crypto_aead_blocksize(aead), 4);
     let clen = ALIGN((*skb).len + 2 + 0, blksize);
     let plen = clen - (*skb).len;
     let tailen = 0 + plen + alen;
-    
+
     let esph = ip_esp_hdr(skb);
-    
+
     if !hw_offload || !skb_is_gso(skb) {
         let nfrags = esp_output_head(x, skb, &esp);
         if nfrags < 0 {
             return nfrags;
         }
     }
-    
+
     let seq = (*xo).seq.low;
-    
+
     (*esph).spi = (*x).id.spi;
-    
+
     skb_push(skb, -skb_network_offset(skb));
-    
+
     if (*xo).flags & XFRM_GSO_SEGMENT {
         (*esph).seq_no = htonl(seq);
-        
+
         if !skb_is_gso(skb) {
             (*xo).seq.low += 1;
         } else {
             (*xo).seq.low += (*skb_shinfo(skb)).gso_segs;
         }
     }
-    
+
     (*ip_hdr(skb)).tot_len = htons((*skb).len);
     ip_send_check(ip_hdr(skb));
-    
+
     if hw_offload {
         if !skb_ext_add(skb, SKB_EXT_SEC_PATH) {
             return ENOMEM;
         }
-        
+
         let xo = xfrm_offload(skb);
         if xo.is_null() {
             return EINVAL;
         }
-        
+
         (*xo).flags |= XFRM_XMIT;
         return 0;
     }
-    
+
     let err = esp_output_tail(x, skb, &esp);
     if err != 0 {
         return err;
     }
-    
+
     secpath_reset(skb);
-    
+
     return 0;
 }
 
 // Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn esp4_offload_init() -> c_int {
-    let esp_type_offload = &esp_type_offload;
-    if xfrm_register_type_offload(esp_type_offload, AF_INET) < 0 {
+    if xfrm_register_type_offload(&esp_type_offload, AF_INET) < 0 {
         pr_info!("esp4_offload_init: can't add xfrm type offload\n");
         return EAGAIN;
     }
-    
+
     return inet_add_offload(&esp4_offload, IPPROTO_ESP);
 }
 
@@ -497,9 +436,9 @@ static mut esp_type_offload: xfrm_type_offload = xfrm_type_offload {
 
 // Module metadata
 #[no_mangle]
-pub static mut esp4_offload_init: extern "C" fn() -> c_int = esp4_offload_init;
+pub static mut esp4_offload_init_fn: extern "C" fn() -> c_int = esp4_offload_init;
 #[no_mangle]
-pub static mut esp4_offload_exit: extern "C" fn() = esp4_offload_exit;
+pub static mut esp4_offload_exit_fn: extern "C" fn() = esp4_offload_exit;
 
 // Tests
 #[cfg(test)]

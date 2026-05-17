@@ -6,7 +6,6 @@
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
-
 use kernel_types::*;
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};

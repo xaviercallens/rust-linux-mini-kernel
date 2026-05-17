@@ -20,17 +20,20 @@ pub const NF_CT_EXPECT_MAX_CNT: c_uint = 100;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in_addr {
     pub s_addr: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct iphdr {
     pub saddr: in_addr,
     pub daddr: in_addr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tcphdr {
     pub source: u16,
     pub dest: u16,
@@ -38,11 +41,13 @@ pub struct tcphdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_buff {
     pub len: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     pub src: nf_conntrack_addr,
     pub dst: nf_conntrack_addr,
@@ -50,32 +55,38 @@ pub struct nf_conntrack_tuple {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union nf_conntrack_addr {
     pub u3: nf_conntrack_addr_u3,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_addr_u3 {
     pub ip: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_hash {
     pub tuple: nf_conntrack_tuple,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     pub tuplehash: [nf_conntrack_tuple_hash; 2],
     pub status: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect {
     pub class: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect_policy {
     pub max_expected: c_uint,
     pub timeout: c_uint,

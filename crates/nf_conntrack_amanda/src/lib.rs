@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_amanda':
+
+```rust
 //! Amanda connection tracking module for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -12,6 +15,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
+use kernel_types::*;
 
 // Constants from C
 pub const IPPROTO_UDP: u8 = 17;
@@ -26,54 +30,58 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    __in6_u: [u16; 8],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     src: nf_conntrack_tuple_ip,
     dst: nf_conntrack_tuple_ip,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_ip {
     u3: nf_conntrack_tuple_ip_u3,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_ip_u3 {
     _addr: [u8; 16], // Flexible based on address family
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     tuplehash: [nf_conn_tuplehash; 2],
     status: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_tuplehash {
     tuple: nf_conntrack_tuple,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect {
     _data: [u8; 1], // Opaque data
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ts_config {
     _data: [u8; 1], // Opaque textsearch config
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect_policy {
     max_expected: c_uint,
     timeout: c_uint,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
     name: *const u8,
     me: *const c_void,
@@ -201,18 +209,18 @@ pub unsafe extern "C" fn amanda_help(
     nf_ct_refresh(ct, skb, master_timeout * 1);
 
     let dataoff = protoff + mem::size_of::<udphdr>() as c_uint;
-    if dataoff >= (*skb).len {
+    if dataoff >= (*(skb as *mut sk_buff)).len {
         nf_ct_helper_log(skb, ct, b"amanda_help: skblen = \0".as_ptr() as *const u8);
         return NF_ACCEPT;
     }
 
-    let start = skb_find_text(skb, dataoff, (*skb).len, search[0].ts);
+    let start = skb_find_text(skb, dataoff, (*(skb as *mut sk_buff)).len, search[0].ts);
     if start == c_uint::MAX {
         return NF_ACCEPT;
     }
     let mut start = start + dataoff + search[0].len;
 
-    let stop = skb_find_text(skb, start, (*skb).len, search[1].ts);
+    let stop = skb_find_text(skb, start, (*(skb as *mut sk_buff)).len, search[1].ts);
     if stop == c_uint::MAX {
         return NF_ACCEPT;
     }
@@ -273,7 +281,6 @@ pub unsafe extern "C" fn amanda_help(
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_amanda_init() -> c_int {
     let mut ret = 0;
-    let mut i: c_int;
 
     for i in 0..6 {
         let algo = ts_algo.as_ptr() as *const u8;
@@ -282,9 +289,8 @@ pub unsafe extern "C" fn nf_conntrack_amanda_init() -> c_int {
         search[i].ts = textsearch_prepare(algo, string, len, 0, 0);
         if search[i].ts.is_null() {
             ret = -ENOMEM;
-            while i > 0 {
-                i -= 1;
-                textsearch_destroy(search[i].ts);
+            for j in 0..i {
+                textsearch_destroy(search[j].ts);
             }
             return ret;
         }
@@ -303,8 +309,6 @@ pub unsafe extern "C" fn nf_conntrack_amanda_init() -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_amanda_fini() {
-    let mut i: c_int;
-
     nf_conntrack_helpers_unregister(&mut search[0] as *mut _ as *mut nf_conntrack_helper, 2);
     for i in (0..6).rev() {
         textsearch_destroy(search[i].ts);

@@ -6,12 +6,12 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
-use core::ffi::c_int;
 use core::ffi::c_void;
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -23,18 +23,6 @@ pub const EADDRNOTAVAIL: c_int = -99;
 pub const EFAULT: c_int = -14;
 
 // Type definitions
-#[repr(C)]
-struct sock {
-    // Placeholder - actual fields would be defined based on kernel headers
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct ipv6_pinfo {
-    // Placeholder - actual fields would be defined based on kernel headers
-    _private: [u8; 0],
-}
-
 #[repr(C)]
 struct ipv6_txoptions {
     opt_nflen: u32,
@@ -60,7 +48,7 @@ struct group_filter {
 
 #[repr(C)]
 struct ip6_ra_chain {
-    sk: *mut sock,
+    sk: *mut c_void, // Changed from *mut sock to *mut c_void
     sel: c_int,
     next: *mut ip6_ra_chain,
 }
@@ -73,20 +61,20 @@ extern "C" {
     fn read_unlock_bh(lock: *mut c_void);
     fn kmalloc(size: size_t, flags: u32) -> *mut c_void;
     fn kfree(ptr: *mut c_void);
-    fn sock_hold(sk: *mut sock);
-    fn sock_put(sk: *mut sock);
+    fn sock_hold(sk: *mut c_void); // Changed from *mut sock to *mut c_void
+    fn sock_put(sk: *mut c_void); // Changed from *mut sock to *mut c_void
     fn copy_from_sockptr(to: *mut c_void, from: *const c_void, len: size_t) -> c_int;
     fn ip6_mc_source(
         add: c_int,
         omode: c_int,
-        sk: *mut sock,
+        sk: *mut c_void, // Changed from *mut sock to *mut c_void
         greqs: *mut group_source_req,
     ) -> c_int;
-    fn ip6_mc_msfilter(sk: *mut sock, gsf: *mut group_filter, slist: *const c_void) -> c_int;
-    fn ipv6_sock_mc_join(sk: *mut sock, ifindex: u32, addr: *const u8) -> c_int;
-    fn ipv6_sock_mc_drop(sk: *mut sock, ifindex: u32, addr: *const u8) -> c_int;
+    fn ip6_mc_msfilter(sk: *mut c_void, gsf: *mut group_filter, slist: *const c_void) -> c_int; // Changed from *mut sock to *mut c_void
+    fn ipv6_sock_mc_join(sk: *mut c_void, ifindex: u32, addr: *const u8) -> c_int; // Changed from *mut sock to *mut c_void
+    fn ipv6_sock_mc_drop(sk: *mut c_void, ifindex: u32, addr: *const u8) -> c_int; // Changed from *mut sock to *mut c_void
     fn ip6_mroute_setsockopt(
-        sk: *mut sock,
+        sk: *mut c_void, // Changed from *mut sock to *mut c_void
         optname: c_int,
         optval: *const c_void,
         optlen: c_int,
@@ -101,19 +89,17 @@ static mut ip6_ra_lock: [u8; 0] = [0; 0]; // Placeholder for lock structure
 
 // Function implementations
 #[no_mangle]
-pub unsafe extern "C" fn ip6_ra_control(sk: *mut sock, sel: c_int) -> c_int {
+pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int { // Changed from *mut sock to *mut c_void
     if sk.is_null() {
         return EINVAL;
     }
 
     // Check socket type
     // SAFETY: Caller guarantees sk is valid
-    let sk_type = unsafe { (*sk).sk_type }; // Placeholder - actual field depends on sock struct
-    let inet_num = unsafe { (*sk).inet_num }; // Placeholder - actual field depends on sock struct
+    let sk_type = unsafe { (*(sk as *mut inet_sock)).inet.sk_type };
+    let inet_num = unsafe { (*(sk as *mut inet_sock)).inet.inet_num };
 
-    if sk_type != 1 /* SOCK_RAW */ || inet_num != 255
-    /* IPPROTO_RAW */
-    {
+    if sk_type != 1 /* SOCK_RAW */ || inet_num != 255 /* IPPROTO_RAW */ {
         return ENOPROTOOPT;
     }
 
@@ -159,7 +145,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut sock, sel: c_int) -> c_int {
             kfree(ra as *mut c_void);
             return 0;
         }
-        rap = &mut (*rap).next;
+        rap = &mut (*ra).next;
     }
 
     if new_ra.is_null() {
@@ -178,7 +164,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut sock, sel: c_int) -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_update_options(
-    sk: *mut sock,
+    sk: *mut c_void, // Changed from *mut sock to *mut c_void
     opt: *mut ipv6_txoptions,
 ) -> *mut ipv6_txoptions {
     if sk.is_null() || opt.is_null() {
@@ -211,7 +197,7 @@ fn setsockopt_needs_rtnl(optname: c_int) -> bool {
 
 #[no_mangle]
 pub unsafe extern "C" fn do_ipv6_setsockopt(
-    sk: *mut sock,
+    sk: *mut c_void, // Changed from *mut sock to *mut c_void
     level: c_int,
     optname: c_int,
     optval: *const c_void,

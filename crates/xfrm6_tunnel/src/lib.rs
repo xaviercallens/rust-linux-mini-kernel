@@ -14,6 +14,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
+use kernel_types::*;
 
 // Constants from C
 const XFRM6_TUNNEL_SPI_BYADDR_HSIZE: c_uint = 256;
@@ -61,25 +62,10 @@ struct rcu_head {
 }
 
 #[repr(C)]
-struct xfrm_state {
-    props: xfrm_state_props,
-}
-
-#[repr(C)]
 struct xfrm_state_props {
     mode: c_int,
     header_len: c_int,
     saddr: xfrm_address_t,
-}
-
-#[repr(C)]
-struct sk_buff {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct net {
-    _private: [u8; 0],
 }
 
 #[repr(C)]
@@ -126,12 +112,6 @@ static mut xfrm6_tunnel_net_ops: pernet_operations = pernet_operations {
     size: mem::size_of::<xfrm6_tunnel_net>() as c_int,
 };
 
-// Spinlock type (simplified)
-#[repr(C)]
-struct spinlock_t {
-    _private: c_int,
-}
-
 // Function implementations
 /// Get per-network namespace data
 ///
@@ -139,7 +119,7 @@ struct spinlock_t {
 /// - `net` must be a valid pointer to network namespace
 #[inline]
 unsafe fn xfrm6_tunnel_pernet(net: *mut net) -> *mut xfrm6_tunnel_net {
-    net_generic(net, xfrm6_tunnel_net_id)
+    net_generic(net, xfrm6_tunnel_net_id) as *mut xfrm6_tunnel_net
 }
 
 /// Calculate hash for address-based lookup
@@ -394,7 +374,7 @@ pub unsafe extern "C" fn x6spi_destroy_rcu(head: *mut rcu_head) {
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_init() -> c_int {
     xfrm6_tunnel_spi_kmem = kmem_cache_create(
-        "xfrm6_tunnel_spi",
+        "xfrm6_tunnel_spi\0".as_ptr() as *const c_char,
         mem::size_of::<xfrm6_tunnel_spi>() as size_t,
         0,
         0,

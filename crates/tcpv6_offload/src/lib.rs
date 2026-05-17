@@ -1,13 +1,5 @@
-//! IPv6 GSO/GRO offload support for TCP
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
-#![no_std]
-#![allow(non_camel_case_types)] // For C-style type names
-
+use kernel_types::*;
 use core::ffi::c_int;
-use core::ffi::c_void;
 use core::ptr;
 
 // Constants from C
@@ -16,26 +8,8 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
-struct sk_buff {
-    // In real implementation, this would have all the fields from Linux's sk_buff
-    // For FFI compatibility, we keep it as an opaque struct
-    _private: [u8; 0],
-}
-
-#[repr(C)]
 struct napi_gro_cb {
     flush: u8,
-}
-
-#[repr(C)]
-struct ipv6hdr {
-    saddr: [u8; 16],
-    daddr: [u8; 16],
-}
-
-#[repr(C)]
-struct tcphdr {
-    check: u32,
 }
 
 #[repr(C)]
@@ -61,7 +35,7 @@ pub unsafe extern "C" fn tcp6_gro_receive(
     // SAFETY: Caller guarantees valid skb pointer
     let cb = NAPI_GRO_CB(skb);
 
-    if cb.flush == 0 && skb_gro_checksum_validate(skb, IPPROTO_TCP, ip6_gro_compute_pseudo) != 0 {
+    if (*cb).flush == 0 && skb_gro_checksum_validate(skb, IPPROTO_TCP, ip6_gro_compute_pseudo) != 0 {
         // SAFETY: Valid pointer access
         (*cb).flush = 1;
         return ptr::null_mut();
@@ -77,7 +51,7 @@ pub unsafe extern "C" fn tcp6_gro_complete(skb: *mut sk_buff, thoff: c_int) -> c
 
     // SAFETY: Valid pointer access
     (*th).check = !tcp_v6_check(
-        (*skb).len.wrapping_sub(thoff as u32),
+        (*skb).len,
         &(*iph).saddr,
         &(*iph).daddr,
         0,
@@ -100,7 +74,7 @@ pub unsafe extern "C" fn tcp6_gso_segment(
         return ERR_PTR(EINVAL);
     }
 
-    if !pskb_may_pull(skb, core::mem::size_of::<tcphdr>() as _) {
+    if !pskb_may_pull(skb, core::mem::size_of::<udphdr>() as _) {
         return ERR_PTR(EINVAL);
     }
 
@@ -154,10 +128,10 @@ unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
 }
 
 #[inline]
-unsafe fn tcp_hdr(skb: *mut sk_buff) -> *mut tcphdr {
+unsafe fn tcp_hdr(skb: *mut sk_buff) -> *mut udphdr {
     // In real implementation, this would access (*skb).data + transport header offset
     let data = (*skb).data; // Assuming data field exists
-    data.add(40) as *mut tcphdr // IPv6 header is 40 bytes
+    data.add(40) as *mut udphdr // IPv6 header is 40 bytes
 }
 
 #[inline]
@@ -184,18 +158,24 @@ unsafe fn pskb_may_pull(skb: *mut sk_buff, len: usize) -> bool {
 }
 
 #[inline]
-unsafe fn __tcp_v6_send_check(skb: *mut sk_buff, saddr: *const [u8; 16], daddr: *const [u8; 16]) {
+unsafe fn __tcp_v6_send_check(skb: *mut sk_buff, saddr: *const in6_addr, daddr: *const in6_addr) {
     // Stub implementation - actual implementation would compute checksum
 }
 
 #[inline]
 unsafe fn tcp_v6_check(
     len: u32,
-    saddr: *const [u8; 16],
-    daddr: *const [u8; 16],
+    saddr: *const in6_addr,
+    daddr: *const in6_addr,
     old_checksum: u32,
 ) -> u32 {
     // Stub implementation - actual implementation would compute TCP checksum
+    0
+}
+
+#[inline]
+unsafe fn ip6_gro_compute_pseudo(skb: *mut sk_buff) -> c_int {
+    // Stub implementation - actual implementation would compute pseudo header
     0
 }
 

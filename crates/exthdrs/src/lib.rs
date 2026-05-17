@@ -18,18 +18,21 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tlvtype_proc {
     pub type_: c_int,
     pub func: extern "C" fn(skb: *mut c_void, offset: c_int) -> bool,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_destopt_hao {
     pub length: u8,
     pub addr: [u8; 16],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_sr_hdr {
     pub nexthdr: u8,
     pub hdrlen: u8,
@@ -39,6 +42,7 @@ pub struct ipv6_sr_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_skb_parm {
     pub lastopt: c_int,
     pub dst1: c_int,
@@ -48,21 +52,25 @@ pub struct inet6_skb_parm {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_dev {
     pub cnf: *mut c_void,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     pub ipv6: *mut c_void,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_entry {
     pub dev: *mut c_void,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_buff {
     pub dev: *mut c_void,
     pub dst: *mut dst_entry,

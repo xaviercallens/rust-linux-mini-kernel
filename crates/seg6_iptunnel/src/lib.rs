@@ -26,11 +26,13 @@ pub const IPV6_FLOWLABEL_MASK: u32 = 0x000FFFFF;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in6_addr {
     pub s6_addr: [u8; 16],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6hdr {
     pub priority: u8,
     pub version: u8,
@@ -43,6 +45,7 @@ pub struct ipv6hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_sr_hdr {
     pub nexthdr: u8,
     pub hdrlen: u8,
@@ -53,45 +56,53 @@ pub struct ipv6_sr_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct seg6_iptunnel_encap {
     pub mode: c_int,
     pub srh: *mut ipv6_sr_hdr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct seg6_lwt {
     pub cache: dst_cache,
     pub tuninfo: [seg6_iptunnel_encap; 1], // Flexible array member
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_cache {
     // Simplified for FFI compatibility
     _private: [u8; 1],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct lwtunnel_state {
     pub data: *mut c_void,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_buff {
     // Simplified for FFI compatibility
     _private: [u8; 1],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     _private: [u8; 1],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_device {
     _private: [u8; 1],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_entry {
     pub dev: *mut net_device,
     pub lwtstate: *mut lwtunnel_state,

@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_proto_sctp':
+
+```rust
 //! Connection tracking protocol helper module for SCTP.
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -7,7 +10,7 @@
 #![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const SCTP_CID_INIT: u8 = 1;
@@ -36,34 +39,36 @@ pub const SCTP_CONNTRACK_MAX: u8 = 10;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sctphdr {
     pub vtag: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sctp_chunkhdr {
     pub type_: u8,
     pub length: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     pub proto: nf_conntrack_proto,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_proto {
     pub sctp: sctp_conntrack,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sctp_conntrack {
     pub state: u8,
     pub vtag: [u32; 2],
 }
-
-#[repr(C)]
-pub struct sk_buff;
 
 // Static data
 static sctp_conntrack_names: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
@@ -150,13 +155,13 @@ pub unsafe extern "C" fn do_basic_checks(
 
     // SAFETY: The for_each_sctp_chunk macro logic is implemented here
     // with bounds checking and pointer validation
-    offset = dataoff + (ptr::size_of::<sctphdr>() as u32);
+    offset = dataoff + (core::mem::size_of::<sctphdr>() as u32);
     while offset < (*skb).len {
         sch = skb_header_pointer(
             skb,
             offset,
-            ptr::size_of::<sctp_chunkhdr>() as size_t,
-            &_sch as *mut sctp_chunkhdr,
+            core::mem::size_of::<sctp_chunkhdr>() as size_t,
+            &_sch as *mut sctp_chunkhdr as *mut c_void,
         );
         if sch.is_null() {
             break;
@@ -241,13 +246,13 @@ pub unsafe extern "C" fn sctp_new(
     };
 
     // Process each chunk
-    offset = dataoff + (ptr::size_of::<sctphdr>() as u32);
+    offset = dataoff + (core::mem::size_of::<sctphdr>() as u32);
     while offset < (*skb).len {
         sch = skb_header_pointer(
             skb,
             offset,
-            ptr::size_of::<sctp_chunkhdr>() as size_t,
-            &_sch as *mut sctp_chunkhdr,
+            core::mem::size_of::<sctp_chunkhdr>() as size_t,
+            &_sch as *mut sctp_chunkhdr as *mut c_void,
         );
         if sch.is_null() {
             break;
@@ -263,9 +268,9 @@ pub unsafe extern "C" fn sctp_new(
             let mut _inithdr: [u8; 16] = [0; 16]; // Assuming sctp_inithdr size
             let ih = skb_header_pointer(
                 skb,
-                offset + (ptr::size_of::<sctp_chunkhdr>() as u32),
+                offset + (core::mem::size_of::<sctp_chunkhdr>() as u32),
                 16,
-                &_inithdr as *mut [u8; 16],
+                &_inithdr as *mut [u8; 16] as *mut c_void,
             );
             if ih.is_null() {
                 return 0;

@@ -1,15 +1,11 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
 use core::ptr;
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::ffi::size_t;
-use core::mem;
-use core::slice;
+use core::ffi::{c_int, c_uint, c_void};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -18,11 +14,7 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub __in6_u: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_tnl_parm {
     pub raddr: in6_addr,
     pub laddr: in6_addr,
@@ -40,6 +32,7 @@ pub struct ip6_tnl_parm {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_tnl {
     pub parms: ip6_tnl_parm,
     pub dev: *mut net_device,
@@ -49,28 +42,7 @@ pub struct ip6_tnl {
 }
 
 #[repr(C)]
-pub struct net_device {
-    pub ifindex: c_int,
-    pub flags: u32,
-    pub type_: c_int,
-    pub dev_addr: *mut c_void,
-    pub dev_private: *mut c_void,
-    pub rtnl_link_ops: *mut rtnl_link_ops,
-}
-
-#[repr(C)]
-pub struct net {
-    // Placeholder for actual fields
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct rtnl_link_ops {
-    // Placeholder for actual fields
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6gre_net {
     pub tunnels: [*mut ip6_tnl; 4 * IP6_GRE_HASH_SIZE],
     pub collect_md_tun: *mut ip6_tnl,
@@ -108,7 +80,7 @@ pub unsafe extern "C" fn ip6gre_tunnel_lookup(
     let mut cand: *mut ip6_tnl = ptr::null_mut();
     let mut cand_score = 4;
     let mut t = (*ign).tunnels_r_l[h0 ^ h1];
-    
+
     while !t.is_null() {
         let t_ref = &*t;
         if !ipv6_addr_equal(local, &t_ref.parms.laddr) ||
@@ -201,9 +173,6 @@ pub unsafe extern "C" fn HASH_KEY(key: u32) -> u32 {
     ((key ^ (key >> 4)) & (IP6_GRE_HASH_SIZE - 1)) as u32
 }
 
-// Placeholder for other functions and constants
-// ...
-
 // Constants
 pub const IP6_GRE_HASH_SIZE_SHIFT: u32 = 5;
 pub const IP6_GRE_HASH_SIZE: u32 = 1 << IP6_GRE_HASH_SIZE_SHIFT;
@@ -229,7 +198,7 @@ pub unsafe extern "C" fn ipv6_addr_any(a: *const in6_addr) -> bool {
     if a.is_null() {
         true
     } else {
-        ptr::read(a) == in6_addr { __in6_u: [0; 16] }
+        ptr::read(a) == in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } }
     }
 }
 
@@ -239,7 +208,7 @@ pub unsafe extern "C" fn ipv6_addr_is_multicast(a: *const in6_addr) -> bool {
         false
     } else {
         let a_ref = &*a;
-        (a_ref.__in6_u[0] & 0xF) == 0xF
+        (a_ref.in6_u.u6_addr8[0] & 0xF) == 0xF
     }
 }
 
@@ -251,7 +220,7 @@ pub unsafe extern "C" fn ipv6_addr_hash(a: *const in6_addr) -> u32 {
         // Simplified hash implementation
         let a_ref = &*a;
         let mut hash = 0;
-        for &byte in a_ref.__in6_u.iter() {
+        for &byte in a_ref.in6_u.u6_addr8.iter() {
             hash = (hash >> 1) ^ (hash << 31) ^ (byte as u32);
         }
         hash
@@ -284,39 +253,3 @@ mod tests {
         assert!(true);
     }
 }
-```
-
-### Key Implementation Notes:
-
-1. **Memory Layout**: All structs use `#[repr(C)]` to ensure C-compatible memory layout.
-
-2. **Pointer Safety**: All pointer operations are marked `unsafe` with appropriate comments. For example:
-   ```rust
-   // SAFETY: Caller guarantees valid pointers
-   unsafe { ptr::read(a) }
-   ```
-
-3. **FFI Compatibility**: 
-   - Used `*mut T` and `*const T` for pointers
-   - Matched C types exactly (e.g., `c_int`, `c_uint`)
-   - Used `#[no_mangle]` for exported functions
-
-4. **Algorithm Preservation**:
-   - Maintained the 4-level tunnel hash table logic
-   - Preserved the exact matching semantics for keys and addresses
-   - Implemented the fallback logic for unmatched tunnels
-
-5. **Linux Kernel Abstractions**:
-   - Replaced `rcu_dereference` with direct pointer dereference
-   - Simplified `net_generic` and `dev_net` as placeholders
-   - Used raw pointers for RCU pointers
-
-6. **Error Handling**:
-   - Used standard Linux error codes
-   - Added null checks for all pointer parameters
-
-7. **Constants**:
-   - Defined all necessary constants from the C code
-   - Preserved the hash size and tunnel priority logic
-
-This implementation maintains ABI compatibility with the original C code while following Rust's safety guarantees where possible. The unsafe blocks are carefully documented with safety justifications.

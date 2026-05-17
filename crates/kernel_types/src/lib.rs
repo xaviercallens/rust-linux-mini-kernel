@@ -74,6 +74,7 @@ pub union nf_inet_addr {
 
 /// Ethernet header
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ethhdr {
     pub h_dest: [c_uchar; 6],
     pub h_source: [c_uchar; 6],
@@ -82,6 +83,7 @@ pub struct ethhdr {
 
 /// IPv4 header
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct iphdr {
     pub ihl: __u8,
     pub version: __u8,
@@ -98,6 +100,7 @@ pub struct iphdr {
 
 /// IPv6 header
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6hdr {
     pub priority: __u8,
     pub version: __u8,
@@ -111,6 +114,7 @@ pub struct ipv6hdr {
 
 /// UDP header
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct udphdr {
     pub source: __be16,
     pub dest: __be16,
@@ -120,6 +124,7 @@ pub struct udphdr {
 
 /// ESP header
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_esp_hdr {
     pub spi: __be32,
     pub seq_no: __be32,
@@ -131,6 +136,7 @@ pub struct ip_esp_hdr {
 
 /// Generic socket address
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sockaddr {
     pub sa_family: c_ushort,
     pub sa_data: [c_char; 14],
@@ -138,6 +144,7 @@ pub struct sockaddr {
 
 /// Base socket structure
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sock {
     pub sk_family: c_ushort,
     pub sk_type: c_ushort,
@@ -148,6 +155,7 @@ pub struct sock {
 
 /// TCP socket
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tcp_sock {
     pub inet: inet_sock,
     pub snd_nxt: __u32,
@@ -158,6 +166,7 @@ pub struct tcp_sock {
 
 /// Internet socket (base)
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_sock {
     pub sk: *mut c_void, // struct sock *
     pub pinet6: *mut c_void, // struct ipv6_pinfo *
@@ -188,6 +197,7 @@ pub struct inet_sock {
 
 /// IPv6 socket info
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_pinfo {
     pub saddr: in6_addr,
     pub daddr: in6_addr,
@@ -201,6 +211,7 @@ pub struct ipv6_pinfo {
 
 /// UDP socket
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct udp_sock {
     pub inet: inet_sock,
     pub pending: c_int,
@@ -213,6 +224,7 @@ pub struct udp_sock {
 
 /// Raw IPv6 socket
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct raw6_sock {
     pub inet: inet_sock,
     pub checksum: __u32,
@@ -226,6 +238,7 @@ pub struct raw6_sock {
 
 /// Flow identifier (base type)
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi {
     pub oif: c_int,
     pub iif: c_int,
@@ -239,6 +252,7 @@ pub struct flowi {
 
 /// Destination entry (routing cache)
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_entry {
     pub dev: *mut c_void, // struct net_device *
     pub ops: *mut c_void, // struct dst_ops *
@@ -253,6 +267,7 @@ pub struct dst_entry {
 
 /// IPv6 routing table entry
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rt6_info {
     pub dst: dst_entry,
     pub rt6_next: *mut rt6_info,
@@ -262,6 +277,7 @@ pub struct rt6_info {
 
 /// Routing table link operations
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rtnl_link_ops {
     pub list: *mut c_void,
     pub kind: *const c_char,
@@ -271,6 +287,7 @@ pub struct rtnl_link_ops {
 
 /// FIB rule
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_rule {
     pub list: *mut c_void,
     pub table: __u32,
@@ -284,9 +301,10 @@ pub struct fib_rule {
 
 /// Socket buffer (packet buffer) - also aliased as sk_buff
 #[repr(C)]
-pub struct skbuff {
-    pub next: *mut skbuff,
-    pub prev: *mut skbuff,
+#[derive(Copy, Clone)]
+pub struct sk_buff {
+    pub next: *mut sk_buff,
+    pub prev: *mut sk_buff,
     pub tstamp: __u64,
     pub dev: *mut c_void, // struct net_device *
     pub len: c_uint,
@@ -296,10 +314,12 @@ pub struct skbuff {
     pub csum: __u32,
     pub priority: __u32,
     pub protocol: __be16,
+    pub cb: [__u8; 48],
 }
 
-/// IPv6 control block (in skbuff->cb)
+/// IPv6 control block (in sk_buff->cb)
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6cb {
     pub nhoff: __u16,
     pub flags: __u16,
@@ -310,6 +330,7 @@ pub struct ip6cb {
 
 /// IPv6 fragmentation state
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_frag_state {
     pub prevhdr: *mut u8,
     pub nexthdr: __u8,
@@ -321,8 +342,9 @@ pub struct ip6_frag_state {
 
 /// IPv6 fraglist iterator
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_fraglist_iter {
-    pub frag: *mut skbuff,
+    pub frag: *mut sk_buff,
     pub offset: c_int,
     pub hlen: c_uint,
 }
@@ -333,6 +355,7 @@ pub struct ip6_fraglist_iter {
 
 /// Netfilter connection tracking zone
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_zone {
     pub id: __u16,
     pub flags: __u8,
@@ -341,6 +364,7 @@ pub struct nf_conntrack_zone {
 
 /// Netfilter connection tracking helper
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
     pub list: *mut c_void,
     pub name: [c_char; 16],
@@ -352,6 +376,7 @@ pub struct nf_conntrack_helper {
 
 /// Netfilter connection
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     pub ct_general: *mut c_void,
     pub tuplehash: [*mut c_void; 2],
@@ -365,6 +390,7 @@ pub struct nf_conn {
 
 /// Kernel timer
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct timer_list {
     pub entry: *mut c_void,
     pub expires: c_ulong,
@@ -374,6 +400,7 @@ pub struct timer_list {
 
 /// Hash list node (nulls variant)
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct hlist_nulls_node {
     pub next: *mut hlist_nulls_node,
     pub pprev: *mut *mut hlist_nulls_node,
@@ -381,6 +408,7 @@ pub struct hlist_nulls_node {
 
 /// XFRM (IPsec) mode skb callback
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_mode_skb_cb {
     pub ihl: __u8,
     pub id: __u8,
@@ -391,10 +419,7 @@ pub struct xfrm_mode_skb_cb {
 
 /// U64 statistics synchronization
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct u64_stats_sync {
     pub seq: c_uint,
 }
-
-// Type aliases for common kernel naming variations
-pub type sk_buff = skbuff;
-

@@ -19,37 +19,44 @@ pub const EMSGSIZE: c_int = -90;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_buff {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state {
     props: xfrm_state_props,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state_props {
     mode: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_entry {
     xfrm: *mut xfrm_state,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sock {
     sk_bound_dev_if: c_int,
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi6 {
     flowi6_oif: c_int,
     daddr: u32,
@@ -57,6 +64,7 @@ pub struct flowi6 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6hdr {
     daddr: u32,
 }

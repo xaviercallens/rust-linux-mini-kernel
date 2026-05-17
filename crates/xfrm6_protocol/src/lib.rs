@@ -6,13 +6,13 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
+use kernel_types::*;
 
 // Constants from C
 pub const IPPROTO_ESP: u8 = 50;
@@ -31,26 +31,29 @@ pub const EAGAIN: c_int = -35;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm6_protocol {
     pub next: *mut xfrm6_protocol,
     pub priority: c_int,
-    pub handler: extern "C" fn(*mut c_void) -> c_int,
-    pub input_handler: extern "C" fn(*mut c_void, c_int, u32, c_int) -> c_int,
-    pub cb_handler: extern "C" fn(*mut c_void, c_int) -> c_int,
-    pub err_handler: extern "C" fn(*mut c_void, *mut c_void, u8, u8, c_int, u32) -> c_int,
+    pub handler: extern "C" fn(*mut sk_buff) -> c_int,
+    pub input_handler: extern "C" fn(*mut sk_buff, c_int, u32, c_int) -> c_int,
+    pub cb_handler: extern "C" fn(*mut sk_buff, c_int) -> c_int,
+    pub err_handler: extern "C" fn(*mut sk_buff, *mut sk_buff, u8, u8, c_int, u32) -> c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_protocol {
-    pub handler: extern "C" fn(*mut c_void) -> c_int,
-    pub err_handler: extern "C" fn(*mut c_void, *mut c_void, u8, u8, c_int, u32) -> c_int,
+    pub handler: extern "C" fn(*mut sk_buff) -> c_int,
+    pub err_handler: extern "C" fn(*mut sk_buff, *mut sk_buff, u8, u8, c_int, u32) -> c_int,
     pub flags: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_input_afinfo {
     pub family: c_int,
-    pub callback: extern "C" fn(*mut c_void, u8, c_int) -> c_int,
+    pub callback: extern "C" fn(*mut sk_buff, u8, c_int) -> c_int,
 }
 
 // Static variables
@@ -60,7 +63,6 @@ static mut ipcomp6_handlers: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::nul
 
 // Mutex implementation (simplified for kernel compatibility)
 #[repr(C)]
-
 struct Mutex {
     // In real kernel code, this would use proper kernel mutexes
     // Here we use a simplified version for demonstration
@@ -98,7 +100,7 @@ unsafe fn proto_handlers(protocol: u8) -> *mut *mut xfrm6_protocol {
 
 // Function implementations
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_rcv_cb(skb: *mut c_void, protocol: u8, err: c_int) -> c_int {
+pub unsafe extern "C" fn xfrm6_rcv_cb(skb: *mut sk_buff, protocol: u8, err: c_int) -> c_int {
     let head = proto_handlers(protocol);
     if head.is_null() {
         return 0;
@@ -122,7 +124,7 @@ pub unsafe extern "C" fn xfrm6_rcv_cb(skb: *mut c_void, protocol: u8, err: c_int
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_rcv_encap(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     nexthdr: c_int,
     spi: u32,
     encap_type: c_int,
@@ -309,12 +311,12 @@ pub unsafe extern "C" fn xfrm6_protocol_fini() {
 
 // Dummy implementations for required kernel functions
 #[no_mangle]
-pub unsafe extern "C" fn icmpv6_send(skb: *mut c_void, _type: c_int, code: c_int, info: c_int) {
+pub unsafe extern "C" fn icmpv6_send(skb: *mut sk_buff, _type: c_int, code: c_int, info: c_int) {
     // Dummy implementation
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn kfree_skb(skb: *mut c_void) {
+pub unsafe extern "C" fn kfree_skb(skb: *mut sk_buff) {
     // Dummy implementation
 }
 

@@ -9,11 +9,13 @@
 use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_char;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
+pub const NF_CT_EXT_ACCT: u32 = 1; // Assuming this is the correct value
 
 // Type definitions
 #[repr(C)]
@@ -52,7 +54,9 @@ static mut nf_ct_acct: bool = false;
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_acct_pernet_init(net: *mut net) {
     // SAFETY: Caller guarantees net is valid and properly aligned
-    (*net).ct.sysctl_acct = nf_ct_acct;
+    if !net.is_null() {
+        (*net).ct.sysctl_acct = nf_ct_acct;
+    }
 }
 
 /// Initialize connection tracking accounting module
@@ -65,15 +69,17 @@ pub unsafe extern "C" fn nf_conntrack_acct_init() -> c_int {
     let acct_extend = nf_ct_ext_type {
         len: core::mem::size_of::<nf_conn_acct>(),
         align: core::mem::align_of::<nf_conn_acct>(),
-        id: NF_CT_EXT_ACCT, // Assuming this is defined as a u32 constant
+        id: NF_CT_EXT_ACCT,
     };
-    
+
     // Register the extension
-    let ret = extern "C" {
-        fn nf_ct_extend_register(ext: *const nf_ct_ext_type) -> c_int;
+    let ret = unsafe {
+        extern "C" {
+            fn nf_ct_extend_register(ext: *const nf_ct_ext_type) -> c_int;
+        }
         nf_ct_extend_register(&acct_extend)
     };
-    
+
     // Log error if registration failed
     if ret < 0 {
         extern "C" {
@@ -83,7 +89,7 @@ pub unsafe extern "C" fn nf_conntrack_acct_init() -> c_int {
             pr_err(b"Unable to register extension\n\0".as_ptr() as *const c_char);
         }
     }
-    
+
     ret
 }
 
@@ -98,7 +104,7 @@ pub unsafe extern "C" fn nf_conntrack_acct_fini() {
         align: core::mem::align_of::<nf_conn_acct>(),
         id: NF_CT_EXT_ACCT,
     };
-    
+
     extern "C" {
         fn nf_ct_extend_unregister(ext: *const nf_ct_ext_type);
     }
@@ -112,19 +118,3 @@ pub unsafe extern "C" fn nf_conntrack_acct_fini() {
 mod tests {
     // No tests for kernel module compatibility
 }
-```
-
-### Key Translation Notes:
-
-1. **FFI Compatibility**: All structs use `#[repr(C)]` to match C layout
-2. **Pointer Safety**: All pointer operations are marked `unsafe` with appropriate SAFETY comments
-3. **Module Parameter**: Translated to `static mut` with appropriate type
-4. **Extension Registration**: Maintains the same struct layout and calling convention
-5. **Error Handling**: Preserves C-style error codes with direct mapping
-6. **Kernel Functions**: Extern declarations for kernel API functions that would be defined elsewhere
-
-### Required Kernel Constants:
-The code assumes the existence of `NF_CT_EXT_ACCT` constant defined elsewhere in the kernel headers. In a real implementation, this would be imported from the appropriate Rust bindings.
-
-### Memory Safety:
-All pointer operations are explicitly marked `unsafe` with comments explaining the safety requirements. The code maintains the same memory safety guarantees as the original C code while using Rust's type system to enforce ABI compatibility.

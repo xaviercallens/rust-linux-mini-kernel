@@ -9,9 +9,8 @@
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
-use core::ffi::size_t;
-use core::mem::size_of;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -41,13 +40,26 @@ pub const PPTP_MSG_MAX: u16 = 18;
 pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ; // 10 minutes
 pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ; // 5 hours
 
+// PPTP session states
+pub const PPTP_SESSION_NONE: c_int = 0;
+pub const PPTP_SESSION_REQUESTED: c_int = 1;
+pub const PPTP_SESSION_CONFIRMED: c_int = 2;
+pub const PPTP_SESSION_ERROR: c_int = 3;
+pub const PPTP_SESSION_STOPREQ: c_int = 4;
+
+// PPTP result codes
+pub const PPTP_START_OK: u16 = 1;
+pub const PPTP_STOP_OK: u16 = 1;
+
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct PptpControlHeader {
     pub messageType: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union pptp_ctrl_union {
     pub srep: PptpStartSessionReply,
     pub strep: PptpStopSessionReply,
@@ -55,22 +67,26 @@ pub union pptp_ctrl_union {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct PptpStartSessionReply {
     pub resultCode: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct PptpStopSessionReply {
     pub resultCode: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct PptpOutCallAck {
     pub callID: u16,
     pub peersCallID: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     pub src: nf_conntrack_address,
     pub dst: nf_conntrack_address,
@@ -78,21 +94,25 @@ pub struct nf_conntrack_tuple {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_address {
     pub u3: nf_conntrack_address_u3,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union nf_conntrack_address_u3 {
     pub gre: nf_conntrack_gre_address,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_gre_address {
     pub key: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     pub proto: nf_conn_proto,
     pub master: *mut nf_conn,
@@ -100,23 +120,27 @@ pub struct nf_conn {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_proto {
     pub gre: nf_conn_proto_gre,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_proto_gre {
     pub timeout: c_int,
     pub stream_timeout: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect {
     pub tuple: nf_conntrack_tuple,
     pub expectfn: Option<unsafe extern "C" fn(*mut nf_conn, *mut nf_conntrack_expect)>,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_ct_pptp_master {
     pub sstate: c_int,
     pub cstate: c_int,
@@ -153,6 +177,7 @@ static mut nf_nat_pptp_hook_expectfn: nf_nat_pptp_hook_expectfn_t = ptr::null_mu
 
 // Spinlock (opaque type for kernel compatibility)
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct spinlock_t {
     _private: [u8; 0],
 }
@@ -176,7 +201,7 @@ pub unsafe extern "C" fn pptp_expectfn(ct: *mut nf_conn, exp: *mut nf_conntrack_
     (*ct).proto.gre.stream_timeout = PPTP_GRE_STREAM_TIMEOUT;
 
     let nf_nat_pptp_expectfn = nf_nat_pptp_hook_expectfn;
-    if !nf_nat_pptp_expectfn.is_null() && (*ct).master.is_some() && (*(*ct).master).status & 1 != 0
+    if !nf_nat_pptp_expectfn.is_null() && !(*ct).master.is_null() && (*(*ct).master).status & 1 != 0
     {
         nf_nat_pptp_expectfn(ct, exp);
     } else {
@@ -250,7 +275,7 @@ pub unsafe extern "C" fn pptp_inbound_pkt(
 
     match msg {
         PPTP_START_SESSION_REPLY => {
-            if info.sstate < PPTP_SESSION_REQUESTED {
+            if (*info).sstate < PPTP_SESSION_REQUESTED {
                 return EINVAL;
             }
             if (*pptpReq).srep.resultCode == PPTP_START_OK {
@@ -260,7 +285,7 @@ pub unsafe extern "C" fn pptp_inbound_pkt(
             }
         }
         PPTP_STOP_SESSION_REPLY => {
-            if info.sstate > PPTP_SESSION_STOPREQ {
+            if (*info).sstate > PPTP_SESSION_STOPREQ {
                 return EINVAL;
             }
             if (*pptpReq).strep.resultCode == PPTP_STOP_OK {

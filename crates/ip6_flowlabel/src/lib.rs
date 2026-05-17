@@ -26,26 +26,31 @@ pub const EPERM: c_int = -1;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct RcuHead {
     _unused: [u8; 0], // Placeholder - actual implementation depends on kernel RCU
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct TimerList {
     _unused: [u8; 0], // Placeholder - actual implementation depends on kernel timers
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct SpinLock {
     _unused: [u8; 0], // Placeholder - actual implementation depends on kernel spinlocks
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Net {
     _unused: [u8; 0], // Placeholder - actual implementation depends on kernel net namespace
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct In6FlowlabelReq {
     flr_label: u32,
     flr_linger: c_ulong,
@@ -53,11 +58,13 @@ pub struct In6FlowlabelReq {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Sock {
     _unused: [u8; 0], // Placeholder - actual implementation depends on kernel sock
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Ip6Flowlabel {
     label: u32,
     users: AtomicUsize,
@@ -73,6 +80,7 @@ pub struct Ip6Flowlabel {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Ip6FlSocklist {
     fl: *mut Ip6Flowlabel,
     next: *mut Ip6FlSocklist,
@@ -80,6 +88,7 @@ pub struct Ip6FlSocklist {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Ipv6Txoptions {
     hopopt: *mut c_void,
     dst0opt: *mut c_void,

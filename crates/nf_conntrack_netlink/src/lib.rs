@@ -9,6 +9,7 @@
 
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const ENOMEM: c_int = -12;
@@ -17,17 +18,14 @@ pub const EMSGSIZE: c_int = -90;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nlattr {
     pub nla_len: c_uint,
     pub nla_type: c_uint,
 }
 
 #[repr(C)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     pub dst: nf_conntrack_tuple_dst,
     pub src: nf_conntrack_tuple_src,
@@ -35,27 +33,26 @@ pub struct nf_conntrack_tuple {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_dst {
     protonum: u8,
+    u3: nf_inet_addr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_src {
-    u3: nf_conntrack_tuple_src_u3,
+    u3: nf_inet_addr,
 }
 
 #[repr(C)]
-pub struct nf_conntrack_tuple_src_u3 {
-    ip: u32,
-    in6: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_l4proto {
-        Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
+    pub tuple_to_nlattr: Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     status: u32,
     mark: u32,
@@ -63,20 +60,29 @@ pub struct nf_conn {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_acct {
     counter: *mut nf_conn_counter,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_counter {
     packets: [u64; 2],
     bytes: [u64; 2],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_tstamp {
     start: u64,
     stop: u64,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_labels {
+    bits: [u64; 16],
 }
 
 // Function prototypes for external C functions
@@ -100,11 +106,6 @@ extern "C" {
     fn rcu_read_unlock();
     fn security_secid_to_secctx(secid: u32, secctx: *mut *mut u8, len: *mut size_t) -> c_int;
     fn security_release_secctx(secctx: *mut u8, len: size_t);
-}
-
-#[repr(C)]
-struct nf_conn_labels {
-    bits: [u64; 16],
 }
 
 // Function implementations
@@ -175,8 +176,8 @@ pub unsafe extern "C" fn ipv6_tuple_to_nlattr(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    if nla_put_in6_addr(skb, CTA_IP_V6_SRC, &(*tuple).src.u3.in6) != 0
-        || nla_put_in6_addr(skb, CTA_IP_V6_DST, &(*tuple).dst.u3.in6) != 0
+    if nla_put_in6_addr(skb, CTA_IP_V6_SRC, &(*tuple).src.u3.in6.in6_u.u6_addr8) != 0
+        || nla_put_in6_addr(skb, CTA_IP_V6_DST, &(*tuple).dst.u3.in6.in6_u.u6_addr8) != 0
     {
         return -EMSGSIZE;
     }

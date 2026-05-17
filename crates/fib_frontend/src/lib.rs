@@ -6,14 +6,10 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::missing_docs_in_private_items)]
-
 
 use kernel_types::*;
 use core::ffi::c_int;
 use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::ffi::size_t;
 use core::ptr;
 
 // Constants from C
@@ -60,11 +56,6 @@ struct ipv4_net {
 }
 
 #[repr(C)]
-struct in_device {
-    ifa_list: *mut c_void, // Placeholder for actual ifa_list type
-}
-
-#[repr(C)]
 struct flowi4 {
     daddr: u32,
     saddr: u32,
@@ -92,6 +83,7 @@ pub unsafe extern "C" fn fib_new_table(net: *mut net, id: u32) -> *mut fib_table
     let mut tb: *mut fib_table = ptr::null_mut();
     let mut alias: *mut fib_table = ptr::null_mut();
 
+    let mut id = id;
     if id == 0 {
         id = RT_TABLE_MAIN;
     }
@@ -140,6 +132,7 @@ pub unsafe extern "C" fn fib_get_table(net: *mut net, id: u32) -> *mut fib_table
         return ptr::null_mut();
     }
 
+    let mut id = id;
     if id == 0 {
         id = RT_TABLE_MAIN;
     }
@@ -152,7 +145,7 @@ pub unsafe extern "C" fn fib_get_table(net: *mut net, id: u32) -> *mut fib_table
         if (*tb).tb_id == id {
             return tb as *mut fib_table;
         }
-        tb = (*tb).tb_hlist.next;
+        tb = (*tb).next;
     }
 
     ptr::null_mut()
@@ -204,8 +197,7 @@ pub unsafe extern "C" fn fib_flush(net: *mut net) -> c_int {
         let mut tb = (*head).first;
 
         while !tb.is_null() {
-            // SAFETY: We're iterating through the list and need to handle the next pointer before processing
-            tmp = (*tb).tb_hlist.next;
+            tmp = (*tb).next;
             flushed += fib_table_flush(net, tb as *mut fib_table, false);
             tb = tmp;
         }
@@ -336,8 +328,8 @@ unsafe fn rcu_read_unlock() {
 
 unsafe fn fib_table_lookup(
     table: *mut fib_table,
-    fl4: *mut flowi4,
-    res: *mut fib_result,
+    fl4: &mut flowi4,
+    res: &mut fib_result,
     flags: c_int,
 ) -> c_int {
     // In real implementation, this would perform a lookup in the table

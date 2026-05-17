@@ -9,7 +9,7 @@
 
 use core::ptr;
 use core::mem;
-use libc::{c_int, c_uint, c_ushort, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 const COOKIEBITS: u32 = 24;
@@ -17,40 +17,13 @@ const COOKIEMASK: u32 = (1 << COOKIEBITS) - 1;
 
 // Type definitions
 #[repr(C)]
-struct in6_addr {
-    s6_addr: [u8; 16],
-}
-
-#[repr(C)]
-struct ipv6hdr {
+struct Combined {
     saddr: in6_addr,
     daddr: in6_addr,
+    count: u32,
+    sport: u16,
+    dport: u16,
 }
-
-#[repr(C)]
-struct tcphdr {
-    source: u16,
-    dest: u16,
-    seq: u32,
-    ack_seq: u32,
-}
-
-#[repr(C)]
-struct sock;
-#[repr(C)]
-struct sk_buff;
-#[repr(C)]
-struct inet_request_sock;
-#[repr(C)]
-struct tcp_request_sock;
-#[repr(C)]
-struct ipv6_pinfo;
-#[repr(C)]
-struct tcp_sock;
-#[repr(C)]
-struct request_sock;
-#[repr(C)]
-struct dst_entry;
 
 // Static data
 static msstab: [u16; 4] = [
@@ -72,15 +45,6 @@ struct siphash_key_t {
 static mut syncookie6_secret: [siphash_key_t; 2] = [siphash_key_t { key: [0; 2] }; 2];
 
 // Function implementations
-#[repr(C)]
-struct Combined {
-    saddr: in6_addr,
-    daddr: in6_addr,
-    count: u32,
-    sport: u16,
-    dport: u16,
-}
-
 fn cookie_hash(
     saddr: *const in6_addr,
     daddr: *const in6_addr,
@@ -107,7 +71,7 @@ fn cookie_hash(
 
     // Calculate size up to dport (offsetofend)
     let size = mem::size_of::<Combined>() - mem::size_of::<u16>();
-    
+
     // Call SIPHASH (simplified for example)
     unsafe {
         siphash(&combined as *const _ as *const c_void, size as size_t, &syncookie6_secret[c as usize])
@@ -125,7 +89,7 @@ fn secure_tcp_syn_cookie(
     let count = tcp_cookie_time();
     let hash1 = cookie_hash(saddr, daddr, sport, dport, 0, 0);
     let hash2 = cookie_hash(saddr, daddr, sport, dport, count, 1);
-    
+
     hash1 + sseq + (count << COOKIEBITS) + ((hash2 + data) & COOKIEMASK)
 }
 
@@ -139,14 +103,14 @@ fn check_tcp_syn_cookie(
 ) -> u32 {
     let count = tcp_cookie_time();
     let mut cookie = cookie;
-    
+
     cookie -= cookie_hash(saddr, daddr, sport, dport, 0, 0) + sseq;
-    
+
     let diff = (count - (cookie >> COOKIEBITS)) & ((u32::MAX as u64 >> COOKIEBITS) as u32);
     if diff >= MAX_SYNCOOKIE_AGE {
         return u32::MAX;
     }
-    
+
     cookie - cookie_hash(saddr, daddr, sport, dport, count - diff, 1) & COOKIEMASK
 }
 
@@ -158,16 +122,16 @@ pub unsafe extern "C" fn __cookie_v6_init_sequence(
 ) -> u32 {
     let mut mssind: c_int = msstab.len() as c_int - 1;
     let mss = *mssp;
-    
+
     while mssind > 0 {
         if mss >= msstab[mssind as usize] {
             break;
         }
         mssind -= 1;
     }
-    
+
     *mssp = msstab[mssind as usize];
-    
+
     secure_tcp_syn_cookie(
         &(*iph).saddr,
         &(*iph).daddr,
@@ -186,7 +150,7 @@ pub unsafe extern "C" fn __cookie_v6_check(
 ) -> c_int {
     let seq = ntohl((*th).seq) - 1;
     let mssind = check_tcp_syn_cookie(cookie, &(*iph).saddr, &(*iph).daddr, (*th).source, (*th).dest, seq);
-    
+
     if mssind < msstab.len() as u32 {
         return msstab[mssind as usize] as c_int;
     }
@@ -230,16 +194,3 @@ mod tests {
         // Would need actual data to test
     }
 }
-```
-
-This implementation maintains strict FFI compatibility with the original C code by:
-
-1. Using `#[repr(C)]` for all structs to preserve memory layout
-2. Using raw pointers (`*mut T`, `*const T`) for all FFI boundaries
-3. Matching the exact function signatures including parameter types and return types
-4. Implementing the same algorithm logic with bit operations and masking
-5. Using `unsafe` blocks with proper SAFETY justifications for pointer operations
-6. Maintaining the same constants and data structures
-7. Preserving the exported symbols with `#[no_mangle]` and `extern "C"`
-
-The code is structured to be a direct replacement for the C implementation in the Linux kernel while maintaining the same behavior and ABI compatibility.

@@ -6,7 +6,7 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
 use core::ffi::c_int;
 use core::ffi::c_uint;
@@ -14,6 +14,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::ptr::null_mut;
+use kernel_types::*;
 
 // Constants from C
 pub const EHOSTUNREACH: c_int = -13;
@@ -22,34 +23,13 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub in6_u: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_address_t {
     pub in6: in6_addr,
 }
 
 #[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct net_device {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct dst_entry {
-    pub error: c_int,
-    pub ops: *const dst_ops,
-    pub route_cookie: *mut c_void,
-    pub dev: *mut net_device,
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rt6_info {
     pub rt6i_flags: c_int,
     pub rt6i_gateway: in6_addr,
@@ -60,6 +40,7 @@ pub struct rt6_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_dst {
     pub u: dst_entry,
     pub rt6: rt6_info,
@@ -68,41 +49,7 @@ pub struct xfrm_dst {
 }
 
 #[repr(C)]
-pub struct inet6_dev {
-    pub dev: *mut net_device,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ListHead {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct dst_ops {
-    pub family: c_int,
-    pub update_pmtu: Option<
-        unsafe extern "C" fn(
-            dst: *mut dst_entry,
-            sk: *mut c_void,
-            skb: *mut c_void,
-            mtu: u32,
-            confirm_neigh: bool,
-        ),
-    >,
-    pub redirect:
-        Option<unsafe extern "C" fn(dst: *mut dst_entry, sk: *mut c_void, skb: *mut c_void)>,
-    pub cow_metrics: Option<
-        unsafe extern "C" fn(dst: *mut dst_entry, new_metrics: *mut c_void) -> *mut dst_entry,
-    >,
-    pub destroy: Option<unsafe extern "C" fn(dst: *mut dst_entry)>,
-    pub ifdown:
-        Option<unsafe extern "C" fn(dst: *mut dst_entry, dev: *mut net_device, unregister: c_int)>,
-    pub local_out: Option<unsafe extern "C" fn(skb: *mut c_void) -> c_int>,
-    pub gc_thresh: c_int,
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_policy_afinfo {
     pub dst_ops: *const dst_ops,
     pub dst_lookup: Option<
@@ -131,6 +78,7 @@ pub struct xfrm_policy_afinfo {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi6 {
     pub flowi6_oif: c_int,
     pub flowi6_flags: c_int,
@@ -158,18 +106,18 @@ pub unsafe extern "C" fn xfrm6_dst_lookup(
         flowi6_oif: l3mdev_master_ifindex_by_index(net, oif),
         flowi6_flags: 0x01, // FLOWI_FLAG_SKIP_NH_OIF
         flowi6_mark: mark,
-        daddr: in6_addr { in6_u: [0; 16] },
-        saddr: in6_addr { in6_u: [0; 16] },
+        daddr: in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } },
+        saddr: in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } },
     };
 
     // SAFETY: fl6 is properly initialized
-    ptr::copy(
-        &fl6.daddr,
+    ptr::copy_nonoverlapping(
+        &(*daddr).in6,
         &mut fl6.daddr as *mut _ as *mut u8,
         mem::size_of::<in6_addr>(),
     );
     if !saddr.is_null() {
-        ptr::copy(
+        ptr::copy_nonoverlapping(
             &(*saddr).in6,
             &mut fl6.saddr as *mut _ as *mut u8,
             mem::size_of::<in6_addr>(),
@@ -203,7 +151,7 @@ pub unsafe extern "C" fn xfrm6_get_saddr(
         return EHOSTUNREACH;
     }
 
-    let dev = (*(*dst).idev).dev;
+    let dev = (*(*dst).dev).dev;
     ipv6_dev_get_saddr(dev_net(dev), dev, &(*daddr).in6, 0, &mut (*saddr).in6);
     dst_release(dst);
     0
@@ -222,19 +170,19 @@ pub unsafe extern "C" fn xfrm6_fill_dst(
     (*xdst).u.dev = dev;
     dev_hold(dev);
 
-    (*xdst).u.rt6.rt6i_idev = in6_dev_get(dev);
-    if (*xdst).u.rt6.rt6i_idev.is_null() {
+    (*xdst).rt6.rt6i_idev = in6_dev_get(dev);
+    if (*xdst).rt6.rt6i_idev.is_null() {
         dev_put(dev);
         return ENODEV;
     }
 
     let rt = (*xdst).route as *mut rt6_info;
-    (*xdst).u.rt6.rt6i_flags = (*rt).rt6i_flags & (0x01 | 0x02); // RTF_ANYCAST | RTF_LOCAL
-    (*xdst).u.rt6.rt6i_gateway = (*rt).rt6i_gateway;
-    (*xdst).u.rt6.rt6i_dst = (*rt).rt6i_dst;
-    (*xdst).u.rt6.rt6i_src = (*rt).rt6i_src;
-    INIT_LIST_HEAD(&mut (*xdst).u.rt6.rt6i_uncached);
-    rt6_uncached_list_add(&mut (*xdst).u.rt6);
+    (*xdst).rt6.rt6i_flags = (*rt).rt6i_flags & (0x01 | 0x02); // RTF_ANYCAST | RTF_LOCAL
+    (*xdst).rt6.rt6i_gateway = (*rt).rt6i_gateway;
+    (*xdst).rt6.rt6i_dst = (*rt).rt6i_dst;
+    (*xdst).rt6.rt6i_src = (*rt).rt6i_src;
+    INIT_LIST_HEAD(&mut (*xdst).rt6.rt6i_uncached);
+    rt6_uncached_list_add(&mut (*xdst).rt6);
     atomic_inc(&mut (*dev_net(dev)).ipv6.rt6_stats.fib_rt_uncache);
 
     0
@@ -282,14 +230,14 @@ pub unsafe extern "C" fn xfrm6_redirect(dst: *mut dst_entry, sk: *mut c_void, sk
 pub unsafe extern "C" fn xfrm6_dst_destroy(dst: *mut dst_entry) {
     let xdst = dst as *mut xfrm_dst;
 
-    if !(*xdst).u.rt6.rt6i_idev.is_null() {
-        in6_dev_put((*xdst).u.rt6.rt6i_idev);
+    if !(*xdst).rt6.rt6i_idev.is_null() {
+        in6_dev_put((*xdst).rt6.rt6i_idev);
     }
 
     dst_destroy_metrics_generic(dst);
 
-    if !(*xdst).u.rt6.rt6i_uncached_list.is_null() {
-        rt6_uncached_list_del(&mut (*xdst).u.rt6);
+    if !(*xdst).rt6.rt6i_uncached.next.is_null() {
+        rt6_uncached_list_del(&mut (*xdst).rt6);
     }
 
     xfrm_dst_destroy(dst);
@@ -310,16 +258,16 @@ pub unsafe extern "C" fn xfrm6_dst_ifdown(
     }
 
     let xdst = dst as *mut xfrm_dst;
-    if (*(*xdst).u.rt6.rt6i_idev).dev == dev {
+    if (*(*xdst).rt6.rt6i_idev).dev == dev {
         let loopback_idev = in6_dev_get(dev_net(dev).loopback_dev);
         let mut current_xdst = xdst;
 
         loop {
-            in6_dev_put((*current_xdst).u.rt6.rt6i_idev);
-            (*current_xdst).u.rt6.rt6i_idev = loopback_idev;
+            in6_dev_put((*current_xdst).rt6.rt6i_idev);
+            (*current_xdst).rt6.rt6i_idev = loopback_idev;
             in6_dev_hold(loopback_idev);
 
-            let child = xfrm_dst_child(&(*current_xdst).u.dst);
+            let child = xfrm_dst_child(&(*current_xdst).u);
             if child.is_null() || (*child).xfrm.is_null() {
                 break;
             }

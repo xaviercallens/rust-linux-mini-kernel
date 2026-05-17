@@ -6,81 +6,21 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
 use core::ptr;
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::ffi::size_t;
 use core::mem;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
-// Type definitions
-#[repr(C)]
-pub struct net {
-    // Opaque type - actual fields depend on kernel implementation
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sock {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sk_buff {
-    // Opaque type - actual fields depend on kernel implementation
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct dst_entry {
-    dev: *mut net_device,
-    lwtstate: *mut c_void,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct net_device {
-    flags: u32,
-    header_ops: *mut c_void,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct in6_addr {
-    s6_addr: [u8; 16],
-}
-
-#[repr(C)]
-pub struct ipv6hdr {
-    daddr: in6_addr,
-    saddr: in6_addr,
-    payload_len: u16,
-    nexthdr: u8,
-    hop_limit: u8,
-}
-
-#[repr(C)]
-pub struct inet6_dev {
-    cnf: *mut c_void,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ipv6_pinfo {
-    hop_limit: c_int,
-    autoflowlabel: bool,
-    autoflowlabel_set: bool,
-    _private: [u8; 0],
-}
-
 // Function pointer types
-type nf_hookfn = extern "C" fn(u_int8_t, *mut c_void, *mut sock, *mut sk_buff, *mut c_void, *mut c_void) -> c_int;
+type nf_hookfn = extern "C" fn(u8, *mut c_void, *mut sock, *mut sk_buff, *mut c_void, *mut c_void) -> c_int;
 
 // Internal functions
 fn skb_shared(skb: *mut sk_buff) -> bool {
@@ -212,7 +152,7 @@ fn BPF_CGROUP_RUN_PROG_INET_EGRESS(sk: *mut sock, skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn NF_HOOK_COND(proto: u_int8_t, hook: u_int8_t, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int, cond: bool) -> c_int {
+fn NF_HOOK_COND(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int, cond: bool) -> c_int {
     // Placeholder implementation
     0
 }
@@ -271,7 +211,7 @@ fn l3mdev_ip6_out(sk: *mut sock, skb: *mut sk_buff) -> *mut sk_buff {
     ptr::null_mut()
 }
 
-fn NF_HOOK(proto: u_int8_t, hook: u_int8_t, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int) -> c_int {
+fn NF_HOOK(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int) -> c_int {
     // Placeholder implementation
     0
 }
@@ -365,20 +305,9 @@ mod tests {
             let mut net = core::mem::zeroed::<super::net>();
             let mut sk = core::mem::zeroed::<super::sock>();
             let mut skb = core::mem::zeroed::<super::sk_buff>();
-            
+
             let result = super::ip6_output(&mut net as *mut _, &mut sk as *mut _, &mut skb as *mut _);
             assert_eq!(result, 0);
         }
     }
 }
-```
-
-This implementation follows the requirements by:
-1. Using `#[repr(C)]` for all structs
-2. Using raw pointers (`*mut T`, `*const T`) for FFI compatibility
-3. Implementing all functions with actual logic (placeholder implementations)
-4. Including proper unsafe blocks with SAFETY comments
-5. Matching C function signatures exactly
-6. Including error codes matching C errno values
-
-Note: This is a simplified template with placeholder implementations. A complete implementation would require full definitions of all kernel structures and proper implementation of all helper functions.

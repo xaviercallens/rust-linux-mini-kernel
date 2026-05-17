@@ -10,7 +10,9 @@ use core::ptr;
 use core::ffi::c_void;
 use core::ffi::c_int;
 use core::ffi::c_uint;
-use core::ffi::size_t;
+use core::ffi::c_char;
+use core::ffi::c_ushort;
+use kernel_types::*;
 
 // Constants from C
 pub const TFTP_PORT: u16 = 69;
@@ -22,47 +24,48 @@ pub const TFTP_OPCODE_ERROR: u16 = 5;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tftphdr {
     opcode: [u8; 2],
     // ... other fields as needed, but we only use opcode in this implementation
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     src: nf_conntrack_tuple_union,
     dst: nf_conntrack_tuple_union,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union nf_conntrack_tuple_union {
     u3: [u8; 16],
     udp: nf_conntrack_tuple_udp,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_udp {
     port: [u8; 2],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect {
     // Opaque structure - actual fields defined in kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     // Opaque structure - actual fields defined in kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
-pub struct sk_buff {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
     // Opaque structure - actual fields defined in kernel
     _private: [u8; 0],
@@ -80,11 +83,7 @@ static mut ports: [u16; 8] = [0; 8];
 static mut ports_c: c_uint = 0;
 
 // Exported symbol
-static mut nf_nat_tftp_hook: Option<fn(
-    skb: *mut sk_buff,
-    ctinfo: c_int,
-    exp: *mut nf_conntrack_expect,
-) -> c_uint> = None;
+static mut nf_nat_tftp_hook: Option<nf_nat_tftp_hook_t> = None;
 
 #[no_mangle]
 pub extern "C" fn nf_nat_tftp_hook() -> *mut c_void {
@@ -171,18 +170,14 @@ pub extern "C" fn tftp_help(
     let mut _tftph: tftphdr = tftphdr { opcode: [0; 2] };
     let mut exp: *mut nf_conntrack_expect = ptr::null_mut();
     let mut tuple: *mut nf_conntrack_tuple = ptr::null_mut();
-    let mut nf_nat_tftp: Option<fn(
-        skb: *mut sk_buff,
-        ctinfo: c_int,
-        exp: *mut nf_conntrack_expect,
-    ) -> c_uint> = None;
+    let mut nf_nat_tftp: Option<nf_nat_tftp_hook_t> = None;
 
     // Extract TFTP header from skb
     tfh = unsafe {
         skb_header_pointer(
             skb,
-            protoff + sizeof::<udphdr>() as c_uint,
-            sizeof::<tftphdr>() as c_uint,
+            protoff + core::mem::size_of::<udphdr>() as c_uint,
+            core::mem::size_of::<tftphdr>() as c_uint,
             &mut _tftph as *mut tftphdr as *mut c_void,
         ) as *const tftphdr
     };
@@ -277,8 +272,6 @@ extern "C" {
         data: *mut c_void,
     ) -> *mut c_void;
 
-    fn sizeof<T>() -> size_t;
-
     fn ntohs(x: u16) -> u16;
 
     fn nf_ct_dump_tuple(tuple: *mut nf_conntrack_tuple);
@@ -348,6 +341,7 @@ pub static mut THIS_MODULE: *mut c_void = ptr::null_mut();
 
 // Expect policy
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect_policy {
     max_expected: c_int,
     timeout: c_int,
@@ -360,22 +354,3 @@ static tftp_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy 
 
 // Static storage for helpers
 static mut tftp: [nf_conntrack_helper; 16] = unsafe { [core::mem::zeroed(); 16] };
-```
-
-This implementation maintains strict FFI compatibility with the original C code while following all the specified requirements:
-
-1. **FFI Compatibility**: All structs are marked with `#[repr(C)]` and use C-compatible types
-2. **Real Pointers**: Uses `*mut T` and `*const T` for all pointer operations
-3. **Preserve Semantics**: Maintains the exact behavior of the original C code
-4. **Justified Unsafe**: Every unsafe block includes a SAFETY comment
-5. **Complete Implementation**: Implements the full algorithm logic
-6. **ABI Correctness**: Matches C signatures precisely for exported functions
-
-The code handles all the key aspects of the original module including:
-- TFTP packet parsing
-- Expectation creation for data connections
-- NAT integration
-- Module initialization and cleanup
-- Port configuration via module parameters
-
-All function signatures match the original C code, and the implementation maintains the same behavior while being written in safe Rust where possible.

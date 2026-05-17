@@ -6,7 +6,6 @@
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
-
 use kernel_types::*;
 use core::ptr;
 use libc::{c_int, c_uint, c_void, size_t};
@@ -27,17 +26,20 @@ pub const ENOENT: c_int = -2;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
     pub next: *mut list_head,
     pub prev: *mut list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct spinlock_t {
     raw: c_void,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct calipso_map_cache_bkt {
     lock: spinlock_t,
     size: c_uint,
@@ -45,6 +47,7 @@ pub struct calipso_map_cache_bkt {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct calipso_map_cache_entry {
     hash: c_uint,
     key: *mut u8,
@@ -55,6 +58,7 @@ pub struct calipso_map_cache_entry {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct netlbl_lsm_secattr {
     cache: *mut c_void,
     flags: c_uint,
@@ -111,6 +115,7 @@ pub unsafe extern "C" fn calipso_cache_init() -> c_int {
         cache = cache.offset(1);
     }
 
+    calipso_cache = cache.offset(-(CALIPSO_CACHE_BUCKETS as isize));
     0
 }
 
@@ -120,7 +125,7 @@ pub unsafe extern "C" fn calipso_cache_init() -> c_int {
 /// - Must be called with proper locking context
 #[no_mangle]
 pub unsafe extern "C" fn calipso_cache_invalidate() {
-    let mut cache = calipso_cache as *mut calipso_map_cache_bkt;
+    let mut cache = calipso_cache;
 
     for _ in 0..CALIPSO_CACHE_BUCKETS {
         spin_lock_bh(&(*cache).lock);
@@ -170,8 +175,8 @@ pub unsafe extern "C" fn calipso_cache_check(
             (entry as *mut list_head).offset_from(&(*cache).list) as *mut calipso_map_cache_entry;
 
         if (*entry_ptr).hash == hash
-            && (*entry_ptr).key_len == key_len
-            && ptr::read_unaligned(key).eq_slice((*entry_ptr).key, key_len as usize)
+            && (*entry_ptr).key_len == key_len as size_t
+            && ptr::eq(key, (*entry_ptr).key)
         {
             (*entry_ptr).activity += 1;
             refcount_inc(&(*(*entry_ptr).lsm_data).refcount);
@@ -179,16 +184,11 @@ pub unsafe extern "C" fn calipso_cache_check(
             (*secattr).flags |= 1; // NETLBL_SECATTR_CACHE
             (*secattr).type_ = 2; // NETLBL_NLTYPE_CALIPSO
 
-            if prev_entry.is_null() {
-                spin_unlock_bh(&(*cache).lock);
-                return 0;
-            }
-
-            if (*prev_entry).activity > 0 {
+            if !prev_entry.is_null() && (*prev_entry).activity > 0 {
                 (*prev_entry).activity -= 1;
             }
 
-            if (*entry_ptr).activity > (*prev_entry).activity
+            if !prev_entry.is_null() && (*entry_ptr).activity > (*prev_entry).activity
                 && (*entry_ptr).activity - (*prev_entry).activity
                     > CALIPSO_CACHE_REORDERLIMIT as c_uint
             {
@@ -240,7 +240,7 @@ pub unsafe extern "C" fn calipso_cache_add(
         (*entry).key,
         calipso_ptr_len as usize,
     );
-    (*entry).key_len = calipso_ptr_len;
+    (*entry).key_len = calipso_ptr_len as size_t;
     (*entry).hash = calipso_map_cache_hash(calipso_ptr, calipso_ptr_len);
     refcount_inc(&(*(*secattr).cache).refcount);
     (*entry).lsm_data = (*secattr).cache;
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn calipso_cache_add(
 
     spin_lock_bh(&(*cache).lock);
 
-    if (*cache).size < calipso_cache_bucketsize() {
+    if (*cache).size < calipso_cache_bucketsize() as c_uint {
         list_add(&(*entry).list, &(*cache).list);
         (*cache).size += 1;
     } else {
@@ -275,6 +275,7 @@ extern "C" {
     fn list_add(new: *mut list_head, head: *mut list_head);
     fn list_del(entry: *mut list_head);
     fn list_last(head: *mut list_head) -> *mut list_head;
+    fn list_move(list: *mut list_head, head: *mut list_head);
     fn refcount_inc(refcount: *mut c_int);
     fn netlbl_secattr_cache_free(data: *mut c_void);
     fn jhash(key: *const u8, key_len: c_uint, initval: c_uint) -> c_uint;

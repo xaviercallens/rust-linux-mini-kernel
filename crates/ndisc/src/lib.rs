@@ -7,7 +7,7 @@
 #![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -16,20 +16,18 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_device {
     pub type_: c_int,
     pub addr_len: c_int,
     pub dev_addr: *const u8,
     pub broadcast: *const u8,
     pub header_ops: *const c_void,
+    pub flags: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct neighbour {
     pub primary_key: [u8; 16],
     pub dev: *mut net_device,
@@ -38,21 +36,25 @@ pub struct neighbour {
     pub ops: *const c_void,
     pub output: *const c_void,
     pub parms: *mut c_void,
+    pub ha: [u8; 16],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct neigh_parms {
     pub reachable_time: c_int,
     pub data: [c_int; 10],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nd_opt_hdr {
     pub nd_opt_type: u8,
     pub nd_opt_len: u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ndisc_options {
     pub nd_opt_array: [*mut nd_opt_hdr; 256],
     pub nd_opts_pi_end: *mut nd_opt_hdr,
@@ -63,6 +65,7 @@ pub struct ndisc_options {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct neigh_table {
     pub family: c_int,
     pub key_len: c_int,
@@ -73,7 +76,7 @@ pub struct neigh_table {
     pub constructor: extern "C" fn(neigh: *mut neighbour) -> c_int,
     pub pconstructor: extern "C" fn(n: *mut c_void) -> c_int,
     pub pdestructor: extern "C" fn(n: *mut c_void),
-    pub proxy_redo: extern "C" fn(skb: *mut c_void),
+    pub proxy_redo: extern "C" fn(skb: *mut sk_buff),
     pub is_multicast: extern "C" fn(pkey: *const c_void) -> c_int,
     pub allow_add: extern "C" fn(dev: *const net_device, extack: *mut c_void) -> c_int,
     pub id: [u8; 16],
@@ -87,14 +90,14 @@ pub struct neigh_table {
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn __ndisc_fill_addr_option(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     type_: c_int,
     data: *const c_void,
     data_len: c_int,
     pad: c_int,
 ) -> c_int {
     // SAFETY: Caller guarantees skb is valid and has enough space
-    let opt = unsafe { ptr::offset(skb, 0) };
+    let opt = unsafe { (*skb).data as *mut u8 };
     unsafe { *opt.offset(0) = type_ as u8 };
     unsafe { *opt.offset(1) = (pad >> 3) as u8 };
     unsafe { ptr::write_bytes(opt.offset(2), 0, pad as usize) };
@@ -150,7 +153,7 @@ pub unsafe extern "C" fn ndisc_mc_map(
         }
         _ => {
             if dir != 0 {
-                unsafe { ptr::copy((*dev).broadcast, buf, (*dev).addr_len as usize) };
+                unsafe { ptr::copy_nonoverlapping((*dev).broadcast, buf, (*dev).addr_len as usize) };
                 0
             } else {
                 -EINVAL
@@ -210,7 +213,7 @@ pub unsafe extern "C" fn ndisc_constructor(neigh: *mut neighbour) -> c_int {
     unsafe { (*neigh).parms = neigh_parms_clone(parms) };
 
     let is_multicast = ipv6_addr_is_multicast(addr);
-    unsafe { (*neigh).type_ = if is_multicast { 2 } else { 1 } };
+    unsafe { (*neigh).type_ = if is_multicast != 0 { 2 } else { 1 } };
 
     if unsafe { (*dev).header_ops.is_null() } {
         unsafe { (*neigh).nud_state = 0 };
@@ -219,16 +222,16 @@ pub unsafe extern "C" fn ndisc_constructor(neigh: *mut neighbour) -> c_int {
     } else {
         if is_multicast != 0 {
             unsafe { (*neigh).nud_state = 0 };
-            ndisc_mc_map(addr, (*neigh).ha, dev, 1);
+            ndisc_mc_map(addr, (*neigh).ha.as_mut_ptr(), dev, 1);
         } else if (unsafe { (*dev).flags } & (1 << 13 | 1 << 1)) != 0 {
             unsafe { (*neigh).nud_state = 0 };
-            unsafe { ptr::copy((*dev).dev_addr, (*neigh).ha, (*dev).addr_len as usize) };
+            unsafe { ptr::copy_nonoverlapping((*dev).dev_addr, (*neigh).ha.as_mut_ptr(), (*dev).addr_len as usize) };
             if (unsafe { (*dev).flags } & (1 << 1)) != 0 {
                 unsafe { (*neigh).type_ = 3 };
             }
         } else if (unsafe { (*dev).flags } & (1 << 9)) != 0 {
             unsafe { (*neigh).nud_state = 0 };
-            unsafe { ptr::copy((*dev).broadcast, (*neigh).ha, (*dev).addr_len as usize) };
+            unsafe { ptr::copy_nonoverlapping((*dev).broadcast, (*neigh).ha.as_mut_ptr(), (*dev).addr_len as usize) };
         }
 
         if (unsafe { (*dev).header_ops }).is_null() {
@@ -330,7 +333,7 @@ pub unsafe extern "C" fn pndisc_destructor(n: *mut c_void) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pndisc_redo(skb: *mut c_void) {
+pub unsafe extern "C" fn pndisc_redo(skb: *mut sk_buff) {
     // Implementation would go here
 }
 
@@ -348,28 +351,31 @@ pub unsafe extern "C" fn ndisc_allow_add(dev: *const net_device, extack: *mut c_
 
 // Neigh ops structs
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ndisc_generic_ops {
     pub family: c_int,
-    pub solicit: extern "C" fn(neigh: *mut neighbour, skb: *mut c_void),
-    pub error_report: extern "C" fn(neigh: *mut neighbour, skb: *mut c_void),
-    pub output: extern "C" fn(skb: *mut c_void) -> c_int,
-    pub connected_output: extern "C" fn(skb: *mut c_void) -> c_int,
+    pub solicit: extern "C" fn(neigh: *mut neighbour, skb: *mut sk_buff),
+    pub error_report: extern "C" fn(neigh: *mut neighbour, skb: *mut sk_buff),
+    pub output: extern "C" fn(skb: *mut sk_buff) -> c_int,
+    pub connected_output: extern "C" fn(skb: *mut sk_buff) -> c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ndisc_hh_ops {
     pub family: c_int,
-    pub solicit: extern "C" fn(neigh: *mut neighbour, skb: *mut c_void),
-    pub error_report: extern "C" fn(neigh: *mut neighbour, skb: *mut c_void),
-    pub output: extern "C" fn(skb: *mut c_void) -> c_int,
-    pub connected_output: extern "C" fn(skb: *mut c_void) -> c_int,
+    pub solicit: extern "C" fn(neigh: *mut neighbour, skb: *mut sk_buff),
+    pub error_report: extern "C" fn(neigh: *mut neighbour, skb: *mut sk_buff),
+    pub output: extern "C" fn(skb: *mut sk_buff) -> c_int,
+    pub connected_output: extern "C" fn(skb: *mut sk_buff) -> c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ndisc_direct_ops {
     pub family: c_int,
-    pub output: extern "C" fn(skb: *mut c_void) -> c_int,
-    pub connected_output: extern "C" fn(skb: *mut c_void) -> c_int,
+    pub output: extern "C" fn(skb: *mut sk_buff) -> c_int,
+    pub connected_output: extern "C" fn(skb: *mut sk_buff) -> c_int,
 }
 
 // Static instances of the ops structs
@@ -400,29 +406,29 @@ pub static ndisc_direct_ops: ndisc_direct_ops = ndisc_direct_ops {
 
 // Helper functions (these would be defined in the actual implementation)
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_solicit(neigh: *mut neighbour, skb: *mut c_void) {
+pub unsafe extern "C" fn ndisc_solicit(neigh: *mut neighbour, skb: *mut sk_buff) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ndisc_error_report(neigh: *mut neighbour, skb: *mut c_void) {
+pub unsafe extern "C" fn ndisc_error_report(neigh: *mut neighbour, skb: *mut sk_buff) {
     // Implementation would go here
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_resolve_output(skb: *mut c_void) -> c_int {
-    // Implementation would go here
-    0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn neigh_connected_output(skb: *mut c_void) -> c_int {
+pub unsafe extern "C" fn neigh_resolve_output(skb: *mut sk_buff) -> c_int {
     // Implementation would go here
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn neigh_direct_output(skb: *mut c_void) -> c_int {
+pub unsafe extern "C" fn neigh_connected_output(skb: *mut sk_buff) -> c_int {
+    // Implementation would go here
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn neigh_direct_output(skb: *mut sk_buff) -> c_int {
     // Implementation would go here
     0
 }

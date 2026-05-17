@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'ip6_input':
+
+```rust
 //! IPv6 input processing for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -9,8 +12,8 @@
 
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -19,54 +22,23 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct net {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sock {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sk_buff {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct net_device {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct inet6_dev {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6hdr {
-    version: u8,
-    daddr: [u8; 16],
-    saddr: [u8; 16],
-    nexthdr: u8,
-    payload_len: u16,
+    pub priority: u8,
+    pub version: u8,
+    pub flow_lbl: [u8; 3],
+    pub payload_len: u16,
+    pub nexthdr: u8,
+    pub hop_limit: u8,
+    pub saddr: in6_addr,
+    pub daddr: in6_addr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_skb_parm {
-    iif: u32,
-    nhoff: u32,
-}
-
-#[repr(C)]
-pub struct inet6_protocol {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
+    pub iif: u32,
+    pub nhoff: u32,
 }
 
 // Function pointer types
@@ -89,9 +61,9 @@ fn ip6_rcv_finish_core(net: *mut net, sk: *mut sock, skb: *mut sk_buff) {
         }
     };
 
-    if edemux.is_some() {
+    if let Some(edemux) = edemux {
         unsafe {
-            edemux.unwrap()(skb);
+            edemux(skb);
         }
     }
 
@@ -111,7 +83,7 @@ fn ip6_rcv_finish(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int {
     unsafe { dst_input(skb) }
 }
 
-fn ip6_sublist_rcv_finish(head: *mut core::ffi::c_void) {
+fn ip6_sublist_rcv_finish(head: *mut c_void) {
     // Implementation of list processing
 }
 
@@ -133,7 +105,7 @@ fn ip6_extract_route_hint(net: *const net, skb: *mut sk_buff) -> *mut sk_buff {
     }
 }
 
-fn ip6_list_rcv_finish(net: *mut net, sk: *mut sock, head: *mut core::ffi::c_void) {
+fn ip6_list_rcv_finish(net: *mut net, sk: *mut sock, head: *mut c_void) {
     // List processing implementation
 }
 
@@ -142,7 +114,7 @@ fn ip6_list_rcv_finish(net: *mut net, sk: *mut sock, head: *mut core::ffi::c_voi
 pub unsafe extern "C" fn ipv6_rcv(
     skb: *mut sk_buff,
     dev: *mut net_device,
-    pt: *mut core::ffi::c_void,
+    pt: *mut c_void,
     orig_dev: *mut net_device,
 ) -> c_int {
     let net = dev_net(skb);
@@ -164,8 +136,8 @@ pub unsafe extern "C" fn ipv6_rcv(
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_list_rcv(
-    head: *mut core::ffi::c_void,
-    pt: *mut core::ffi::c_void,
+    head: *mut c_void,
+    pt: *mut c_void,
     orig_dev: *mut net_device,
 ) {
     let mut curr_dev = ptr::null_mut();
@@ -199,12 +171,16 @@ extern "C" {
         nfproto: c_int,
         hooknum: c_int,
         net: *mut net,
-        pf: *mut core::ffi::c_void,
+        pf: *mut c_void,
         skb: *mut sk_buff,
         indev: *mut net_device,
         outdev: *mut net_device,
-        okfn: extern "C" fn(*mut sk_buff) -> c_int,
+        okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int,
     ) -> c_int;
+    fn skb_dst(skb: *const sk_buff) -> *mut dst_entry;
+    fn ipv6_hdr(skb: *const sk_buff) -> *const ipv6hdr;
+    fn ipv6_addr_equal(a1: *const in6_addr, a2: *const in6_addr) -> bool;
+    fn ip6_rcv_core(skb: *mut sk_buff, dev: *mut net_device, net: *mut net) -> *mut sk_buff;
 }
 
 // Constants

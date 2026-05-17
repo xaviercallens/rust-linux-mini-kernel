@@ -25,16 +25,19 @@ pub const EOPNOTSUPP: c_int = -95;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in6_addr {
     pub s6_addr: [u8; 16],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct iphdr {
     pub version: u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct udphdr {
     pub source: u16,
     pub dest: u16,
@@ -43,24 +46,28 @@ pub struct udphdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_buff {
     // Placeholder - actual fields depend on kernel version
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_tunnel_encap {
     pub dport: u16, // __be16
     pub flags: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi6 {
     pub saddr: in6_addr,
     pub daddr: in6_addr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct guehdr {
     pub version: u8,
     pub control: u8,
@@ -69,11 +76,13 @@ pub struct guehdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_skb_parm {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_protocol {
     pub err_handler: extern "C" fn(
         *mut sk_buff,
@@ -86,6 +95,7 @@ pub struct inet6_protocol {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_tnl_encap_ops {
     pub encap_hlen: extern "C" fn(*const ip_tunnel_encap) -> c_int,
     pub build_header: extern "C" fn(

@@ -10,12 +10,11 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
+use core::ffi::{c_int, c_uint, c_char, c_void};
 use core::mem;
 use core::ptr;
 use core::slice;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -24,13 +23,7 @@ pub const ENOTSUPP: c_int = -95;
 
 // Type definitions
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct ipv6_sr_hdr {
     pub type_: u8,
     pub hdrlen: u8,
@@ -40,7 +33,7 @@ pub struct ipv6_sr_hdr {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct sr6_tlv {
     pub type_: u8,
     pub len: u8,
@@ -48,7 +41,7 @@ pub struct sr6_tlv {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct genl_family {
     pub hdrsize: c_uint,
     pub name: *const c_char,
@@ -58,7 +51,7 @@ pub struct genl_family {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct genl_ops {
     pub cmd: c_uint,
     pub validate: c_uint,
@@ -70,7 +63,7 @@ pub struct genl_ops {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct pernet_operations {
     pub init: extern "C" fn(net: *mut c_void) -> c_int,
     pub exit: extern "C" fn(net: *mut c_void),
@@ -94,11 +87,11 @@ pub unsafe extern "C" fn seg6_validate_srh(
         return false;
     }
 
-    if ((srh.hdrlen as c_int + 1) << 3) != len {
+    if ((srh.hdrlen as c_int + 1) * 8) != len {
         return false;
     }
 
-    if !reduced && srh.segleft > srh.segleft {
+    if !reduced && srh.segleft > srh.first {
         return false;
     } else {
         let max_last_entry = (srh.hdrlen as c_int / 2) - 1;
@@ -112,28 +105,28 @@ pub unsafe extern "C" fn seg6_validate_srh(
         }
     }
 
-    let tlv_offset = mem::size_of::<ipv6_sr_hdr>() + ((srh.first + 1) as c_int << 4);
-    let trailing = len - tlv_offset;
+    let mut tlv_offset = mem::size_of::<ipv6_sr_hdr>() + ((srh.first + 1) as usize * 16);
+    let trailing = len as usize - tlv_offset;
 
     if trailing < 0 {
         return false;
     }
 
     let mut remaining = trailing;
-    let base = srh as *const u8 as *const c_void;
+    let base = srh as *const ipv6_sr_hdr as *const u8;
 
     while remaining > 0 {
-        let tlv_ptr = base.add(tlv_offset as usize);
+        let tlv_ptr = base.add(tlv_offset);
         let tlv = &*(tlv_ptr as *const sr6_tlv);
 
         let tlv_len = mem::size_of::<sr6_tlv>() + tlv.len as usize;
-        remaining -= tlv_len as c_int;
+        remaining -= tlv_len;
 
         if remaining < 0 {
             return false;
         }
 
-        tlv_offset += tlv_len as c_int;
+        tlv_offset += tlv_len;
     }
 
     true
@@ -145,7 +138,6 @@ pub unsafe extern "C" fn seg6_genl_sethmac(
     info: *mut c_void,
 ) -> c_int {
     // Implementation would go here
-    // For the purpose of this example, we'll return a placeholder
     -ENOTSUPP
 }
 
@@ -196,6 +188,9 @@ pub unsafe extern "C" fn seg6_exit() {
 // Tests (conditional compilation)
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use kernel_types::in6_addr;
+
     #[test]
     fn test_seg6_validate_srh() {
         // Basic test case
@@ -204,7 +199,7 @@ mod tests {
         srh.hdrlen = 2;
         srh.segleft = 0;
         srh.first = 0;
-        
+
         let result = unsafe { super::seg6_validate_srh(&srh, 8, false) };
         assert!(result);
     }

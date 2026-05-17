@@ -14,6 +14,7 @@
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -25,6 +26,7 @@ pub const HZ: c_int = 100; // Assuming standard HZ value
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct icmphdr {
     pub type_: u8,
     pub code: u8,
@@ -50,17 +52,20 @@ struct icmp_ipv4 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     pub src: nf_conntrack_tuple_src,
     pub dst: nf_conntrack_tuple_dst,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_src {
     pub u: nf_conntrack_tuple_u,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_dst {
     pub u: nf_conntrack_tuple_u,
 }
@@ -83,43 +88,17 @@ struct nf_conntrack_tuple_u3 {
     pub ip: u32,
 }
 
-#[repr(C)]
-pub struct sk_buff;
-
-#[repr(C)]
-pub struct nf_hook_state {
-    pub pf: c_int,
-    pub net: *mut c_void,
-    pub hook: c_int,
-}
-
-#[repr(C)]
-pub struct nf_conn {
-    pub tuplehash: [*mut nf_conntrack_tuple_hash; 2],
-}
-
-#[repr(C)]
-pub struct nf_conntrack_tuple_hash;
-
-#[repr(C)]
-pub struct nf_conntrack_zone;
-
-#[repr(C)]
-pub struct nf_inet_addr {
-    pub ip: u32,
-};
-
 // Static data
 static invmap: [u8; 256] = {
     let mut arr = [0u8; 256];
-    arr[ICMP_ECHO] = ICMP_ECHOREPLY + 1;
-    arr[ICMP_ECHOREPLY] = ICMP_ECHO + 1;
-    arr[ICMP_TIMESTAMP] = ICMP_TIMESTAMPREPLY + 1;
-    arr[ICMP_TIMESTAMPREPLY] = ICMP_TIMESTAMP + 1;
-    arr[ICMP_INFO_REQUEST] = ICMP_INFO_REPLY + 1;
-    arr[ICMP_INFO_REPLY] = ICMP_INFO_REQUEST + 1;
-    arr[ICMP_ADDRESS] = ICMP_ADDRESSREPLY + 1;
-    arr[ICMP_ADDRESSREPLY] = ICMP_ADDRESS + 1;
+    arr[ICMP_ECHO as usize] = ICMP_ECHOREPLY + 1;
+    arr[ICMP_ECHOREPLY as usize] = ICMP_ECHO + 1;
+    arr[ICMP_TIMESTAMP as usize] = ICMP_TIMESTAMPREPLY + 1;
+    arr[ICMP_TIMESTAMPREPLY as usize] = ICMP_TIMESTAMP + 1;
+    arr[ICMP_INFO_REQUEST as usize] = ICMP_INFO_REPLY + 1;
+    arr[ICMP_INFO_REPLY as usize] = ICMP_INFO_REQUEST + 1;
+    arr[ICMP_ADDRESS as usize] = ICMP_ADDRESSREPLY + 1;
+    arr[ICMP_ADDRESSREPLY as usize] = ICMP_ADDRESS + 1;
     arr
 };
 
@@ -150,15 +129,17 @@ pub unsafe extern "C" fn icmp_pkt_to_tuple(
 ) -> bool {
     let mut _hdr: icmphdr = mem::zeroed();
     let hp = skb_header_pointer(skb, dataoff, mem::size_of_val(&_hdr) as c_uint, &_hdr as *mut _ as *mut c_void);
-    
+
     if hp.is_null() {
         return false;
     }
-    
+
+    let hp = hp as *const icmphdr;
+
     (*tuple).dst.u.icmp.type_ = (*hp).type_;
     (*tuple).src.u.icmp.id = (*hp).un.echo.id;
     (*tuple).dst.u.icmp.code = (*hp).code;
-    
+
     true
 }
 
@@ -172,15 +153,15 @@ pub unsafe extern "C" fn nf_conntrack_invert_icmp_tuple(
     orig: *const nf_conntrack_tuple,
 ) -> bool {
     let orig_type = (*orig).dst.u.icmp.type_;
-    
+
     if orig_type >= invmap.len() as u8 || invmap[orig_type as usize] == 0 {
         return false;
     }
-    
+
     (*tuple).src.u.icmp.id = (*orig).src.u.icmp.id;
     (*tuple).dst.u.icmp.type_ = invmap[orig_type as usize] - 1;
     (*tuple).dst.u.icmp.code = (*orig).dst.u.icmp.code;
-    
+
     true
 }
 
@@ -200,17 +181,17 @@ pub unsafe extern "C" fn nf_conntrack_icmp_packet(
     if (*state).pf != NFPROTO_IPV4 {
         return -NF_ACCEPT;
     }
-    
+
     let tuple = &(*ct).tuplehash[0].tuple;
     let type_ = tuple.dst.u.icmp.type_;
-    
+
     if type_ >= mem::size_of_val(&valid_new) as u8 || !valid_new[type_ as usize] {
         return -NF_ACCEPT;
     }
-    
+
     // Implementation would continue here with actual timeout handling
     // and connection tracking logic
-    
+
     NF_ACCEPT
 }
 
@@ -229,23 +210,25 @@ pub unsafe extern "C" fn nf_conntrack_icmpv4_error(
     let mut outer_daddr: nf_inet_addr = mem::zeroed();
     let mut _ih: icmphdr = mem::zeroed();
     let icmph = skb_header_pointer(skb, dataoff, mem::size_of_val(&_ih) as c_uint, &_ih as *mut _ as *mut c_void);
-    
+
     if icmph.is_null() {
         icmp_error_log(skb, state, b"short packet\0".as_ptr() as *const c_char);
         return -NF_ACCEPT;
     }
-    
+
+    let icmph = icmph as *const icmphdr;
+
     if (*icmph).type_ > NR_ICMP_TYPES {
         icmp_error_log(skb, state, b"invalid icmp type\0".as_ptr() as *const c_char);
         return -NF_ACCEPT;
     }
-    
+
     if !icmp_is_err((*icmph).type_) {
         return NF_ACCEPT;
     }
-    
+
     outer_daddr.ip = ip_hdr(skb).daddr;
-    
+
     dataoff += mem::size_of::<icmphdr>() as c_uint;
     nf_conntrack_inet_error(_tmpl, skb, dataoff, state, IPPROTO_ICMP, &outer_daddr as *const _)
 }
@@ -253,10 +236,10 @@ pub unsafe extern "C" fn nf_conntrack_icmpv4_error(
 // Helper functions (these would be implemented in the kernel)
 #[link(name = "kernel")]
 extern "C" {
-    fn skb_header_pointer(skb: *const sk_buff, 
-                          offset: c_uint,
-                          size: c_uint,
-                          data: *mut c_void) -> *mut c_void;
+    fn skb_header_pointer(skb: *const sk_buff,
+                         offset: c_uint,
+                         size: c_uint,
+                         data: *mut c_void) -> *mut c_void;
     fn ip_hdr(skb: *const sk_buff) -> *const iphdr;
     fn nf_ct_timeout_lookup(ct: *mut nf_conn) -> *mut c_uint;
     fn nf_ct_refresh_acct(ct: *mut nf_conn, ctinfo: c_int, skb: *mut sk_buff, timeout: c_uint);
@@ -291,9 +274,9 @@ pub const NF_INET_PRE_ROUTING: c_int = 0;
 // Static data
 static valid_new: [u8; 256] = {
     let mut arr = [0u8; 256];
-    arr[ICMP_ECHO] = 1;
-    arr[ICMP_TIMESTAMP] = 1;
-    arr[ICMP_INFO_REQUEST] = 1;
-    arr[ICMP_ADDRESS] = 1;
+    arr[ICMP_ECHO as usize] = 1;
+    arr[ICMP_TIMESTAMP as usize] = 1;
+    arr[ICMP_INFO_REQUEST as usize] = 1;
+    arr[ICMP_ADDRESS as usize] = 1;
     arr
 };

@@ -9,15 +9,31 @@
 
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const EBUSY: c_int = -16;
 pub const ENOSYS: c_int = -38;
 
+// GRE flags
+pub const GRE_VERSION: u16 = 0x7000;
+pub const GRE_ROUTING: u16 = 0x1000;
+pub const GRE_CSUM: u16 = 0x8000;
+pub const GRE_KEY: u16 = 0x2000;
+pub const GRE_SEQ: u16 = 0x1000;
+
+// Protocol numbers
+pub const IPPROTO_GRE: c_int = 47;
+
+// Ethernet protocol types
+pub const ETH_P_WCCP: u16 = 0x883E;
+pub const ETH_P_ERSPAN: u16 = 0x88BE;
+pub const ETH_P_ERSPAN2: u16 = 0x22EB;
+
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct gre_protocol {
     handler: unsafe extern "C" fn(*mut c_void) -> c_int,
     err_handler: unsafe extern "C" fn(*mut c_void, u32) -> c_int,
@@ -25,12 +41,14 @@ pub struct gre_protocol {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct gre_base_hdr {
     flags: u16,
     protocol: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tnl_ptk_info {
     flags: u16,
     key: u32,
@@ -40,6 +58,7 @@ pub struct tnl_ptk_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct erspan_base_hdr {
     version: u8,
     type_: u8,

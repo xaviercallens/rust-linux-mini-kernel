@@ -8,13 +8,11 @@
 #![allow(dead_code)]
 #![allow(clashing_extern_declarations)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_ulong;
-use core::ffi::c_void;
+use core::ffi::{c_int, c_uint, c_ulong, c_void};
 use core::mem;
 use core::ptr;
 use core::slice;
+use kernel_types::*;
 
 // Constants from C
 pub const CONNCOUNT_SLOTS: c_uint = 256;
@@ -29,38 +27,45 @@ pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const EAGAIN: c_int = -11;
 pub const ENOENT: c_int = -2;
+pub const EOVERFLOW: c_int = -75;
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
     pub next: *mut list_head,
     pub prev: *mut list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     // Opaque structure - actual fields would be defined in the kernel headers
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_zone {
     // Opaque structure - actual fields would be defined in the kernel headers
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     // Opaque structure - actual fields would be defined in the kernel headers
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_hash {
     // Opaque structure - actual fields would be defined in the kernel headers
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conncount_tuple {
     pub node: list_head,
     pub tuple: nf_conntrack_tuple,
@@ -70,6 +75,7 @@ pub struct nf_conncount_tuple {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conncount_list {
     pub list_lock: *mut c_void, // spinlock_t
     pub head: list_head,
@@ -77,6 +83,7 @@ pub struct nf_conncount_list {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rb_node {
     pub rb_parent_color: u32,
     pub rb_left: *mut rb_node,
@@ -86,6 +93,7 @@ pub struct rb_node {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conncount_rb {
     pub node: rb_node,
     pub list: nf_conncount_list,
@@ -94,6 +102,7 @@ pub struct nf_conncount_rb {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conncount_data {
     pub keylen: c_uint,
     pub root: [rb_root; CONNCOUNT_SLOTS],
@@ -104,6 +113,7 @@ pub struct nf_conncount_data {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rb_root {
     pub rb_node: *mut rb_node,
 }
@@ -228,7 +238,6 @@ pub unsafe extern "C" fn __nf_conncount_add(
 ) -> c_int {
     let mut collect = 0;
     let mut conn: *mut nf_conncount_tuple = ptr::null_mut();
-    let mut conn_n: *mut nf_conncount_tuple = ptr::null_mut();
 
     // Iterate through list entries
     while !conn.is_null() && collect < CONNCOUNT_GC_MAX_NODES {
@@ -319,7 +328,6 @@ pub unsafe extern "C" fn nf_conncount_gc_list(
 ) -> c_int {
     let mut collected = 0;
     let mut conn: *mut nf_conncount_tuple = ptr::null_mut();
-    let mut conn_n: *mut nf_conncount_tuple = ptr::null_mut();
 
     if spin_trylock((*list).list_lock) == 0 {
         return 0;

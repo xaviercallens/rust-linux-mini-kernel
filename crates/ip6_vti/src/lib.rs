@@ -7,7 +7,7 @@
 #![allow(non_camel_case_types)]  // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const IP6_VTI_HASH_SIZE_SHIFT: c_int = 5;
@@ -18,13 +18,9 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_device {
-    pub name: [u8; IFNAMSIZ],
+    pub name: [c_char; IFNAMSIZ],
     pub flags: c_int,
     pub tstats: *mut c_void,
     pub dev: *mut net_device,
@@ -33,15 +29,17 @@ pub struct net_device {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_tnl_parm {
     pub laddr: in6_addr,
     pub raddr: in6_addr,
-    pub name: [u8; IFNAMSIZ],
+    pub name: [c_char; IFNAMSIZ],
     pub proto: c_int,
     pub i_key: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_tnl {
     pub parms: ip6_tnl_parm,
     pub dev: *mut net_device,
@@ -50,6 +48,7 @@ pub struct ip6_tnl {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct vti6_net {
     pub fb_tnl_dev: *mut net_device,
     pub tnls_r_l: [*mut ip6_tnl; IP6_VTI_HASH_SIZE as usize],
@@ -84,29 +83,41 @@ pub unsafe extern "C" fn vti6_tnl_lookup(
     let any: in6_addr = unsafe { core::mem::zeroed() };
 
     // First pass: exact match
-    for t in get_tnls_r_l(ip6n, hash) {
-        if ipv6_addr_equal(local, &(*t).parms.laddr) &&
-           ipv6_addr_equal(remote, &(*t).parms.raddr) &&
-           ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
-            return t;
+    for i in 0..IP6_VTI_HASH_SIZE {
+        t = ip6n.tnls_r_l[i as usize];
+        while !t.is_null() {
+            if ipv6_addr_equal(local, &(*t).parms.laddr) &&
+               ipv6_addr_equal(remote, &(*t).parms.raddr) &&
+               ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
+                return t;
+            }
+            t = (*t).next;
         }
     }
 
     // Second pass: local match
     hash = HASH(&any, local);
-    for t in get_tnls_r_l(ip6n, hash) {
-        if ipv6_addr_equal(local, &(*t).parms.laddr) &&
-           ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
-            return t;
+    for i in 0..IP6_VTI_HASH_SIZE {
+        t = ip6n.tnls_r_l[i as usize];
+        while !t.is_null() {
+            if ipv6_addr_equal(local, &(*t).parms.laddr) &&
+               ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
+                return t;
+            }
+            t = (*t).next;
         }
     }
 
     // Third pass: remote match
     hash = HASH(remote, &any);
-    for t in get_tnls_r_l(ip6n, hash) {
-        if ipv6_addr_equal(remote, &(*t).parms.raddr) &&
-           ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
-            return t;
+    for i in 0..IP6_VTI_HASH_SIZE {
+        t = ip6n.tnls_r_l[i as usize];
+        while !t.is_null() {
+            if ipv6_addr_equal(remote, &(*t).parms.raddr) &&
+               ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
+                return t;
+            }
+            t = (*t).next;
         }
     }
 
@@ -171,7 +182,7 @@ pub unsafe extern "C" fn vti6_tnl_unlink(
 ) {
     let tp = vti6_tnl_bucket(ip6n, &(*t).parms);
     let mut iter: *mut ip6_tnl = ptr::null_mut();
-    
+
     while !(*tp).is_null() {
         iter = *tp;
         if iter == t {
@@ -204,7 +215,7 @@ pub unsafe extern "C" fn vti6_tnl_create2(
     let t = netdev_priv(dev);
     let net = dev_net(dev);
     let ip6n = get_vti6_net(net);
-    
+
     (*dev).rtnl_link_ops = &vti6_link_ops;
     let err = register_netdevice(dev);
     if err < 0 {
@@ -213,7 +224,7 @@ pub unsafe extern "C" fn vti6_tnl_create2(
 
     strcpy((*t).parms.name.as_mut_ptr(), (*dev).name.as_ptr());
     vti6_tnl_link(ip6n, t);
-    
+
     0
 }
 
@@ -231,9 +242,9 @@ pub unsafe extern "C" fn vti6_locate(
     let remote = &(*p).raddr;
     let local = &(*p).laddr;
     let ip6n = get_vti6_net(net);
-    let mut tp: *mut *mut ip6_tnl = ptr::null_mut();
+    let mut tp = vti6_tnl_bucket(ip6n, p);
     let mut t: *mut ip6_tnl = ptr::null_mut();
-    
+
     while !(*tp).is_null() {
         t = *tp;
         if ipv6_addr_equal(local, &(*t).parms.laddr) &&
@@ -245,11 +256,11 @@ pub unsafe extern "C" fn vti6_locate(
         }
         tp = &mut (*t).next;
     }
-    
+
     if create == 0 {
         return ptr::null_mut();
     }
-    
+
     vti6_tnl_create(net, p)
 }
 
@@ -261,7 +272,7 @@ fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool {
 
 #[inline]
 fn ipv6_addr_any(a: *const in6_addr) -> bool {
-    unsafe { ptr::read(a).s6_addr[0] == 0 && ptr::read(a).s6_addr[1] == 0 }
+    unsafe { ptr::read(a).in6_u.u6_addr32[0] == 0 && ptr::read(a).in6_u.u6_addr32[1] == 0 }
 }
 
 #[inline]
@@ -280,7 +291,7 @@ fn hash_32(mut val: u32, bits: u32) -> c_uint {
 #[inline]
 fn ipv6_addr_hash(addr: *const in6_addr) -> u32 {
     // Simplified hash implementation
-    let bytes = unsafe { &(*addr).s6_addr };
+    let bytes = unsafe { &(*addr).in6_u.u6_addr8 };
     let mut hash = 0;
     for &b in bytes.iter() {
         hash = hash.wrapping_mul(31).wrapping_add(b as u32);
@@ -313,7 +324,7 @@ unsafe fn register_netdevice(dev: *mut net_device) -> c_int {
 }
 
 #[inline]
-unsafe fn strcpy(dest: *mut u8, src: *const u8) {
+unsafe fn strcpy(dest: *mut c_char, src: *const c_char) {
     // Simple strcpy implementation
     let mut i = 0;
     while *src.offset(i) != 0 {
@@ -337,11 +348,11 @@ static vti6_link_ops: rtnl_link_ops = rtnl_link_ops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_hash() {
-        let a = in6_addr { s6_addr: [0; 16] };
-        let b = in6_addr { s6_addr: [1; 16] };
+        let a = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
+        let b = in6_addr { in6_u: in6_addr_union { u6_addr8: [1; 16] } };
         let hash = HASH(&a as *const _, &b as *const_);
         assert!(hash < IP6_VTI_HASH_SIZE as u32);
     }

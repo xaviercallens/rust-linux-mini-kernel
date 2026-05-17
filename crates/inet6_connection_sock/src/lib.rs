@@ -13,90 +13,11 @@ use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const ENOMEM: c_int = -12;
 pub const EINVAL: c_int = -22;
-
-// Type definitions
-#[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
-pub struct sockaddr_in6 {
-    pub sin6_family: c_int,
-    pub sin6_port: u16,
-    pub sin6_flowinfo: u32,
-    pub sin6_addr: in6_addr,
-    pub sin6_scope_id: u32,
-}
-
-#[repr(C)]
-pub struct flowi6 {
-    pub flowi6_proto: u8,
-    pub daddr: in6_addr,
-    pub saddr: in6_addr,
-    pub flowlabel: u32,
-    pub flowi6_oif: c_int,
-    pub flowi6_mark: c_int,
-    pub fl6_sport: u16,
-    pub fl6_dport: u16,
-    pub flowi6_uid: u32,
-}
-
-#[repr(C)]
-pub struct dst_entry {
-    pub ops: *const c_void,
-}
-
-#[repr(C)]
-pub struct sock {
-    pub sk_v6_daddr: in6_addr,
-    pub sk_protocol: u8,
-    pub sk_bound_dev_if: c_int,
-    pub sk_mark: c_int,
-    pub sk_uid: u32,
-    pub sk_route_caps: c_int,
-    pub sk_err_soft: c_int,
-    pub sk_priority: c_int,
-}
-
-#[repr(C)]
-pub struct inet_sock {
-    pub inet_sport: u16,
-    pub inet_dport: u16,
-}
-
-#[repr(C)]
-pub struct ipv6_pinfo {
-    pub saddr: in6_addr,
-    pub flow_label: u32,
-    pub dst_cookie: u32,
-    pub opt: *const c_void,
-    pub tclass: u8,
-}
-
-#[repr(C)]
-pub struct request_sock {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct inet_request_sock {
-    pub ir_v6_rmt_addr: in6_addr,
-    pub ir_v6_loc_addr: in6_addr,
-    pub ir_iif: c_int,
-    pub ir_mark: c_int,
-    pub ir_rmt_port: u16,
-    pub ir_num: u16,
-}
-
-#[repr(C)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
 
 // Function declarations for external C functions
 extern "C" {
@@ -125,20 +46,20 @@ pub unsafe extern "C" fn inet6_csk_route_req(
 ) -> *mut dst_entry {
     let ireq = &*(req as *const inet_request_sock);
     let np = &*(sk as *const ipv6_pinfo);
-    
+
     // SAFETY: Caller guarantees fl6 is valid and properly aligned
     unsafe {
         let _ = memset(fl6 as *mut c_void, 0, mem::size_of::<flowi6>() as _);
     }
-    
+
     (*fl6).flowi6_proto = proto;
     (*fl6).daddr = (*ireq).ir_v6_rmt_addr;
-    
+
     unsafe {
         rcu_read_lock();
-        let final_p = fl6_update_dst(fl6, rcu_dereference(np.opt), &mut in6_addr { s6_addr: [0; 16] });
+        let final_p = fl6_update_dst(fl6, rcu_dereference(np.opt), &mut in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } });
         rcu_read_unlock();
-        
+
         (*fl6).saddr = (*ireq).ir_v6_loc_addr;
         (*fl6).flowi6_oif = (*ireq).ir_iif;
         (*fl6).flowi6_mark = (*ireq).ir_mark;
@@ -147,12 +68,12 @@ pub unsafe extern "C" fn inet6_csk_route_req(
         (*fl6).flowi6_uid = (*sk).sk_uid;
         security_req_classify_flow(req, &mut (*fl6) as *mut _ as *mut c_void);
     }
-    
-    let dst = ip6_dst_lookup_flow(sock_net(sk), sk, fl6, &mut in6_addr { s6_addr: [0; 16] });
+
+    let dst = ip6_dst_lookup_flow(sock_net(sk), sk, fl6, &mut in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } });
     if (dst as usize) < 0x00007FF000000000 {
         return ptr::null_mut();
     }
-    
+
     dst
 }
 
@@ -187,13 +108,13 @@ pub unsafe extern "C" fn inet6_csk_xmit(
         fl6_dport: (*inet_sk(sk)).inet_dport,
         flowi6_uid: (*sk).sk_uid,
     };
-    
+
     unsafe {
         rcu_read_lock();
-        let final_p = fl6_update_dst(&mut fl6, rcu_dereference(np.opt), &mut in6_addr { s6_addr: [0; 16] });
+        let final_p = fl6_update_dst(&mut fl6, rcu_dereference(np.opt), &mut in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } });
         rcu_read_unlock();
     }
-    
+
     let dst = inet6_csk_route_socket(sk, &mut fl6);
     if (dst as usize) < 0x00007FF000000000 {
         (*sk).sk_err_soft = -(dst as isize);
@@ -201,13 +122,13 @@ pub unsafe extern "C" fn inet6_csk_xmit(
         ptr::null_mut::<sk_buff>();
         return -(dst as isize);
     }
-    
+
     unsafe {
         skb_dst_set_noref(skb, dst);
-        
+
         // Restore final destination back after routing done
         (*fl6).daddr = (*sk).sk_v6_daddr;
-        
+
         let res = ip6_xmit(
             sk,
             skb,
@@ -238,21 +159,21 @@ pub unsafe extern "C" fn inet6_csk_update_pmtu(
         fl6_dport: (*inet_sk(sk)).inet_dport,
         flowi6_uid: (*sk).sk_uid,
     };
-    
+
     let dst = inet6_csk_route_socket(sk, &mut fl6);
     if (dst as usize) < 0x00007FF000000000 {
         return ptr::null_mut();
     }
-    
+
     unsafe {
         (*(*dst).ops).update_pmtu.expect("update_pmtu function pointer")(dst, sk, ptr::null_mut(), mtu, 1);
     }
-    
+
     let dst = inet6_csk_route_socket(sk, &mut fl6);
     if (dst as usize) < 0x00007FF000000000 {
         return ptr::null_mut();
     }
-    
+
     dst
 }
 
@@ -279,13 +200,13 @@ unsafe extern "C" fn inet6_csk_route_socket(
 ) -> *mut dst_entry {
     let inet = inet_sk(sk);
     let np = inet6_sk(sk);
-    let mut final_p = in6_addr { s6_addr: [0; 16] };
-    
+    let mut final_p = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
+
     // SAFETY: Caller guarantees fl6 is valid and properly aligned
     unsafe {
         let _ = memset(fl6 as *mut c_void, 0, mem::size_of::<flowi6>() as _);
     }
-    
+
     (*fl6).flowi6_proto = (*sk).sk_protocol;
     (*fl6).daddr = (*sk).sk_v6_daddr;
     (*fl6).saddr = (*np).saddr;
@@ -297,17 +218,17 @@ unsafe extern "C" fn inet6_csk_route_socket(
     (*fl6).fl6_dport = (*inet).inet_dport;
     (*fl6).flowi6_uid = (*sk).sk_uid;
     security_sk_classify_flow(sk, &mut (*fl6) as *mut _ as *mut c_void);
-    
+
     unsafe {
         rcu_read_lock();
         let final_p = fl6_update_dst(fl6, rcu_dereference(np.opt), &mut final_p);
         rcu_read_unlock();
     }
-    
+
     let dst = __inet6_csk_dst_check(sk, (*np).dst_cookie);
     if dst.is_null() {
         let dst = ip6_dst_lookup_flow(sock_net(sk), sk, fl6, &mut final_p);
-        
+
         if !dst.is_null() {
             ip6_dst_store(sk, dst, ptr::null_mut(), ptr::null_mut());
         }
@@ -337,16 +258,3 @@ pub unsafe extern "C" fn inet6_csk_xmit_export() {
 pub unsafe extern "C" fn inet6_csk_update_pmtu_export() {
     // Symbol export marker
 }
-```
-
-This implementation follows the requirements for FFI compatibility with the Linux kernel:
-
-1. All structs are marked with `#[repr(C)]` for C-compatible memory layout
-2. All exported functions use `#[no_mangle]` and `extern "C"` calling convention
-3. Raw pointers (`*mut T`, `*const T`) are used for all pointer operations
-4. Unsafe operations are properly justified with comments
-5. Error codes match Linux kernel conventions
-6. Algorithm logic is implemented exactly as in the C code
-7. All function signatures match the original C declarations
-
-The code handles the complex interactions with the Linux kernel's networking stack while maintaining strict ABI compatibility. All memory operations and pointer manipulations are done in an unsafe context with appropriate safety justifications.

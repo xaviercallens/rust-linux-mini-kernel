@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'af_inet6':
+
+```rust
 //! IPv6 protocol stack for Linux
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -6,8 +9,6 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
-
 
 use kernel_types::*;
 use core::ffi::c_int;
@@ -27,50 +28,14 @@ pub const ENOBUFS: c_int = -105;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
     pub next: *mut list_head,
     pub prev: *mut list_head,
 }
 
 #[repr(C)]
-pub struct sock {
-    pub sk_prot: *const proto,
-    pub sk_type: c_int,
-    pub sk_family: c_int,
-    pub sk_protocol: c_int,
-    pub sk_backlog_rcv: Option<extern "C" fn(*mut sock, *mut c_void, size_t) -> c_int>,
-    pub sk_destruct: Option<extern "C" fn(*mut sock)>,
-    pub sk_bound_dev_if: c_int,
-    pub sk_v6_rcv_saddr: [u8; 16],
-    pub sk_ipv6only: c_int,
-    pub sk_refcnt_debug: c_int,
-}
-
-#[repr(C)]
-pub struct inet_sock {
-    pub is_icsk: c_int,
-    pub inet_num: c_int,
-    pub inet_sport: u16,
-    pub uc_ttl: c_int,
-    pub mc_loop: c_int,
-    pub mc_ttl: c_int,
-    pub mc_index: c_int,
-    pub rcv_tos: u8,
-    pub pmtudisc: c_int,
-}
-
-#[repr(C)]
-pub struct ipv6_pinfo {
-    pub hop_limit: c_int,
-    pub mcast_hops: c_int,
-    pub mc_loop: c_int,
-    pub mc_all: c_int,
-    pub pmtudisc: c_int,
-    pub repflow: c_int,
-    pub saddr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_protosw {
     pub list: list_head,
     pub protocol: c_int,
@@ -80,6 +45,7 @@ pub struct inet_protosw {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct proto {
     pub obj_size: c_int,
     pub slab: *const c_void,
@@ -89,23 +55,27 @@ pub struct proto {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     pub user_ns: *const c_void,
     pub ipv6: ipv6_net,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_net {
     sysctl: ipv6_sysctl,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_sysctl {
     bindv6only: c_int,
     flowlabel_reflect: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sockaddr_in6 {
     pub sin6_family: c_int,
     pub sin6_port: u16,
@@ -115,6 +85,7 @@ pub struct sockaddr_in6 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_params {
     disable_ipv6: c_int,
     autoconf: c_int,
@@ -122,7 +93,7 @@ pub struct ipv6_params {
 
 // Static variables
 static mut inetsw6: [list_head; 16] = unsafe { mem::zeroed() };
-static inetsw6_lock: spin::Mutex<()> = spin::Mutex::new(());
+static inetsw6_lock: AtomicU32 = AtomicU32::new(0);
 
 static mut ipv6_defaults: ipv6_params = ipv6_params {
     disable_ipv6: 0,
@@ -208,7 +179,7 @@ pub unsafe extern "C" fn inet6_create(
                     } else {
                         // request_module("net-pf-10-proto-132")
                     }
-                    continue lookup_protocol;
+                    continue;
                 } else {
                     break;
                 }
@@ -372,5 +343,6 @@ const IPV6_DEFAULT_MCASTHOPS: c_int = -1;
 const IPV6_PMTUDISC_WANT: c_int = 1;
 const FLOWLABEL_REFLECT_ESTABLISHED: c_int = 1 << 0;
 const IP_PMTUDISC_DONT: c_int = 0;
+const IP_PMTUDISC_WANT: c_int = 1;
 const CAP_NET_RAW: c_int = 130;
 const CAP_NET_BIND_SERVICE: c_int = 10;

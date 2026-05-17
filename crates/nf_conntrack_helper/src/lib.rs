@@ -1,4 +1,4 @@
-//! Netfilter connection tracking helper module
+// Netfilter connection tracking helper module
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
@@ -14,6 +14,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -23,75 +24,86 @@ pub const ENOENT: c_int = -2;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
-    src: nf_conntrack_tuple_address,
-    dst: nf_conntrack_tuple_address,
-    src_l3num: u16,
+    pub src: nf_conntrack_tuple_address,
+    pub dst: nf_conntrack_tuple_address,
+    pub src_l3num: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_address {
-    all: u16,
+    pub all: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
-    name: *const u8,
-    tuple: nf_conntrack_tuple,
-    nat_mod_name: *const u8,
-    help: *const c_void,
-    destroy: Option<unsafe extern "C" fn(*mut nf_conn)>,
-    me: *mut c_void,
-    refcnt: AtomicUsize,
-    hnode: hlist_node,
+    pub name: *const u8,
+    pub tuple: nf_conntrack_tuple,
+    pub nat_mod_name: *const u8,
+    pub help: *const c_void,
+    pub destroy: Option<unsafe extern "C" fn(*mut nf_conn)>,
+    pub me: *mut c_void,
+    pub refcnt: AtomicUsize,
+    pub hnode: hlist_node,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct hlist_node {
-    next: *mut hlist_node,
+    pub next: *mut hlist_node,
     // ... other fields as needed
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct hlist_head {
-    first: *mut hlist_node,
+    pub first: *mut hlist_node,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
-    status: u32,
-    tuplehash: [nf_conn_tuple_hash; 2],
+    pub status: u32,
+    pub tuplehash: [nf_conn_tuple_hash; 2],
     // ... other fields as needed
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_tuple_hash {
-    tuple: nf_conntrack_tuple,
+    pub tuple: nf_conntrack_tuple,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_help {
-    helper: *mut nf_conntrack_helper,
-    expectations: hlist_head,
+    pub helper: *mut nf_conntrack_helper,
+    pub expectations: hlist_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_net {
-    sysctl_auto_assign_helper: u8,
-    auto_assign_helper_warned: u8,
+    pub sysctl_auto_assign_helper: u8,
+    pub auto_assign_helper_warned: u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_ct_helper_expectfn {
-    name: *const u8,
-    expectfn: *const c_void,
-    head: list_head,
+    pub name: *const u8,
+    pub expectfn: *const c_void,
+    pub head: list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
-    next: *mut list_head,
-    prev: *mut list_head,
+    pub next: *mut list_head,
+    pub prev: *mut list_head,
 }
 
 // Global variables

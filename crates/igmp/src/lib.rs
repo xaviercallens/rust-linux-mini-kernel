@@ -6,8 +6,7 @@
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -20,8 +19,19 @@ pub const IGMP_QUERY_INTERVAL: c_int = (125 * HZ) as c_int;
 pub const IGMP_QUERY_RESPONSE_INTERVAL: c_int = (10 * HZ) as c_int;
 pub const IGMP_INITIAL_REPORT_DELAY: c_int = 1;
 
+// IGMP version constants
+pub const IGMP_V1: c_int = 1;
+pub const IGMP_V2: c_int = 2;
+pub const IGMP_V3: c_int = 3;
+
+// Configuration constants
+pub const IGMPV2_UNSOLICITED_REPORT_INTERVAL: c_int = 10000; // 10 seconds
+pub const IGMPV3_UNSOLICITED_REPORT_INTERVAL: c_int = 1000;   // 1 second
+pub const FORCE_IGMP_VERSION: c_int = 0; // Default value
+
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in_device {
     mr_v1_seen: *mut c_void,
     mr_v2_seen: *mut c_void,
@@ -30,6 +40,7 @@ pub struct in_device {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_mc_list {
     interface: *mut in_device,
     timer: timer_list,
@@ -39,21 +50,6 @@ pub struct ip_mc_list {
     reporter: c_int,
     unsolicit_count: c_int,
     // Additional fields would be added based on actual struct definition
-}
-
-#[repr(C)]
-pub struct timer_list {
-    // Kernel timer structure fields
-}
-
-#[repr(C)]
-pub struct atomic_t {
-    counter: c_int,
-}
-
-#[repr(C)]
-pub struct spinlock_t {
-    // Spinlock implementation details
 }
 
 // Function implementations
@@ -98,12 +94,12 @@ pub unsafe extern "C" fn unsolicited_report_interval(in_dev: *mut in_device) -> 
 unsafe fn IGMP_V1_SEEN(in_dev: *mut in_device) -> bool {
     let dev_net = get_dev_net(in_dev); // Placeholder for actual implementation
     let force_version = IPV4_DEVCONF_ALL(dev_net, FORCE_IGMP_VERSION);
-    if force_version == 1 {
+    if force_version == IGMP_V1 {
         return true;
     }
 
     let in_dev_force_version = IN_DEV_CONF_GET(in_dev, FORCE_IGMP_VERSION);
-    if in_dev_force_version == 1 {
+    if in_dev_force_version == IGMP_V1 {
         return true;
     }
 
@@ -123,12 +119,12 @@ unsafe fn IGMP_V1_SEEN(in_dev: *mut in_device) -> bool {
 unsafe fn IGMP_V2_SEEN(in_dev: *mut in_device) -> bool {
     let dev_net = get_dev_net(in_dev); // Placeholder for actual implementation
     let force_version = IPV4_DEVCONF_ALL(dev_net, FORCE_IGMP_VERSION);
-    if force_version == 2 {
+    if force_version == IGMP_V2 {
         return true;
     }
 
     let in_dev_force_version = IN_DEV_CONF_GET(in_dev, FORCE_IGMP_VERSION);
-    if in_dev_force_version == 2 {
+    if in_dev_force_version == IGMP_V2 {
         return true;
     }
 
@@ -150,7 +146,7 @@ fn msecs_to_jiffies(msecs: c_int) -> c_int {
 #[inline]
 unsafe fn jiffies() -> *mut c_void {
     // Placeholder for actual implementation
-    ptr::null_mut()
+    core::ptr::null_mut()
 }
 
 /// Check if jiffies is before a given time
@@ -164,7 +160,7 @@ unsafe fn time_before(jiffies: *mut c_void, time: *mut c_void) -> bool {
 #[inline]
 unsafe fn get_dev_net(in_dev: *mut in_device) -> *mut c_void {
     // Placeholder for actual implementation
-    ptr::null_mut()
+    core::ptr::null_mut()
 }
 
 /// Get device configuration value

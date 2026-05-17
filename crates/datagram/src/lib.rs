@@ -22,12 +22,14 @@ pub const EAFNOSUPPORT: c_int = -97;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in6_addr {
     pub s6_addr: [u8; 16],
     pub s6_addr32: [u32; 4],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi6 {
     pub flowi6_proto: u8,
     pub daddr: in6_addr,
@@ -41,6 +43,7 @@ pub struct flowi6 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_pinfo {
     pub sndflow: c_int,
     pub flow_label: u32,
@@ -51,21 +54,25 @@ pub struct ipv6_pinfo {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct pktinfo {
     pub ipi6_ifindex: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rxopt {
     pub bits: rxopt_bits,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rxopt_bits {
     pub rxpmtu: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_sock {
     pub inet_dport: u16,
     pub inet_sport: u16,
@@ -73,6 +80,7 @@ pub struct inet_sock {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sock {
     pub sk_protocol: u8,
     pub sk_v6_daddr: in6_addr,
@@ -84,16 +92,19 @@ pub struct sock {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sk_prot {
     pub rehash: Option<unsafe extern "C" fn(*mut sock)>,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_flowlabel {
     pub opt: *mut ipv6_txoptions,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_txoptions {
     // Placeholder for actual fields
     _unused: [u8; 0],

@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_seqadj':
+
+```rust
 //! TCP Sequence Adjustment for Netfilter Connection Tracking
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -7,28 +10,26 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::ffi::size_t;
-use core::ptr;
+use core::ffi::{c_int, c_uint, c_void};
+use kernel_types::*;
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 pub struct nf_conn {
     pub status: u32,
     pub lock: *mut c_void, // Spinlock
     pub proctnum: u16,
+    pub tcph: *mut tcphdr,
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 pub struct nf_conn_seqadj {
     pub seq: [nf_ct_seqadj; 2],
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 pub struct nf_ct_seqadj {
     pub offset_before: c_int,
     pub offset_after: c_int,
@@ -36,24 +37,20 @@ pub struct nf_ct_seqadj {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 pub struct tcphdr {
     pub seq: u32,
     pub ack_seq: u32,
     pub doff: u8,
+    pub check: u16,
+    pub ack: u16,
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 pub struct tcp_sack_block_wire {
     pub start_seq: u32,
     pub end_seq: u32,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct sk_buff {
-    pub data: *mut u8,
 }
 
 // Extern declarations for kernel functions
@@ -157,7 +154,7 @@ pub unsafe extern "C" fn nf_ct_seqadj_set(
     // SAFETY: Lock is held by caller
     unsafe {
         if (*this_way).offset_before == (*this_way).offset_after
-            || before((*this_way).correction_pos, seq)
+            || after((*this_way).correction_pos, seq)
         {
             (*this_way).correction_pos = seq;
             (*this_way).offset_before = (*this_way).offset_after;
@@ -192,7 +189,7 @@ pub unsafe extern "C" fn nf_ct_tcp_seqadj_set(
 
     let network_header = unsafe { skb_network_header(skb) };
     let ip_header_len = unsafe { ip_hdrlen(skb) };
-    let tcp_header = (network_header as *mut u8).offset(ip_header_len as isize) as *mut tcphdr;
+    let tcp_header = (network_header as *mut u8).add(ip_header_len as usize) as *mut tcphdr;
     let seq = (*tcp_header).seq;
 
     unsafe { nf_ct_seqadj_set(ct, ctinfo, seq, off) };
@@ -219,29 +216,29 @@ pub unsafe extern "C" fn nf_ct_sack_block_adjust(
 
     let mut current_off = sackoff;
     while current_off < sackend {
-        let sack = (skb as *mut u8).offset(current_off as isize) as *mut tcp_sack_block_wire;
+        let sack = (skb as *mut u8).add(current_off as usize) as *mut tcp_sack_block_wire;
         let new_start_seq = if after(
-            ntohl((*sack).start_seq) - (*seq).offset_before,
+            ntohl((*sack).start_seq) - (*seq).offset_before as u32,
             (*seq).correction_pos,
         ) {
-            htonl(ntohl((*sack).start_seq) - (*seq).offset_after)
+            htonl(ntohl((*sack).start_seq) - (*seq).offset_after as u32)
         } else {
-            htonl(ntohl((*sack).start_seq) - (*seq).offset_before)
+            htonl(ntohl((*sack).start_seq) - (*seq).offset_before as u32)
         };
 
         let new_end_seq = if after(
-            ntohl((*sack).end_seq) - (*seq).offset_before,
+            ntohl((*sack).end_seq) - (*seq).offset_before as u32,
             (*seq).correction_pos,
         ) {
-            htonl(ntohl((*sack).end_seq) - (*seq).offset_after)
+            htonl(ntohl((*sack).end_seq) - (*seq).offset_after as u32)
         } else {
-            htonl(ntohl((*sack).end_seq) - (*seq).offset_before)
+            htonl(ntohl((*sack).end_seq) - (*seq).offset_before as u32)
         };
 
         // Update checksum
         unsafe {
-            inet_proto_csum_replace4(&(*tcph).check, skb, &(*sack).start_seq, &new_start_seq, 0);
-            inet_proto_csum_replace4(&(*tcph).check, skb, &(*sack).end_seq, &new_end_seq, 0);
+            inet_proto_csum_replace4(&(*tcph).check, skb, &(*sack).start_seq as *mut c_void, &new_start_seq as *mut c_void, 0);
+            inet_proto_csum_replace4(&(*tcph).check, skb, &(*sack).end_seq as *mut c_void, &new_end_seq as *mut c_void, 0);
         }
 
         (*sack).start_seq = new_start_seq;
@@ -278,14 +275,14 @@ pub unsafe extern "C" fn nf_ct_sack_adjust(
 
     let dir = unsafe { CTINFO2DIR(ctinfo) } as usize;
     let mut optoff = protoff + core::mem::size_of::<tcphdr>() as c_int;
-    let optend = protooff + (*(*ct).tcph).doff as c_int * 4;
+    let optend = protoff + (*(*ct).tcph).doff as c_int * 4;
 
     if unsafe { skb_ensure_writable(skb, optend) } != 0 {
         return 0;
     }
 
     while optoff < optend {
-        let op = (skb as *mut u8).offset(optoff as isize) as *mut u8;
+        let op = (skb as *mut u8).add(optoff as usize) as *mut u8;
         match (*op) {
             TCPOPT_EOL => return 1,
             TCPOPT_NOP => {
@@ -293,7 +290,7 @@ pub unsafe extern "C" fn nf_ct_sack_adjust(
                 continue;
             }
             _ => {
-                let len = *op.offset(1) as c_int;
+                let len = *op.add(1) as c_int;
                 if optoff + len > optend || len < 2 {
                     return 0;
                 }
@@ -354,32 +351,32 @@ pub unsafe extern "C" fn nf_ct_seq_adjust(
         return 0;
     }
 
-    let tcph = (skb as *mut u8).offset(protoff as isize) as *mut tcphdr;
+    let tcph = (skb as *mut u8).add(protoff as usize) as *mut tcphdr;
     let mut res = 1;
 
     unsafe {
-        if after(ntohl((*tcph).seq), (*this_way).correction_pos) {
-            seqoff = (*this_way).offset_after;
+        let seqoff = if after(ntohl((*tcph).seq), (*this_way).correction_pos) {
+            (*this_way).offset_after as u32
         } else {
-            seqoff = (*this_way).offset_before;
-        }
+            (*this_way).offset_before as u32
+        };
 
         let newseq = htonl(ntohl((*tcph).seq) + seqoff);
-        inet_proto_csum_replace4(&(*tcph).check, skb, &(*tcph).seq, &newseq, 0);
+        inet_proto_csum_replace4(&(*tcph).check, skb, &(*tcph).seq as *mut c_void, &newseq as *mut c_void, 0);
         (*tcph).seq = newseq;
 
         if (*tcph).ack != 0 {
-            if after(
-                ntohl((*tcph).ack_seq) - (*other_way).offset_before,
+            let ackoff = if after(
+                ntohl((*tcph).ack_seq) - (*other_way).offset_before as u32,
                 (*other_way).correction_pos,
             ) {
-                ackoff = (*other_way).offset_after;
+                (*other_way).offset_after as u32
             } else {
-                ackoff = (*other_way).offset_before;
-            }
+                (*other_way).offset_before as u32
+            };
 
             let newack = htonl(ntohl((*tcph).ack_seq) - ackoff);
-            inet_proto_csum_replace4(&(*tcph).check, skb, &(*tcph).ack_seq, &newack, 0);
+            inet_proto_csum_replace4(&(*tcph).check, skb, &(*tcph).ack_seq as *mut c_void, &newack as *mut c_void, 0);
             (*tcph).ack_seq = newack;
         }
 

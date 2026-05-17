@@ -14,11 +14,14 @@ use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_ulong;
 use core::mem;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
+pub const IPEXP_DESTROY: c_int = 1;
+pub const nf_conntrack_net_id: c_ulong = 1;
 
 // Type definitions
 #[repr(C)]
@@ -44,17 +47,9 @@ struct refcount_t {
 
 #[repr(C)]
 struct nf_conntrack_tuple {
-    src: nf_conntrack_addr,
-    dst: nf_conntrack_addr,
+    src: nf_inet_addr,
+    dst: nf_inet_addr,
     protonum: u8,
-}
-
-#[repr(C)]
-struct nf_conntrack_addr {
-    u3: [u32; 4],
-    u: struct {
-        all: u16,
-    },
 }
 
 #[repr(C)]
@@ -62,7 +57,7 @@ struct nf_conntrack_expect {
     hnode: hlist_node,
     lnode: hlist_node,
     master: *mut nf_conn,
-    use: refcount_t,
+    use_: refcount_t,
     timeout: timer_list,
     class: c_uint,
     tuple: nf_conntrack_tuple,
@@ -74,7 +69,7 @@ struct nf_conntrack_expect {
 #[repr(C)]
 struct nf_conn {
     ct_general: struct {
-        use: atomic_t,
+        use_: atomic_t,
     },
     // ... other fields as needed
 }
@@ -92,11 +87,6 @@ struct nf_conn_help {
 #[repr(C)]
 struct nf_conntrack_net {
     expect_count: c_uint,
-}
-
-#[repr(C)]
-struct net {
-    // ... fields as needed
 }
 
 // Function implementations
@@ -149,7 +139,7 @@ pub unsafe extern "C" fn __nf_ct_expect_find(
 
     let h = nf_ct_expect_dst_hash(net, tuple);
     let head = &(*nf_ct_expect_hash.offset(h as isize));
-    
+
     let mut i = hlist_entry(head.first, nf_conntrack_expect, hnode);
     while !i.is_null() {
         if nf_ct_exp_equal(tuple, i, zone, net) != 0 {
@@ -167,14 +157,14 @@ pub unsafe extern "C" fn nf_ct_expect_find_get(
     tuple: *const nf_conntrack_tuple,
 ) -> *mut nf_conntrack_expect {
     let mut i: *mut nf_conntrack_expect = ptr::null_mut();
-    
+
     rcu_read_lock();
     i = __nf_ct_expect_find(net, zone, tuple);
-    if !i.is_null() && refcount_inc_not_zero(&(*i).use) == 0 {
+    if !i.is_null() && refcount_inc_not_zero(&(*i).use_) == 0 {
         i = ptr::null_mut();
     }
     rcu_read_unlock();
-    
+
     i
 }
 
@@ -198,14 +188,7 @@ extern "C" {
     fn atomic_inc_not_zero(atomic: *mut atomic_t) -> c_int;
     fn nf_ct_is_dying(ct: *mut nf_conn) -> c_int;
     fn nf_ct_put(ct: *mut nf_conn);
-    fn nf_ct_is_confirmed(ct: *mut nf_conn) -> c_int;
-    fn nf_ct_is_dying(ct: *mut nf_conn) -> c_int;
     fn nf_ct_delete(ct: *mut nf_conn);
-    fn nf_ct_remove_expect(exp: *mut nf_conntrack_expect) -> c_int;
-    fn nf_ct_remove_expectations(ct: *mut nf_conn);
-    fn expect_clash(a: *const nf_conntrack_expect, b: *const nf_conntrack_expect) -> c_int;
-    fn expect_matches(a: *const nf_conntrack_expect, b: *const nf_conntrack_expect) -> c_int;
-    fn master_matches(a: *const nf_conntrack_expect, b: *const nf_conntrack_expect, flags: c_uint) -> c_int;
     fn nf_ct_unexpect_related(exp: *mut nf_conntrack_expect);
     fn nf_ct_expect_alloc(me: *mut nf_conn) -> *mut nf_conntrack_expect;
     fn nf_ct_expect_init(exp: *mut nf_conntrack_expect, class: c_uint, family: c_int, saddr: *const nf_inet_addr, daddr: *const nf_inet_addr, proto: u8, src: *const u16, dst: *const u16);

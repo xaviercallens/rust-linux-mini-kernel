@@ -22,12 +22,14 @@ pub const EAGAIN: c_int = -11;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_rule {
     // Opaque structure - actual fields defined in Linux kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib4_rule {
     common: fib_rule,
     dst_len: u8,
@@ -42,24 +44,28 @@ pub struct fib4_rule {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_result {
     // Opaque structure - actual fields defined in Linux kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_table {
     // Opaque structure - actual fields defined in Linux kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_lookup_arg {
     result: *mut fib_result,
     flags: c_uint,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_rules_ops {
     family: c_int,
     rule_size: c_uint,
@@ -79,11 +85,13 @@ pub struct fib_rules_ops {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     ipv4: net_ipv4,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_ipv4 {
     rules_ops: *mut fib_rules_ops,
     fib_has_custom_rules: bool,
@@ -93,6 +101,7 @@ pub struct net_ipv4 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi4 {
     daddr: u32,
     saddr: u32,
@@ -103,11 +112,13 @@ pub struct flowi4 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi {
     u: flowi4,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_rule_hdr {
     dst_len: u8,
     src_len: u8,
@@ -116,12 +127,14 @@ pub struct fib_rule_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nlattr {
     len: c_ushort,
     type_: c_ushort,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct netlink_ext_ack {
     _private: [u8; 0],
 }

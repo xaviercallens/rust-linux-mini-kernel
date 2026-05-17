@@ -13,6 +13,7 @@
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr::{self, NonNull};
+use kernel_types::*;
 
 // Constants from C
 pub const IPPROTO_TCP: u8 = 6;
@@ -29,117 +30,106 @@ pub const NF_NAT_MANIP_DST: c_int = 1;
 
 // Type definitions
 #[repr(C)]
-pub struct in_addr {
-    pub s_addr: u32,
-}
-
-#[repr(C)]
-pub struct iphdr {
-    pub ihl: u8,
-    pub version: u8,
-    pub tos: u8,
-    pub tot_len: u16,
-    pub id: u16,
-    pub frag_off: u16,
-    pub ttl: u8,
-    pub protocol: u8,
-    pub check: u16,
-    pub saddr: u32,
-    pub daddr: u32,
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct udphdr {
-    pub source: u16,
-    pub dest: u16,
-    pub len: u16,
-    pub check: u16,
+    pub source: __be16,
+    pub dest: __be16,
+    pub len: __be16,
+    pub check: __be16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tcphdr {
-    pub source: u16,
-    pub dest: u16,
-    pub seq: u32,
-    pub ack_seq: u32,
-    pub doff: u8,
-    pub _res1: u8,
-    pub _res2: u8,
-    pub _res3: u8,
-    pub check: u16,
+    pub source: __be16,
+    pub dest: __be16,
+    pub seq: __be32,
+    pub ack_seq: __be32,
+    pub doff: __u8,
+    pub _res1: __u8,
+    pub _res2: __u8,
+    pub _res3: __u8,
+    pub check: __be16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct icmphdr {
-    pub type_: u8,
-    pub code: u8,
-    pub checksum: u16,
-    pub un: [u8; 4],
+    pub type_: __u8,
+    pub code: __u8,
+    pub checksum: __be16,
+    pub un: [__u8; 4],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct icmp6hdr {
-    pub icmp6_type: u8,
-    pub icmp6_code: u8,
-    pub icmp6_cksum: u16,
-    pub icmp6_identifier: u16,
+    pub icmp6_type: __u8,
+    pub icmp6_code: __u8,
+    pub icmp6_cksum: __be16,
+    pub icmp6_identifier: __be16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sctphdr {
-    pub source: u16,
-    pub dest: u16,
-    pub verification_tag: u32,
-    pub checksum: u32,
+    pub source: __be16,
+    pub dest: __be16,
+    pub verification_tag: __be32,
+    pub checksum: __be32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dccp_hdr {
-    pub dccph_sport: u16,
-    pub dccph_dport: u16,
-    pub dccph_type: u8,
-    pub dccph_code: u8,
-    pub dccph_checksum: u16,
+    pub dccph_sport: __be16,
+    pub dccph_dport: __be16,
+    pub dccph_type: __u8,
+    pub dccph_code: __u8,
+    pub dccph_checksum: __be16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
     pub src: nf_conntrack_tuple_address,
     pub dst: nf_conntrack_tuple_address,
-    pub protonum: u8,
+    pub protonum: __u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union nf_conntrack_tuple_address {
     pub u3: in_addr,
     pub u: nf_conntrack_tuple_proto,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_proto {
-    pub tcp: u16,
-    pub udp: u16,
-    pub sctp: u16,
-    pub dccp: u16,
-    pub icmp: u16,
-    pub gre: u16,
+    pub tcp: __be16,
+    pub udp: __be16,
+    pub sctp: __be16,
+    pub dccp: __be16,
+    pub icmp: __be16,
+    pub gre: __be16,
 }
 
 // Function prototypes for external functions
 extern "C" {
-    fn skb_ensure_writable(skb: *mut c_void, len: c_uint) -> c_int;
+    fn skb_ensure_writable(skb: *mut sk_buff, len: c_uint) -> c_int;
     fn inet_proto_csum_replace2(
-        check: *mut u16,
-        skb: *mut c_void,
-        old: u16,
-        new: u16,
+        check: *mut __be16,
+        skb: *mut sk_buff,
+        old: __be16,
+        new: __be16,
         pseudo: bool,
     );
-    fn sctp_compute_cksum(skb: *mut c_void, hdroff: c_uint) -> u32;
+    fn sctp_compute_cksum(skb: *mut sk_buff, hdroff: c_uint) -> __be32;
     fn nf_csum_update(
-        skb: *mut c_void,
+        skb: *mut sk_buff,
         iphdroff: c_uint,
-        check: *mut u16,
+        check: *mut __be16,
         t: *const nf_conntrack_tuple,
         maniptype: c_int,
     );
@@ -147,7 +137,7 @@ extern "C" {
 
 // Internal functions
 fn __udp_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdr: *mut udphdr,
     tuple: *const nf_conntrack_tuple,
@@ -159,9 +149,9 @@ fn __udp_manip_pkt(
         let tuple = &*tuple;
 
         let newport = if maniptype == NF_NAT_MANIP_SRC {
-            (*tuple.src.u.udp).wrapping_cast::<u16>()
+            tuple.src.u.udp
         } else {
-            (*tuple.dst.u.udp).wrapping_cast::<u16>()
+            tuple.dst.u.udp
         };
 
         let portptr = if maniptype == NF_NAT_MANIP_SRC {
@@ -176,7 +166,7 @@ fn __udp_manip_pkt(
 
             // SAFETY: Checksum validation follows C standard
             if hdr.check == 0 {
-                *hdr.check = 0xBABE; // CSUM_MANGLED_0 equivalent
+                hdr.check = 0xBABE; // CSUM_MANGLED_0 equivalent
             }
         }
 
@@ -185,14 +175,14 @@ fn __udp_manip_pkt(
 }
 
 fn udp_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
     maniptype: c_int,
 ) -> bool {
     unsafe {
-        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<udphdr>()) != 0 {
+        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<udphdr>() as c_uint) != 0 {
             return false;
         }
 
@@ -204,14 +194,14 @@ fn udp_manip_pkt(
 
 #[cfg(feature = "udplite")]
 fn udplite_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
     maniptype: c_int,
 ) -> bool {
     unsafe {
-        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<udphdr>()) != 0 {
+        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<udphdr>() as c_uint) != 0 {
             return false;
         }
 
@@ -223,7 +213,7 @@ fn udplite_manip_pkt(
 
 #[cfg(not(feature = "udplite"))]
 fn udplite_manip_pkt(
-    _: *mut c_void,
+    _: *mut sk_buff,
     _: c_uint,
     _: c_uint,
     _: *const nf_conntrack_tuple,
@@ -233,7 +223,7 @@ fn udplite_manip_pkt(
 }
 
 fn sctp_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
@@ -277,7 +267,7 @@ fn sctp_manip_pkt(
 }
 
 fn tcp_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
@@ -324,7 +314,7 @@ fn tcp_manip_pkt(
 }
 
 fn dccp_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
@@ -374,14 +364,14 @@ fn dccp_manip_pkt(
 }
 
 fn icmp_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
     maniptype: c_int,
 ) -> bool {
     unsafe {
-        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmphdr>()) != 0 {
+        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmphdr>() as c_uint) != 0 {
             return false;
         }
 
@@ -393,11 +383,11 @@ fn icmp_manip_pkt(
                 inet_proto_csum_replace2(
                     &mut hdr.checksum,
                     skb,
-                    hdr.un[0],
+                    hdr.un[0] as __be16,
                     (*tuple).src.u.icmp,
                     false,
                 );
-                hdr.un[0] = (*tuple).src.u.icmp;
+                hdr.un[0] = (*tuple).src.u.icmp as __u8;
             }
             _ => return true,
         }
@@ -406,14 +396,14 @@ fn icmp_manip_pkt(
 }
 
 fn icmpv6_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
     maniptype: c_int,
 ) -> bool {
     unsafe {
-        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmp6hdr>()) != 0 {
+        if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmp6hdr>() as c_uint) != 0 {
             return false;
         }
 
@@ -435,7 +425,7 @@ fn icmpv6_manip_pkt(
 }
 
 fn gre_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
@@ -448,19 +438,19 @@ fn gre_manip_pkt(
                 return false;
             }
 
-            let greh = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut u8;
-            let greh = greh as *mut u16;
+            let greh = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut __u8;
+            let greh = greh as *mut __be16;
 
             if maniptype != NF_NAT_MANIP_DST {
                 return true;
             }
 
-            match (*greh as u16) & 0x8000 {
+            match (*greh as __be16) & 0x8000 {
                 0x0000 => {
                     // GREv0 - no NAT
                 }
                 0x8000 => {
-                    let pgreh = greh as *mut u32;
+                    let pgreh = greh as *mut __be32;
                     (*pgreh) = (*tuple).dst.u.gre;
                 }
                 _ => {
@@ -474,7 +464,7 @@ fn gre_manip_pkt(
 }
 
 fn l4proto_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
@@ -498,7 +488,7 @@ fn l4proto_manip_pkt(
 // Exported functions
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     iphdroff: c_uint,
     target: *const nf_conntrack_tuple,
     maniptype: c_int,
@@ -508,7 +498,7 @@ pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
         return -22; // EINVAL
     }
 
-    if skb_ensure_writable(skb, iphdroff + core::mem::size_of::<iphdr>()) != 0 {
+    if skb_ensure_writable(skb, iphdroff + core::mem::size_of::<iphdr>() as c_uint) != 0 {
         return -12; // ENOMEM
     }
 
@@ -546,7 +536,7 @@ mod tests {
     fn test_udp_manipulation() {
         // This would require a real skb buffer to test
         // For demonstration purposes, we just verify the function signatures
-        assert_eq!(size_of::<udphdr>(), 8);
-        assert_eq!(size_of::<tcphdr>(), 20);
+        assert_eq!(core::mem::size_of::<udphdr>(), 8);
+        assert_eq!(core::mem::size_of::<tcphdr>(), 20);
     }
 }

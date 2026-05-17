@@ -7,7 +7,6 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-
 use kernel_types::*;
 use core::ptr;
 use libc::{c_int, c_uint, c_void};
@@ -19,28 +18,33 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct NotifierBlock {
     // Opaque structure - fields not accessed directly
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct FIBNotifierInfo {
     family: c_int,
     // Other fields not accessed in this implementation
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Net {
-    ipv4: NetIPv4,
+    ipv4: *mut NetIPv4,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct NetIPv4 {
     fib_seq: c_uint,
     notifier_ops: *mut FIBNotifierOps,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct FIBNotifierOps {
     family: c_int,
     fib_seq_read: Option<unsafe extern "C" fn(net: *mut Net) -> c_uint>,
@@ -51,6 +55,7 @@ pub struct FIBNotifierOps {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct NetlinkExtAck {
     // Opaque structure - fields not accessed directly
 }
@@ -86,6 +91,9 @@ pub unsafe extern "C" fn call_fib4_notifier(
     info: *mut FIBNotifierInfo,
 ) -> c_int {
     // SAFETY: Caller must ensure info is valid
+    if info.is_null() {
+        return EINVAL;
+    }
     (*info).family = AF_INET;
     call_fib_notifier(nb, event_type, info)
 }
@@ -97,6 +105,9 @@ pub unsafe extern "C" fn call_fib4_notifiers(
     info: *mut FIBNotifierInfo,
 ) -> c_int {
     // ASSERT_RTNL() - RTNL lock must be held by caller
+    if net.is_null() || info.is_null() {
+        return EINVAL;
+    }
     (*info).family = AF_INET;
     (*(*net).ipv4).fib_seq += 1;
     call_fib_notifiers(net, event_type, info)
@@ -105,6 +116,9 @@ pub unsafe extern "C" fn call_fib4_notifiers(
 #[no_mangle]
 pub unsafe extern "C" fn fib4_seq_read(net: *mut Net) -> c_uint {
     // ASSERT_RTNL() - RTNL lock must be held by caller
+    if net.is_null() {
+        return 0;
+    }
     (*(*net).ipv4).fib_seq + fib4_rules_seq_read(net)
 }
 
@@ -114,8 +128,11 @@ pub unsafe extern "C" fn fib4_dump(
     nb: *mut NotifierBlock,
     extack: *mut c_void,
 ) -> c_int {
-    let mut err: c_int = 0;
-    err = fib4_rules_dump(net, nb, extack);
+    if net.is_null() || nb.is_null() {
+        return EINVAL;
+    }
+
+    let mut err: c_int = fib4_rules_dump(net, nb, extack);
     if err != 0 {
         return err;
     }
@@ -124,6 +141,10 @@ pub unsafe extern "C" fn fib4_dump(
 
 #[no_mangle]
 pub unsafe extern "C" fn fib4_notifier_init(net: *mut Net) -> c_int {
+    if net.is_null() {
+        return EINVAL;
+    }
+
     (*(*net).ipv4).fib_seq = 0;
 
     let ops = fib_notifier_ops_register(&FIB4_NOTIFIER_OPS_TEMPLATE as *const FIBNotifierOps, net);
@@ -137,8 +158,14 @@ pub unsafe extern "C" fn fib4_notifier_init(net: *mut Net) -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn fib4_notifier_exit(net: *mut Net) {
+    if net.is_null() {
+        return;
+    }
+
     let ops = (*(*net).ipv4).notifier_ops;
-    fib_notifier_ops_unregister(ops);
+    if !ops.is_null() {
+        fib_notifier_ops_unregister(ops);
+    }
 }
 
 // Helper function for error handling

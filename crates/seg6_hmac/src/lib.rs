@@ -7,11 +7,10 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use core::ffi::c_int;
-use core::ffi::c_void;
-use core::ffi::size_t;
+use core::ffi::{c_int, c_void};
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -21,11 +20,7 @@ pub const EMSGSIZE: c_int = -92;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_sr_hdr {
     pub hdrlen: u8,
     pub flags: u8,
@@ -34,6 +29,7 @@ pub struct ipv6_sr_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sr6_tlv_hmac {
     pub tlvhdr: [u8; 2], // Assuming TLV header structure
     pub hmackeyid: u32,
@@ -41,6 +37,7 @@ pub struct sr6_tlv_hmac {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct seg6_hmac_info {
     pub hmackeyid: u32,
     pub alg_id: u8,
@@ -51,6 +48,7 @@ pub struct seg6_hmac_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct seg6_hmac_algo {
     pub alg_id: u8,
     pub name: *const u8,
@@ -59,6 +57,7 @@ pub struct seg6_hmac_algo {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rhashtable_params {
     pub head_offset: size_t,
     pub key_offset: size_t,
@@ -422,3 +421,14 @@ fn idev_require_hmac(idev: *mut c_void) -> c_int {
 
 // Per-CPU variables
 static hmac_ring: [u8; SEG6_HMAC_RING_SIZE] = [0; SEG6_HMAC_RING_SIZE];
+
+// Helper function to get rhashtable_params
+fn rht_params() -> rhashtable_params {
+    rhashtable_params {
+        head_offset: 0,
+        key_offset: 0,
+        key_len: 0,
+        automatic_shrinking: 0,
+        obj_cmpfn: seg6_hmac_cmpfn,
+    }
+}

@@ -34,17 +34,20 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rcu_head {
     next: *mut rcu_head,
     func: unsafe extern "C" fn(*mut rcu_head),
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct hlist_head {
     first: *mut c_void,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_alias {
     rcu: rcu_head,
     fa_tos: c_uint,
@@ -54,6 +57,7 @@ pub struct fib_alias {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct key_vector {
     key: c_uint,
     pos: u8,
@@ -63,6 +67,7 @@ pub struct key_vector {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tnode {
     rcu: rcu_head,
     empty_children: c_uint,
@@ -72,6 +77,7 @@ pub struct tnode {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct trie {
     kv: key_vector,
 }

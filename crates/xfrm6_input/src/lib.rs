@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'xfrm6_input':
+
+```rust
 //! IPv6 XFRM (IPsec) Input Processing
 //!
 //! This module implements the IPv6-specific input path for XFRM (IPsec) in the Linux kernel.
@@ -16,7 +19,7 @@
 #![allow(non_camel_case_types)]  // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const IPPROTO_ESP: c_int = 50;
@@ -31,87 +34,48 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct sk_buff {
-    // Opaque structure - actual fields defined in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ip6_tnl {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ipv6hdr {
-    payload_len: u16,
-    // Other fields omitted for brevity
-}
-
-#[repr(C)]
-pub struct xfrm_offload {
-    flags: u32,
-}
-
-#[repr(C)]
-pub struct sock {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct xfrm_state {
-    props: xfrm_state_props,
-    km: xfrm_state_km,
-    curlft: xfrm_state_curlft,
-    type_: *const xfrm_state_type,
-    lock: spinlock_t,
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state_props {
     flags: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state_km {
     state: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state_curlft {
     bytes: u64,
     packets: u64,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state_type {
     input: extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int,
 }
 
 #[repr(C)]
-pub struct spinlock_t {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sec_path {
     xvec: [*mut xfrm_state; XFRM_MAX_DEPTH as usize],
     len: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_address_t {
-    // IPv6 address (16 bytes)
-    data: [u8; 16],
+    // IPv6 address (128-bit)
+    data: in6_addr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in6addr_any {
-    data: [u8; 16],
+    data: in6_addr,
 }
 
 // Function pointers and externs
@@ -160,16 +124,16 @@ fn offsetof<T, U>(_: &T, _: &U) -> usize {
 #[inline]
 fn XFRM_TUNNEL_SKB_CB(skb: *mut sk_buff) -> *mut ip6_tnl {
     unsafe {
-        let cb: *mut c_void = (*skb).offset(offsetof!(sk_buff, cb)) as *mut c_void;
-        &mut (*cb).cast::<ip6_tnl>() as *mut ip6_tnl
+        let cb: *mut c_void = (*skb).cb as *mut c_void;
+        cb.cast::<ip6_tnl>()
     }
 }
 
 #[inline]
 fn XFRM_SPI_SKB_CB(skb: *mut sk_buff) -> *mut xfrm_spi_info {
     unsafe {
-        let cb: *mut c_void = (*skb).offset(offsetof!(sk_buff, cb)) as *mut c_void;
-        &mut (*cb).cast::<xfrm_spi_info>() as *mut xfrm_spi_info
+        let cb: *mut c_void = (*skb).cb as *mut c_void;
+        cb.cast::<xfrm_spi_info>()
     }
 }
 
@@ -231,25 +195,25 @@ pub unsafe extern "C" fn xfrm6_transport_finish2(
 /// # Returns
 /// 0 on success
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_transport_finish(skb: *mut sk_buff, async: c_int) -> c_int {
+pub unsafe extern "C" fn xfrm6_transport_finish(skb: *mut sk_buff, async_flag: c_int) -> c_int {
     let xo = xfrm_offload(skb);
     let nhlen = (*skb).data - skb_network_header(skb);
-    
-    (*skb_network_header(skb).offset(IP6CB(skb).nhoff)) = 
+
+    (*skb_network_header(skb).offset(IP6CB(skb).nhoff)) =
         (*XFRM_MODE_SKB_CB(skb)).protocol;
-    
+
     // SAFETY: Caller guarantees skb is valid
     unsafe {
         __skb_push(skb, nhlen);
         (*ipv6_hdr(skb)).payload_len = ((skb).len - size_of::<ipv6hdr>()) as u16;
         skb_postpush_rcsum(skb, skb_network_header(skb), nhlen);
-        
+
         if !xo.is_null() && (*xo).flags & XFRM_GRO != 0 {
             skb_mac_header_rebuild(skb);
             skb_reset_transport_header(skb);
             return 0;
         }
-        
+
         NF_HOOK(
             NFPROTO_IPV6,
             NF_INET_PRE_ROUTING,
@@ -268,6 +232,7 @@ pub unsafe extern "C" fn xfrm6_transport_finish(skb: *mut sk_buff, async: c_int)
 ///
 /// # Safety
 /// - `sk` must be a valid pointer to sock
+/// - `sk` must be a valid pointer to sock
 /// - `skb` must be a valid pointer to sk_buff
 ///
 /// # Returns
@@ -280,20 +245,20 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
     let up = udp_sk(sk);
     let uh = udp_hdr(skb);
     let len = (*skb).len - size_of::<udphdr>();
-    
+
     // SAFETY: Caller guarantees sk and skb are valid
     unsafe {
         if !(*up).encap_type {
             return 1;
         }
-        
+
         if !pskb_may_pull(skb, size_of::<udphdr>() + min(len, 8)) {
             return 1;
         }
-        
+
         let udpdata = (*uh).offset(size_of::<udphdr>()) as *mut u8;
         let udpdata32 = udpdata as *mut u32;
-        
+
         match (*up).encap_type {
             UDP_ENCAP_ESPINUDP => {
                 if len == 1 && *udpdata == 0xff {
@@ -321,21 +286,21 @@ pub unsafe extern "C" fn xfrm6_udp_encap_rcv(
                 }
             }
         }
-        
+
         if skb_unclone(skb, GFP_ATOMIC) != 0 {
         }
-        
+
         let ip6h = ipv6_hdr(skb);
         (*ip6h).payload_len = (*ip6h).payload_len as u16 - len as u16;
-        
+
         if (*skb).len < size_of::<ipv6hdr>() + len {
         }
-        
+
         __skb_pull(skb, len);
         skb_reset_transport_header(skb);
-        
+
         return xfrm6_rcv_encap(skb, IPPROTO_ESP, 0, (*up).encap_type);
-        
+
         kfree_skb(skb);
         0
     }
@@ -393,19 +358,19 @@ pub unsafe extern "C" fn xfrm6_input_addr(
     let net = dev_net((*skb).dev);
     let mut sp = sec_path_set(skb);
     let mut x: *mut xfrm_state = ptr::null_mut();
-    
+
     if sp.is_null() {
         XFRM_INC_STATS(net, LINUX_MIB_XFRMINERROR);
     }
-    
+
     if 1 + (*sp).len == XFRM_MAX_DEPTH {
         XFRM_INC_STATS(net, LINUX_MIB_XFRMINBUFFERERROR);
     }
-    
+
     for i in 0..3 {
         let mut dst: *mut xfrm_address_t = ptr::null_mut();
         let mut src: *mut xfrm_address_t = ptr::null_mut();
-        
+
         match i {
             0 => {
                 dst = daddr;
@@ -413,14 +378,14 @@ pub unsafe extern "C" fn xfrm6_input_addr(
             },
             1 => {
                 dst = daddr;
-                src = &in6addr_any { data: [0; 16] };
+                src = &in6addr_any { data: in6_addr { in6_u: in6_addr_union { u6_addr32: [0, 0, 0, 0] } } };
             },
             _ => {
-                dst = &in6addr_any { data: [0; 16] };
-                src = &in6addr_any { data: [0; 16] };
+                dst = &in6addr_any { data: in6_addr { in6_u: in6_addr_union { u6_addr32: [0, 0, 0, 0] } } };
+                src = &in6addr_any { data: in6_addr { in6_u: in6_addr_union { u6_addr32: [0, 0, 0, 0] } } };
             },
         }
-        
+
         x = xfrm_state_lookup_byaddr(
             net,
             (*skb).mark,
@@ -429,13 +394,13 @@ pub unsafe extern "C" fn xfrm6_input_addr(
             proto as c_int,
             AF_INET6,
         );
-        
+
         if x.is_null() {
             continue;
         }
-        
+
         spin_lock(&(*x).lock);
-        
+
         if ((!i || (*x).props.flags & XFRM_STATE_WILDRECV != 0) &&
             (*x).km.state == XFRM_STATE_VALID &&
             xfrm_state_check_expire(x) == 0) {
@@ -446,26 +411,26 @@ pub unsafe extern "C" fn xfrm6_input_addr(
         } else {
             spin_unlock(&(*x).lock);
         }
-        
+
         xfrm_state_put(x);
         x = ptr::null_mut();
     }
-    
+
     if x.is_null() {
         XFRM_INC_STATS(net, LINUX_MIB_XFRMINNOSTATES);
         XFRM_AUDIT_STATE_NOTFOUND_SIMPLE(skb, AF_INET6);
     }
-    
+
     (*sp).xvec[(*sp).len] = x;
     (*sp).len += 1;
-    
+
     spin_lock(&(*x).lock);
     (*x).curlft.bytes += (*skb).len as u64;
     (*x).curlft.packets += 1;
     spin_unlock(&(*x).lock);
-    
+
     return 1;
-    
+
     -1
 }
 

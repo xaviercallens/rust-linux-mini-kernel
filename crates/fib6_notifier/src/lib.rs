@@ -7,7 +7,6 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-
 use kernel_types::*;
 use core::ffi::c_int;
 use core::ffi::c_uint;
@@ -21,16 +20,8 @@ pub const EINVAL: c_int = -22;
 
 // Type definitions
 #[repr(C)]
-struct net;
-
-#[repr(C)]
 struct ipv6_net {
     notifier_ops: *mut fib_notifier_ops,
-}
-
-#[repr(C)]
-struct net {
-    ipv6: ipv6_net,
 }
 
 #[repr(C)]
@@ -45,8 +36,8 @@ struct fib_notifier_info {
 #[repr(C)]
 struct fib_notifier_ops {
     family: c_int,
-    fib_seq_read: unsafe extern "C" fn(*mut net) -> c_uint,
-    fib_dump: unsafe extern "C" fn(*mut net, *mut notifier_block, *mut c_void) -> c_int,
+    fib_seq_read: unsafe extern "C" fn(*mut c_void) -> c_uint,
+    fib_dump: unsafe extern "C" fn(*mut c_void, *mut notifier_block, *mut c_void) -> c_int,
     owner: *mut c_void,
 }
 
@@ -57,16 +48,16 @@ extern "C" {
         event_type: c_int,
         info: *mut fib_notifier_info,
     ) -> c_int;
-    fn call_fib_notifiers(net: *mut net, event_type: c_int, info: *mut fib_notifier_info) -> c_int;
+    fn call_fib_notifiers(net: *mut c_void, event_type: c_int, info: *mut fib_notifier_info) -> c_int;
     fn fib_notifier_ops_register(
         ops: *const fib_notifier_ops,
-        net: *mut net,
+        net: *mut c_void,
     ) -> *mut fib_notifier_ops;
     fn fib_notifier_ops_unregister(ops: *mut fib_notifier_ops);
-    fn fib6_tables_seq_read(net: *mut net) -> c_uint;
-    fn fib6_rules_seq_read(net: *mut net) -> c_uint;
-    fn fib6_rules_dump(net: *mut net, nb: *mut notifier_block, extack: *mut c_void) -> c_int;
-    fn fib6_tables_dump(net: *mut net, nb: *mut notifier_block, extack: *mut c_void) -> c_int;
+    fn fib6_tables_seq_read(net: *mut c_void) -> c_uint;
+    fn fib6_rules_seq_read(net: *mut c_void) -> c_uint;
+    fn fib6_rules_dump(net: *mut c_void, nb: *mut notifier_block, extack: *mut c_void) -> c_int;
+    fn fib6_tables_dump(net: *mut c_void, nb: *mut notifier_block, extack: *mut c_void) -> c_int;
     fn IS_ERR(ptr: *mut fib_notifier_ops) -> bool;
     fn PTR_ERR(ptr: *mut fib_notifier_ops) -> c_int;
 }
@@ -76,7 +67,7 @@ static FIB6_NOTIFIER_OPS_TEMPLATE: fib_notifier_ops = fib_notifier_ops {
     family: AF_INET6,
     fib_seq_read: fib6_seq_read,
     fib_dump: fib6_dump,
-    owner: 0 as *mut c_void,
+    owner: ptr::null_mut(),
 };
 
 // Function implementations
@@ -93,7 +84,7 @@ pub unsafe extern "C" fn call_fib6_notifier(
 
 #[no_mangle]
 pub unsafe extern "C" fn call_fib6_notifiers(
-    net: *mut net,
+    net: *mut c_void,
     event_type: c_int,
     info: *mut fib_notifier_info,
 ) -> c_int {
@@ -103,7 +94,7 @@ pub unsafe extern "C" fn call_fib6_notifiers(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fib6_seq_read(net: *mut net) -> c_uint {
+pub unsafe extern "C" fn fib6_seq_read(net: *mut c_void) -> c_uint {
     let tables_seq = fib6_tables_seq_read(net);
     let rules_seq = fib6_rules_seq_read(net);
     tables_seq + rules_seq
@@ -111,11 +102,11 @@ pub unsafe extern "C" fn fib6_seq_read(net: *mut net) -> c_uint {
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_dump(
-    net: *mut net,
+    net: *mut c_void,
     nb: *mut notifier_block,
     extack: *mut c_void,
 ) -> c_int {
-    let mut err = fib6_rules_dump(net, nb, extack);
+    let err = fib6_rules_dump(net, nb, extack);
     if err != 0 {
         return err;
     }
@@ -123,19 +114,21 @@ pub unsafe extern "C" fn fib6_dump(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fib6_notifier_init(net: *mut net) -> c_int {
+pub unsafe extern "C" fn fib6_notifier_init(net: *mut c_void) -> c_int {
     let ops = fib_notifier_ops_register(&FIB6_NOTIFIER_OPS_TEMPLATE, net);
     if IS_ERR(ops) {
         return PTR_ERR(ops);
     }
     // SAFETY: net is valid and has an ipv6 field with notifier_ops
-    (*net).ipv6.notifier_ops = ops;
+    let ipv6_net_ptr = net as *mut ipv6_net;
+    (*ipv6_net_ptr).notifier_ops = ops;
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fib6_notifier_exit(net: *mut net) {
-    let ops = (*net).ipv6.notifier_ops;
+pub unsafe extern "C" fn fib6_notifier_exit(net: *mut c_void) {
+    let ipv6_net_ptr = net as *mut ipv6_net;
+    let ops = (*ipv6_net_ptr).notifier_ops;
     fib_notifier_ops_unregister(ops);
 }
 

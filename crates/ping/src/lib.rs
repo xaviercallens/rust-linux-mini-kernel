@@ -6,11 +6,11 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::c_void;
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -21,11 +21,13 @@ pub const EDESTADDRREQ: c_int = -39;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in6_addr {
     pub s6_addr: [u8; 16],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct sockaddr_in6 {
     pub sin6_family: u16,
     pub sin6_port: u16,
@@ -35,28 +37,7 @@ pub struct sockaddr_in6 {
 }
 
 #[repr(C)]
-pub struct sock;
-#[repr(C)]
-pub struct msghdr;
-#[repr(C)]
-pub struct sk_buff;
-#[repr(C)]
-pub struct net;
-#[repr(C)]
-pub struct net_device;
-#[repr(C)]
-pub struct dst_entry;
-#[repr(C)]
-pub struct rt6_info;
-#[repr(C)]
-pub struct inet_sock;
-#[repr(C)]
-pub struct ipv6_pinfo;
-#[repr(C)]
-pub struct flowi6;
-#[repr(C)]
-pub struct ipcm6_cookie;
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct pingfakehdr {
     pub icmph: icmp6hdr,
     pub msg: *mut msghdr,
@@ -65,6 +46,7 @@ pub struct pingfakehdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct icmp6hdr {
     pub icmp6_type: u8,
     pub icmp6_code: u8,
@@ -73,12 +55,14 @@ pub struct icmp6hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct icmp6_echo {
     pub id: u16,
     pub sequence: u16,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct proto {
     pub name: *const u8,
     pub owner: *mut c_void,
@@ -99,6 +83,7 @@ pub struct proto {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_protosw {
     pub type_: c_int,
     pub protocol: c_int,
@@ -284,7 +269,7 @@ pub unsafe extern "C" fn ping_v6_sendmsg(sk: *mut sock, msg: *mut msghdr, len: s
     pfh.wcheck = 0;
     pfh.family = 10;
 
-    ipc6.hlimit = ip6_sk_dst_hoplimit(np, &mut fl6 as *mut _, dst);
+    ipc6.hlimit = ip6_sk_dst_hoplimit(np, &mut fl6 as *mut _ as *mut _, dst);
 
     lock_sock(sk);
     err = ip6_append_data(
@@ -410,7 +395,3 @@ pub unsafe extern "C" fn pingv6_exit() {
 
     inet6_unregister_protosw(&mut pingv6_protosw as *mut _);
 }
-
-// Exported symbols
-#[no_mangle]
-pub static mut pingv6_prot: proto = unsafe { core::mem::zeroed() };

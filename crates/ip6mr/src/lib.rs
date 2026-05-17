@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'ip6mr':
+
+```rust
 //! IPv6 multicast routing support for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -6,11 +9,11 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem::{self, size_of, transmute};
 use core::ptr::{self, NonNull};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -19,11 +22,7 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct flowi6 {
     pub daddr: in6_addr,
     pub saddr: in6_addr,
@@ -31,12 +30,14 @@ pub struct flowi6 {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     // ... fields as needed
     ipv6: ipv6_net,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_net {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     mr6_tables: list_head,
@@ -46,17 +47,20 @@ pub struct ipv6_net {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
     pub next: *mut list_head,
     pub prev: *mut list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib_rules_ops {
     // ... fields as needed
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct mr_table {
     list: list_head,
     id: u32,
@@ -66,16 +70,19 @@ pub struct mr_table {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rhltable {
     // ... fields as needed
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct timer_list {
     // ... fields as needed
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct mfc6_cache {
     mf6c_origin: in6_addr,
     mf6c_mcastgrp: in6_addr,
@@ -84,18 +91,21 @@ pub struct mfc6_cache {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct mfc6_cache_cmp_arg {
     mf6c_origin: in6_addr,
     mf6c_mcastgrp: in6_addr,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct mr_table_ops {
     rht_params: *const rhashtable_params,
     cmparg_any: *const mfc6_cache_cmp_arg,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rhashtable_params {
     head_offset: usize,
     key_offset: usize,
@@ -108,6 +118,7 @@ pub struct rhashtable_params {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rhashtable_compare_arg {
     key: *const c_void,
 }
@@ -119,8 +130,8 @@ static mut mrt_cachep: *mut c_void = ptr::null_mut();
 
 #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
 static mut ip6mr_mr_table_ops_cmparg_any: mfc6_cache_cmp_arg = mfc6_cache_cmp_arg {
-    mf6c_origin: in6_addr { s6_addr: [0; 16] },
-    mf6c_mcastgrp: in6_addr { s6_addr: [0; 16] },
+    mf6c_origin: in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } },
+    mf6c_mcastgrp: in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } },
 };
 
 #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
@@ -158,7 +169,7 @@ pub unsafe extern "C" fn ip6mr_hash_cmp(
 pub unsafe extern "C" fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool {
     let a = &*a;
     let b = &*b;
-    a.s6_addr == b.s6_addr
+    a.in6_u.u6_addr8 == b.in6_u.u6_addr8
 }
 
 #[no_mangle]

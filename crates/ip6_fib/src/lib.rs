@@ -20,27 +20,32 @@ pub const INT_MAX: c_int = 2147483647;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
     pub next: *mut list_head,
     pub prev: *mut list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct hlist_head {
     pub first: *mut hlist_node,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct hlist_node {
     pub next: *mut hlist_node,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     pub ipv6: ipv6_net,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_net {
     pub fib6_walkers: list_head,
     pub fib6_walker_lock: spinlock_t,
@@ -52,16 +57,19 @@ pub struct ipv6_net {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rt6_stats {
     pub fib_nodes: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct spinlock_t {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_table {
     pub tb6_hlist: hlist_head,
     pub tb6_id: u32,
@@ -72,11 +80,13 @@ pub struct fib6_table {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inetpeer_base {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_node {
     pub fn_sernum: u32,
     pub __child: *mut fib6_node,
@@ -89,11 +99,13 @@ pub struct fib6_node {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rcu_head {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_info {
     pub fib6_node: *mut fib6_node,
     pub fib6_table: *mut fib6_table,
@@ -106,16 +118,19 @@ pub struct fib6_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_nh {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nexthop {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_walker {
     pub lh: list_head,
     pub net: *mut net,
@@ -127,6 +142,7 @@ pub struct fib6_walker {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_cleaner {
     pub w: fib6_walker,
     pub net: *mut net,

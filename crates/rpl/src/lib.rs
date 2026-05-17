@@ -14,11 +14,13 @@ const IPV6_RPL_BEST_ADDR_COMPRESSION: u8 = 15;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct in6_addr {
     s6_addr: [u8; 16],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_rpl_sr_hdr {
     pub nexthdr: u8,
     pub hdrlen: u8,

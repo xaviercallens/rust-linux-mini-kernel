@@ -7,7 +7,7 @@
 #![allow(non_camel_case_types)] // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -18,22 +18,20 @@ pub const EADDRNOTAVAIL: c_int = -99;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct work_struct {
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_device {
     pub ifindex: c_int,
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_dev {
     pub mc_list: *mut ifmcaddr6,
     pub mc_tomb: *mut ifmcaddr6,
@@ -43,12 +41,14 @@ pub struct inet6_dev {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_devconf {
     pub mldv1_unsolicited_report_interval: c_int,
     pub mldv2_unsolicited_report_interval: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ifmcaddr6 {
     pub next: *mut ifmcaddr6,
     pub mca_addr: in6_addr,
@@ -59,12 +59,7 @@ pub struct ifmcaddr6 {
 }
 
 #[repr(C)]
-pub struct ipv6_pinfo {
-    pub ipv6_mc_list: *mut ipv6_mc_socklist,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_mc_socklist {
     pub next: *mut ipv6_mc_socklist,
     pub addr: in6_addr,
@@ -74,12 +69,7 @@ pub struct ipv6_mc_socklist {
 }
 
 #[repr(C)]
-pub struct sock {
-    pub sk_omem_alloc: c_int,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct group_source_req {
     pub gsr_interface: c_int,
     pub gsr_group: in6_addr,
@@ -112,7 +102,7 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
     ifindex: c_int,
     addr: *const in6_addr,
 ) -> c_int {
-    let np = &mut (*sk).ipv6_pinfo;
+    let np = &mut (*sk).pinet6 as *mut *mut ipv6_pinfo;
     let net = ptr::null_mut(); // Placeholder for net namespace
 
     // Validate inputs
@@ -120,7 +110,7 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
         return -EINVAL;
     }
 
-    let mut lnk = &mut (*np).ipv6_mc_list;
+    let mut lnk = &mut (*(*np)).ipv6_mc_list;
     while let Some(mc_lst) = ptr::read(lnk) {
         if (ifindex == 0 || (*mc_lst).ifindex == ifindex) && ipv6_addr_equal(&(*mc_lst).addr, addr)
         {
@@ -144,7 +134,7 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
                 mc_lst,
                 ipv6_mc_socklist {
                     next: ptr::null_mut(),
-                    addr: in6_addr { s6_addr: [0; 16] },
+                    addr: in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } },
                     ifindex: 0,
                     sfmode: 0,
                     sflist: ptr::null_mut(),
@@ -180,7 +170,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
         return -EINVAL;
     }
 
-    let np = &mut (*sk).ipv6_pinfo;
+    let np = &mut (*sk).pinet6 as *mut *mut ipv6_pinfo;
     let net = ptr::null_mut(); // Placeholder for net namespace
 
     // Check if address is multicast
@@ -189,7 +179,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
     }
 
     // Check for existing entry
-    let mut pmc = (*np).ipv6_mc_list;
+    let mut pmc = (*(*np)).ipv6_mc_list;
     while !pmc.is_null() {
         if (ifindex == 0 || (*pmc).ifindex == ifindex) && ipv6_addr_equal(&(*pmc).addr, addr) {
             return -EADDRINUSE;
@@ -206,7 +196,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
 
     // Initialize new entry
     unsafe {
-        (*mc_lst).next = (*np).ipv6_mc_list;
+        (*mc_lst).next = (*(*np)).ipv6_mc_list;
         (*mc_lst).addr = *addr;
         (*mc_lst).ifindex = ifindex;
         (*mc_lst).sfmode = mode;
@@ -218,7 +208,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
         let group = &(*addr);
         let rt = rt6_lookup(net, group, ptr::null_mut(), 0, ptr::null_mut(), 0);
         if !rt.is_null() {
-            let dev = (*rt).dst.dev;
+            let dev = (*(rt as *mut sk_buff)).dst.dev;
             ip6_rt_put(rt);
             dev
         } else {
@@ -242,7 +232,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
     }
 
     // Add to list
-    (*np).ipv6_mc_list = mc_lst;
+    (*(*np)).ipv6_mc_list = mc_lst;
     0
 }
 
@@ -252,7 +242,7 @@ pub unsafe extern "C" fn ipv6_addr_is_multicast(addr: *const in6_addr) -> c_int 
     if addr.is_null() {
         return 0;
     }
-    let first_octet = (*addr).s6_addr[0];
+    let first_octet = (*addr).in6_u.u6_addr8[0];
     (first_octet & 0xF0) == 0xF0
 }
 
@@ -261,8 +251,8 @@ pub unsafe extern "C" fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr)
     if a.is_null() || b.is_null() {
         return 0;
     }
-    let a_bytes = &(*a).s6_addr;
-    let b_bytes = &(*b).s6_addr;
+    let a_bytes = &(*a).in6_u.u6_addr8;
+    let b_bytes = &(*b).in6_u.u6_addr8;
     a_bytes.iter().zip(b_bytes.iter()).all(|(x, y)| x == y) as c_int
 }
 
@@ -297,13 +287,13 @@ mod tests {
 
     #[test]
     fn test_ipv6_addr_is_multicast() {
-        let mut addr = in6_addr { s6_addr: [0; 16] };
-        addr.s6_addr[0] = 0xFF; // Multicast
+        let mut addr = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
+        addr.in6_u.u6_addr8[0] = 0xFF; // Multicast
         unsafe {
             assert_eq!(ipv6_addr_is_multicast(&addr), 1);
         }
 
-        addr.s6_addr[0] = 0x00; // Unicast
+        addr.in6_u.u6_addr8[0] = 0x00; // Unicast
         unsafe {
             assert_eq!(ipv6_addr_is_multicast(&addr), 0);
         }
@@ -311,14 +301,14 @@ mod tests {
 
     #[test]
     fn test_ipv6_addr_equal() {
-        let a = in6_addr { s6_addr: [0; 16] };
-        let b = in6_addr { s6_addr: [0; 16] };
+        let a = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
+        let b = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
         unsafe {
             assert_eq!(ipv6_addr_equal(&a, &b), 1);
         }
 
-        let mut c = in6_addr { s6_addr: [0; 16] };
-        c.s6_addr[0] = 1;
+        let mut c = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
+        c.in6_u.u6_addr8[0] = 1;
         unsafe {
             assert_eq!(ipv6_addr_equal(&a, &c), 0);
         }

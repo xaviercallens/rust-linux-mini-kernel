@@ -6,10 +6,9 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from Linux headers
 pub const IPPROTO_GRE: c_int = 47;
@@ -21,45 +20,18 @@ pub const CHECKSUM_PARTIAL: c_int = 2;
 pub const ENODEV: c_int = -19;
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
+pub const ENOENT: c_int = -2;
+pub const SKB_GSO_GRE: u16 = 1 << 12;
+
+// GRE flags
+pub const GRE_KEY: u16 = 1 << 1;
+pub const GRE_CSUM: u16 = 1 << 2;
 
 // Type definitions
 #[repr(C)]
 struct gre_base_hdr {
     flags: u16,
     protocol: u16,
-}
-
-#[repr(C)]
-struct sk_buff {
-    encapsulation: u8,
-    encap_hdr_csum: u8,
-    ip_summed: c_int,
-    csum_start: usize,
-    csum_offset: usize,
-    mac_len: u16,
-    protocol: u16,
-    dev: *mut net_device,
-    dst: *mut dst_entry,
-    inner_protocol: u16,
-    inner_network_offset: u16,
-    mac_header: u16,
-    transport_header: *mut c_void,
-    network_header: *mut c_void,
-    data: *mut c_void,
-    head: *mut c_void,
-    next: *mut sk_buff,
-    // ... many more fields in real sk_buff ...
-}
-
-#[repr(C)]
-struct net_device {
-    hw_enc_features: netdev_features_t,
-    features: netdev_features_t,
-}
-
-#[repr(C)]
-struct dst_entry {
-    // Simplified for this example
 }
 
 #[repr(C)]

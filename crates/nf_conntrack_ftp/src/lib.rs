@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_ftp':
+
+```rust
 //! FTP connection tracking helper for Netfilter
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -6,12 +9,12 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr;
 use libc::{size_t, IPPROTO_TCP, PF_INET, PF_INET6};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -20,87 +23,65 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub u6_addr8: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_conntrack_man {
     pub u3: nf_conntrack_union,
     pub u: nf_conntrack_tcp,
 }
 
 #[repr(C)]
-union nf_conntrack_union {
-    ip: u32,
-    ip6: [u8; 16],
+#[derive(Copy, Clone)]
+pub union nf_conntrack_union {
+    pub ip: __be32,
+    pub ip6: in6_addr,
 }
 
 #[repr(C)]
-struct nf_conntrack_tcp {
-    port: u16,
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tcp {
+    pub port: __be16,
 }
 
 #[repr(C)]
-struct nf_ct_ftp_master {
-    seq_aft_nl: [[u32; 2]; 2],
-    seq_aft_nl_num: [c_uint; 2],
+#[derive(Copy, Clone)]
+pub struct nf_ct_ftp_master {
+    pub seq_aft_nl: [[__u32; 2]; 2],
+    pub seq_aft_nl_num: [c_uint; 2],
 }
 
 #[repr(C)]
-struct nf_conn {
+#[derive(Copy, Clone)]
+pub struct nf_ct_ftp_type {
     _private: [u8; 0],
 }
 
 #[repr(C)]
-struct nf_ct_ftp_type {
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_helper {
     _private: [u8; 0],
 }
 
 #[repr(C)]
-struct nf_conntrack_expect {
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_ftp {
     _private: [u8; 0],
 }
 
 #[repr(C)]
-struct sk_buff {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct ip_conntrack_info {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct nf_ct_ftp_type {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct nf_conntrack_helper {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct nf_conntrack_ftp {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct ftp_search {
-    pattern: *const u8,
-    plen: size_t,
-    skip: u8,
-    term: u8,
-    ftptype: nf_ct_ftp_type,
-    getnum: extern "C" fn(*const u8, size_t, *mut nf_conntrack_man, u8, *mut c_uint) -> c_int,
+#[derive(Copy, Clone)]
+pub struct ftp_search {
+    pub pattern: *const u8,
+    pub plen: size_t,
+    pub skip: u8,
+    pub term: u8,
+    pub ftptype: nf_ct_ftp_type,
+    pub getnum: extern "C" fn(*const u8, size_t, *mut nf_conntrack_man, u8, *mut c_uint) -> c_int,
 }
 
 // Function implementations
 static mut nf_ftp_lock: spinlock_t = spinlock_t { _private: [0; 0] };
 
-static ports: [u16; 8] = [0; 8];
+static ports: [__be16; 8] = [0; 8];
 static ports_c: c_uint = 0;
 
 static loose: bool = false;
@@ -118,7 +99,7 @@ type nf_nat_ftp_hook_type = extern "C" fn(
 static mut nf_nat_ftp_hook: nf_nat_ftp_hook_type = ptr::null_mut();
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_nat_ftp_hook(
+pub unsafe extern "C" fn nf_nat_ftp_hook_fn(
     skb: *mut sk_buff,
     ctinfo: *mut ip_conntrack_info,
     type_: nf_ct_ftp_type,
@@ -150,11 +131,6 @@ static search: [ftp_search; 2] = [
     },
 ];
 
-#[repr(C)]
-struct spinlock_t {
-    _private: [u8; 0],
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn get_ipv6_addr(
     src: *const u8,
@@ -170,7 +146,7 @@ pub unsafe extern "C" fn get_ipv6_addr(
 pub unsafe extern "C" fn try_number(
     data: *const u8,
     dlen: size_t,
-    array: *mut u32,
+    array: *mut __u32,
     array_size: c_int,
     sep: u8,
     term: u8,
@@ -209,7 +185,7 @@ pub unsafe extern "C" fn get_port(
     start: c_int,
     dlen: size_t,
     delim: u8,
-    port: *mut u16,
+    port: *mut __be16,
 ) -> c_int {
     // Implementation would go here
     0
@@ -257,7 +233,7 @@ pub unsafe extern "C" fn find_pattern(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn find_nl_seq(seq: u32, info: *const nf_ct_ftp_master, dir: c_int) -> c_int {
+pub unsafe extern "C" fn find_nl_seq(seq: __u32, info: *const nf_ct_ftp_master, dir: c_int) -> c_int {
     // Implementation would go here
     0
 }
@@ -265,7 +241,7 @@ pub unsafe extern "C" fn find_nl_seq(seq: u32, info: *const nf_ct_ftp_master, di
 #[no_mangle]
 pub unsafe extern "C" fn update_nl_seq(
     ct: *mut nf_conn,
-    nl_seq: u32,
+    nl_seq: __u32,
     info: *mut nf_ct_ftp_master,
     dir: c_int,
     skb: *mut sk_buff,

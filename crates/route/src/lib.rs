@@ -6,11 +6,10 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::missing_docs_in_private_items)]
 
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -21,16 +20,13 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_device {
     pub flags: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_entry {
     __refcnt: AtomicI32,
     __use: c_int,
@@ -42,6 +38,7 @@ pub struct dst_entry {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rt6_info {
     dst: dst_entry,
     rt6i_flags: c_int,
@@ -51,18 +48,21 @@ pub struct rt6_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct list_head {
     next: *mut list_head,
     prev: *mut list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct uncached_list {
     lock: *mut c_void, // spinlock_t
     head: list_head,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct dst_ops {
     family: c_int,
     gc: extern "C" fn(*mut c_void) -> c_int,
@@ -82,6 +82,7 @@ pub struct dst_ops {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct fib6_info {
     fib6_flags: c_int,
     fib6_protocol: c_int,
@@ -92,6 +93,7 @@ pub struct fib6_info {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_dev {
     dev: *mut net_device,
 }
@@ -120,7 +122,7 @@ pub unsafe extern "C" fn ip6_dst_alloc(
     let rt = ptr as *mut rt6_info;
     (*rt).rt6i_idev = ptr::null_mut();
     (*rt).rt6i_flags = 0;
-    INIT_LIST_HEAD(&(*rt).rt6i_uncached);
+    INIT_LIST_HEAD(&mut (*rt).rt6i_uncached);
 
     // Initialize dst_entry
     (*rt).dst.__refcnt = AtomicI32::new(1);
@@ -221,7 +223,7 @@ pub unsafe extern "C" fn ip6_dst_destroy(
     }
 
     let rt = (dst as *mut rt6_info);
-    
+
     // Release metrics
     let metrics = (*dst).cast::<struct {
         __metrics: *mut c_void,
@@ -232,7 +234,7 @@ pub unsafe extern "C" fn ip6_dst_destroy(
 
     // Remove from uncached list
     rt6_uncached_list_del(rt);
-    
+
     // Release idev
     if !(*rt).rt6i_idev.is_null() {
         let idev = (*rt).rt6i_idev;
@@ -242,7 +244,7 @@ pub unsafe extern "C" fn ip6_dst_destroy(
             in6_dev_put(idev);
         }
     }
-    
+
     // Release from fib6_info
     let from = (*rt).from;
     if !from.is_null() {
@@ -252,7 +254,7 @@ pub unsafe extern "C" fn ip6_dst_destroy(
             fib6_info_release(from);
         }
     }
-    
+
     // Free memory
     libc::free(dst);
 }
@@ -275,11 +277,11 @@ pub unsafe extern "C" fn rt6_uncached_list_add(
     // Get per-CPU list
     let cpu = core::hint::black_box(0); // Simplified for example
     let ul = per_cpu_ptr(&rt6_uncached_list, cpu);
-    
+
     (*rt).rt6i_uncached_list = ul;
-    
+
     // Add to list
-    list_add_tail(&(*rt).rt6i_uncached, &(*ul).head);
+    list_add_tail(&mut (*rt).rt6i_uncached, &mut (*ul).head);
 }
 
 #[no_mangle]
@@ -292,10 +294,10 @@ pub unsafe extern "C" fn rt6_uncached_list_del(
 
     let ul = (*rt).rt6i_uncached_list;
     let net = dev_net((*rt).dst.dev);
-    
+
     // Remove from list
-    list_del(&(*rt).rt6i_uncached);
-    
+    list_del(&mut (*rt).rt6i_uncached);
+
     // Decrement counter
     atomic_dec(&(*net).ipv6.rt6_stats);
 }
@@ -313,7 +315,7 @@ unsafe fn list_add_tail(head: *mut list_head, new: *mut list_head) {
 unsafe fn list_del(entry: *mut list_head) {
     let next = (*entry).next;
     let prev = (*entry).prev;
-    
+
     (*next).prev = prev;
     (*prev).next = next;
 }

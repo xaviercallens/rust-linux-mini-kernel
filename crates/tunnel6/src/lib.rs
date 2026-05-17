@@ -1,22 +1,10 @@
-//! IPv6 tunneling support for XFRM (IPsec) in the Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
+use kernel_types::*;
 
-#![no_std]
-#![allow(non_camel_case_types)]
-#![allow(dead_code)]
-
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::ptr;
-
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const EEXIST: c_int = -17;
 pub const ENOENT: c_int = -2;
+pub const EAGAIN: c_int = -11;
 
 // Address family constants
 pub const AF_INET6: c_int = 10;
@@ -32,29 +20,15 @@ pub const IPPROTO_IPV6: c_int = 41;
 pub const IPPROTO_IPIP: c_int = 4;
 pub const IPPROTO_MPLS: c_int = 137;
 
-// inet6_skb_parm is not fully defined here as it's part of the kernel
-// We'll use a dummy type for function signatures
-#[repr(C)]
-pub struct inet6_skb_parm {
-    _private: [u8; 0],
-}
-
-// xfrm_input_afinfo is not fully defined here as it's part of the kernel
-#[repr(C)]
-pub struct xfrm_input_afinfo {
-    family: c_int,
-    is_ipip: c_int,
-    callback: unsafe extern "C" fn(*mut c_void, u8) -> c_int,
-}
-
 // Define function pointer types for handler callbacks
-pub type handler_func = unsafe extern "C" fn(*mut c_void) -> c_int;
-pub type cb_handler_func = unsafe extern "C" fn(*mut c_void, c_int) -> c_int;
+pub type handler_func = unsafe extern "C" fn(*mut sk_buff) -> c_int;
+pub type cb_handler_func = unsafe extern "C" fn(*mut sk_buff, c_int) -> c_int;
 pub type err_handler_func =
-    unsafe extern "C" fn(*mut c_void, *mut inet6_skb_parm, u8, u8, c_int, u32) -> c_int;
+    unsafe extern "C" fn(*mut sk_buff, *mut inet6_skb_parm, u8, u8, c_int, u32) -> c_int;
 
 // Define the xfrm6_tunnel struct with #[repr(C)] for ABI compatibility
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm6_tunnel {
     pub priority: c_int,
     pub handler: handler_func,
@@ -64,15 +38,16 @@ pub struct xfrm6_tunnel {
 }
 
 // Static variables - represented as static mut with unsafe access
-static mut tunnel6_handlers: *mut xfrm6_tunnel = ptr::null_mut();
-static mut tunnel46_handlers: *mut xfrm6_tunnel = ptr::null_mut();
-static mut tunnelmpls6_handlers: *mut xfrm6_tunnel = ptr::null_mut();
+static mut tunnel6_handlers: *mut xfrm6_tunnel = core::ptr::null_mut();
+static mut tunnel46_handlers: *mut xfrm6_tunnel = core::ptr::null_mut();
+static mut tunnelmpls6_handlers: *mut xfrm6_tunnel = core::ptr::null_mut();
 
 // Mutex for synchronization - represented as a raw mutex handle
 static mut tunnel6_mutex: c_void = 0 as c_void;
 
 // Define the inet6_protocol struct with #[repr(C)] for ABI compatibility
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet6_protocol {
     handler: handler_func,
     err_handler: Option<err_handler_func>,
@@ -80,29 +55,34 @@ pub struct inet6_protocol {
 }
 
 // Define the tunnel protocol instances
-#[repr(C)]
 static tunnel6_protocol: inet6_protocol = inet6_protocol {
     handler: tunnel6_rcv,
     err_handler: Some(tunnel6_err),
     flags: INET6_PROTO_NOPOLICY | INET6_PROTO_FINAL,
 };
 
-#[repr(C)]
 static tunnel46_protocol: inet6_protocol = inet6_protocol {
     handler: tunnel46_rcv,
     err_handler: Some(tunnel46_err),
     flags: INET6_PROTO_NOPOLICY | INET6_PROTO_FINAL,
 };
 
-#[repr(C)]
 static tunnelmpls6_protocol: inet6_protocol = inet6_protocol {
     handler: tunnelmpls6_rcv,
     err_handler: Some(tunnelmpls6_err),
     flags: INET6_PROTO_NOPOLICY | INET6_PROTO_FINAL,
 };
 
-// Define the xfrm_input_afinfo instance
+// Define the xfrm_input_afinfo struct with #[repr(C)] for ABI compatibility
 #[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_input_afinfo {
+    pub family: c_int,
+    pub is_ipip: c_int,
+    pub callback: unsafe extern "C" fn(*mut sk_buff, u8, c_int) -> c_int,
+}
+
+// Define the xfrm_input_afinfo instance
 static tunnel6_input_afinfo: xfrm_input_afinfo = xfrm_input_afinfo {
     family: AF_INET6,
     is_ipip: 1,
@@ -113,9 +93,9 @@ static tunnel6_input_afinfo: xfrm_input_afinfo = xfrm_input_afinfo {
 extern "C" {
     fn mutex_lock(mutex: *mut c_void);
     fn mutex_unlock(mutex: *mut c_void);
-    fn pskb_may_pull(skb: *mut c_void, size: c_int) -> c_int;
-    fn icmpv6_send(skb: *mut c_void, type_: c_int, code: c_int, info: u32);
-    fn kfree_skb(skb: *mut c_void);
+    fn pskb_may_pull(skb: *mut sk_buff, size: c_int) -> c_int;
+    fn icmpv6_send(skb: *mut sk_buff, type_: c_int, code: c_int, info: u32);
+    fn kfree_skb(skb: *mut sk_buff);
     fn inet6_add_protocol(proto: *const inet6_protocol, protocol: c_int) -> c_int;
     fn inet6_del_protocol(proto: *const inet6_protocol, protocol: c_int) -> c_int;
     fn xfrm_input_register_afinfo(afinfo: *const xfrm_input_afinfo) -> c_int;
@@ -225,7 +205,7 @@ pub unsafe extern "C" fn synchronize_net() {
 
 // Implementation of tunnelmpls6_rcv
 #[no_mangle]
-pub unsafe extern "C" fn tunnelmpls6_rcv(skb: *mut c_void) -> c_int {
+pub unsafe extern "C" fn tunnelmpls6_rcv(skb: *mut sk_buff) -> c_int {
     if pskb_may_pull(skb, core::mem::size_of::<ipv6hdr>() as c_int) == 0 {
         kfree_skb(skb);
         return 0;
@@ -246,7 +226,7 @@ pub unsafe extern "C" fn tunnelmpls6_rcv(skb: *mut c_void) -> c_int {
 
 // Implementation of tunnel6_rcv
 #[no_mangle]
-pub unsafe extern "C" fn tunnel6_rcv(skb: *mut c_void) -> c_int {
+pub unsafe extern "C" fn tunnel6_rcv(skb: *mut sk_buff) -> c_int {
     if pskb_may_pull(skb, core::mem::size_of::<ipv6hdr>() as c_int) == 0 {
         kfree_skb(skb);
         return 0;
@@ -267,7 +247,7 @@ pub unsafe extern "C" fn tunnel6_rcv(skb: *mut c_void) -> c_int {
 
 // Implementation of tunnel6_rcv_cb
 #[no_mangle]
-pub unsafe extern "C" fn tunnel6_rcv_cb(skb: *mut c_void, proto: u8, err: c_int) -> c_int {
+pub unsafe extern "C" fn tunnel6_rcv_cb(skb: *mut sk_buff, proto: u8, err: c_int) -> c_int {
     let head: *mut xfrm6_tunnel = if proto == IPPROTO_IPV6 {
         tunnel6_handlers
     } else {
@@ -290,7 +270,7 @@ pub unsafe extern "C" fn tunnel6_rcv_cb(skb: *mut c_void, proto: u8, err: c_int)
 
 // Implementation of tunnel46_rcv
 #[no_mangle]
-pub unsafe extern "C" fn tunnel46_rcv(skb: *mut c_void) -> c_int {
+pub unsafe extern "C" fn tunnel46_rcv(skb: *mut sk_buff) -> c_int {
     if pskb_may_pull(skb, core::mem::size_of::<iphdr>() as c_int) == 0 {
         kfree_skb(skb);
         return 0;
@@ -312,7 +292,7 @@ pub unsafe extern "C" fn tunnel46_rcv(skb: *mut c_void) -> c_int {
 // Implementation of tunnel6_err
 #[no_mangle]
 pub unsafe extern "C" fn tunnel6_err(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     opt: *mut inet6_skb_parm,
     type_: u8,
     code: u8,
@@ -335,7 +315,7 @@ pub unsafe extern "C" fn tunnel6_err(
 // Implementation of tunnel46_err
 #[no_mangle]
 pub unsafe extern "C" fn tunnel46_err(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     opt: *mut inet6_skb_parm,
     type_: u8,
     code: u8,
@@ -358,7 +338,7 @@ pub unsafe extern "C" fn tunnel46_err(
 // Implementation of tunnelmpls6_err
 #[no_mangle]
 pub unsafe extern "C" fn tunnelmpls6_err(
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     opt: *mut inet6_skb_parm,
     type_: u8,
     code: u8,
@@ -445,17 +425,6 @@ pub unsafe extern "C" fn module_init() {
 #[no_mangle]
 pub unsafe extern "C" fn module_exit() {
     tunnel6_fini();
-}
-
-// Dummy type definitions for IPv6 and IPv4 headers
-#[repr(C)]
-pub struct ipv6hdr {
-    _private: [u8; 40], // 40 bytes for IPv6 header
-}
-
-#[repr(C)]
-pub struct iphdr {
-    _private: [u8; 20], // 20 bytes for IPv4 header
 }
 
 // Constants for ICMPv6

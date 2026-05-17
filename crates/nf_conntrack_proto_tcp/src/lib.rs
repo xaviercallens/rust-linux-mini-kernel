@@ -14,7 +14,7 @@ use core::mem;
 use core::ptr;
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 pub struct TcpHdr {
     pub rst: u8,
     pub syn: u8,

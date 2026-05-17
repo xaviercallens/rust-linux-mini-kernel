@@ -26,12 +26,14 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_opt_hdr {
     pub nexthdr: u8,
     pub hdrlen: u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_rt_hdr {
     pub nexthdr: u8,
     pub hdrlen: u8,
@@ -40,6 +42,7 @@ pub struct ipv6_rt_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct frag_hdr {
     pub nexthdr: u8,
     pub reserved: u8,
@@ -375,6 +378,7 @@ pub unsafe extern "C" fn ipv6_hdr(skb: *const c_void) -> *const ipv6hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6hdr {
     pub version: u8,
     pub traffic_class: u8,

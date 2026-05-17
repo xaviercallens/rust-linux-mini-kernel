@@ -20,6 +20,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::slice;
+use kernel_types::*;
 
 // Constants from C
 pub const IPPROTO_DSTOPTS: c_int = 60;
@@ -48,11 +49,7 @@ pub const IPV6_TLV_HAO: u8 = 0x08;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip6_mh {
     pub ip6mh_type: u8,
     pub ip6mh_hdrlen: u8,
@@ -61,12 +58,14 @@ pub struct ip6_mh {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_destopt_hdr {
     pub nexthdr: u8,
     pub hdrlen: u8,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv6_destopt_hao {
     pub type_: u8,
     pub length: u8,
@@ -74,6 +73,7 @@ pub struct ipv6_destopt_hao {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct rt2_hdr {
     pub rt_hdr: ipv6_destopt_hdr,
     pub segments_left: u32,
@@ -82,6 +82,7 @@ pub struct rt2_hdr {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_state {
     pub id: xfrm_id,
     pub props: xfrm_props,
@@ -90,22 +91,20 @@ pub struct xfrm_state {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_id {
     pub spi: u32,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_props {
     pub mode: c_int,
     pub header_len: c_int,
 }
 
 #[repr(C)]
-pub struct spinlock_t {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct xfrm_type {
     pub description: *const u8,
     pub owner: *const u8,
@@ -120,6 +119,7 @@ pub struct xfrm_type {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct mip6_report_rate_limiter {
     pub lock: spinlock_t,
     pub stamp: u64,
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn mip6_padn(data: *mut u8, padlen: c_uint) -> *mut u8 {
 /// - `code` must be valid parameter problem code
 /// - `pos` must be valid offset in packet
 #[no_mangle]
-pub unsafe extern "C" fn mip6_param_prob(skb: *mut c_void, code: u8, pos: c_int) {
+pub unsafe extern "C" fn mip6_param_prob(skb: *mut sk_buff, code: u8, pos: c_int) {
     // Implementation would call icmpv6_send in kernel
     // This is a placeholder for actual kernel function
 }
@@ -195,13 +195,13 @@ pub extern "C" fn mip6_mh_len(type_: c_int) -> c_int {
 /// - `sk` must be valid pointer to sock
 /// - `skb` must be valid pointer to sk_buff
 #[no_mangle]
-pub unsafe extern "C" fn mip6_mh_filter(sk: *mut c_void, skb: *mut c_void) -> c_int {
+pub unsafe extern "C" fn mip6_mh_filter(sk: *mut sock, skb: *mut sk_buff) -> c_int {
     let mut _hdr: ip6_mh = mem::zeroed();
     let mh = skb_header_pointer(
         skb,
         skb_transport_offset(skb),
         mem::size_of_val(&_hdr),
-        &_hdr as *mut _ as *mut c_void,
+        &mut _hdr as *mut _ as *mut c_void,
     );
 
     if mh.is_null() {
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn mip6_mh_filter(sk: *mut c_void, skb: *mut c_void) -> c_
     let mh = mh as *const ip6_mh;
     let header_len = (((*mh).ip6mh_hdrlen + 1) << 3) as usize;
 
-    if header_len > (*skb as *mut skbuff).len {
+    if header_len > (*skb).len {
         return -1;
     }
 
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn mip6_mh_filter(sk: *mut c_void, skb: *mut c_void) -> c_
         mip6_param_prob(
             skb,
             0,
-            (offsetof(ip6_mh, ip6mh_hdrlen) + (*skb as *mut skbuff).network_header_len) as c_int,
+            (skb_network_offset(skb) + mem::size_of::<u8>() * 1) as c_int,
         );
         return -1;
     }
@@ -230,7 +230,7 @@ pub unsafe extern "C" fn mip6_mh_filter(sk: *mut c_void, skb: *mut c_void) -> c_
         mip6_param_prob(
             skb,
             0,
-            (offsetof(ip6_mh, ip6mh_proto) + (*skb as *mut skbuff).network_header_len) as c_int,
+            (skb_network_offset(skb) + mem::size_of::<u8>() * 2) as c_int,
         );
         return -1;
     }
@@ -250,23 +250,24 @@ pub unsafe extern "C" fn mip6_report_rl_allow(
     src: *const in6_addr,
     iif: c_int,
 ) -> c_int {
+    let mut mip6_report_rl: mip6_report_rate_limiter = mem::zeroed();
     let allow = 0;
 
-    spin_lock_bh(&mut (*(&mut mip6_report_rl as *mut _)).lock);
+    spin_lock_bh(&mut mip6_report_rl.lock);
 
-    if (*(&mip6_report_rl as *const _)).stamp != stamp
-        || (*(&mip6_report_rl as *const _)).iif != iif
-        || !ipv6_addr_equal(&(*(&mip6_report_rl as *const _)).src, src)
-        || !ipv6_addr_equal(&(*(&mip6_report_rl as *const _)).dst, dst)
+    if mip6_report_rl.stamp != stamp
+        || mip6_report_rl.iif != iif
+        || !ipv6_addr_equal(&mip6_report_rl.src, src)
+        || !ipv6_addr_equal(&mip6_report_rl.dst, dst)
     {
-        (*(&mut mip6_report_rl as *mut _)).stamp = stamp;
-        (*(&mut mip6_report_rl as *mut _)).iif = iif;
-        (*(&mut mip6_report_rl as *mut _)).src = *src;
-        (*(&mut mip6_report_rl as *mut _)).dst = *dst;
+        mip6_report_rl.stamp = stamp;
+        mip6_report_rl.iif = iif;
+        mip6_report_rl.src = *src;
+        mip6_report_rl.dst = *dst;
         allow = 1;
     }
 
-    spin_unlock_bh(&mut (*(&mut mip6_report_rl as *mut _)).lock);
+    spin_unlock_bh(&mut mip6_report_rl.lock);
 
     allow
 }
@@ -288,49 +289,49 @@ pub static mut mip6_destopt_type: xfrm_type = xfrm_type {
 
 // Helper functions
 #[no_mangle]
-pub extern "C" fn skb_transport_offset(skb: *mut c_void) -> c_int {
+pub extern "C" fn skb_transport_offset(skb: *mut sk_buff) -> c_int {
     // Implementation would access (*skb).transport_header
     0
 }
 
 #[no_mangle]
-pub extern "C" fn skb_network_offset(skb: *mut c_void) -> c_int {
+pub extern "C" fn skb_network_offset(skb: *mut sk_buff) -> c_int {
     // Implementation would access (*skb).network_header
     0
 }
 
 #[no_mangle]
-pub extern "C" fn skb_push(skb: *mut c_void, offset: c_int) -> *mut c_void {
+pub extern "C" fn skb_push(skb: *mut sk_buff, offset: c_int) -> *mut sk_buff {
     // Implementation would modify (*skb).data
     skb
 }
 
 #[no_mangle]
-pub extern "C" fn skb_mac_header(skb: *mut c_void) -> *mut u8 {
+pub extern "C" fn skb_mac_header(skb: *mut sk_buff) -> *mut u8 {
     // Implementation would access (*skb).mac_header
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn ipv6_hdr(skb: *mut c_void) -> *mut in6_addr {
+pub extern "C" fn ipv6_hdr(skb: *mut sk_buff) -> *mut in6_addr {
     // Implementation would access IPv6 header
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn skb_tail_pointer(skb: *mut c_void) -> *mut c_void {
+pub extern "C" fn skb_tail_pointer(skb: *mut sk_buff) -> *mut c_void {
     // Implementation would access (*skb).tail
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn skb_get_ktime(skb: *mut c_void) -> u64 {
+pub extern "C" fn skb_get_ktime(skb: *mut sk_buff) -> u64 {
     // Implementation would access (*skb).tstamp
     0
 }
 
 #[no_mangle]
-pub extern "C" fn ipv6_find_tlv(skb: *mut c_void, offset: c_int, type_: u8) -> c_int {
+pub extern "C" fn ipv6_find_tlv(skb: *mut sk_buff, offset: c_int, type_: u8) -> c_int {
     // Implementation would search for TLV
     -1
 }
@@ -363,7 +364,7 @@ pub extern "C" fn spin_unlock_bh(lock: *mut spinlock_t) {
 
 #[no_mangle]
 pub extern "C" fn km_report(
-    net: *mut c_void,
+    net: *mut net,
     proto: c_int,
     sel: *mut c_void,
     addr: *mut c_void,
@@ -373,19 +374,19 @@ pub extern "C" fn km_report(
 }
 
 #[no_mangle]
-pub extern "C" fn xfrm_flowi_dport(fl: *const c_void, uli: *const c_void) -> u16 {
+pub extern "C" fn xfrm_flowi_dport(fl: *const flowi, uli: *const c_void) -> u16 {
     // Implementation would extract destination port
     0
 }
 
 #[no_mangle]
-pub extern "C" fn xfrm_flowi_sport(fl: *const c_void, uli: *const c_void) -> u16 {
+pub extern "C" fn xfrm_flowi_sport(fl: *const flowi, uli: *const c_void) -> u16 {
     // Implementation would extract source port
     0
 }
 
 #[no_mangle]
-pub extern "C" fn xs_net(x: *mut xfrm_state) -> *mut c_void {
+pub extern "C" fn xs_net(x: *mut xfrm_state) -> *mut net {
     // Implementation would get network namespace
     ptr::null_mut()
 }

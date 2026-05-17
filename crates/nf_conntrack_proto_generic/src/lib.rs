@@ -19,6 +19,7 @@ pub const EINVAL: c_int = -22;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nlattr {
     _unused: [u8; 0],
 } // Opaque type - actual layout defined in kernel headers
@@ -45,6 +46,7 @@ struct NfCtnlTimeout {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct NfConntrackL4proto {
     l4proto: u8,
     #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]

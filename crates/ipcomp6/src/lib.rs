@@ -1,3 +1,6 @@
+Here's the fixed Rust code for the Linux kernel FFI module 'ipcomp6':
+
+```rust
 //! IP Payload Compression Protocol (IPComp) for IPv6 - RFC3173
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -7,6 +10,7 @@
 #![allow(non_camel_case_types)]  // For C-style type names
 
 use core::ptr;
+use kernel_types::*;
 use libc::{c_int, c_uint, c_void, size_t};
 
 // Constants from C
@@ -18,98 +22,9 @@ pub const EAGAIN: c_int = -11;
 
 // Type definitions
 #[repr(C)]
-pub struct sk_buff {
-    pub dev: *mut net_device,
-    pub mark: c_int,
-    pub data: *const c_void,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct inet6_skb_parm {
-    // Opaque struct - actual fields depend on kernel headers
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ipv6hdr {
-    pub daddr: [u8; 16], // in6_addr
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ip_comp_hdr {
     pub cpi: u16,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm_state {
-    pub id: xfrm_id,
-    pub sel: xfrm_selector,
-    pub props: xfrm_state_prop,
-    pub mark: xfrm_mark,
-    pub if_id: u32,
-    pub tunnel: *mut xfrm_state,
-    pub tunnel_users: atomic_t,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm_id {
-    pub proto: c_int,
-    pub spi: u32,
-    pub daddr: [u8; 16], // in6_addr
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm_selector {
-    _private: [u8; 0],
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm_state_prop {
-    pub family: c_int,
-    pub mode: c_int,
-    pub saddr: [u8; 16], // in6_addr
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm_mark {
-    pub v: u32,
-    pub m: u32,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct atomic_t {
-    counter: c_int,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct net_device {
-    pub ifindex: c_int,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm_type {
-    description: *const c_char,
-    owner: *const module,
-    proto: c_int,
-    init_state: extern "C" fn(*mut xfrm_state) -> c_int,
-    destructor: extern "C" fn(*mut xfrm_state),
-    input: extern "C" fn(*mut sk_buff) -> c_int,
-    output: extern "C" fn(*mut sk_buff) -> c_int,
-    hdr_offset: extern "C" fn(*mut sk_buff, *mut c_void) -> c_int,
-} // Opaque struct - actual fields depend on kernel headers
-
-#[repr(C)]
-pub struct xfrm6_protocol {
-    handler: extern "C" fn(*mut sk_buff) -> c_int,
-    input_handler: extern "C" fn(*mut sk_buff) -> c_int,
-    cb_handler: extern "C" fn(*mut sk_buff, c_int) -> c_int,
-    err_handler: extern "C" fn(*mut sk_buff, *mut inet6_skb_parm, u8, u8, c_int, u32) -> c_int,
-    priority: c_int,
 } // Opaque struct - actual fields depend on kernel headers
 
 // Function implementations
@@ -138,12 +53,12 @@ pub unsafe extern "C" fn ipcomp6_err(
         return 0;
     }
 
-    let iph = (skb as *const c_void).offset(0);
-    let ipcomph = (skb as *const c_void).offset(offset as isize);
-    
+    let iph = (*skb).data as *const ipv6hdr;
+    let ipcomph = (*skb).data.offset(offset as isize) as *const ip_comp_hdr;
+
     let spi = u32::from_be(ntohs((*ipcomph).cpi));
     let net = dev_net((*skb).dev);
-    
+
     let x = xfrm_state_lookup(
         net,
         (*skb).mark,
@@ -152,19 +67,19 @@ pub unsafe extern "C" fn ipcomp6_err(
         IPPROTO_COMP,
         10, // AF_INET6
     );
-    
+
     if x.is_null() {
         return 0;
     }
-    
+
     if type_ == 2 {
         ip6_redirect(skb, net, (*skb).dev.offset(0).ifindex, 0, sock_net_uid(net, ptr::null_mut()));
     } else {
         ip6_update_pmtu(skb, net, info, 0, 0, sock_net_uid(net, ptr::null_mut()));
     }
-    
+
     xfrm_state_put(x);
-    
+
     0
 }
 
@@ -179,60 +94,60 @@ pub unsafe extern "C" fn ipcomp6_err(
 pub unsafe extern "C" fn ipcomp6_tunnel_create(x: *mut xfrm_state) -> *mut xfrm_state {
     let net = xs_net(x);
     let mut t: *mut xfrm_state = ptr::null_mut();
-    
+
     t = xfrm_state_alloc(net);
     if t.is_null() {
         return ptr::null_mut();
     }
-    
+
     (*t).id.proto = IPPROTO_IPV6;
     (*t).id.spi = xfrm6_tunnel_alloc_spi(
         net,
         &(*x).props.saddr as *const _ as *const xfrm_address_t
     );
-    
+
     if (*t).id.spi == 0 {
+        xfrm_state_put(t);
+        return ptr::null_mut();
     }
-    
+
     ptr::copy_nonoverlapping(
         (*x).id.daddr.as_ptr(),
         (*t).id.daddr.as_mut_ptr(),
         16
     );
-    
+
     ptr::copy_nonoverlapping(
         &(*x).sel,
         &mut (*t).sel,
         core::mem::size_of::<xfrm_selector>()
     );
-    
+
     (*t).props.family = (*x).props.family;
     (*t).props.mode = (*x).props.mode;
-    
+
     ptr::copy_nonoverlapping(
         (*x).props.saddr.as_ptr(),
         (*t).props.saddr.as_mut_ptr(),
         16
     );
-    
+
     ptr::copy_nonoverlapping(
         &(*x).mark,
         &mut (*t).mark,
         core::mem::size_of::<xfrm_mark>()
     );
-    
+
     (*t).if_id = (*x).if_id;
-    
+
     if xfrm_init_state(t) != 0 {
+        xfrm_state_put(t);
+        return ptr::null_mut();
     }
-    
+
     atomic_set(&(*t).tunnel_users, 1);
-    
-    return t;
-    
-    (*t).km.state = XFRM_STATE_DEAD;
-    xfrm_state_put(t);
-    return ptr::null_mut();
+
+    t
 }
 
 /// Attach tunnel to IPComp state
@@ -249,12 +164,12 @@ pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
     let mut t: *mut xfrm_state = ptr::null_mut();
     let mut spi: u32 = 0;
     let mark = (*x).mark.m & (*x).mark.v;
-    
+
     spi = xfrm6_tunnel_spi_lookup(
         net,
         &(*x).props.saddr as *const _ as *const xfrm_address_t
     );
-    
+
     if spi != 0 {
         t = xfrm_state_lookup(
             net,
@@ -265,7 +180,7 @@ pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
             10 // AF_INET6
         );
     }
-    
+
     if t.is_null() {
         t = ipcomp6_tunnel_create(x);
         if t.is_null() {
@@ -274,11 +189,11 @@ pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
         xfrm_state_insert(t);
         xfrm_state_hold(t);
     }
-    
+
     (*x).tunnel = t;
     atomic_inc(&(*t).tunnel_users);
-    
-    return 0;
+
+    0
 }
 
 /// Initialize IPComp state
@@ -291,9 +206,9 @@ pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_init_state(x: *mut xfrm_state) -> c_int {
     let mut err = -EINVAL;
-    
+
     (*x).props.header_len = 0;
-    
+
     match (*x).props.mode {
         1 => {} // XFRM_MODE_TRANSPORT
         2 => { // XFRM_MODE_TUNNEL
@@ -301,20 +216,20 @@ pub unsafe extern "C" fn ipcomp6_init_state(x: *mut xfrm_state) -> c_int {
         },
         _ => return -EINVAL,
     }
-    
+
     err = ipcomp_init_state(x);
     if err != 0 {
         return err;
     }
-    
+
     if (*x).props.mode == 2 {
         err = ipcomp6_tunnel_attach(x);
         if err != 0 {
             return err;
         }
     }
-    
-    return 0;
+
+    0
 }
 
 /// Callback for IPComp receive
@@ -336,14 +251,14 @@ pub unsafe extern "C" fn ipcomp6_init() -> c_int {
     if xfrm_register_type(&ipcomp6_type, 10) < 0 {
         return -EAGAIN;
     }
-    
+
     if xfrm6_protocol_register(&ipcomp6_protocol, IPPROTO_COMP) < 0 {
         pr_info(b"ipcomp6_init: can't add protocol\n".as_ptr() as *const c_char);
         xfrm_unregister_type(&ipcomp6_type, 10);
         return -EAGAIN;
     }
-    
-    return 0;
+
+    0
 }
 
 #[no_mangle]

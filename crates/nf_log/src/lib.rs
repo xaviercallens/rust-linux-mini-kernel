@@ -29,16 +29,19 @@ pub const EEXIST: c_int = -17;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     pub nf: net_nf,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net_nf {
     pub nf_loggers: [*mut nf_logger; NFPROTO_NUMPROTO],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_logger {
     pub name: [u8; NF_LOGGER_NAME_LEN],
     pub type_: c_int,
@@ -46,6 +49,7 @@ pub struct nf_logger {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_log_buf {
     pub count: c_uint,
     pub buf: [u8; 1024], // S_SIZE + 1

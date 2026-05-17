@@ -6,8 +6,7 @@
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -15,89 +14,6 @@ pub const ENOMEM: c_int = -12;
 pub const ENETUNREACH: c_int = -101;
 pub const EAFNOSUPPORT: c_int = -97;
 pub const ENOENT: c_int = -2;
-
-// Type definitions
-#[repr(C)]
-pub struct sock {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sk_buff {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct sockaddr {
-    sa_family: c_int,
-    // ... other fields
-}
-
-#[repr(C)]
-pub struct sockaddr_in6 {
-    sin6_family: c_int,
-    sin6_port: u16,
-    sin6_flowinfo: u32,
-    sin6_addr: [u8; 16],
-    sin6_scope_id: u32,
-}
-
-#[repr(C)]
-pub struct inet_sock {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct inet_connection_sock {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ipv6_pinfo {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct tcp_sock {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct ipv6_txoptions {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct flowi6 {
-    flowlabel: u32,
-    daddr: [u32; 4],
-    saddr: [u32; 4],
-    flowi6_proto: u8,
-    flowi6_oif: c_int,
-    flowi6_mark: c_int,
-    fl6_dport: u16,
-    fl6_sport: u16,
-    flowi6_uid: u32,
-}
-
-#[repr(C)]
-pub struct rt6_info {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct dst_entry {
-    // Opaque fields - actual implementation in kernel
-    _private: [u8; 0],
-}
 
 // Function implementations
 
@@ -122,13 +38,13 @@ pub unsafe extern "C" fn tcp_inet6_sk(sk: *const sock) -> *mut ipv6_pinfo {
 /// - `skb` must be a valid pointer to sk_buff
 #[no_mangle]
 pub unsafe extern "C" fn inet6_sk_rx_dst_set(sk: *mut sock, skb: *const sk_buff) {
-    let dst = (*skb).dst; // Assuming dst is a field in sk_buff
+    let dst = (*skb).dst;
     if !dst.is_null() {
         // SAFETY: dst is non-null and valid
         let rt = dst as *const rt6_info;
         (*sk).rx_dst = dst;
         (*sk).rx_dst_ifindex = (*skb).skb_iif;
-        (*tcp_inet6_sk(sk)).rx_dst_cookie = (*rt).cookie; // Assuming cookie is a field
+        (*tcp_inet6_sk(sk)).rx_dst_cookie = (*rt).cookie;
     }
 }
 
@@ -138,8 +54,8 @@ pub unsafe extern "C" fn inet6_sk_rx_dst_set(sk: *mut sock, skb: *const sk_buff)
 /// - `skb` must be a valid pointer to sk_buff
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
-    let ipv6_hdr = (*skb).ipv6_hdr; // Assuming ipv6_hdr is a field
-    let tcp_hdr = (*skb).tcp_hdr; // Assuming tcp_hdr is a field
+    let ipv6_hdr = (*skb).ipv6_hdr;
+    let tcp_hdr = (*skb).tcp_hdr;
     secure_tcpv6_seq(
         ipv6_hdr.daddr.s6_addr32,
         ipv6_hdr.saddr.s6_addr32,
@@ -191,11 +107,11 @@ pub unsafe extern "C" fn tcp_v6_connect(
     addr_len: c_int,
 ) -> c_int {
     let usin = uaddr as *mut sockaddr_in6;
-    let inet = (*sk).inet_sk; // Assuming inet_sk is a field
-    let icsk = (*sk).icsk; // Assuming icsk is a field
+    let inet = (*sk).inet_sk;
+    let icsk = (*sk).icsk;
     let np = tcp_inet6_sk(sk);
-    let tp = (*sk).tcp_sock; // Assuming tcp_sock is a field
-    let tcp_death_row = (*sk).tcp_death_row; // Assuming tcp_death_row is a field
+    let tp = (*sk).tcp_sock;
+    let tcp_death_row = (*sk).tcp_death_row;
 
     if addr_len < 28 {
         return EINVAL;
@@ -242,6 +158,9 @@ pub unsafe extern "C" fn tcp_v6_err(
 // Tests (conditional compilation)
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use core::ptr;
+
     #[test]
     fn test_tcp_inet6_sk() {
         // Basic test for pointer arithmetic

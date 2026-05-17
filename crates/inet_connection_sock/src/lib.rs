@@ -13,6 +13,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::slice;
+use kernel_types::*;
 
 // Constants from C header files
 pub const IPV6_ADDR_ANY: u32 = 0;
@@ -23,27 +24,7 @@ pub const TCP_TIME_WAIT: c_int = 7;
 
 // Type definitions for FFI compatibility
 #[repr(C)]
-pub struct in6_addr {
-    s6_addr: [u8; 16],
-}
-
-#[repr(C)]
-pub struct sock {
-    sk_family: c_int,
-    sk_v6_rcv_saddr: in6_addr,
-    sk_rcv_saddr: u32,
-    sk_bound_dev_if: c_int,
-    sk_reuseport: *mut c_void,
-    sk_state: c_int,
-    sk_rcv_saddr: u32,
-    sk_bound_dev_if: c_int,
-    sk_reuseport: *mut c_void,
-    sk_reuse: c_int,
-    sk_prot: *mut c_void,
-    sk_net: *mut c_void,
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_bind_bucket {
     port: u16,
     l3mdev: c_int,
@@ -56,26 +37,31 @@ pub struct inet_bind_bucket {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_hashinfo {
     bhash_size: c_int,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct net {
     ipv4: ipv4_net,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct ipv4_net {
     ip_local_ports: seqlock,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct seqlock {
     lock: spinlock,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct spinlock {
     // Placeholder for actual spinlock implementation
 }
@@ -109,11 +95,7 @@ pub unsafe extern "C" fn ipv6_rcv_saddr_equal(
     }
 
     let addr_type = ipv6_addr_type(sk1_rcv_saddr6);
-    let mut addr_type2 = if sk2_rcv_saddr6.is_null() {
-        IPV6_ADDR_MAPPED
-    } else {
-        ipv6_addr_type(sk2_rcv_saddr6)
-    };
+    let addr_type2 = ipv6_addr_type(sk2_rcv_saddr6);
 
     // Handle mapped IPv4 addresses
     if addr_type == IPV6_ADDR_MAPPED && addr_type2 == IPV6_ADDR_MAPPED {
@@ -147,7 +129,7 @@ pub unsafe extern "C" fn ipv6_rcv_saddr_equal(
     }
 
     // Exact address match
-    if !sk2_rcv_saddr6.is_null() && ipv6_addr_equal(sk1_rcv_saddr6, sk2_rcv_saddr6) {
+    if ipv6_addr_equal(sk1_rcv_saddr6, sk2_rcv_saddr6) {
         return true;
     }
 
@@ -272,7 +254,7 @@ pub unsafe extern "C" fn inet_csk_bind_conflict(
                     || (!reuseport_ok
                         && reuseport
                         && (*sk2).sk_reuseport != ptr::null()
-                        && rcu_access_pointer((*sk).sk_reuseport_cb).is_null()
+                        && rcu_access_pointer((*sk).sk_reuseport_cb).is_none()
                         && ((*sk2).sk_state == TCP_TIME_WAIT || uid_eq(uid, sock_i_uid(sk2))))
                         && inet_rcv_saddr_equal(sk, sk2, true))
                 {

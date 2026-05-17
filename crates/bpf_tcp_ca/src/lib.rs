@@ -5,8 +5,7 @@
 
 #![no_std]
 #![allow(non_camel_case_types)]
-#![allow(clang::too_many_arguments)]
-
+#![allow(dead_code)]
 
 use kernel_types::*;
 use core::ffi::c_int;
@@ -25,54 +24,49 @@ pub const NOT_INIT: c_int = -1;
 
 // Type definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Btf {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BtfType {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BpfProg {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BpfInsnAccessAux {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BpfVerfierLog {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
-pub struct TcpSock {
-    // Opaque type - actual fields are in the kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-pub struct InetConnectionSock {
-    // Opaque type - actual fields are in the kernel
-    _private: [u8; 0],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BpfFuncProto {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BpfStructOps {
     pub verifier_ops: *const BpfVerifierOps,
     pub reg: extern "C" fn(*mut c_void) -> c_int,
@@ -84,6 +78,7 @@ pub struct BpfStructOps {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BpfVerifierOps {
     pub get_func_proto: extern "C" fn(c_int, *const BpfProg) -> *const BpfFuncProto,
     pub is_valid_access: extern "C" fn(c_int, c_int, c_int, *const BpfProg, *mut BpfInsnAccessAux) -> bool,
@@ -92,6 +87,7 @@ pub struct BpfVerifierOps {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct BtfMember {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
@@ -114,6 +110,7 @@ static mut unsupported_ops: [c_uint; 1] = [mem::offset_of!(TcpCongestionOps, get
 
 // Opaque struct definitions
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct TcpCongestionOps {
     // Opaque type - actual fields are in the kernel
     _private: [u8; 0],
@@ -140,7 +137,7 @@ static mut sock_id: c_uint = 0;
 
 // BPF function prototypes
 #[no_mangle]
-pub unsafe extern "C" fn bpf_tcp_send_ack(tp: *mut TcpSock, rcv_nxt: u32) -> c_int {
+pub unsafe extern "C" fn bpf_tcp_send_ack(tp: *mut tcp_sock, rcv_nxt: u32) -> c_int {
     // bpf_tcp_ca prog cannot have NULL tp
     __tcp_send_ack(tp as *mut c_void, rcv_nxt);
     0
@@ -152,48 +149,48 @@ static mut bpf_tcp_ca_kfunc_ids: [Option<unsafe extern "C" fn() -> ()>; 20] = [N
 #[no_mangle]
 pub unsafe extern "C" fn bpf_tcp_ca_init(btf: *mut Btf) -> c_int {
     let mut type_id: c_int = 0;
-    
+
     type_id = btf_find_by_name_kind(btf, b"sock\0" as *const u8, 0); // BTF_KIND_STRUCT
     if type_id < 0 {
         return EINVAL;
     }
     sock_id = type_id as c_uint;
-    
+
     type_id = btf_find_by_name_kind(btf, b"tcp_sock\0" as *const u8, 0); // BTF_KIND_STRUCT
     if type_id < 0 {
         return EINVAL;
     }
     tcp_sock_id = type_id as c_uint;
     tcp_sock_type = btf_type_by_id(btf, type_id);
-    
+
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn is_optional(member_offset: c_uint) -> bool {
     let mut i: usize = 0;
-    
+
     while i < 9 {
         if member_offset == *optional_ops.as_ptr().add(i) {
             return true;
         }
         i += 1;
     }
-    
+
     false
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn is_unsupported(member_offset: c_uint) -> bool {
     let mut i: usize = 0;
-    
+
     while i < 1 {
         if member_offset == *unsupported_ops.as_ptr().add(i) {
             return true;
         }
         i += 1;
     }
-    
+
     false
 }
 
@@ -304,7 +301,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_init_member(t: *const BtfType, member: *cons
     let utcp_ca = udata as *const TcpCongestionOps;
     let tcp_ca = kdata as *mut TcpCongestionOps;
     let moff = btf_member_bit_offset(t, member) / 8;
-    
+
     match moff {
         0 => { // offsetof(struct tcp_congestion_ops, flags)
             if (*utcp_ca).flags & !TCP_CONG_MASK {
@@ -324,16 +321,16 @@ pub unsafe extern "C" fn bpf_tcp_ca_init_member(t: *const BtfType, member: *cons
         },
         _ => {}
     }
-    
+
     if !btf_type_resolve_func_ptr(btf_vmlinux, (*member).type_field, ptr::null_mut()) {
         return 0;
     }
-    
+
     let prog_fd = *(udata as *const c_int);
     if prog_fd == 0 && !is_optional(moff) && !is_unsupported(moff) {
         return EINVAL;
     }
-    
+
     0
 }
 

@@ -9,8 +9,8 @@
 
 use core::ffi::c_int;
 use core::ffi::c_void;
-use core::ffi::size_t;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -20,53 +20,16 @@ pub const EADDRNOTAVAIL: c_int = -125;
 
 // Type definitions
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr32: [u32; 4],
-}
-
-#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_hashinfo {
     pub ehash_mask: u32,
     pub ehash: *mut inet_ehash_bucket,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_ehash_bucket {
-    pub chain: hlist_nulls,
-}
-
-#[repr(C)]
-pub struct hlist_nulls {
-    // Simplified representation - actual implementation would need to match C's hlist_nulls
-    // This is a placeholder for the actual kernel structure
-    _dummy: u8,
-}
-
-#[repr(C)]
-pub struct sock {
-    pub sk_hash: u32,
-    pub sk_refcnt: refcount_t,
-    pub sk_bound_dev_if: c_int,
-    pub sk_v6_rcv_saddr: in6_addr,
-    pub sk_v6_daddr: in6_addr,
-    pub sk_family: c_int,
-    pub sk_prot: *mut c_void,
-}
-
-#[repr(C)]
-pub struct refcount_t {
-    // Simplified representation - actual implementation would need to match C's refcount_t
-    count: u32,
-}
-
-#[repr(C)]
-pub struct inet_connection_sock {
-    sk: sock,
-}
-
-#[repr(C)]
-pub struct inet_listen_hashbucket {
-    head: hlist_nulls,
+    pub chain: hlist_nulls_head,
 }
 
 // Function implementations
@@ -89,7 +52,7 @@ pub unsafe extern "C" fn inet6_ehashfn(
         ipv6_hash_secret = 0x87654321;
     }
 
-    let lhash = (*laddr).s6_addr32[3];
+    let lhash = (*laddr).in6_u.u6_addr32[3];
     let fhash = __ipv6_addr_jhash(faddr, ipv6_hash_secret);
 
     __inet6_ehashfn(
@@ -115,9 +78,7 @@ pub unsafe extern "C" fn __inet6_lookup_established(
     let hashinfo = &*hashinfo;
     let head = &*hashinfo.ehash;
     let slot = inet6_ehashfn(net, daddr, hnum, saddr, sport) & hashinfo.ehash_mask;
-    let head = &head[slot];
-
-    let ports = INET_COMBINED_PORTS(sport, hnum);
+    let head = &head[slot as usize];
 
     let mut sk: *mut sock = ptr::null_mut();
     let mut node: *const hlist_nulls_node = ptr::null();
@@ -126,12 +87,50 @@ pub unsafe extern "C" fn __inet6_lookup_established(
     loop {
         if node.is_null() {
             // Start of list
+            node = head.chain.first;
         } else {
             // Continue iteration
+            node = (*node).next;
         }
 
-        // This is a simplified version of the C loop
-        // Actual implementation would need to properly handle the hlist_nulls iteration
+        if node.is_null() {
+            break;
+        }
+
+        let entry = container_of!(node, sock, sk_nulls_node);
+        let entry_sk = &*entry;
+
+        if entry_sk.sk_family != AF_INET6 {
+            continue;
+        }
+
+        let inet6_sk = &*(entry_sk.sk_prot as *mut inet_sock);
+
+        if inet6_sk.inet_sport != sport || inet6_sk.inet_dport != hnum {
+            continue;
+        }
+
+        if inet6_sk.pinet6.is_null() {
+            continue;
+        }
+
+        let pinet6 = &*(inet6_sk.pinet6 as *mut ipv6_pinfo);
+
+        if pinet6.saddr.in6_u.u6_addr32[0] != (*saddr).in6_u.u6_addr32[0] ||
+           pinet6.saddr.in6_u.u6_addr32[1] != (*saddr).in6_u.u6_addr32[1] ||
+           pinet6.saddr.in6_u.u6_addr32[2] != (*saddr).in6_u.u6_addr32[2] ||
+           pinet6.saddr.in6_u.u6_addr32[3] != (*saddr).in6_u.u6_addr32[3] {
+            continue;
+        }
+
+        if pinet6.daddr.in6_u.u6_addr32[0] != (*daddr).in6_u.u6_addr32[0] ||
+           pinet6.daddr.in6_u.u6_addr32[1] != (*daddr).in6_u.u6_addr32[1] ||
+           pinet6.daddr.in6_u.u6_addr32[2] != (*daddr).in6_u.u6_addr32[2] ||
+           pinet6.daddr.in6_u.u6_addr32[3] != (*daddr).in6_u.u6_addr32[3] {
+            continue;
+        }
+
+        sk = entry;
         break;
     }
 
@@ -142,7 +141,7 @@ pub unsafe extern "C" fn __inet6_lookup_established(
 pub unsafe extern "C" fn inet6_lookup_listener(
     net: *const c_void,
     hashinfo: *mut inet_hashinfo,
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     doff: c_int,
     saddr: *const in6_addr,
     sport: u16,
@@ -151,15 +150,66 @@ pub unsafe extern "C" fn inet6_lookup_listener(
     dif: c_int,
     sdif: c_int,
 ) -> *mut sock {
-    // Implementation would follow C logic
-    ptr::null_mut()
+    let hashinfo = &*hashinfo;
+    let head = &*hashinfo.ehash;
+    let slot = inet6_ehashfn(net, daddr, hnum, saddr, sport) & hashinfo.ehash_mask;
+    let head = &head[slot as usize];
+
+    let mut sk: *mut sock = ptr::null_mut();
+    let mut node: *const hlist_nulls_node = ptr::null();
+
+    // SAFETY: We're iterating through the hlist_nulls as in C's sk_nulls_for_each_rcu
+    loop {
+        if node.is_null() {
+            // Start of list
+            node = head.chain.first;
+        } else {
+            // Continue iteration
+            node = (*node).next;
+        }
+
+        if node.is_null() {
+            break;
+        }
+
+        let entry = container_of!(node, sock, sk_nulls_node);
+        let entry_sk = &*entry;
+
+        if entry_sk.sk_family != AF_INET6 {
+            continue;
+        }
+
+        let inet6_sk = &*(entry_sk.sk_prot as *mut inet_sock);
+
+        if inet6_sk.inet_sport != hnum {
+            continue;
+        }
+
+        if inet6_sk.pinet6.is_null() {
+            continue;
+        }
+
+        let pinet6 = &*(inet6_sk.pinet6 as *mut ipv6_pinfo);
+
+        if pinet6.daddr.in6_u.u6_addr32[0] != (*daddr).in6_u.u6_addr32[0] ||
+           pinet6.daddr.in6_u.u6_addr32[1] != (*daddr).in6_u.u6_addr32[1] ||
+           pinet6.daddr.in6_u.u6_addr32[2] != (*daddr).in6_u.u6_addr32[2] ||
+           pinet6.daddr.in6_u.u6_addr32[3] != (*daddr).in6_u.u6_addr32[3] {
+            continue;
+        }
+
+        sk = entry;
+        break;
+    }
+
+    sk
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn inet6_lookup(
     net: *const c_void,
     hashinfo: *mut inet_hashinfo,
-    skb: *mut c_void,
+    skb: *mut sk_buff,
     doff: c_int,
     saddr: *const in6_addr,
     sport: u16,
@@ -167,8 +217,17 @@ pub unsafe extern "C" fn inet6_lookup(
     dport: u16,
     dif: c_int,
 ) -> *mut sock {
-    // Implementation would follow C logic
-    ptr::null_mut()
+    let mut sk: *mut sock = ptr::null_mut();
+
+    // First try to find established connection
+    sk = __inet6_lookup_established(net, hashinfo, saddr, sport, daddr, dport, dif, 0);
+
+    if sk.is_null() {
+        // If no established connection, try to find listener
+        sk = inet6_lookup_listener(net, hashinfo, skb, doff, saddr, sport, daddr, dport, dif, 0);
+    }
+
+    sk
 }
 
 #[no_mangle]
@@ -212,7 +271,7 @@ unsafe fn __ipv6_addr_jhash(addr: *const in6_addr, secret: u32) -> u32 {
         return 0;
     }
     let addr = &*addr;
-    (addr.s6_addr32[0] ^ addr.s6_addr32[1] ^ addr.s6_addr32[2] ^ addr.s6_addr32[3]) + secret
+    (addr.in6_u.u6_addr32[0] ^ addr.in6_u.u6_addr32[1] ^ addr.in6_u.u6_addr32[2] ^ addr.in6_u.u6_addr32[3]) + secret
 }
 
 #[inline]
@@ -229,16 +288,23 @@ unsafe fn net_hash_mix(net: *const c_void) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use kernel_types::*;
+
     #[test]
     fn test_inet6_ehashfn() {
         // Basic test case
         unsafe {
             let net = ptr::null();
             let laddr = &in6_addr {
-                s6_addr32: [0, 0, 0, 0x12345678],
+                in6_u: in6_addr_union {
+                    u6_addr32: [0, 0, 0, 0x12345678],
+                },
             };
             let faddr = &in6_addr {
-                s6_addr32: [0x11223344, 0x55667788, 0x99aabbcc, 0xddeeff00],
+                in6_u: in6_addr_union {
+                    u6_addr32: [0x11223344, 0x55667788, 0x99aabbcc, 0xddeeff00],
+                },
             };
             let result = super::inet6_ehashfn(net, laddr, 80, faddr, 443);
             assert_ne!(result, 0);

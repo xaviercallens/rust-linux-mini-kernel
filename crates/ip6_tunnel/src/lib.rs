@@ -10,9 +10,9 @@ use core::ptr;
 use core::ffi::c_void;
 use core::ffi::c_int;
 use core::ffi::c_uint;
-use core::ffi::c_ulong;
 use core::ffi::c_char;
 use core::mem;
+use kernel_types::*;
 
 // Constants from C
 const IP6_TUNNEL_HASH_SIZE_SHIFT: c_int = 5;
@@ -36,11 +36,6 @@ pub const EEXIST: c_int = -17;
 pub const E2BIG: c_int = -75;
 
 // Type definitions
-#[repr(C)]
-struct in6_addr {
-    __in6_u: [u8; 16],
-}
-
 #[repr(C)]
 struct net_device {
     name: [c_char; IFNAMSIZ],
@@ -110,8 +105,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
 
     let hash = HASH(remote, local);
     let ip6n = net_generic(net, ip6_tnl_net_id);
-    let any = in6_addr { __in6_u: [0; 16] };
-    let mut t: *mut ip6_tnl = ptr::null_mut();
+    let any = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
     let mut cand: *mut ip6_tnl = ptr::null_mut();
 
     // First pass - exact match
@@ -119,7 +113,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
     for t in get_list(bucket) {
         if !ipv6_addr_equal(local, &(*t).parms.laddr) ||
            !ipv6_addr_equal(remote, &(*t).parms.raddr) ||
-           !((*(*t).dev).flags & IFF_UP) != 0 {
+           ((*(*t).dev).flags & IFF_UP) == 0 {
             continue;
         }
 
@@ -135,7 +129,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
     for t in get_list(&(*ip6n).tnls_r_l[hash as usize]) {
         if !ipv6_addr_equal(local, &(*t).parms.laddr) ||
            !ipv6_addr_any(&(*t).parms.raddr) ||
-           !((*(*t).dev).flags & IFF_UP) != 0 {
+           ((*(*t).dev).flags & IFF_UP) == 0 {
             continue;
         }
 
@@ -151,7 +145,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
     for t in get_list(&(*ip6n).tnls_r_l[hash as usize]) {
         if !ipv6_addr_equal(remote, &(*t).parms.raddr) ||
            !ipv6_addr_any(&(*t).parms.laddr) ||
-           !((*(*t).dev).flags & IFF_UP) != 0 {
+           ((*(*t).dev).flags & IFF_UP) == 0 {
             continue;
         }
 
@@ -168,14 +162,14 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
 
     // Check collect_md_tun
     if !(*ip6n).collect_md_tun.is_null() &&
-       ((*(*ip6n).collect_md_tun).dev).is_null() &&
+       !((*(*ip6n).collect_md_tun).dev).is_null() &&
        ((*(*(*ip6n).collect_md_tun).dev).flags & IFF_UP) != 0 {
         return (*ip6n).collect_md_tun;
     }
 
     // Fallback to wildcard
     if !(*ip6n).tnls_wc[0].is_null() &&
-       ((*(*ip6n).tnls_wc[0]).dev).is_null() &&
+       !((*(*ip6n).tnls_wc[0]).dev).is_null() &&
        ((*(*(*ip6n).tnls_wc[0]).dev).flags & IFF_UP) != 0 {
         return (*ip6n).tnls_wc[0];
     }
@@ -272,7 +266,7 @@ unsafe fn ipv6_addr_any(addr: *const in6_addr) -> bool {
     if addr.is_null() {
         true
     } else {
-        let zero: in6_addr = in6_addr { __in6_u: [0; 16] };
+        let zero = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
         *addr == zero
     }
 }
@@ -281,7 +275,7 @@ unsafe fn ipv6_addr_hash(addr: *const in6_addr) -> c_uint {
     if addr.is_null() {
         0
     } else {
-        let a = &(*addr).__in6_u;
+        let a = &(*addr).in6_u.u6_addr8;
         let mut hash = 0;
         for &byte in a {
             hash = hash.wrapping_mul(31).wrapping_add(byte as c_uint);
@@ -303,11 +297,11 @@ static mut log_ecn_error: bool = true;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_hash() {
-        let a = in6_addr { __in6_u: [1; 16] };
-        let b = in6_addr { __in6_u: [2; 16] };
+        let a = in6_addr { in6_u: in6_addr_union { u6_addr8: [1; 16] } };
+        let b = in6_addr { in6_u: in6_addr_union { u6_addr8: [2; 16] } };
         unsafe {
             let h = HASH(&a, &b);
             assert!(h != 0);
