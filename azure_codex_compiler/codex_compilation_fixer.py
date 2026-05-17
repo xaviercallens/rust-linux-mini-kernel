@@ -76,32 +76,36 @@ class AzureCodexCompilationFixer:
                 "api-key": endpoint["api_key"]
             }
 
+            # Prepend system instructions to the prompt for Responses API
+            full_prompt = f"""You are an expert Rust systems programmer specializing in Linux kernel FFI code. Fix compilation errors while maintaining C FFI compatibility. Always use #[repr(C)] for structs, extern "C" for functions, and proper unsafe blocks.
+
+{prompt}"""
+
             payload = {
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are an expert Rust systems programmer specializing in Linux kernel FFI code. Fix compilation errors while maintaining C FFI compatibility. Always use #[repr(C)] for structs, extern \"C\" for functions, and proper unsafe blocks."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "max_tokens": max_tokens,
-                "temperature": 0.1,
-                "top_p": 0.95
+                "model": endpoint["deployment"],
+                "input": full_prompt
+                # Note: Responses API doesn't support max_tokens, temperature, top_p
             }
 
             response = requests.post(
-                f"{endpoint['endpoint']}/openai/deployments/{endpoint['deployment']}/chat/completions?api-version=2024-02-15-preview",
+                f"{endpoint['endpoint']}/openai/responses?api-version=2025-04-01-preview",
                 headers=headers,
                 json=payload,
-                timeout=60
+                timeout=120,
+                verify=False  # Disable SSL verification for corporate proxy
             )
 
             response.raise_for_status()
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+
+            # Extract text from Responses API format
+            if result.get("output") and len(result["output"]) > 0:
+                content = result["output"][0].get("content", [])
+                if content and len(content) > 0:
+                    return content[0].get("text", "")
+
+            print(f"❌ Unexpected response format from endpoint {idx}")
+            return None
 
         except Exception as e:
             print(f"Error calling Codex endpoint {idx}: {e}")

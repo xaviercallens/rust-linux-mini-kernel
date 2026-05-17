@@ -24,36 +24,38 @@ def compile_module(module_path):
     return len(errors), result.stderr
 
 def call_azure_openai(endpoint, api_key, deployment, prompt):
-    """Call Azure OpenAI API"""
+    """Call Azure OpenAI Responses API"""
     # Remove trailing slash and construct URL
     base_url = endpoint.rstrip('/')
-    url = f"{base_url}/openai/deployments/{deployment}/chat/completions?api-version=2024-02-15-preview"
+    url = f"{base_url}/openai/responses?api-version=2025-04-01-preview"
 
     headers = {
         "Content-Type": "application/json",
         "api-key": api_key
     }
 
+    # Combine system message with user prompt for Responses API
+    full_input = f"""You are an expert Rust systems programmer. Fix compilation errors with minimal changes.
+
+{prompt}"""
+
     payload = {
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are an expert Rust systems programmer. Fix compilation errors with minimal changes."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "max_tokens": 1500,
-        "temperature": 0.2
+        "model": deployment,
+        "input": full_input
     }
 
     print(f"   URL: {url[:80]}...")
-    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    response = requests.post(url, headers=headers, json=payload, timeout=60, verify=False)
     response.raise_for_status()
 
-    return response.json()['choices'][0]['message']['content']
+    result = response.json()
+    # Extract text from Responses API format
+    if result.get("output") and len(result["output"]) > 0:
+        content = result["output"][0].get("content", [])
+        if content and len(content) > 0:
+            return content[0].get("text", "")
+
+    return "No response content"
 
 def main():
     module_name = sys.argv[1] if len(sys.argv) > 1 else "netfilter"
