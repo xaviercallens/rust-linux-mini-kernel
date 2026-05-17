@@ -8,6 +8,9 @@ import asyncio
 import json
 import subprocess
 import time
+import os
+import re
+import requests
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -70,6 +73,12 @@ class ParallelImprovementMonitor:
         self.current_state: Optional[CheckpointState] = None
         self.metrics: List[ImprovementMetrics] = []
         self.start_time = time.time()
+
+        # Azure OpenAI Codex configuration
+        self.azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT_1", "")
+        self.azure_key = os.environ.get("AZURE_OPENAI_KEY_1", "")
+        self.azure_deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_1", "gpt-5.3-codex")
+        self.azure_api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2025-04-01-preview")
 
         # Load previous checkpoint if exists
         self.load_checkpoint()
@@ -201,22 +210,105 @@ class ParallelImprovementMonitor:
             print(f"⚠️  Error counting errors for {module_name}: {e}")
             return 0
 
+    async def call_codex(self, prompt: str, max_tokens: int = 2000) -> Optional[str]:
+        """Call Azure OpenAI Codex API"""
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "api-key": self.azure_key
+            }
+
+            payload = {
+                "model": self.azure_deployment,
+                "input": prompt,
+                "max_tokens": max_tokens
+            }
+
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: requests.post(
+                    f"{self.azure_endpoint}/openai/responses?api-version={self.azure_api_version}",
+                    headers=headers,
+                    json=payload,
+                    timeout=120,
+                    verify=False
+                )
+            )
+
+            if response.status_code != 200:
+                return None
+
+            result = response.json()
+            if result.get("output") and len(result["output"]) > 0:
+                content = result["output"][0].get("content", [])
+                if content and len(content) > 0:
+                    return content[0].get("text", "")
+
+            return None
+
+        except Exception as e:
+            print(f"⚠️  Codex API error: {e}")
+            return None
+
     async def run_codex_fix(self, module_name: str, model: str) -> bool:
         """Run Codex fix on a module"""
         try:
-            # Call the Codex compilation fixer
+            module_path = self.workspace_root / "crates" / module_name / "src" / "lib.rs"
+
+            if not module_path.exists():
+                return False
+
+            # Read current code
+            code = module_path.read_text()
+
+            # Get compilation errors
             proc = await asyncio.create_subprocess_exec(
-                "python3",
-                str(self.workspace_root / "azure_codex_compiler" / "codex_compilation_fixer.py"),
-                "--workspace", str(self.workspace_root),
-                "--module", module_name,
-                "--model", model,
+                "cargo", "build",
+                cwd=module_path.parent.parent,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
+            _, stderr = await proc.communicate()
+            errors = stderr.decode()
 
-            await asyncio.wait_for(proc.wait(), timeout=300)  # 5 min timeout
-            return proc.returncode == 0
+            if "error" not in errors.lower():
+                return True  # Already compiles
+
+            # Extract first 5 errors
+            error_lines = [line for line in errors.split('\n') if 'error[E' in line][:5]
+            error_summary = '\n'.join(error_lines)
+
+            # Build prompt
+            prompt = f"""You are an expert Rust systems programmer fixing Linux kernel networking code translation errors.
+
+Current code has these compilation errors:
+{error_summary}
+
+Full error output:
+{errors[:2000]}
+
+Current code excerpt (first 100 lines):
+```rust
+{''.join(code.split(chr(10))[:100])}
+```
+
+Please provide ONLY the corrected Rust code that fixes these errors. Do not include explanations, just the fixed code wrapped in ```rust blocks."""
+
+            # Call Codex
+            fixed_code = await self.call_codex(prompt, max_tokens=4000)
+
+            if not fixed_code:
+                return False
+
+            # Extract code from response
+            code_match = re.search(r'```rust\n(.*?)```', fixed_code, re.DOTALL)
+            if code_match:
+                new_code = code_match.group(1)
+                module_path.write_text(new_code)
+                return True
+
+            return False
 
         except asyncio.TimeoutError:
             print(f"⏱️  {module_name} - Timeout after 5 minutes")
@@ -427,7 +519,7 @@ class ParallelImprovementMonitor:
 | **Successful** | {len(successful)} ({len(successful)/len(self.metrics)*100:.1f}%) |
 | **Failed** | {len(failed)} ({len(failed)/len(self.metrics)*100:.1f}%) |
 | **Total Errors Fixed** | {sum(m.errors_fixed for m in successful)} |
-| **Avg Improvement** | {sum(m.improvement_percent for m in successful)/len(successful):.1f}% |
+| **Avg Improvement** | {sum(m.improvement_percent for m in successful)/len(successful):.1f}% if successful else 0.0% |
 | **Total Commits** | {len([m for m in successful if m.git_commit])} |
 
 ### Performance
