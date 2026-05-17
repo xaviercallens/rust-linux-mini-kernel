@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! IPv4 Socket Handling for Linux Kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

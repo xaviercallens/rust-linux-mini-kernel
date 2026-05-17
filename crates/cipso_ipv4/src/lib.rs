@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! CIPSO - Commercial IP Security Option
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

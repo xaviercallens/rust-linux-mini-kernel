@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! IPv6 Routing Policy Rules
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

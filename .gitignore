@@ -8,3 +8,5 @@
 # Rust build artifacts
 /target/
 **/target/
+*.pyc
+__pycache__/

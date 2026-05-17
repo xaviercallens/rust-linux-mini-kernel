@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! IPv4 Device Support Routines
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

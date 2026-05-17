@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! BPF TCP Congestion Control Implementation
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

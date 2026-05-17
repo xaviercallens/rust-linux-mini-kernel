@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! IPv4 Forwarding Information Base (FIB) frontend implementation
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

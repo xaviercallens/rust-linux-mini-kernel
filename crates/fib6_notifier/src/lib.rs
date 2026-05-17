@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! IPv6 FIB Notifier Module
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

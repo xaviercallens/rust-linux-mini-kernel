@@ -11,3 +11,5 @@ crate-type = ["staticlib", "rlib"]
 
 [dependencies]
 libc.workspace = true
+
+kernel_types = { path = "../kernel_types" }

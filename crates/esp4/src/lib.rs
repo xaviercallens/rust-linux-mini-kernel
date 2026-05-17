@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! IPsec ESP (Encapsulating Security Payload) handling for IPv4
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

@@ -1,3 +1,5 @@
+use kernel_types::*;
+
 //! Anycast support for IPv6
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
