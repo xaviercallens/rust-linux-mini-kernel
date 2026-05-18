@@ -5,70 +5,82 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)]
 
+use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
-use core::ffi::c_void;
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_char;
-use core::ffi::c_ushort;
 use kernel_types::*;
 
-// Constants from C
 pub const TFTP_PORT: u16 = 69;
 pub const TFTP_OPCODE_READ: u16 = 1;
 pub const TFTP_OPCODE_WRITE: u16 = 2;
-pub const TFTP_OPCODE_DATA: u16 = 3;
-pub const TFTP_OPCODE_ACK: u16 = 4;
-pub const TFTP_OPCODE_ERROR: u16 = 5;
+pub const NF_ACCEPT: c_int = 1;
+pub const AF_INET: c_int = 2;
+pub const AF_INET6: c_int = 10;
+pub const IPPROTO_UDP: c_int = 17;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct tftphdr {
-    opcode: [u8; 2],
-    // ... other fields as needed, but we only use opcode in this implementation
+    pub opcode: [u8; 2],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    src: nf_conntrack_tuple_union,
-    dst: nf_conntrack_tuple_union,
+pub struct udphdr {
+    _private: [u8; 8],
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub union nf_conntrack_tuple_union {
-    u3: [u8; 16],
-    udp: nf_conntrack_tuple_udp,
+pub struct sk_buff {
+    _private: [u8; 0],
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_udp {
-    port: [u8; 2],
+pub struct nf_conn {
+    _private: [u8; 0],
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conntrack_expect {
-    // Opaque structure - actual fields defined in kernel
     _private: [u8; 0],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    // Opaque structure - actual fields defined in kernel
+pub struct nf_conntrack_tuple_udp {
+    pub port: [u8; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_conntrack_tuple_union {
+    pub u3: [u8; 16],
+    pub udp: nf_conntrack_tuple_udp,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple {
+    pub src: nf_conntrack_tuple_union,
+    pub dst: nf_conntrack_tuple_union,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_expect_policy {
+    pub max_expected: c_uint,
+    pub timeout: c_uint,
+}
+
+#[repr(C)]
+pub struct module {
     _private: [u8; 0],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
-    // Opaque structure - actual fields defined in kernel
     _private: [u8; 0],
 }
 
@@ -93,7 +105,25 @@ pub extern "C" fn nf_nat_tftp_hook() -> *mut c_void {
     unsafe { ptr::from_ref(&NF_NAT_TFTP_HOOK) as *mut c_void }
 }
 
-#[no_mangle]
+static HELPER_NAME: &[u8] = b"tftp\0";
+static ERR_MSG: &[u8] = b"failed to register helpers\n\0";
+
+#[unsafe(no_mangle)]
+pub static mut nf_nat_tftp_hook: Option<nf_nat_tftp_hook_t> = None;
+
+static mut PORTS: [u16; 8] = [0; 8];
+static mut PORTS_C: c_uint = 0;
+
+static mut TFTP_HELPERS: [nf_conntrack_helper; 16] = [nf_conntrack_helper { _private: [] }; 16];
+
+static TFTP_EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
+    max_expected: 1,
+    timeout: 5 * 60,
+};
+
+const THIS_MODULE: *mut module = ptr::null_mut();
+
+#[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
     let mut ret: c_int = 0;
 
@@ -103,7 +133,6 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
             PORTS[0] = TFTP_PORT;
             PORTS_C = 1;
         }
-    }
 
     // Register helpers for both IPv4 and IPv6
     for i in 0..unsafe { PORTS_C } {
@@ -123,10 +152,7 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
                 ptr::null_mut(),
                 THIS_MODULE,
             );
-        }
 
-        // Initialize IPv6 helper
-        unsafe {
             nf_ct_helper_init(
                 &mut TFTP[2 * i as usize + 1],
                 10, // AF_INET6
@@ -141,8 +167,6 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
                 ptr::null_mut(),
                 THIS_MODULE,
             );
-        }
-    }
 
     // Register helpers
     ret = unsafe { nf_conntrack_helpers_register(TFTP.as_mut_ptr(), 2 * PORTS_C as c_int) };
@@ -153,17 +177,17 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
     ret
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_tftp_fini() {
     unsafe { nf_conntrack_helpers_unregister(TFTP.as_mut_ptr(), 2 * PORTS_C as c_int) };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tftp_help(
     skb: *mut sk_buff,
     protoff: c_uint,
-    ct: *mut nf_conn,
-    ctinfo: c_int,
+    _ct: *mut nf_conn,
+    _ctinfo: c_int,
 ) -> c_int {
     let mut ret: c_int = 0;
     let mut tfh: *const tftphdr = ptr::null();
@@ -172,28 +196,27 @@ pub extern "C" fn tftp_help(
     let mut tuple: *mut nf_conntrack_tuple = ptr::null_mut();
     let mut nf_nat_tftp: Option<NfNatTftpHookFn> = None;
 
-    // Extract TFTP header from skb
-    tfh = unsafe {
+    let tfh = unsafe {
         skb_header_pointer(
             skb,
             protoff + core::mem::size_of::<udphdr>() as c_uint,
             core::mem::size_of::<tftphdr>() as c_uint,
-            &mut _tftph as *mut tftphdr as *mut c_void,
-        ) as *const tftphdr
+            (&raw mut local_hdr).cast::<c_void>(),
+        ) as *mut tftphdr
     };
 
     if tfh.is_null() {
         return NF_ACCEPT;
     }
 
-    // Get opcode
-    let opcode: u16 = unsafe { ntohs((*tfh).opcode[0] as u16 | ((*tfh).opcode[1] as u16) << 8) };
+    let opcode = unsafe {
+        let raw = [(*tfh).opcode[0], (*tfh).opcode[1]];
+        ntohs(u16::from_ne_bytes(raw))
+    };
 
-    match opcode {
-        TFTP_OPCODE_READ | TFTP_OPCODE_WRITE => {
-            // RRQ and WRQ work the same way
-            unsafe { nf_ct_dump_tuple(&(*ct).tuplehash[IP_CT_DIR_ORIGINAL].tuple) };
-            unsafe { nf_ct_dump_tuple(&(*ct).tuplehash[IP_CT_DIR_REPLY].tuple) };
+    if opcode != TFTP_OPCODE_READ && opcode != TFTP_OPCODE_WRITE {
+        return NF_ACCEPT;
+    }
 
             // Allocate expectation
             exp = unsafe { nf_ct_expect_alloc(ct) };
@@ -260,7 +283,7 @@ pub extern "C" fn tftp_help(
         }
     }
 
-    ret
+    NF_ACCEPT
 }
 
 // Helper functions (declared as extern in C)

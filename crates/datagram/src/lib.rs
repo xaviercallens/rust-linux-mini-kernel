@@ -1,8 +1,3 @@
-//! IPv6 Datagram Handling
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
@@ -10,13 +5,18 @@
 use kernel_types::*;
 use core::ptr;
 use core::mem;
-use libc::{c_int, c_uint, c_ulong, size_t, socklen_t};
+use core::ptr;
+use kernel_types::*;
+
+pub type size_t = usize;
+pub type c_size_t = usize;
+pub type socklen_t = u32;
 
 // Constants from C
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENETUNREACH: c_int = -101;
-pub const EAFNOSUPPORT: c_int = -97;
+pub const EINVAL: c_int = 22;
+pub const ENOMEM: c_int = 12;
+pub const ENETUNREACH: c_int = 101;
+pub const EAFNOSUPPORT: c_int = 97;
 
 // Type definitions
 
@@ -42,12 +42,6 @@ pub struct pktinfo {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rxopt {
-    pub bits: rxopt_bits,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct rxopt_bits {
     pub rxpmtu: c_int,
 }
@@ -61,19 +55,42 @@ pub struct ip6_flowlabel {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ipv6_txoptions {
-    // Placeholder for actual fields
     _unused: [u8; 0],
 }
 
-// Function implementations
-/// Check if IPv6 address is mapped to IPv4 any
-///
-/// # Safety
-/// - `a` must be a valid pointer to in6_addr
+unsafe extern "C" {
+    fn ipv6_addr_v4mapped(a: *const in6_addr) -> bool;
+    fn ipv6_addr_is_multicast(a: *const in6_addr) -> bool;
+    fn ipv6_addr_any(a: *const in6_addr) -> bool;
+
+    fn security_sk_classify_flow(sk: *mut sock, fl6: *mut flowi6);
+
+    fn fl6_sock_lookup(sk: *mut sock, label: u32) -> *mut ip6_flowlabel;
+    fn rcu_dereference(p: *mut ipv6_txoptions) -> *mut ipv6_txoptions;
+
+    fn sock_net(sk: *mut sock) -> *mut c_void;
+    fn ip6_dst_lookup_flow(
+        net: *mut c_void,
+        sk: *mut sock,
+        fl6: *mut flowi6,
+        final_p: *mut in6_addr,
+    ) -> *mut c_void;
+
+    fn inet_sk(sk: *mut sock) -> *mut inet_sock;
+    fn inet6_sk(sk: *mut sock) -> *mut ipv6_pinfo;
+}
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_mapped_addr_any(
-    a: *const in6_addr
-) -> bool {
+pub unsafe extern "C" fn rust_eh_personality() {}
+
+#[no_mangle]
+pub unsafe extern "C" fn ipv6_mapped_addr_any(a: *const in6_addr) -> bool {
     if a.is_null() {
         return false;
     }
@@ -81,16 +98,8 @@ pub unsafe extern "C" fn ipv6_mapped_addr_any(
     ipv6_addr_v4mapped(a) && (a_ref.in6_u.u6_addr32[3] == 0)
 }
 
-/// Initialize flow key for IPv6 datagram
-///
-/// # Safety
-/// - `fl6` must be a valid pointer to flowi6
-/// - `sk` must be a valid pointer to sock
 #[no_mangle]
-pub unsafe extern "C" fn ip6_datagram_flow_key_init(
-    fl6: *mut flowi6,
-    sk: *mut sock
-) {
+pub unsafe extern "C" fn ip6_datagram_flow_key_init(fl6: *mut flowi6, sk: *mut sock) {
     if fl6.is_null() || sk.is_null() {
         return;
     }
@@ -120,10 +129,6 @@ pub unsafe extern "C" fn ip6_datagram_flow_key_init(
     security_sk_classify_flow(sk, fl6);
 }
 
-/// Update destination for IPv6 datagram
-///
-/// # Safety
-/// - `sk` must be a valid pointer to sock
 #[no_mangle]
 pub unsafe extern "C" fn ip6_datagram_dst_update(
     sk: *mut sock,
@@ -153,7 +158,7 @@ pub unsafe extern "C" fn ip6_datagram_dst_update(
 
     let dst = ip6_dst_lookup_flow(sock_net(sk), sk, &mut fl6, &mut final_p);
     if dst.is_null() {
-        return -1;
+        return -ENETUNREACH;
     }
 
     if fix_sk_saddr != 0 {

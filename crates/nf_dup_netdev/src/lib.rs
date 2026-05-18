@@ -5,13 +5,13 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)] // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
 use core::ffi::c_int;
 use core::ptr;
 use kernel_types::*;
 
-// Error codes from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const EOPNOTSUPP: c_int = -95;
@@ -40,13 +40,24 @@ pub struct flow_action_entry {
     pub dev: *mut net_device,
 }
 
-// External C functions used in implementation
-extern "C" {
+#[repr(C)]
+pub struct nft_flow_rule {
+    pub rule: *mut c_void,
+}
+
+#[repr(C)]
+pub struct flow_action_entry {
+    pub id: c_int,
+    pub dev: *mut net_device,
+}
+
+unsafe extern "C" {
     fn dev_get_by_index_rcu(net: *mut c_void, ifindex: c_int) -> *mut net_device;
     fn dev_get_by_index(net: *mut c_void, ifindex: c_int) -> *mut net_device;
     fn kfree_skb(skb: *mut sk_buff);
     fn skb_clone(skb: *mut sk_buff, gfp_mask: c_int) -> *mut sk_buff;
-    fn dev_queue_xmit(skb: *mut sk_buff);
+    fn nf_do_netdev_egress(skb: *mut sk_buff, dev: *mut net_device);
+    fn nft_flow_rule_action_entry(rule: *mut c_void, index: c_int) -> *mut flow_action_entry;
 }
 
 // Internal helper function
@@ -68,11 +79,7 @@ fn nf_do_netdev_egress(skb: *mut sk_buff, dev: *mut net_device) {
     }
 }
 
-// Exported function: nf_fwd_netdev_egress
-/// # Safety
-/// - pkt must be a valid pointer to nft_pktinfo
-/// - oif must be a valid interface index
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_fwd_netdev_egress(pkt: *const nft_pktinfo, oif: c_int) {
     if pkt.is_null() {
         return;
@@ -80,18 +87,14 @@ pub unsafe extern "C" fn nf_fwd_netdev_egress(pkt: *const nft_pktinfo, oif: c_in
 
     let dev = dev_get_by_index_rcu((*pkt).net, oif);
     if dev.is_null() {
-        kfree_skb((*pkt).skb);
+        unsafe { kfree_skb(skb) };
         return;
     }
 
-    nf_do_netdev_egress((*pkt).skb, dev);
+    unsafe { nf_do_netdev_egress(skb, dev) };
 }
 
-// Exported function: nf_dup_netdev_egress
-/// # Safety
-/// - pkt must be a valid pointer to nft_pktinfo
-/// - oif must be a valid interface index
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_dup_netdev_egress(pkt: *const nft_pktinfo, oif: c_int) {
     if pkt.is_null() {
         return;
@@ -102,18 +105,13 @@ pub unsafe extern "C" fn nf_dup_netdev_egress(pkt: *const nft_pktinfo, oif: c_in
         return;
     }
 
-    let skb = skb_clone((*pkt).skb, 0x8000_0000); // GFP_ATOMIC
+    let skb = unsafe { skb_clone(orig_skb, GFP_ATOMIC) };
     if !skb.is_null() {
-        nf_do_netdev_egress(skb, dev);
+        unsafe { nf_do_netdev_egress(skb, dev) };
     }
 }
 
-// Exported function: nft_fwd_dup_netdev_offload
-/// # Safety
-/// - ctx must be a valid pointer to nft_offload_ctx
-/// - flow must be a valid pointer to nft_flow_rule
-/// - oif must be a valid interface index
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nft_fwd_dup_netdev_offload(
     ctx: *mut nft_offload_ctx,
     flow: *mut nft_flow_rule,
@@ -124,7 +122,8 @@ pub unsafe extern "C" fn nft_fwd_dup_netdev_offload(
         return EINVAL;
     }
 
-    let dev = dev_get_by_index((*ctx).net, oif);
+    let net = unsafe { (*ctx).net };
+    let dev = unsafe { dev_get_by_index(net, oif) };
     if dev.is_null() {
         return EOPNOTSUPP;
     }
@@ -133,7 +132,11 @@ pub unsafe extern "C" fn nft_fwd_dup_netdev_offload(
     (*entry).id = id;
     (*entry).dev = dev;
 
-    (*ctx).num_actions += 1;
+    unsafe {
+        (*entry).id = id;
+        (*entry).dev = dev;
+        (*ctx).num_actions += 1;
+    }
 
     0
 }

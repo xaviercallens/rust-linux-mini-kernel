@@ -5,11 +5,21 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_uint, c_void};
+use core::ffi::{c_int, c_void};
+use core::panic::PanicInfo;
 use kernel_types::*;
+
+type __be32 = u32;
+type __sum16 = u16;
+
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -19,113 +29,81 @@ pub struct nf_conn_seqadj {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_seqadj {
-    pub offset_before: c_int,
-    pub offset_after: c_int,
-    pub correction_pos: u32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct tcphdr {
-    pub seq: u32,
-    pub ack_seq: u32,
-    pub doff: u8,
-    pub check: u16,
-    pub ack: u16,
+    pub seq: __be32,
+    pub ack_seq: __be32,
+    pub doff_res_flags: u16,
+    pub window: u16,
+    pub check: __sum16,
+    pub urg_ptr: u16,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct tcp_sack_block_wire {
-    pub start_seq: u32,
-    pub end_seq: u32,
+    pub start_seq: __be32,
+    pub end_seq: __be32,
 }
 
-// Extern declarations for kernel functions
-extern "C" {
+unsafe extern "C" {
     fn set_bit(bit: c_int, addr: *mut u32);
     fn nfct_seqadj(ct: *mut nf_conn) -> *mut nf_conn_seqadj;
     fn CTINFO2DIR(ctinfo: c_int) -> c_int;
     fn skb_network_header(skb: *mut sk_buff) -> *mut c_void;
     fn ip_hdrlen(skb: *mut sk_buff) -> c_int;
-    fn skb_ensure_writable(skb: *mut sk_buff, len: c_int) -> c_int;
-    fn inet_proto_csum_replace4(
-        csum: *mut u16,
-        skb: *mut sk_buff,
-        old: *mut c_void,
-        new: *mut c_void,
-        pseudo: c_int,
-    );
 }
 
-// Constants from C
 pub const IPPROTO_TCP: u16 = 6;
-pub const TCPOPT_SACK: u8 = 4;
-pub const TCPOLEN_SACK_PERBLOCK: u8 = 8;
-pub const TCPOPT_EOL: u8 = 0;
-pub const TCPOPT_NOP: u8 = 1;
-
-// Error codes
 pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
+pub const IPS_SEQ_ADJUST_BIT: c_int = 0;
 
-/// Initialize sequence adjustment for connection
-///
-/// # Safety
-/// - `ct` must be a valid pointer to nf_conn
-/// - `off` must be a valid s32 value
-/// - Caller must ensure no data races on `ct`
-///
-/// # Returns
-/// 0 on success, -EINVAL if parameters invalid
-#[no_mangle]
+#[inline]
+fn after(a: __be32, b: __be32) -> bool {
+    (b.wrapping_sub(a) as i32) < 0
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_eh_personality() {}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_ct_seqadj_init(ct: *mut nf_conn, ctinfo: c_int, off: c_int) -> c_int {
     if ct.is_null() {
         return EINVAL;
     }
-
     if off == 0 {
         return 0;
     }
 
-    // Set the IPS_SEQ_ADJUST_BIT in (*ct).status
-    unsafe { set_bit(0, &mut (*ct).status) };
+    unsafe { set_bit(IPS_SEQ_ADJUST_BIT, &mut (*ct).status) };
 
     let seqadj = unsafe { nfct_seqadj(ct) };
     if seqadj.is_null() {
         return EINVAL;
     }
 
-    let dir = unsafe { CTINFO2DIR(ctinfo) } as usize;
-    let this_way = &mut (*seqadj).seq[dir];
-    (*this_way).offset_before = off;
-    (*this_way).offset_after = off;
+    let dir = unsafe { CTINFO2DIR(ctinfo) as usize };
+    if dir >= 2 {
+        return EINVAL;
+    }
+
+    let this_way = unsafe { &mut (*seqadj).seq[dir] };
+    this_way.offset_before = off;
+    this_way.offset_after = off;
+    this_way.correction_pos = 0;
 
     0
 }
 
-/// Set sequence adjustment parameters
-///
-/// # Safety
-/// - `ct` must be a valid pointer to nf_conn
-/// - `seq` must be a valid __be32 value
-/// - `off` must be a valid s32 value
-/// - Caller must ensure no data races on `ct`
-///
-/// # Returns
-/// 0 on success, -EINVAL if parameters invalid
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_ct_seqadj_set(
     ct: *mut nf_conn,
     ctinfo: c_int,
-    seq: u32,
+    seq: __be32,
     off: c_int,
 ) -> c_int {
     if ct.is_null() {
         return EINVAL;
     }
-
     if off == 0 {
         return 0;
     }
@@ -135,33 +113,24 @@ pub unsafe extern "C" fn nf_ct_seqadj_set(
         return EINVAL;
     }
 
-    unsafe { set_bit(0, &mut (*ct).status) };
+    unsafe { set_bit(IPS_SEQ_ADJUST_BIT, &mut (*ct).status) };
 
-    let dir = unsafe { CTINFO2DIR(ctinfo) } as usize;
-    let this_way = &mut (*seqadj).seq[dir];
+    let dir = unsafe { CTINFO2DIR(ctinfo) as usize };
+    if dir >= 2 {
+        return EINVAL;
+    }
 
-    // SAFETY: Lock is held by caller
-    unsafe {
-        if (*this_way).offset_before == (*this_way).offset_after
-            || after((*this_way).correction_pos, seq)
-        {
-            (*this_way).correction_pos = seq;
-            (*this_way).offset_before = (*this_way).offset_after;
-            (*this_way).offset_after += off;
-        }
+    let this_way = unsafe { &mut (*seqadj).seq[dir] };
+    if this_way.offset_before == this_way.offset_after || after(this_way.correction_pos, seq) {
+        this_way.correction_pos = seq;
+        this_way.offset_before = this_way.offset_after;
+        this_way.offset_after = this_way.offset_after.wrapping_add(off);
     }
 
     0
 }
 
-/// Set TCP sequence adjustment from skb
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `ct` must be a valid pointer to nf_conn
-/// - `off` must be a valid s32 value
-/// - Caller must ensure no data races on `ct` or `skb`
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_ct_tcp_seqadj_set(
     skb: *mut sk_buff,
     ct: *mut nf_conn,
@@ -250,12 +219,15 @@ pub unsafe extern "C" fn nf_ct_sack_adjust(
     ctinfo: c_int,
 ) -> c_int {
     if skb.is_null() || ct.is_null() {
-        return 0;
+        return;
+    }
+    if unsafe { (*ct).proctnum } != IPPROTO_TCP {
+        return;
     }
 
-    let seqadj = unsafe { nfct_seqadj(ct) };
-    if seqadj.is_null() {
-        return 0;
+    let nh = unsafe { skb_network_header(skb) as *mut u8 };
+    if nh.is_null() {
+        return;
     }
 
     let dir = unsafe { CTINFO2DIR(ctinfo) } as usize;

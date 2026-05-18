@@ -1,13 +1,9 @@
-//! IPv4 Socket Handling for Linux Kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use kernel_types::*;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 use core::ffi::{c_int, c_void};
 
@@ -31,13 +27,92 @@ pub struct inet_protosw {
     pub flags: c_int,
 }
 
-// Function implementations
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sock {
+    pub sk_receive_queue: skb_queue_head_t,
+    pub sk_rx_skb_cache: *mut sk_buff,
+    pub sk_error_queue: skb_queue_head_t,
+    pub sk_type: c_int,
+    pub sk_state: c_int,
+    pub sk_max_ack_backlog: c_int,
+    pub sk_dst_cache: *mut dst_entry,
+    pub sk_rx_dst: *mut dst_entry,
+    pub sk_rmem_alloc: atomic_t,
+    pub sk_wmem_alloc: refcount_t,
+    pub sk_wmem_queued: size_t,
+    pub sk_forward_alloc: size_t,
+    pub sk_backlog_rcv: *mut c_void,
+    pub sk_prot: *mut proto,
+    pub sk_destruct: Option<unsafe extern "C" fn(*mut sock)>,
+    pub sk_protocol: c_int,
+    pub sk_users: atomic_t,
+    pub sk_refcnt: atomic_t,
+    pub sk_shutdown: c_int,
+    pub sk_no_check: c_int,
+    pub sk_lingertime: c_int,
+    pub sk_reuse: c_int,
+    pub sk_bound_dev_if: c_int,
+    pub sk_bind_mark: c_int,
+    pub sk_priority: c_int,
+    pub sk_rcvlowat: size_t,
+    pub sk_rcvtimeo: c_int,
+    pub sk_sndtimeo: c_int,
+    pub sk_linger: linger,
+    pub sk_info_cache: *mut c_void,
+    pub sk_prot_creator: *mut proto,
+    pub sk_wq: *mut wait_queue_head_t,
+    pub sk_user_data: *mut c_void,
+    pub sk_clockid: c_int,
+    pub sk_flags: c_int,
+    pub sk_tsflags: c_int,
+    pub sk_peek_off: size_t,
+    pub sk_rxhash: c_int,
+    pub sk_filter: *mut c_void,
+    pub sk_timer: timer_list,
+    pub sk_stamp: timeval,
+}
 
-/// Socket destructor for IPv4 sockets
-///
-/// # Safety
-/// - `sk` must be a valid pointer to a sock structure
-/// - The socket must be in the correct state for destruction
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_protosw {
+    pub list: list_head,
+    pub protocol: c_int,
+    pub ops: *mut socket_ops,
+    pub prot: *mut proto,
+    pub flags: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct socket {
+    pub state: c_int,
+    pub type_field: c_int,
+    pub sk: *mut sock,
+}
+
+// Common constants used in shown code
+pub const SOCK_STREAM: c_int = 1;
+pub const TCP_CLOSE: c_int = 7;
+pub const SOCK_DEAD: c_int = 1;
+pub const SS_UNCONNECTED: c_int = 1;
+pub const TCPF_CLOSE: c_int = 1 << TCP_CLOSE;
+pub const TCP_LISTEN: c_int = 10;
+pub const TCPF_LISTEN: c_int = 1 << TCP_LISTEN;
+
+unsafe extern "C" {
+    fn __skb_queue_purge(list: *const skb_queue_head_t);
+    fn __kfree_skb(skb: *mut sk_buff);
+    fn sk_mem_reclaim(sk: *mut sock);
+    fn sock_flag(sk: *const sock, flag: c_int) -> bool;
+    fn atomic_read(v: *const atomic_t) -> c_int;
+    fn refcount_read(r: *const refcount_t) -> c_int;
+    fn dst_release(dst: *mut dst_entry);
+    fn sk_refcnt_debug_dec(sk: *mut sock);
+    fn lock_sock(sk: *mut sock);
+    fn release_sock(sk: *mut sock);
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn inet_sock_destruct(sk: *mut sock) {
     let inet = inet_sk(sk);
@@ -232,30 +307,19 @@ pub unsafe extern "C" fn inet_create(
     err = -ENOBUFS;
     sk = sk_alloc(net, PF_INET, GFP_KERNEL, answer_prot, kern);
     if sk.is_null() {
-        return err;
+        return;
     }
 
-    err = 0;
-    if INET_PROTOSW_REUSE & answer_flags != 0 {
-        (*sk).sk_reuse = SK_CAN_REUSE;
-    }
+    unsafe {
+        __skb_queue_purge(&(*sk).sk_receive_queue);
 
-    let inet = inet_sk(sk);
-    inet.is_icsk = (INET_PROTOSW_ICSK & answer_flags) != 0;
-    inet.nodefrag = 0;
-
-    if (*sock).type_field == SOCK_RAW {
-        inet.inet_num = protocol;
-        if protocol == IPPROTO_RAW {
-            inet.hdrincl = 1;
+        if !(*sk).sk_rx_skb_cache.is_null() {
+            __kfree_skb((*sk).sk_rx_skb_cache);
+            (*sk).sk_rx_skb_cache = ptr::null_mut();
         }
-    }
 
-    if (*net).ipv4.sysctl_ip_no_pmtu_disc != 0 {
-        inet.pmtudisc = IP_PMTUDISC_DONT;
-    } else {
-        inet.pmtudisc = IP_PMTUDISC_WANT;
-    }
+        __skb_queue_purge(&(*sk).sk_error_queue);
+        sk_mem_reclaim(sk);
 
     inet.inet_id = 0;
     sock_init_data(sock, sk);
@@ -281,25 +345,32 @@ pub unsafe extern "C" fn inet_create(
             sk_common_release(sk);
             return err;
         }
-    }
 
-    if (*sk).sk_prot.init != ptr::null_mut() {
-        err = (*sk).sk_prot.init(sk);
-        if err != 0 {
-            sk_common_release(sk);
-            return err;
+        if !sock_flag(sk, SOCK_DEAD) {
+            return;
         }
-    }
 
-    if kern == 0 {
-        err = BPF_CGROUP_RUN_PROG_INET_SOCK(sk);
-        if err != 0 {
-            sk_common_release(sk);
-            return err;
+        if atomic_read(&(*sk).sk_rmem_alloc) != 0 {
+            return;
         }
-    }
+        if refcount_read(&(*sk).sk_wmem_alloc) != 0 {
+            return;
+        }
+        if (*sk).sk_wmem_queued != 0 || (*sk).sk_forward_alloc != 0 {
+            return;
+        }
 
-    return err;
+        if !(*sk).sk_dst_cache.is_null() {
+            dst_release((*sk).sk_dst_cache);
+            (*sk).sk_dst_cache = ptr::null_mut();
+        }
+        if !(*sk).sk_rx_dst.is_null() {
+            dst_release((*sk).sk_rx_dst);
+            (*sk).sk_rx_dst = ptr::null_mut();
+        }
+
+        sk_refcnt_debug_dec(sk);
+    }
 }
 
 // Helper functions (would be implemented in C in the kernel)

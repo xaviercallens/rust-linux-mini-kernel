@@ -10,14 +10,18 @@
 //! - Maintains exact function signatures for exported symbols
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_void, c_int, c_uint, c_ulong, c_char};
-use core::mem;
-use core::ptr;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void};
+use core::panic::PanicInfo;
+use core::sync::atomic::AtomicUsize;
 use kernel_types::*;
+
+pub type size_t = usize;
+pub type c_size_t = usize;
+pub type socklen_t = u32;
 
 // Constants from C headers
 pub const IPPROTO_UDP: u8 = 17;
@@ -39,7 +43,13 @@ pub const NF_INET_LOCAL_IN: u32 = 3;
 pub const NF_IP_PRI_CONNTRACK: i32 = -100;
 pub const NF_IP_PRI_CONNTRACK_CONFIRM: i32 = 100;
 
-// Forward declarations for kernel types
+// Opaque kernel types that may not be present in kernel_types.
+#[repr(C)]
+pub struct net {
+    _private: [u8; 0],
+}
+
+// Opaque/FFI structs
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn_help {
@@ -51,8 +61,9 @@ pub struct nf_conn_help {
 pub struct nf_conntrack_tuple_hash;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple;
+pub struct nf_hook_state {
+    _private: [u8; 0],
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -64,8 +75,9 @@ pub struct nf_hook_ops {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_hook_state;
+pub struct nf_ct_zone_dflt {
+    _private: [u8; 0],
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -88,9 +100,8 @@ pub struct nf_conntrack_l4proto {
     _private: [u8; 0],
 }
 
-// Mutex type for kernel compatibility
 #[repr(C)]
-struct mutex {
+pub struct mutex {
     _private: [u8; 0],
 }
 
@@ -103,7 +114,7 @@ static NF_CT_PROTO_MUTEX: mutex = mutex {
 type nf_hook_fn = extern "C" fn(skb: *mut sk_buff, state: *const nf_hook_state) -> c_ulong;
 type nf_sockopt_get = extern "C" fn(sk: *mut c_void, optval: c_int, user: *mut c_void, len: *mut c_int) -> c_int;
 
-// Exported symbols
+// Exported l4proto symbols
 #[no_mangle]
 pub static NF_CONNTRACK_L4PROTO_UDP: nf_conntrack_l4proto = nf_conntrack_l4proto {
     _private: [0; 0],
@@ -149,7 +160,6 @@ pub static NF_CONNTRACK_L4PROTO_GENERIC: nf_conntrack_l4proto = nf_conntrack_l4p
     _private: [0; 0],
 };
 
-// Helper functions
 #[no_mangle]
 pub unsafe extern "C" fn nf_ct_l4proto_find(l4proto: u8) -> *const nf_conntrack_l4proto {
     match l4proto {
@@ -165,30 +175,22 @@ pub unsafe extern "C" fn nf_ct_l4proto_find(l4proto: u8) -> *const nf_conntrack_
     }
 }
 
-// Logging functions
 #[no_mangle]
 pub unsafe extern "C" fn nf_l4proto_log_invalid(
-    skb: *const sk_buff,
-    net: *mut net,
-    pf: c_uint,
-    protonum: u8,
-    fmt: *const c_char,
-    // ... variadic arguments
+    _skb: *const sk_buff,
+    _net: *mut net,
+    _pf: c_uint,
+    _protonum: u8,
+    _fmt: *const c_char,
 ) {
-    // SAFETY: This is a direct translation of the C function signature.
-    // Variadic arguments are handled by the C calling convention.
-    // The actual implementation would require C-compatible va_list handling.
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_ct_l4proto_log_invalid(
-    skb: *const sk_buff,
-    ct: *const nf_conn,
-    fmt: *const c_char,
-    // ... variadic arguments
+    _skb: *const sk_buff,
+    _ct: *const nf_conn,
+    _fmt: *const c_char,
 ) {
-    // SAFETY: This is a direct translation of the C function signature.
-    // Variadic arguments are handled by the C calling convention.
 }
 
 // Connection confirmation

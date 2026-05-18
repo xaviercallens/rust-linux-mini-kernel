@@ -1,20 +1,16 @@
-//! IPv6 extension header processing for the Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(clippy::all)]
 
 use kernel_types::*;
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
-// Constants from C
 pub const NEXTHDR_HOP: u8 = 0;
-pub const NEXTHDR_ROUTING: u8 = 44;
-pub const NEXTHDR_FRAGMENT: u8 = 47;
+pub const NEXTHDR_ROUTING: u8 = 43;
+pub const NEXTHDR_FRAGMENT: u8 = 44;
 pub const NEXTHDR_AUTH: u8 = 51;
 pub const NEXTHDR_NONE: u8 = 59;
 pub const NEXTHDR_DEST: u8 = 60;
@@ -23,7 +19,6 @@ pub const EBADMSG: c_int = -74;
 pub const ENOENT: c_int = -2;
 pub const ENOMEM: c_int = -12;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ipv6_opt_hdr {
@@ -48,49 +43,55 @@ pub struct frag_hdr {
     pub frag_off: u16,
 }
 
-// Function implementations
-/// Check if nexthdr is an IPv6 extension header
-///
-/// # Safety
-/// - `nexthdr` must be a valid u8 value
-///
-/// # Returns
-/// true if extension header, false otherwise
-#[no_mangle]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ipv6hdr {
+    pub priority_version: u32,
+    pub payload_len: u16,
+    pub nexthdr: u8,
+    pub hop_limit: u8,
+    pub saddr: [u8; 16],
+    pub daddr: [u8; 16],
+}
+
+unsafe extern "C" {
+    fn skb_header_pointer(
+        skb: *const c_void,
+        offset: c_int,
+        len: c_int,
+        buffer: *mut c_void,
+    ) -> *const c_void;
+
+    fn skb_network_header(skb: *const c_void) -> *const u8;
+    fn skb_tail_pointer(skb: *const c_void) -> *const u8;
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_eh_personality() {}
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_ext_hdr(nexthdr: u8) -> bool {
     matches!(nexthdr, NEXTHDR_HOP | NEXTHDR_ROUTING | NEXTHDR_FRAGMENT | NEXTHDR_AUTH | NEXTHDR_NONE | NEXTHDR_DEST)
 }
 
-/// Calculate length of authentication header
-///
-/// # Safety
-/// - `hp` must be a valid pointer to ipv6_opt_hdr
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_authlen(hp: *const ipv6_opt_hdr) -> c_int {
     let hdrlen = (*hp).hdrlen as c_int;
     (hdrlen + 2) * 4
 }
 
-/// Calculate length of option header
-///
-/// # Safety
-/// - `hp` must be a valid pointer to ipv6_opt_hdr
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_optlen(hp: *const ipv6_opt_hdr) -> c_int {
     let hdrlen = (*hp).hdrlen as c_int;
     (hdrlen + 1) << 3
 }
 
-/// Skip extension headers in skb
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `nexthdrp` must be a valid pointer to u8
-/// - `frag_offp` must be a valid pointer to __be16
-///
-/// # Returns
-/// New start offset or -1 on error
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_skip_exthdr(
     skb: *const c_void,
     mut start: c_int,
@@ -112,12 +113,12 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
             return -1;
         }
 
-        let hp = hp as *const ipv6_opt_hdr;
-        let mut hdrlen = 0;
+        let hp = hp.cast::<ipv6_opt_hdr>();
+        let hdrlen: c_int;
 
         if nexthdr == NEXTHDR_FRAGMENT {
-            let mut _frag_off: u16 = 0;
-            let frag_off = skb_header_pointer(
+            let mut frag: frag_hdr = mem::zeroed();
+            let fhp = skb_header_pointer(
                 skb,
                 start + mem::size_of::<u8>() as c_int * 2,
                 mem::size_of_val(&_frag_off) as _,
@@ -128,16 +129,17 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
                 return -1;
             }
 
-            *frag_offp = *frag_off;
-            if (*frag_offp as u32 & 0x7FF8) == 0 {
-                hdrlen = 8;
-            } else {
+            let fhp = fhp.cast::<frag_hdr>();
+            *frag_offp = (*fhp).frag_off;
+
+            if ((*frag_offp as u32) & 0xFFF8) != 0 {
                 break;
             }
+            hdrlen = 8;
         } else if nexthdr == NEXTHDR_AUTH {
-            hdrlen = ipv6_authlen(hp as *const _) as _;
+            hdrlen = ipv6_authlen(hp);
         } else {
-            hdrlen = ipv6_optlen(hp as *const _) as _;
+            hdrlen = ipv6_optlen(hp);
         }
 
         nexthdr = (*hp).nexthdr;
@@ -148,53 +150,61 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
     start
 }
 
-/// Find TLV in IPv6 options
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-///
-/// # Returns
-/// Offset to TLV or -1 on error
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_find_tlv(skb: *const c_void, offset: c_int, type_: c_int) -> c_int {
     let nh = skb_network_header(skb);
-    let packet_len = skb_tail_pointer(skb) as usize - nh as usize;
-    let mut offset = offset as usize;
-
-    if offset + 2 > packet_len {
+    if nh.is_null() {
         return -1;
     }
 
-    let hdr = (nh as usize + offset) as *const ipv6_opt_hdr;
-    let len = ((*hdr).hdrlen as usize + 1) << 3;
-
-    if offset + len > packet_len {
+    let tail = skb_tail_pointer(skb);
+    if tail.is_null() || (tail as usize) < (nh as usize) {
         return -1;
     }
 
-    offset += 2;
-    let mut len = len - 2;
+    let packet_len = (tail as usize) - (nh as usize);
+    let mut off = offset as usize;
 
-    while len > 0 {
-        let opttype = *(nh as usize + offset) as c_int;
-        let mut optlen = 0;
+    if off + 2 > packet_len {
+        return -1;
+    }
+
+    let hdr = (nh as usize + off) as *const ipv6_opt_hdr;
+    let hdr_bytes = (((*hdr).hdrlen as usize) + 1) << 3;
+
+    if off + hdr_bytes > packet_len || hdr_bytes < 2 {
+        return -1;
+    }
+
+    off += 2;
+    let mut left = hdr_bytes - 2;
+
+    while left > 0 {
+        if off >= packet_len {
+            return -1;
+        }
+
+        let opttype = ptr::read((nh as usize + off) as *const u8) as c_int;
 
         if opttype == type_ {
-            return offset as c_int;
+            return off as c_int;
         }
 
-        match opttype {
-            0 => optlen = 1,
-            _ => {
-                optlen = *(nh as usize + offset + 1) as usize + 2;
-                if optlen > len {
-                    return -1;
-                }
+        let optlen: usize = if opttype == 0 {
+            1
+        } else {
+            if off + 1 >= packet_len {
+                return -1;
             }
+            (ptr::read((nh as usize + off + 1) as *const u8) as usize) + 2
+        };
+
+        if optlen == 0 || optlen > left {
+            return -1;
         }
 
-        offset += optlen;
-        len -= optlen;
+        off += optlen;
+        left -= optlen;
     }
 
     -1

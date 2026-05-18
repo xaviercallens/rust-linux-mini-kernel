@@ -5,23 +5,19 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)] // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::ptr;
+use core::ffi::{c_int, c_uint, c_void};
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
-// Time constants
-pub const HZ: c_int = 100; // Assuming 100 HZ as default
+pub const HZ: c_int = 100;
+pub const IPPROTO_GRE: u8 = 47;
 
-// PPTP message types
 pub const PPTP_START_SESSION_REQUEST: u16 = 1;
 pub const PPTP_START_SESSION_REPLY: u16 = 2;
 pub const PPTP_STOP_SESSION_REQUEST: u16 = 5;
@@ -37,34 +33,22 @@ pub const PPTP_WAN_ERROR_NOTIFY: u16 = 17;
 pub const PPTP_SET_LINK_INFO: u16 = 18;
 pub const PPTP_MSG_MAX: u16 = 18;
 
-// Timeouts
-pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ; // 10 minutes
-pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ; // 5 hours
+pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ;
+pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ;
 
-// PPTP session states
 pub const PPTP_SESSION_NONE: c_int = 0;
 pub const PPTP_SESSION_REQUESTED: c_int = 1;
 pub const PPTP_SESSION_CONFIRMED: c_int = 2;
 pub const PPTP_SESSION_ERROR: c_int = 3;
 pub const PPTP_SESSION_STOPREQ: c_int = 4;
 
-// PPTP result codes
 pub const PPTP_START_OK: u16 = 1;
 pub const PPTP_STOP_OK: u16 = 1;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct PptpControlHeader {
     pub messageType: u16,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union pptp_ctrl_union {
-    pub srep: PptpStartSessionReply,
-    pub strep: PptpStopSessionReply,
-    pub ocack: PptpOutCallAck,
 }
 
 #[repr(C)]
@@ -88,22 +72,10 @@ pub struct PptpOutCallAck {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_address,
-    pub dst: nf_conntrack_address,
-    pub protonum: u8,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_address {
-    pub u3: nf_conntrack_address_u3,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union nf_conntrack_address_u3 {
-    pub gre: nf_conntrack_gre_address,
+pub union pptp_ctrl_union {
+    pub srep: PptpStartSessionReply,
+    pub strep: PptpStopSessionReply,
+    pub ocack: PptpOutCallAck,
 }
 
 #[repr(C)]
@@ -120,9 +92,10 @@ pub struct nf_conn_proto {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_proto_gre {
-    pub timeout: c_int,
-    pub stream_timeout: c_int,
+pub struct nf_conn {
+    pub proto: nf_conn_proto,
+    pub master: *mut nf_conn,
+    pub status: c_int,
 }
 
 #[repr(C)]
@@ -141,26 +114,30 @@ pub struct nf_ct_pptp_master {
     pub pac_call_id: u16,
 }
 
-// Function pointer types
-pub type nf_nat_pptp_hook_outbound_t = unsafe extern "C" fn(
-    *mut c_void,
-    *mut nf_conn,
-    c_int,
-    c_uint,
-    *mut PptpControlHeader,
-    *mut pptp_ctrl_union,
-) -> c_int;
-pub type nf_nat_pptp_hook_inbound_t = unsafe extern "C" fn(
-    *mut c_void,
-    *mut nf_conn,
-    c_int,
-    c_uint,
-    *mut PptpControlHeader,
-    *mut pptp_ctrl_union,
-) -> c_int;
+pub type nf_nat_pptp_hook_outbound_t = Option<
+    unsafe extern "C" fn(
+        *mut c_void,
+        *mut nf_conn,
+        c_int,
+        c_uint,
+        *mut PptpControlHeader,
+        *mut pptp_ctrl_union,
+    ) -> c_int,
+>;
+
+pub type nf_nat_pptp_hook_inbound_t = Option<
+    unsafe extern "C" fn(
+        *mut c_void,
+        *mut nf_conn,
+        c_int,
+        c_uint,
+        *mut PptpControlHeader,
+        *mut pptp_ctrl_union,
+    ) -> c_int,
+>;
+
 pub type nf_nat_pptp_hook_exp_gre_t =
-    unsafe extern "C" fn(*mut nf_conntrack_expect, *mut nf_conntrack_expect);
-pub type nf_nat_pptp_hook_expectfn_t = unsafe extern "C" fn(*mut nf_conn, *mut nf_conntrack_expect);
+    Option<unsafe extern "C" fn(*mut nf_conntrack_expect, *mut nf_conntrack_expect)>;
 
 // Exported symbols
 pub static mut NF_NAT_PPTP_HOOK_OUTBOUND: nf_nat_pptp_hook_outbound_t = ptr::null_mut();
@@ -168,7 +145,6 @@ pub static mut NF_NAT_PPTP_HOOK_INBOUND: nf_nat_pptp_hook_inbound_t = ptr::null_
 pub static mut NF_NAT_PPTP_HOOK_EXP_GRE: nf_nat_pptp_hook_exp_gre_t = ptr::null_mut();
 pub static mut NF_NAT_PPTP_HOOK_EXPECTFN: nf_nat_pptp_hook_expectfn_t = ptr::null_mut();
 
-// Spinlock (opaque type for kernel compatibility)
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct spinlock_t {
@@ -177,19 +153,12 @@ pub struct spinlock_t {
 
 static NF_PPTP_LOCK: spinlock_t = spinlock_t { _private: [] };
 
-// Function implementations
-/// Increase timeouts for GRE data channel
-///
-/// # Safety
-/// - `ct` must be a valid pointer to nf_conn
-/// - `exp` must be a valid pointer to nf_conntrack_expect
 #[no_mangle]
 pub unsafe extern "C" fn pptp_expectfn(ct: *mut nf_conn, exp: *mut nf_conntrack_expect) {
     if ct.is_null() || exp.is_null() {
         return;
     }
 
-    // SAFETY: Caller guarantees pointers are valid
     (*ct).proto.gre.timeout = PPTP_GRE_TIMEOUT;
     (*ct).proto.gre.stream_timeout = PPTP_GRE_STREAM_TIMEOUT;
 
@@ -308,42 +277,18 @@ pub unsafe extern "C" fn nf_ct_invert_tuple(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_expect_find_get(
-    net: *mut c_void,
-    zone: *mut c_void,
-    tuple: *const nf_conntrack_tuple,
-) -> *mut nf_conntrack_expect {
-    // SAFETY: Kernel API to find expectation
-    ptr::null_mut()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_ct_unexpect_related(exp: *mut nf_conntrack_expect) {
-    // SAFETY: Kernel API to unexpect related connection
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_ct_expect_put(exp: *mut nf_conntrack_expect) {
-    // SAFETY: Kernel API to release expectation
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_ct_expect_related(
-    exp: *mut nf_conntrack_expect,
-    timeout: c_int,
-) -> c_int {
-    // SAFETY: Kernel API to relate expectation
+pub unsafe extern "C" fn nf_conntrack_pptp_init() -> c_int {
+    let _ = &nf_pptp_lock;
+    nf_nat_pptp_hook_expectfn = Some(pptp_expectfn);
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_gre_keymap_add(
-    ct: *mut nf_conn,
-    dir: c_int,
-    tuple: *const nf_conntrack_tuple,
-) -> c_int {
-    // SAFETY: Kernel API to add GRE keymap
-    0
+pub unsafe extern "C" fn nf_conntrack_pptp_fini() {
+    nf_nat_pptp_hook_expectfn = None;
+    nf_nat_pptp_hook_outbound = None;
+    nf_nat_pptp_hook_inbound = None;
+    nf_nat_pptp_hook_exp_gre = None;
 }
 
 #[no_mangle]

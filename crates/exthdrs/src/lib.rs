@@ -1,21 +1,15 @@
-//! IPv6 Extension Header Handling
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
 use kernel_types::*;
-use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
 
-// Constants from C
+pub type socklen_t = u32;
+pub type size_t = usize;
+
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct tlvtype_proc {
@@ -37,7 +31,6 @@ pub struct ipv6_sr_hdr {
     pub hdrlen: u8,
     pub segments_left: u16,
     pub reserved: u16,
-    pub segments: [u8; 0], // Flexible array member
 }
 
 #[repr(C)]
@@ -80,12 +73,42 @@ extern "C" {
     fn netif_rx(skb: *mut sk_buff);
 }
 
-// Internal functions
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_eh_personality() {}
+
+#[inline]
+unsafe fn skb_network_header_ptr(skb: *mut sk_buff) -> *mut u8 {
+    (*skb).head.add((*skb).network_header as usize)
+}
+
+#[inline]
+unsafe fn skb_transport_header_ptr(skb: *mut sk_buff) -> *mut u8 {
+    (*skb).head.add((*skb).transport_header as usize)
+}
+
+#[inline]
+unsafe fn skb_headlen(skb: *mut sk_buff) -> usize {
+    (*skb).len as usize
+}
+
+#[inline]
+unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+    skb_network_header_ptr(skb) as *mut ipv6hdr
+}
+
+#[inline]
+unsafe fn ip6cb(skb: *mut sk_buff) -> *mut inet6_skb_parm {
+    (*skb).cb.as_mut_ptr() as *mut inet6_skb_parm
+}
+
+#[inline]
 fn ipv6_addr_is_multicast(addr: *const u8) -> bool {
-    unsafe {
-        // Simplified check for multicast address (first 4 bits are 1111)
-        (*addr as u8 & 0xF0) == 0xF0
-    }
+    unsafe { (*addr & 0xFF) == 0xFF }
 }
 
 fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
@@ -299,8 +322,11 @@ pub unsafe extern "C" fn ipv6_dest_hao(skb: *mut sk_buff, optoff: c_int) -> bool
         return false; // Duplicate HAO
     }
 
-    if (*hao).length != 16 {
-        return false; // Invalid length
+    let skb = skb as *mut sk_buff;
+    let _ = ip6cb(skb);
+    let th = skb_transport_header_ptr(skb);
+    if th.is_null() {
+        return false;
     }
 
     // Additional checks would go here...

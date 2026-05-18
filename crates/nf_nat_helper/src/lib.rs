@@ -6,6 +6,7 @@
 //! maintains exact ABI compatibility with the original C code.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -13,11 +14,13 @@ use core::ffi::c_void;
 use core::ptr;
 use kernel_types::*;
 
-// Constants from Linux headers
 pub const IPPROTO_TCP: c_int = 6;
 pub const IPPROTO_UDP: c_int = 17;
 pub const NFPROTO_IPV4: c_int = 2;
-pub const IPS_NAT_DONE_MASK: c_int = 0x0000000F;
+pub const IPS_NAT_DONE_MASK: c_int = 0x0000_000F;
+
+pub const EINVAL: c_int = -22;
+pub const ENOMEM: c_int = -12;
 
 // Type definitions for FFI compatibility
 
@@ -38,8 +41,7 @@ pub struct NF_NAT_RANGE2 {
     pub max_proto: c_int,
 }
 
-// Extern declarations for kernel functions
-extern "C" {
+unsafe extern "C" {
     fn skb_ensure_writable(skb: *mut sk_buff, len: usize) -> c_int;
     fn pskb_expand_head(skb: *mut sk_buff, headroom: usize, tailroom: usize, gfp: c_int) -> c_int;
     fn nf_nat_csum_recalc(
@@ -59,12 +61,28 @@ extern "C" {
     fn skb_put(skb: *mut sk_buff, len: usize) -> *mut u8;
 }
 
-// Error codes
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {
+        core::hint::spin_loop();
+    }
+}
 
-/// Internal function to manipulate packet contents
-fn mangle_contents(
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_eh_personality() {}
+
+#[inline]
+unsafe fn enlarge_skb(skb: *mut sk_buff, extra: usize) -> c_int {
+    if extra == 0 {
+        return 1;
+    }
+    if unsafe { pskb_expand_head(skb, 0, extra, 0) } != 0 {
+        return 0;
+    }
+    1
+}
+
+unsafe fn mangle_contents(
     skb: *mut sk_buff,
     dataoff: c_uint,
     match_offset: c_uint,
@@ -72,25 +90,22 @@ fn mangle_contents(
     rep_buffer: *const c_void,
     rep_len: c_uint,
 ) {
+    let data = unsafe { skb_network_header(skb).add(dataoff as usize) };
+    let src = unsafe { data.add((match_offset + match_len) as usize) };
+    let dst = unsafe { data.add((match_offset + rep_len) as usize) };
+    let end = unsafe { skb_tail_pointer(skb) as usize };
+    let from = src as usize;
+    let len = end.saturating_sub(from);
+
+    unsafe { ptr::copy(src, dst, len) };
+
     unsafe {
-        // SAFETY: Caller guarantees skb is valid and writable
-        let data = skb_network_header(skb).add(dataoff as usize);
-
-        // Move post-replacement data
-        let src = data.add(match_offset as usize + match_len as usize);
-        let dst = data.add(match_offset as usize + rep_len as usize);
-        let len = (skb_tail_pointer(skb) as usize
-            - (data as usize + match_offset as usize + match_len as usize))
-            as usize;
-
-        ptr::copy_nonoverlapping(src, dst, len);
-
-        // Copy replacement buffer
         ptr::copy_nonoverlapping(
-            rep_buffer,
+            rep_buffer as *const u8,
             data.add(match_offset as usize),
             rep_len as usize,
-        );
+        )
+    };
 
         // Update skb length
         if rep_len > match_len {
@@ -129,24 +144,29 @@ pub unsafe extern "C" fn __NF_NAT_MANGLE_TCP_PACKET(
     rep_len: c_uint,
     adjust: c_int,
 ) -> c_int {
-    let skb_ref = &mut *skb;
-
-    // Ensure packet is writable
-    if skb_ensure_writable(skb, skb_ref.len) != 0 {
+    if skb.is_null() || ct.is_null() || rep_buffer.is_null() {
         return EINVAL;
     }
 
-    // Check if we need to expand the skb
+    let old_skb_len = unsafe { (*skb).len as usize };
+
+    if unsafe { skb_ensure_writable(skb, old_skb_len) } != 0 {
+        return EINVAL;
+    }
+
     if rep_len > match_len {
-        let tailroom = skb_ref.len - (skb_tail_pointer(skb) as usize - skb_network_header(skb) as usize);
-        if (rep_len - match_len) as usize > tailroom {
-            if enlarge_skb(skb, (rep_len - match_len) as usize) != 1 {
-                return ENOMEM;
-            }
+        let grow = (rep_len - match_len) as usize;
+        if unsafe { enlarge_skb(skb, grow) } != 1 {
+            return ENOMEM;
+        }
+        if unsafe { skb_ensure_writable(skb, (*skb).len as usize) } != 0 {
+            return EINVAL;
         }
     }
 
-    let tcph = (skb_network_header(skb) as *mut u8).add(protoff as usize);
+    let tcph = unsafe { skb_network_header(skb).add(protoff as usize) };
+    let doff_words = unsafe { ((*tcph.add(12) >> 4) & 0x0f) as usize };
+    let dataoff = protoff as usize + doff_words * 4;
 
     let oldlen = skb_ref.len - protoff as usize;
     mangle_contents(

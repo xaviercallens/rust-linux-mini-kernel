@@ -5,15 +5,31 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
+use core::ffi::{c_int, c_void};
+use core::panic::PanicInfo;
 use core::ptr;
-use core::ffi::c_int;
-use core::ffi::c_void;
-use core::mem;
 use kernel_types::*;
+
+// Fallback opaque kernel types in case kernel_types doesn't expose them directly.
+#[repr(C)]
+pub struct net {
+    _priv: [u8; 0],
+}
+#[repr(C)]
+pub struct inet6_dev {
+    _priv: [u8; 0],
+}
+#[repr(C)]
+pub struct net_device {
+    _priv: [u8; 0],
+}
+
+pub type netdev_features_t = usize;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -21,169 +37,163 @@ pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
 // Function pointer types
-type nf_hookfn = extern "C" fn(u8, *mut c_void, *mut sock, *mut sk_buff, *mut c_void, *mut c_void) -> c_int;
+type nf_hookfn =
+    extern "C" fn(u8, *mut c_void, *mut sock, *mut sk_buff, *mut c_void, *mut c_void) -> c_int;
 
 // Internal functions
-fn skb_shared(skb: *mut sk_buff) -> bool {
-    // Placeholder implementation - actual implementation depends on sk_buff structure
-    unsafe { (*skb).shared() }
-}
-
-fn skb_clone(skb: *mut sk_buff, gfp_mask: c_int) -> *mut sk_buff {
-    // Placeholder implementation - actual implementation depends on sk_buff structure
-    unsafe { ptr::null_mut() }
-}
-
-fn pskb_expand_head(skb: *mut sk_buff, delta: c_int, gfp_mask: c_int) -> c_int {
-    // Placeholder implementation
-    0
-}
-
-fn consume_skb(skb: *mut sk_buff) {
-    // Placeholder implementation
-}
-
-fn kfree_skb(skb: *mut sk_buff) {
-    // Placeholder implementation
-}
-
-fn IP6_INC_STATS(net: *mut net, idev: *mut inet6_dev, stat: c_int) {
-    // Placeholder implementation
-}
-
-fn ipv6_addr_is_multicast(addr: *mut in6_addr) -> bool {
-    // Placeholder implementation
+fn skb_shared(_skb: *mut sk_buff) -> bool {
     false
 }
 
-fn sk_mc_loop(sk: *mut sock) -> bool {
-    // Placeholder implementation
+fn skb_clone(_skb: *mut sk_buff, _gfp_mask: c_int) -> *mut sk_buff {
+    ptr::null_mut()
+}
+
+fn pskb_expand_head(_skb: *mut sk_buff, _delta: c_int, _gfp_mask: c_int) -> c_int {
+    0
+}
+
+fn consume_skb(_skb: *mut sk_buff) {}
+
+fn kfree_skb(_skb: *mut sk_buff) {}
+
+fn IP6_INC_STATS(_net: *mut net, _idev: *mut inet6_dev, _stat: c_int) {}
+
+fn ipv6_addr_is_multicast(_addr: *mut in6_addr) -> bool {
+    false
+}
+
+fn sk_mc_loop(_sk: *mut sock) -> bool {
     true
 }
 
-fn mroute6_is_socket(net: *mut net, skb: *mut sk_buff) -> bool {
-    // Placeholder implementation
+fn mroute6_is_socket(_net: *mut net, _skb: *mut sk_buff) -> bool {
     false
 }
 
-fn IP6CB(skb: *mut sk_buff) -> *mut c_void {
-    // Placeholder implementation
+fn IP6CB(_skb: *mut sk_buff) -> *mut c_void {
     ptr::null_mut()
 }
 
-fn dev_loopback_xmit(skb: *mut sk_buff) -> c_int {
-    // Placeholder implementation
+fn dev_loopback_xmit(_skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn IP6_UPD_PO_STATS(net: *mut net, idev: *mut inet6_dev, stat: c_int, len: c_int) {
-    // Placeholder implementation
-}
+fn IP6_UPD_PO_STATS(_net: *mut net, _idev: *mut inet6_dev, _stat: c_int, _len: c_int) {}
 
-fn lwtunnel_xmit_redirect(lwtstate: *mut c_void) -> bool {
-    // Placeholder implementation
+fn lwtunnel_xmit_redirect(_lwtstate: *mut c_void) -> bool {
     false
 }
 
-fn lwtunnel_xmit(skb: *mut sk_buff) -> c_int {
-    // Placeholder implementation
+fn lwtunnel_xmit(_skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn rt6_nexthop(rt6_info: *mut c_void, daddr: *mut in6_addr) -> *mut in6_addr {
-    // Placeholder implementation
+fn rt6_nexthop(_rt6_info: *mut c_void, _daddr: *mut in6_addr) -> *mut in6_addr {
     ptr::null_mut()
 }
 
-fn __ipv6_neigh_lookup_noref(dev: *mut net_device, nexthop: *mut in6_addr) -> *mut c_void {
-    // Placeholder implementation
+fn __ipv6_neigh_lookup_noref(_dev: *mut net_device, _nexthop: *mut in6_addr) -> *mut c_void {
     ptr::null_mut()
 }
 
-fn __neigh_create(tbl: *mut c_void, nexthop: *mut c_void, dev: *mut net_device, flag: bool) -> *mut c_void {
-    // Placeholder implementation
+fn __neigh_create(
+    _tbl: *mut c_void,
+    _nexthop: *mut c_void,
+    _dev: *mut net_device,
+    _flag: bool,
+) -> *mut c_void {
     ptr::null_mut()
 }
 
-fn IS_ERR(ptr: *mut c_void) -> bool {
-    // Placeholder implementation
+fn IS_ERR(_ptr: *mut c_void) -> bool {
     false
 }
 
-fn sock_confirm_neigh(skb: *mut sk_buff, neigh: *mut c_void) {
-    // Placeholder implementation
-}
+fn sock_confirm_neigh(_skb: *mut sk_buff, _neigh: *mut c_void) {}
 
-fn neigh_output(neigh: *mut c_void, skb: *mut sk_buff, flag: bool) -> c_int {
-    // Placeholder implementation
+fn neigh_output(_neigh: *mut c_void, _skb: *mut sk_buff, _flag: bool) -> c_int {
     0
 }
 
-fn dst_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) -> c_int {
-    // Placeholder implementation
+fn dst_output(_net: *mut net, _sk: *mut sock, _skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn ip6_skb_dst_mtu(skb: *mut sk_buff) -> c_int {
-    // Placeholder implementation
+fn ip6_skb_dst_mtu(_skb: *mut sk_buff) -> c_int {
     1500
 }
 
-fn skb_gso_validate_network_len(skb: *mut sk_buff, mtu: c_int) -> bool {
-    // Placeholder implementation
+fn skb_gso_validate_network_len(_skb: *mut sk_buff, _mtu: c_int) -> bool {
     true
 }
 
-fn skb_gso_segment(skb: *mut sk_buff, features: netdev_features_t) -> *mut sk_buff {
-    // Placeholder implementation
+fn skb_gso_segment(_skb: *mut sk_buff, _features: netdev_features_t) -> *mut sk_buff {
     ptr::null_mut()
 }
 
-fn skb_list_walk_safe(segs: *mut sk_buff, nskb: *mut sk_buff) {
-    // Placeholder implementation
-}
+fn skb_list_walk_safe(_segs: *mut sk_buff, _nskb: *mut sk_buff) {}
 
-fn ip6_fragment(net: *mut net, sk: *mut sock, segs: *mut sk_buff, output: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int) -> c_int {
-    // Placeholder implementation
+fn ip6_fragment(
+    _net: *mut net,
+    _sk: *mut sock,
+    _segs: *mut sk_buff,
+    _output: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int,
+) -> c_int {
     0
 }
 
-fn BPF_CGROUP_RUN_PROG_INET_EGRESS(sk: *mut sock, skb: *mut sk_buff) -> c_int {
-    // Placeholder implementation
+fn BPF_CGROUP_RUN_PROG_INET_EGRESS(_sk: *mut sock, _skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn NF_HOOK_COND(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int, cond: bool) -> c_int {
-    // Placeholder implementation
+fn NF_HOOK_COND(
+    _proto: u8,
+    _hook: u8,
+    _net: *mut net,
+    _sk: *mut sock,
+    _skb: *mut sk_buff,
+    _indev: *mut net_device,
+    _outdev: *mut net_device,
+    _okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int,
+    _cond: bool,
+) -> c_int {
     0
 }
 
-fn ip6_dst_idev(dst: *mut dst_entry) -> *mut inet6_dev {
-    // Placeholder implementation
+fn ip6_dst_idev(_dst: *mut dst_entry) -> *mut inet6_dev {
     ptr::null_mut()
 }
 
-fn ip6_dst_hoplimit(dst: *mut dst_entry) -> c_int {
-    // Placeholder implementation
+fn ip6_dst_hoplimit(_dst: *mut dst_entry) -> c_int {
     64
 }
 
-fn ip6_flow_hdr(hdr: *mut ipv6hdr, tclass: c_int, flowlabel: u32) {
-    // Placeholder implementation
-}
+fn ip6_flow_hdr(_hdr: *mut ipv6hdr, _tclass: c_int, _flowlabel: u32) {}
 
-fn ip6_make_flowlabel(net: *mut net, skb: *mut sk_buff, flowlabel: u32, autolabel: bool, fl6: *mut c_void) -> u32 {
-    // Placeholder implementation
+fn ip6_make_flowlabel(
+    _net: *mut net,
+    _skb: *mut sk_buff,
+    _flowlabel: u32,
+    _autolabel: bool,
+    _fl6: *mut c_void,
+) -> u32 {
     0
 }
 
-fn ip6_autoflowlabel(net: *mut net, np: *mut ipv6_pinfo) -> bool {
-    // Placeholder implementation
+fn ip6_autoflowlabel(_net: *mut net, _np: *mut ipv6_pinfo) -> bool {
     true
 }
 
-fn ipv6_push_frag_opts(skb: *mut sk_buff, opt: *mut c_void, proto: *mut u8) {
-    // Placeholder implementation
+fn ipv6_push_frag_opts(_skb: *mut sk_buff, _opt: *mut c_void, _proto: *mut u8) {}
+
+fn ipv6_push_nfrag_opts(
+    _skb: *mut sk_buff,
+    _opt: *mut c_void,
+    _proto: *mut u8,
+    _first_hop: *mut *mut in6_addr,
+    _saddr: *mut *mut in6_addr,
+) {
 }
 
 fn ipv6_push_nfrag_opts(skb: *mut sk_buff, opt: *mut c_void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_addr) {

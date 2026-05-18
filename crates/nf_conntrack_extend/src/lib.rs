@@ -1,4 +1,6 @@
 use kernel_types::*;
+use core::ffi::c_void;
+use core::mem::MaybeUninit;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -66,7 +68,7 @@ pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_co
         timeout_data: [0; 4],
     }));
 
-    extend
+    extend_uninit.as_mut_ptr()
 }
 
 #[no_mangle]
@@ -77,7 +79,10 @@ pub unsafe extern "C" fn nf_conntrack_extend_destroy(extend: *mut nf_conntrack_e
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_timeout(extend: *mut nf_conntrack_extend, timeout: u32) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_timeout(
+    extend: *mut nf_conntrack_extend,
+    timeout: u32,
+) {
     if !extend.is_null() {
         (*extend).timeout = timeout;
     }
@@ -91,28 +96,40 @@ pub unsafe extern "C" fn nf_conntrack_extend_set_flags(extend: *mut nf_conntrack
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_helper(extend: *mut nf_conntrack_extend, helper: *mut c_void) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_helper(
+    extend: *mut nf_conntrack_extend,
+    helper: *mut c_void,
+) {
     if !extend.is_null() {
         (*extend).helper = helper;
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_master(extend: *mut nf_conntrack_extend, master: *mut c_void) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_master(
+    extend: *mut nf_conntrack_extend,
+    master: *mut c_void,
+) {
     if !extend.is_null() {
         (*extend).master = master;
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_tstamp(extend: *mut nf_conntrack_extend, tstamp: u64) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_tstamp(
+    extend: *mut nf_conntrack_extend,
+    tstamp: u64,
+) {
     if !extend.is_null() {
         (*extend).tstamp = tstamp;
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_status(extend: *mut nf_conntrack_extend, status: u32) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_status(
+    extend: *mut nf_conntrack_extend,
+    status: u32,
+) {
     if !extend.is_null() {
         (*extend).status = status;
     }
@@ -151,7 +168,10 @@ pub unsafe extern "C" fn nf_conntrack_extend_set_nat_ipv6(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_timeout_data(extend: *mut nf_conntrack_extend, data: [u32; 4]) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_timeout_data(
+    extend: *mut nf_conntrack_extend,
+    data: [u32; 4],
+) {
     if !extend.is_null() {
         (*extend).timeout_data = data;
     }

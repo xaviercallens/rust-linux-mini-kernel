@@ -1,36 +1,28 @@
-//! IPv6 FIB Notifier Module
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
+```rust
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use kernel_types::*;
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
+use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
+use kernel_types::*;
 
-// Constants from C
 pub const AF_INET6: c_int = 10;
-pub const ENOMEM: c_int = -12;
-pub const EINVAL: c_int = -22;
 
-// Type definitions
 #[repr(C)]
 struct ipv6_net {
     notifier_ops: *mut fib_notifier_ops,
 }
 
 #[repr(C)]
-struct notifier_block;
+struct notifier_block {
+    _private: [u8; 0],
+}
 
 #[repr(C)]
 struct fib_notifier_info {
     family: c_int,
-    // Other fields (not accessed in this module)
 }
 
 #[repr(C)]
@@ -38,17 +30,23 @@ struct fib_notifier_ops {
     family: c_int,
     fib_seq_read: unsafe extern "C" fn(*mut c_void) -> c_uint,
     fib_dump: unsafe extern "C" fn(*mut c_void, *mut notifier_block, *mut c_void) -> c_int,
-    owner: *mut c_void,
+    owner: *const c_void,
 }
 
-// Function pointers for FFI compatibility
-extern "C" {
+// SAFETY: Immutable static containing only function pointers and opaque pointer.
+unsafe impl Sync for fib_notifier_ops {}
+
+unsafe extern "C" {
     fn call_fib_notifier(
         nb: *mut notifier_block,
         event_type: c_int,
         info: *mut fib_notifier_info,
     ) -> c_int;
-    fn call_fib_notifiers(net: *mut c_void, event_type: c_int, info: *mut fib_notifier_info) -> c_int;
+    fn call_fib_notifiers(
+        net: *mut c_void,
+        event_type: c_int,
+        info: *mut fib_notifier_info,
+    ) -> c_int;
     fn fib_notifier_ops_register(
         ops: *const fib_notifier_ops,
         net: *mut c_void,
@@ -62,15 +60,14 @@ extern "C" {
     fn PTR_ERR(ptr: *mut fib_notifier_ops) -> c_int;
 }
 
-// Static data
+#[used]
 static FIB6_NOTIFIER_OPS_TEMPLATE: fib_notifier_ops = fib_notifier_ops {
     family: AF_INET6,
     fib_seq_read: fib6_seq_read,
     fib_dump: fib6_dump,
-    owner: ptr::null_mut(),
+    owner: ptr::null(),
 };
 
-// Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn call_fib6_notifier(
     nb: *mut notifier_block,
@@ -99,9 +96,7 @@ pub unsafe extern "C" fn call_fib6_notifiers(
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_seq_read(net: *mut c_void) -> c_uint {
-    let tables_seq = fib6_tables_seq_read(net);
-    let rules_seq = fib6_rules_seq_read(net);
-    tables_seq + rules_seq
+    fib6_tables_seq_read(net).wrapping_add(fib6_rules_seq_read(net))
 }
 
 #[no_mangle]
@@ -155,11 +150,9 @@ pub unsafe extern "C" fn fib6_notifier_exit(net: *mut c_void) {
     }
 }
 
-// Tests (conditional compilation)
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn placeholder() {
-        // No tests implemented for kernel module
-    }
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }
+```

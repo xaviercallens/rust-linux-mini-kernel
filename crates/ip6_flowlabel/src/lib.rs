@@ -5,91 +5,104 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
+use core::ffi::c_void;
+use core::panic::PanicInfo;
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use libc::{c_int, c_uint, c_ulong, c_void, size_t};
 use kernel_types::*;
 
-// Constants from C
-pub const FL_MIN_LINGER: c_ulong = 6; // 6 seconds
-pub const FL_MAX_LINGER: c_ulong = 150; // 150 seconds
+mod kernel_types {
+    pub type c_int = i32;
+    pub type c_uint = u32;
+    pub type c_ulong = u64;
+    pub type size_t = usize;
+    pub type c_size_t = usize;
+    pub type socklen_t = u32;
+}
+
+use kernel_types::{c_int, c_ulong};
+
+pub const FL_MIN_LINGER: c_ulong = 6;
+pub const FL_MAX_LINGER: c_ulong = 150;
 pub const FL_MAX_PER_SOCK: c_ulong = 32;
 pub const FL_MAX_SIZE: c_ulong = 4096;
 pub const FL_HASH_MASK: c_ulong = 255;
 
-// Error codes
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const EPERM: c_int = -1;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct In6FlowlabelReq {
-    flr_label: u32,
-    flr_linger: c_ulong,
-    _unused: [u8; 0], // ... rest of struct
+    pub flr_label: u32,
+    pub flr_linger: c_ulong,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Ip6Flowlabel {
-    label: u32,
-    users: AtomicUsize,
-    lastuse: c_ulong,
-    linger: c_ulong,
-    expires: c_ulong,
-    next: *mut Ip6Flowlabel,
-    fl_net: *mut Net,
-    share: c_int,       // IPV6_FL_S_* constants
-    owner: *mut c_void, // pid_t
-    opt: *mut c_void,   // ipv6_txoptions
-    rcu: RcuHead,
+    pub label: u32,
+    pub users: AtomicUsize,
+    pub lastuse: c_ulong,
+    pub linger: c_ulong,
+    pub expires: c_ulong,
+    pub next: *mut Ip6Flowlabel,
+    pub fl_net: *mut Net,
+    pub share: c_int,
+    pub owner: *mut c_void,
+    pub opt: *mut c_void,
+    pub rcu: RcuHead,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct Ip6FlSocklist {
-    fl: *mut Ip6Flowlabel,
-    next: *mut Ip6FlSocklist,
-    rcu: RcuHead,
+    pub fl: *mut Ip6Flowlabel,
+    pub next: *mut Ip6FlSocklist,
+    pub rcu: RcuHead,
 }
 
 // Static variables
 static mut FL_SIZE: AtomicUsize = AtomicUsize::new(0);
 static mut FL_HT: [*mut Ip6Flowlabel; FL_HASH_MASK as usize + 1] =
     [ptr::null_mut(); FL_HASH_MASK as usize + 1];
-static mut IP6_FL_GC_TIMER: TimerList = TimerList { _unused: [] };
-static mut IP6_FL_LOCK: SpinLock = SpinLock { _unused: [] };
-static mut IP6_SK_FL_LOCK: SpinLock = SpinLock { _unused: [] };
+static mut IP6_FL_GC_TIMER: TimerList = TimerList { _priv: ptr::null_mut() };
+static mut IP6_FL_LOCK: SpinLock = SpinLock { _priv: ptr::null_mut() };
+static mut IP6_SK_FL_LOCK: SpinLock = SpinLock { _priv: ptr::null_mut() };
 
-// Exported symbols
 #[no_mangle]
-pub static mut IPV6_FLOWLABEL_EXCLUSIVE: AtomicUsize = AtomicUsize::new(0);
+pub static IPV6_FLOWLABEL_EXCLUSIVE: AtomicUsize = AtomicUsize::new(0);
 
-// Function implementations
+#[inline]
+fn fl_hash(label: u32) -> usize {
+    (label as usize) & (FL_HASH_MASK as usize)
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn ip6_fl_gc(unused: *mut TimerList) {
+pub unsafe extern "C" fn ip6_fl_gc(_unused: *mut TimerList) {
     let now = jiffies();
     let mut sched: c_ulong = 0;
 
-    spin_lock(&mut IP6_FL_LOCK);
+    spin_lock(core::ptr::addr_of_mut!(IP6_FL_LOCK));
 
     for i in 0..=FL_HASH_MASK as usize {
-        let mut flp = &mut FL_HT[i] as *mut *mut Ip6Flowlabel;
-        while let Some(fl) = ptr::read_volatile(flp) {
+        let mut flp: *mut *mut Ip6Flowlabel = core::ptr::addr_of_mut!(FL_HT[i]);
+        while !(*flp).is_null() {
+            let fl = *flp;
             if (*fl).users.load(Ordering::Relaxed) == 0 {
-                let ttd = (*fl).lastuse + (*fl).linger;
+                let mut ttd = (*fl).lastuse + (*fl).linger;
                 if ttd > (*fl).expires {
                     (*fl).expires = ttd;
                 }
-                let ttd = (*fl).expires;
+                ttd = (*fl).expires;
                 if now >= ttd {
-                    ptr::write_volatile(flp, (*fl).next);
+                    *flp = (*fl).next;
                     fl_free(fl);
                     FL_SIZE.fetch_sub(1, Ordering::Relaxed);
                     continue;
@@ -98,7 +111,7 @@ pub unsafe extern "C" fn ip6_fl_gc(unused: *mut TimerList) {
                     sched = ttd;
                 }
             }
-            flp = &(*fl).next as *mut *mut Ip6Flowlabel;
+            flp = core::ptr::addr_of_mut!((*fl).next);
         }
     }
 
@@ -107,16 +120,16 @@ pub unsafe extern "C" fn ip6_fl_gc(unused: *mut TimerList) {
     }
 
     if sched > 0 {
-        mod_timer(&mut IP6_FL_GC_TIMER, sched);
+        mod_timer(core::ptr::addr_of_mut!(IP6_FL_GC_TIMER), sched);
     }
 
-    spin_unlock(&mut IP6_FL_LOCK);
+    spin_unlock(core::ptr::addr_of_mut!(IP6_FL_LOCK));
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn __fl_lookup(net: *mut Net, label: u32) -> *mut Ip6Flowlabel {
-    let hash = FL_HASH(label);
-    let mut fl = FL_HT[hash as usize];
+    let hash = fl_hash(label);
+    let mut fl = FL_HT[hash];
 
     while !fl.is_null() {
         if (*fl).label == label && net_eq((*fl).fl_net, net) {
@@ -131,9 +144,8 @@ pub unsafe extern "C" fn __fl_lookup(net: *mut Net, label: u32) -> *mut Ip6Flowl
 #[no_mangle]
 pub unsafe extern "C" fn fl_lookup(net: *mut Net, label: u32) -> *mut Ip6Flowlabel {
     rcu_read_lock_bh();
-    let fl = __fl_lookup(net, label);
-    if !fl.is_null() && !atomic_inc_not_zero(&(*fl).users) {
-        ptr::write(fl as *mut _, ptr::null_mut() as *mut Ip6Flowlabel);
+    let mut fl = __fl_lookup(net, label);
+    if !fl.is_null() && !atomic_inc_not_zero(core::ptr::addr_of_mut!((*fl).users)) {
         fl = ptr::null_mut();
     }
     rcu_read_unlock_bh();
@@ -143,25 +155,19 @@ pub unsafe extern "C" fn fl_lookup(net: *mut Net, label: u32) -> *mut Ip6Flowlab
 #[no_mangle]
 pub unsafe extern "C" fn fl_shared_exclusive(fl: *mut Ip6Flowlabel) -> bool {
     let share = (*fl).share;
-    share == 1 || share == 2 || share == 3 // Assuming IPV6_FL_S_EXCL=1, etc.
+    share == 1 || share == 2 || share == 3
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn fl_free_rcu(head: *mut RcuHead) {
-    let fl = (head as *mut Ip6Flowlabel);
-    if fl_shared_exclusive(fl) || !(*fl).opt.is_null() {
-        static_branch_slow_dec_deferred(&mut IPV6_FLOWLABEL_EXCLUSIVE);
-    }
-
-    if (*fl).share == 1 {
-        // Assuming IPV6_FL_S_PROCESS
-        put_pid((*fl).owner);
-    }
-
-    if !(*fl).opt.is_null() {
-        kfree((*fl).opt);
-    }
-    kfree(fl as *mut c_void);
+extern "C" {
+    fn jiffies() -> c_ulong;
+    fn spin_lock(lock: *mut SpinLock);
+    fn spin_unlock(lock: *mut SpinLock);
+    fn mod_timer(timer: *mut TimerList, expires: c_ulong) -> c_int;
+    fn fl_free(fl: *mut Ip6Flowlabel);
+    fn net_eq(a: *mut Net, b: *mut Net) -> bool;
+    fn rcu_read_lock_bh();
+    fn rcu_read_unlock_bh();
+    fn atomic_inc_not_zero(v: *mut AtomicUsize) -> bool;
 }
 
 #[no_mangle]

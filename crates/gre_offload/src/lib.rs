@@ -1,14 +1,16 @@
-//! IPv4 GRE GSO/GRO offload support for Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
+use core::ffi::{c_int, c_void};
 use core::ptr;
 use kernel_types::*;
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
 
 // Constants from Linux headers
 pub const IPPROTO_GRE: c_int = 47;
@@ -27,35 +29,56 @@ pub const SKB_GSO_GRE: u16 = 1 << 12;
 pub const GRE_KEY: u16 = 1 << 1;
 pub const GRE_CSUM: u16 = 1 << 2;
 
-// Type definitions
+type netdev_features_t = u32;
+
 #[repr(C)]
-struct gre_base_hdr {
+pub struct sk_buff {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct list_head {
+    next: *mut list_head,
+    prev: *mut list_head,
+}
+
+#[repr(C)]
+pub struct gre_base_hdr {
     flags: u16,
     protocol: u16,
 }
 
 #[repr(C)]
-struct packet_offload {
+pub struct packet_offload_callbacks {
+    gso_segment: Option<extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff>,
+    gro_receive: Option<extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff>,
+    gro_complete: Option<extern "C" fn(*mut sk_buff, c_int) -> c_int>,
+}
+
+#[repr(C)]
+pub struct packet_offload {
     callbacks: packet_offload_callbacks,
 }
 
-#[repr(C)]
-struct packet_offload_callbacks {
-    gso_segment: extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
-    gro_receive: extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff,
-    gro_complete: extern "C" fn(*mut sk_buff, c_int) -> c_int,
-}
+unsafe extern "C" {
+    fn skb_inner_mac_header(skb: *const sk_buff) -> usize;
+    fn skb_transport_header(skb: *const sk_buff) -> usize;
+    fn skb_get_protocol(skb: *const sk_buff) -> u16;
+    fn skb_set_protocol(skb: *mut sk_buff, protocol: u16);
 
-#[repr(C)]
-struct list_head {
-    next: *mut list_head,
-    prev: *mut list_head,
-}
+    fn skb_get_encapsulation(skb: *const sk_buff) -> c_int;
+    fn skb_set_encapsulation(skb: *mut sk_buff, val: c_int);
 
-type netdev_features_t = u32;
+    fn skb_get_inner_network_offset(skb: *const sk_buff) -> u16;
+    fn skb_get_inner_protocol(skb: *const sk_buff) -> u16;
 
-// External C functions
-extern "C" {
+    fn skb_get_mac_header(skb: *const sk_buff) -> u16;
+    fn skb_get_mac_len(skb: *const sk_buff) -> u16;
+    fn skb_set_mac_len(skb: *mut sk_buff, val: u16);
+
+    fn skb_get_ip_summed(skb: *const sk_buff) -> c_int;
+    fn skb_set_encap_hdr_csum(skb: *mut sk_buff, val: c_int);
+
     fn pskb_may_pull(skb: *mut sk_buff, len: usize) -> c_int;
     fn __skb_pull(skb: *mut sk_buff, len: usize) -> *mut c_void;
     fn skb_reset_mac_header(skb: *mut sk_buff);
@@ -96,18 +119,16 @@ extern "C" {
     fn rcu_read_unlock();
 }
 
-// Function implementations
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gre_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
-    let tnl_hlen = skb_inner_mac_header(skb) - (*skb).transport_header as usize;
-    let need_csum = (*skb).ip_summed & (SKB_GSO_GRE_CSUM as c_int) != 0;
-    let mut segs = ptr::null_mut();
+    let tnl_hlen = unsafe { skb_inner_mac_header(skb) - skb_transport_header(skb) };
+    let need_csum = unsafe { skb_get_ip_summed(skb) == CHECKSUM_PARTIAL };
 
-    if (*skb).encapsulation == 0 {
-        return segs;
+    if unsafe { skb_get_encapsulation(skb) } == 0 {
+        return ptr::null_mut();
     }
 
     if tnl_hlen < core::mem::size_of::<gre_base_hdr>() {
@@ -118,21 +139,16 @@ pub unsafe extern "C" fn gre_gso_segment(
         return ptr::null_mut();
     }
 
-    // Setup inner skb
-    (*skb).encapsulation = 0;
-    // SKB_GSO_CB(skb)->encap_level = 0; // Not implemented in this translation
-    unsafe { __skb_pull(skb, tnl_hlen) };
-    unsafe { skb_reset_mac_header(skb) };
-    unsafe { skb_set_network_header(skb, (*skb).inner_network_offset) };
-    (*skb).mac_len = (*skb).inner_network_offset;
-    (*skb).protocol = (*skb).inner_protocol;
-
-    (*skb).encap_hdr_csum = if need_csum { 1 } else { 0 };
-
-    let mut offload_csum = 0;
-    if need_csum {
-        features &= !NETIF_F_SCTP_CRC;
-        offload_csum = 1;
+    unsafe {
+        skb_set_encapsulation(skb, 0);
+        __skb_pull(skb, tnl_hlen);
+        skb_reset_mac_header(skb);
+        skb_set_network_header(skb, skb_get_inner_network_offset(skb));
+        skb_set_mac_len(skb, skb_get_inner_network_offset(skb));
+        skb_set_protocol(skb, skb_get_inner_protocol(skb));
+        skb_set_encap_hdr_csum(skb, if need_csum { 1 } else { 0 });
+        skb_set_transport_header(skb, skb_get_inner_network_offset(skb) as usize);
+        skb_mac_gso_segment(skb, features)
     }
 
     segs = unsafe { skb_mac_gso_segment(skb, features) };

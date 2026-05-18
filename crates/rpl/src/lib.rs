@@ -1,15 +1,10 @@
-//! IPv6 Routing Protocol for Low-Power and Lossy Networks (RPL)
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
 const IPV6_RPL_BEST_ADDR_COMPRESSION: u8 = 15;
 
 // Type definitions
@@ -25,10 +20,18 @@ pub struct ipv6_rpl_sr_hdr {
     pub segments_left: u8,
     pub cmpri: u8,
     pub cmpre: u8,
-    pub rpl_segaddr: [in6_addr; 1], // Flexible array member
+    pub rpl_segaddr: [in6_addr; 1],
 }
 
-// Function implementations
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rust_eh_personality() {}
+
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_rpl_addr_decompress(
     dst: *mut in6_addr,
@@ -161,6 +164,9 @@ pub unsafe extern "C" fn ipv6_rpl_srh_compress(
         if mismatch {
             break;
         }
+        if plen == 15 {
+            cmpri = 16;
+        }
     }
 
     for plen in 0..16 {
@@ -220,9 +226,31 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_srh_size() {
-        let size = unsafe { ipv6_rpl_srh_size(3, 8, 8) };
-        assert_eq!(size, (3 * 8 + 8) as size_t);
+    let outhdr_ref = &mut *outhdr;
+    outhdr_ref.nexthdr = inhdr_ref.nexthdr;
+    let seg_len = (n as usize * (16 - cmpri as usize)) + (16 - cmpre as usize);
+    outhdr_ref.hdrlen = (seg_len >> 3) as u8;
+
+    if (seg_len & 0x7) != 0 {
+        outhdr_ref.hdrlen = outhdr_ref.hdrlen.wrapping_add(1);
+        outhdr_ref.pad = (8 - (seg_len & 0x7)) as u8;
+    } else {
+        outhdr_ref.pad = 0;
     }
+
+    outhdr_ref.rsvd = inhdr_ref.rsvd;
+    outhdr_ref.type_ = inhdr_ref.type_;
+    outhdr_ref.segments_left = inhdr_ref.segments_left;
+    outhdr_ref.cmpri = cmpri;
+    outhdr_ref.cmpre = cmpre;
+
+    for i in 0..n {
+        let seg = &*in_base.add(i as usize);
+        let pos = ipv6_rpl_segdata_pos(outhdr as *const ipv6_rpl_sr_hdr, i as c_int);
+        ipv6_rpl_addr_compress(pos, seg, cmpri);
+    }
+
+    let seg = &*in_base.add(n as usize);
+    let pos = ipv6_rpl_segdata_pos(outhdr as *const ipv6_rpl_sr_hdr, n as c_int);
+    ipv6_rpl_addr_compress(pos, seg, cmpre);
 }

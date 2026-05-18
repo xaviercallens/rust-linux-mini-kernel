@@ -40,13 +40,12 @@ pub struct nf_conntrack_amanda_hook {
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::c_void;
-use core::mem;
+use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::panic::PanicInfo;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 use kernel_types::*;
 
-// Constants from C
 pub const IPPROTO_UDP: u8 = 17;
 pub const AF_INET: u8 = 2;
 pub const AF_INET6: u8 = 10;
@@ -57,7 +56,9 @@ pub const NF_CT_EXPECT_CLASS_DEFAULT: u8 = 0;
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 
-// Type definitions
+pub type size_t = usize;
+pub type socklen_t = u32;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
@@ -85,12 +86,17 @@ pub struct nf_conn_tuplehash {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
+pub struct nf_conn {
+    pub tuplehash: [nf_conn_tuplehash; 2],
+    pub status: u32,
+}
+
+#[repr(C)]
 pub struct nf_conntrack_expect {
     pub _data: [u8; 1], // Opaque data
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct ts_config {
     pub _data: [u8; 1], // Opaque textsearch config
 }
@@ -102,72 +108,67 @@ pub struct nf_conntrack_expect_policy {
     pub timeout: c_uint,
 }
 
-// Global variables
-static mut master_timeout: c_uint = 300;
-static ts_algo: &str = "kmp";
-static HELPER_NAME: &str = "amanda";
-
-// Function pointer
-type nf_nat_amanda_hook_t = extern "C" fn(
-    *mut c_void, // skb
-    c_int,       // ctinfo
-    c_uint,      // protoff
-    c_uint,      // matchoff
-    c_uint,      // matchlen
+pub type nf_nat_amanda_hook_t = unsafe extern "C" fn(
+    *mut c_void,
+    c_int,
+    c_uint,
+    c_uint,
+    c_uint,
     *mut nf_conntrack_expect,
 ) -> c_int;
 
-static mut nf_nat_amanda_hook: AtomicPtr<nf_nat_amanda_hook_t> = AtomicPtr::new(ptr::null_mut());
-
-// Search patterns
 #[repr(C)]
-struct SearchPattern {
-    string: *const u8,
-    len: size_t,
-    ts: *mut ts_config,
+pub struct SearchPattern {
+    pub string: *const c_char,
+    pub len: size_t,
+    pub ts: *mut ts_config,
 }
 
-static mut search: [SearchPattern; 6] = [
+static mut MASTER_TIMEOUT: c_uint = 300;
+
+static TS_ALGO: &[u8] = b"kmp\0";
+static HELPER_NAME: &[u8] = b"amanda\0";
+static NAT_MOD_NAME: &[u8] = b"nf_nat_amanda\0";
+
+static NF_NAT_AMANDA_HOOK: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+
+static mut SEARCH: [SearchPattern; 6] = [
     SearchPattern {
-        string: b"CONNECT \0".as_ptr() as *const u8,
+        string: b"CONNECT ".as_ptr() as *const c_char,
         len: 8,
         ts: ptr::null_mut(),
     },
     SearchPattern {
-        string: b"\n\0".as_ptr() as *const u8,
+        string: b"\n".as_ptr() as *const c_char,
         len: 1,
         ts: ptr::null_mut(),
     },
     SearchPattern {
-        string: b"DATA \0".as_ptr() as *const u8,
+        string: b"DATA ".as_ptr() as *const c_char,
         len: 5,
         ts: ptr::null_mut(),
     },
     SearchPattern {
-        string: b"MESG \0".as_ptr() as *const u8,
+        string: b"MESG ".as_ptr() as *const c_char,
         len: 5,
         ts: ptr::null_mut(),
     },
     SearchPattern {
-        string: b"INDEX \0".as_ptr() as *const u8,
+        string: b"INDEX ".as_ptr() as *const c_char,
         len: 6,
         ts: ptr::null_mut(),
     },
     SearchPattern {
-        string: b"STATE \0".as_ptr() as *const u8,
+        string: b"STATE ".as_ptr() as *const c_char,
         len: 6,
         ts: ptr::null_mut(),
     },
 ];
 
-// Helper functions
-extern "C" {
+unsafe extern "C" {
     fn skb_find_text(skb: *mut c_void, from: c_uint, to: c_uint, ts: *mut ts_config) -> c_uint;
-
     fn nf_ct_refresh(ct: *mut nf_conn, skb: *mut c_void, timeout: c_uint);
-
     fn nf_ct_expect_alloc(ct: *mut nf_conn) -> *mut nf_conntrack_expect;
-
     fn nf_ct_expect_init(
         exp: *mut nf_conntrack_expect,
         class: u8,
@@ -175,36 +176,36 @@ extern "C" {
         src: *const nf_conntrack_tuple_ip_u3,
         dst: *const nf_conntrack_tuple_ip_u3,
         protonum: u8,
-        _l4num: *const c_void,
+        l4num: *const c_void,
         port: *const u16,
     );
-
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, timeout: c_int) -> c_int;
-
     fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
 
     fn nf_conntrack_helpers_register(helpers: *mut nf_conntrack_helper, nhelpers: c_int) -> c_int;
-
     fn nf_conntrack_helpers_unregister(helpers: *mut nf_conntrack_helper, nhelpers: c_int);
 
     fn textsearch_prepare(
-        algo: *const u8,
-        string: *const u8,
+        algo: *const c_char,
+        pattern: *const c_char,
         len: size_t,
         gfp: c_int,
         flags: c_int,
     ) -> *mut ts_config;
-
     fn textsearch_destroy(ts: *mut ts_config);
 
-    fn nf_ct_helper_log(skb: *mut c_void, ct: *mut nf_conn, msg: *const u8);
+    fn nf_ct_helper_log(skb: *mut c_void, ct: *mut nf_conn, msg: *const c_char);
 }
 
-// Module functions
-#[no_mangle]
+#[inline]
+fn ctinfo2dir(ctinfo: c_int) -> u8 {
+    (ctinfo as u8) & 0x01
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn amanda_help(
     skb: *mut c_void,
-    protoff: c_uint,
+    _protoff: c_uint,
     ct: *mut nf_conn,
     ctinfo: c_int,
 ) -> c_int {
@@ -215,13 +216,11 @@ pub unsafe extern "C" fn amanda_help(
         return NF_ACCEPT;
     }
 
-    // Increase the UDP timeout of the master connection
-    nf_ct_refresh(ct, skb, master_timeout * 1);
+    nf_ct_refresh(ct, skb, MASTER_TIMEOUT);
 
-    let dataoff = protoff + mem::size_of::<udphdr>() as c_uint;
-    if dataoff >= (*(skb as *mut sk_buff)).len {
-        nf_ct_helper_log(skb, ct, b"amanda_help: skblen = \0".as_ptr() as *const u8);
-        return NF_ACCEPT;
+    let exp = nf_ct_expect_alloc(ct);
+    if exp.is_null() {
+        return NF_DROP;
     }
 
     let start = skb_find_text(skb, dataoff, (*(skb as *mut sk_buff)).len, search[0].ts);
@@ -285,117 +284,11 @@ pub unsafe extern "C" fn amanda_help(
         nf_ct_expect_put(exp);
     }
 
-    ret
+    nf_ct_expect_put(exp);
+    NF_ACCEPT
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_amanda_init() -> c_int {
-    let mut ret = 0;
-
-    for i in 0..6 {
-        let algo = ts_algo.as_ptr() as *const u8;
-        let string = search[i].string;
-        let len = search[i].len;
-        search[i].ts = textsearch_prepare(algo, string, len, 0, 0);
-        if search[i].ts.is_null() {
-            ret = -ENOMEM;
-            for j in 0..i {
-                textsearch_destroy(search[j].ts);
-            }
-            return ret;
-        }
-    }
-
-    let helpers = &mut search[0] as *mut _ as *mut nf_conntrack_helper;
-    ret = nf_conntrack_helpers_register(helpers, 2);
-    if ret < 0 {
-        for i in (0..6).rev() {
-            textsearch_destroy(search[i].ts);
-        }
-    }
-
-    ret
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
 }
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_amanda_fini() {
-    nf_conntrack_helpers_unregister(&mut search[0] as *mut _ as *mut nf_conntrack_helper, 2);
-    for i in (0..6).rev() {
-        textsearch_destroy(search[i].ts);
-    }
-}
-
-// Module exports
-#[no_mangle]
-pub unsafe extern "C" fn nf_nat_amanda_hook(
-    skb: *mut c_void,
-    ctinfo: c_int,
-    protoff: c_uint,
-    matchoff: c_uint,
-    matchlen: c_uint,
-    exp: *mut nf_conntrack_expect,
-) -> c_int {
-    // Implementation would be provided by NAT module
-    0
-}
-
-// Helper macros
-#[inline]
-unsafe fn CTINFO2DIR(ctinfo: c_int) -> u8 {
-    (ctinfo & 0x01) as u8
-}
-
-#[inline]
-unsafe fn nf_ct_l3num(ct: *mut nf_conn) -> u8 {
-    (*ct).tuplehash[0].tuple.src.l3num
-}
-
-#[inline]
-unsafe fn skb_copy_bits(skb: *mut c_void, offset: c_uint, to: *mut u8, len: c_int) -> c_int {
-    // Simplified implementation - actual implementation would copy from skb
-    0
-}
-
-// Module metadata
-#[no_mangle]
-pub static HELPER_NAME_BYTES: [u8; 7] = *b"amanda\0";
-
-#[no_mangle]
-pub static amanda_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
-    max_expected: 4,
-    timeout: 180,
-};
-
-#[no_mangle]
-pub static amanda_helper: [nf_conntrack_helper; 2] = [
-    nf_conntrack_helper {
-        name: HELPER_NAME_BYTES.as_ptr(),
-        me: ptr::null_mut(),
-        help: amanda_help,
-        tuple: nf_conntrack_tuple {
-            src: nf_conntrack_tuple_ip {
-                u3: nf_conntrack_tuple_ip_u3 { _addr: [0; 16] },
-            },
-            dst: nf_conntrack_tuple_ip {
-                u3: nf_conntrack_tuple_ip_u3 { _addr: [0; 16] },
-            },
-        },
-        expect_policy: &amanda_exp_policy,
-        nat_mod_name: ptr::null_mut(),
-    },
-    nf_conntrack_helper {
-        name: HELPER_NAME_BYTES.as_ptr(),
-        me: ptr::null_mut(),
-        help: amanda_help,
-        tuple: nf_conntrack_tuple {
-            src: nf_conntrack_tuple_ip {
-                u3: nf_conntrack_tuple_ip_u3 { _addr: [0; 16] },
-            },
-            dst: nf_conntrack_tuple_ip {
-                u3: nf_conntrack_tuple_ip_u3 { _addr: [0; 16] },
-            },
-        },
-        expect_policy: &amanda_exp_policy,
-        nat_mod_name: ptr::null_mut(),
-    },
-];

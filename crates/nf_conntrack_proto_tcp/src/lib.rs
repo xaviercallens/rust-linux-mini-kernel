@@ -33,13 +33,13 @@ pub fn initialize_globals() {
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
 use core::ffi::{c_int, c_uint, c_char, c_void};
 use kernel_types::*;
 
-// TCP state transition table indices
 #[repr(u8)]
 pub enum TcpBitSet {
     TCP_SYN_SET = 0,
@@ -50,7 +50,6 @@ pub enum TcpBitSet {
     TCP_NONE_SET,
 }
 
-// TCP connection states
 #[repr(u8)]
 pub enum TcpConntrack {
     TCP_CONNTRACK_NONE = 0,
@@ -90,7 +89,7 @@ pub struct tcphdr {
 // State transition table
 static TCP_CONNTACKS: [[c_uint; 11]; 12] = {
     let mut table = [[0u32; 11]; 12];
-    // Original direction transitions
+
     table[0][0] = TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint;
     table[0][1] = TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint;
     table[0][2] = TcpConntrack::TCP_CONNTRACK_IGNORE as c_uint;
@@ -102,7 +101,6 @@ static TCP_CONNTACKS: [[c_uint; 11]; 12] = {
     table[0][8] = TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint;
     table[0][9] = TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as c_uint;
 
-    // Reply direction transitions
     table[1][0] = TcpConntrack::TCP_CONNTRACK_IGNORE as c_uint;
     table[1][1] = TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as c_uint;
     table[1][2] = TcpConntrack::TCP_CONNTRACK_IGNORE as c_uint;
@@ -117,7 +115,6 @@ static TCP_CONNTACKS: [[c_uint; 11]; 12] = {
     table
 };
 
-// Timeouts in jiffies
 static TCP_TIMEOUTS: [c_uint; 12] = {
     let mut timeouts = [0u32; 12];
     timeouts[TcpConntrack::TCP_CONNTRACK_SYN_SENT as usize] = 2 * 60 * HZ;
@@ -132,9 +129,6 @@ static TCP_TIMEOUTS: [c_uint; 12] = {
     timeouts
 };
 
-// HZ is the number of jiffies per second
-pub const HZ: c_uint = 100;
-
 #[cfg(feature = "procfs")]
 #[no_mangle]
 pub unsafe extern "C" fn tcp_print_conntrack(s: *mut c_void, ct: *mut c_void) {
@@ -146,8 +140,7 @@ pub unsafe extern "C" fn tcp_print_conntrack(s: *mut c_void, ct: *mut c_void) {
     let state = unsafe { *(ct as *const TcpConntrack) };
     let name = TCP_CONNTRACK_NAMES[state as usize];
 
-    // SAFETY: seq_printf is a valid kernel function
-    extern "C" {
+    unsafe extern "C" {
         fn seq_printf(s: *mut c_void, fmt: *const c_char, ...) -> c_int;
     }
 

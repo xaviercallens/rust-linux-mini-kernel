@@ -5,6 +5,7 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
@@ -13,7 +14,12 @@ use core::ffi::{c_int, c_uint, c_ulong, c_void};
 use core::ptr::{self, NonNull};
 use kernel_types::*;
 
-// Constants from C
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
+// Constants
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const NF_ACCEPT: c_int = 0;
@@ -61,15 +67,28 @@ pub struct nf_conntrack_expect_policy {
     pub timeout: c_uint,
 }
 
-// Function pointer type
-type nf_nat_irc_hook_t = unsafe extern "C" fn(
-    skb: *const sk_buff,
-    ctinfo: c_int,
-    protoff: c_uint,
-    matchoff: c_uint,
-    matchlen: c_uint,
-    exp: *mut nf_conntrack_expect,
-) -> c_int;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_helper {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct Spinlock {
+    _private: u32,
+}
+
+type nf_nat_irc_hook_t = Option<
+    unsafe extern "C" fn(
+        skb: *const sk_buff,
+        ctinfo: c_int,
+        protoff: c_uint,
+        matchoff: c_uint,
+        matchlen: c_uint,
+        exp: *mut nf_conntrack_expect,
+    ) -> c_int,
+>;
 
 // Global variables
 static mut PORTS: [u16; 8] = [0; 8];
@@ -80,15 +99,22 @@ static mut IRC_BUFFER: *mut c_void = ptr::null_mut();
 static mut IRC_BUFFER_LOCK: Spinlock = Spinlock { _private: 0 };
 static mut NF_NAT_IRC_HOOK: Option<nf_nat_irc_hook_t> = None;
 
-// DCC protocol strings
-const DCC_PROTOS: [&[u8; 5]; 5] = [
-    b"SEND ", b"CHAT ", b"MOVE ", b"TSEND ", b"SCHAT ",
-];
+unsafe extern "C" {
+    static mut nf_nat_irc_hook: nf_nat_irc_hook_t;
+}
 
-// Helper function prototypes
-extern "C" {
+const DCC_PROTOS: [&[u8; 6]; 5] = [b"SEND \0", b"CHAT \0", b"MOVE \0", b"TSEND\0", b"SCHAT\0"];
+
+static mut irc: [nf_conntrack_helper; 8] = [nf_conntrack_helper { _priv: [] }; 8];
+static irc_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
+    max_expected: 1,
+    timeout: 300,
+};
+
+unsafe extern "C" {
     fn nf_conntrack_helpers_register(helper: *mut nf_conntrack_helper, count: c_uint) -> c_int;
     fn nf_conntrack_helpers_unregister(helper: *mut nf_conntrack_helper, count: c_uint);
+
     fn nf_ct_expect_alloc(ct: *const nf_conn) -> *mut nf_conntrack_expect;
     fn nf_ct_expect_init(
         exp: *mut nf_conntrack_expect,
@@ -102,6 +128,7 @@ extern "C" {
     );
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, timeout: c_int) -> c_int;
     fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
+
     fn nf_ct_helper_init(
         helper: *mut nf_conntrack_helper,
         l3num: u8,
@@ -121,6 +148,7 @@ extern "C" {
         me: *const c_void,
         module: *const c_void,
     );
+
     fn ip_hdr(skb: *const sk_buff) -> *const iphdr;
     fn skb_header_pointer(
         skb: *const sk_buff,
@@ -128,19 +156,25 @@ extern "C" {
         size: c_int,
         buffer: *mut c_void,
     ) -> *mut c_void;
+
     fn pr_debug(fmt: *const u8, ...);
     fn net_warn_ratelimited(fmt: *const u8, ...);
     fn nf_ct_helper_log(skb: *const sk_buff, ct: *const nf_conn, fmt: *const u8, ...);
+
+    fn malloc(size: usize) -> *mut c_void;
+    fn free(ptr: *mut c_void);
 }
 
-// Spinlock type (simplified for FFI compatibility)
-#[repr(C)]
-struct Spinlock {
-    _private: u32,
+unsafe extern "C" fn help(
+    _skb: *const sk_buff,
+    _protoff: c_uint,
+    _ct: *mut nf_conn,
+    _ctinfo: c_int,
+) -> c_int {
+    NF_ACCEPT
 }
 
-// Module init/exit
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_irc_init() -> c_int {
     if MAX_DCC_CHANNELS < 1 {
         unsafe { pr_debug(b"max_dcc_channels must not be zero\n\0".as_ptr() as *const u8); }
@@ -194,7 +228,7 @@ pub extern "C" fn nf_conntrack_irc_init() -> c_int {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_irc_fini() {
     unsafe {
         let mut irc_helpers: [nf_conntrack_helper; 8] = [Default::default(); 8];

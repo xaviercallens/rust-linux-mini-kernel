@@ -1,6 +1,16 @@
 use kernel_types::*;
 use core::ptr;
 
+type ExpectFn = Option<extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> c_int>;
+type gfp_t = c_uint;
+
+unsafe extern "C" {
+    fn kmalloc(size: usize, flags: gfp_t) -> *mut c_void;
+    fn kfree(objp: *const c_void);
+}
+
+const GFP_KERNEL: gfp_t = 0x10u32;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct h323_call_id {
@@ -12,9 +22,9 @@ pub struct h323_call_id {
 #[derive(Copy, Clone)]
 pub struct h323_call_signal {
     pub call_id: h323_call_id,
-    pub setup: bool,
-    pub connect: bool,
-    pub release_complete: bool,
+    pub setup: u8,
+    pub connect: u8,
+    pub release_complete: u8,
     pub call_type: c_int,
 }
 
@@ -37,7 +47,7 @@ pub struct h323_expect {
     pub timeout: c_uint,
     pub flags: c_uint,
     pub master: *mut c_void,
-    pub expectfn: Option<extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> c_int>,
+    pub expectfn: ExpectFn,
     pub expect_data: *mut c_void,
 }
 
@@ -47,7 +57,7 @@ pub extern "C" fn h323_expect_create(
     timeout: c_uint,
     flags: c_uint,
     master: *mut c_void,
-    expectfn: Option<extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> c_int>,
+    expectfn: ExpectFn,
     expect_data: *mut c_void,
 ) -> *mut h323_expect {
     if call.is_null() {
@@ -73,6 +83,8 @@ pub extern "C" fn h323_expect_create(
         });
         expect
     }
+
+    expect
 }
 
 #[no_mangle]
@@ -87,10 +99,7 @@ pub extern "C" fn h323_expect_destroy(expect: *mut h323_expect) {
 }
 
 #[no_mangle]
-pub extern "C" fn h323_expect_match(
-    expect: *mut h323_expect,
-    call: *mut h323_call,
-) -> bool {
+pub extern "C" fn h323_expect_match(expect: *mut h323_expect, call: *mut h323_call) -> bool {
     if expect.is_null() || call.is_null() {
         return false;
     }
@@ -103,8 +112,13 @@ pub extern "C" fn h323_expect_match(
             return false;
         }
 
-        for i in 0..expect_call.call_signal.call_id.call_id_len {
-            if expect_call.call_signal.call_id.call_id[i as usize] != match_call.call_signal.call_id.call_id[i as usize] {
+        let len = expect_call.call_signal.call_id.call_id_len;
+        if len < 0 || len as usize > expect_call.call_signal.call_id.call_id.len() {
+            return false;
+        }
+
+        for i in 0..(len as usize) {
+            if expect_call.call_signal.call_id.call_id[i] != match_call.call_signal.call_id.call_id[i] {
                 return false;
             }
         }
@@ -138,22 +152,15 @@ pub extern "C" fn h323_expect_match(
 }
 
 #[no_mangle]
-pub extern "C" fn h323_expect_attach(
-    expect: *mut h323_expect,
-    skb: *mut sk_buff,
-) -> c_int {
+pub extern "C" fn h323_expect_attach(expect: *mut h323_expect, skb: *mut sk_buff) -> c_int {
     if expect.is_null() || skb.is_null() {
         return -1;
     }
 
     unsafe {
-        if (*expect).expectfn.is_none() {
-            return 0;
+        match (*expect).expectfn {
+            Some(expectfn) => expectfn((*expect).master, skb as *mut c_void, (*expect).expect_data),
+            None => 0,
         }
-
-        let expectfn = (*expect).expectfn.unwrap();
-        let result = expectfn((*expect).master, skb as *mut c_void, (*expect).expect_data);
-
-        result
     }
 }

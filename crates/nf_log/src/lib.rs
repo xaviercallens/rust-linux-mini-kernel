@@ -5,22 +5,18 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_ulong;
-use core::ffi::c_void;
-use core::mem;
+use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 use core::slice;
 use kernel_types::*;
 
-// Constants from C
 pub const NF_LOGGER_NAME_LEN: usize = 64;
-pub const NF_LOG_TYPE_MAX: usize = 16; // Assuming this value based on typical enum sizes
-pub const NFPROTO_NUMPROTO: usize = 32; // Assuming this value based on typical enum sizes
+pub const NF_LOG_TYPE_MAX: usize = 16;
+pub const NFPROTO_NUMPROTO: usize = 32;
 pub const NFPROTO_UNSPEC: u8 = 0;
 pub const NF_LOG_PREFIXLEN: usize = 128;
 pub const EINVAL: c_int = -22;
@@ -37,17 +33,35 @@ pub struct net_nf {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
+pub struct net {
+    pub nf: net_nf,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct nf_logger {
     pub name: [u8; NF_LOGGER_NAME_LEN],
     pub type_: c_int,
-    pub me: *mut c_void, // struct module*
+    pub me: *mut c_void,
+    pub logfn: Option<
+        extern "C" fn(
+            net: *mut net,
+            pf: u8,
+            hooknum: c_uint,
+            skb: *const c_void,
+            in_: *const c_void,
+            out: *const c_void,
+            loginfo: *const c_void,
+            prefix: *const c_char,
+        ),
+    >,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_log_buf {
     pub count: c_uint,
-    pub buf: [u8; 1024], // S_SIZE + 1
+    pub buf: [u8; 1024],
 }
 
 // Function pointer types
@@ -71,8 +85,8 @@ static mut sysctl_nf_log_all_netns: c_int = 0;
 
 // Mutex implementation (simplified for FFI compatibility)
 #[repr(C)]
-struct Mutex {
-    lock: c_int,
+pub struct Mutex {
+    lock: AtomicI32,
 }
 
 impl Mutex {
@@ -95,63 +109,50 @@ impl Mutex {
     }
 }
 
-// RCU helpers (simplified for FFI compatibility)
-#[inline]
-unsafe fn rcu_dereference<T>(ptr: *const T) -> *const T {
-    ptr
-}
+static mut loggers: [[*mut nf_logger; NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO] =
+    [[ptr::null_mut(); NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO];
+static nf_log_mutex: Mutex = Mutex::new();
+static mut emergency_ptr: *mut nf_log_buf = ptr::null_mut();
+static mut sysctl_nf_log_all_netns: c_int = 0;
 
 #[inline]
-unsafe fn rcu_assign_pointer<T>(dest: *mut *mut T, src: *mut T) {
-    *dest = src;
-}
-
-#[inline]
-unsafe fn RCU_INIT_POINTER<T>(dest: *mut *mut T, src: *mut T) {
-    *dest = src;
+unsafe fn rcu_dereference<T>(p: *mut T) -> *mut T {
+    p
 }
 
 #[inline]
-unsafe fn rcu_access_pointer<T>(ptr: *const *mut T) -> *mut T {
-    *ptr
+unsafe fn rcu_assign_pointer<T>(dst: *mut *mut T, src: *mut T) {
+    *dst = src;
 }
 
-// Internal functions
-fn nft_log_dereference(logger: *mut nf_logger) -> *mut nf_logger {
-    unsafe { rcu_dereference(logger) }
-}
-
-fn __find_logger(pf: u8, str_logger: *const u8) -> *mut nf_logger {
-    if pf >= NFPROTO_NUMPROTO as u8 {
+fn __find_logger(pf: u8, str_logger: *const c_char) -> *mut nf_logger {
+    if pf as usize >= NFPROTO_NUMPROTO || str_logger.is_null() {
         return ptr::null_mut();
     }
 
-    for i in 0..NF_LOG_TYPE_MAX {
-        let logger = unsafe { loggers[pf as usize][i] };
-        if logger.is_null() {
-            continue;
-        }
-
-        let logger = nft_log_dereference(logger);
+    let mut i = 0usize;
+    while i < NF_LOG_TYPE_MAX {
+        let logger = unsafe { rcu_dereference(loggers[pf as usize][i]) };
         if !logger.is_null() {
-            let logger_name =
-                unsafe { slice::from_raw_parts(logger.offset(0) as *const u8, NF_LOGGER_NAME_LEN) };
-            let str_logger_len = unsafe {
-                core::ffi::CStr::from_ptr(str_logger as *const i8)
-                    .to_bytes()
-                    .len()
-            };
-
-            if logger_name.len() >= str_logger_len {
-                let match_len = str_logger_len;
-                let logger_name_slice = &logger_name[..match_len];
-                let str_logger_slice = unsafe { slice::from_raw_parts(str_logger, match_len) };
-
-                if logger_name_slice == str_logger_slice {
-                    return logger;
+            let mut matched = true;
+            let mut j = 0usize;
+            while j < NF_LOGGER_NAME_LEN {
+                let a = unsafe { (*logger).name[j] };
+                let b = unsafe { *str_logger.add(j) as u8 };
+                if a != b {
+                    matched = false;
+                    break;
                 }
+                if b == 0 {
+                    break;
+                }
+                j += 1;
+            }
+            if matched {
+                return logger;
             }
         }
+        i += 1;
     }
 
     ptr::null_mut()
@@ -221,18 +222,12 @@ pub unsafe extern "C" fn nf_log_unset(net: *mut c_void, logger: *const nf_logger
         }
     }
 
-    mutex.unlock();
+    nf_log_mutex.lock();
+    rcu_assign_pointer((*netns).nf.nf_loggers.as_mut_ptr().add(pf as usize), ptr::null_mut());
+    nf_log_mutex.unlock();
 }
 
-/// Register a network logger
-///
-/// # Safety
-/// - `pf` must be valid protocol family
-/// - `logger` must be a valid logger pointer
-///
-/// # Returns
-/// 0 on success, -EINVAL if invalid, -EEXIST if already exists
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_log_register(pf: u8, logger: *mut nf_logger) -> c_int {
     if pf >= NFPROTO_NUMPROTO as u8 {
         return -EINVAL;
@@ -273,8 +268,9 @@ pub unsafe extern "C" fn nf_log_register(pf: u8, logger: *mut nf_logger) -> c_in
         }
     }
 
-    mutex.unlock();
-    ret
+    loggers[pf as usize][t as usize] = logger;
+    nf_log_mutex.unlock();
+    0
 }
 
 /// Unregister a network logger

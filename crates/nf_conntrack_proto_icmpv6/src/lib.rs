@@ -1,5 +1,6 @@
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_void, c_int, c_uint, c_ulong};
@@ -8,8 +9,6 @@ use core::ptr;
 
 pub const IPPROTO_ICMPV6: c_int = 58;
 pub const NF_ACCEPT: c_int = 1;
-pub const NF_DROP: c_int = 0;
-pub const NF_INET_PRE_ROUTING: c_int = 0;
 pub const NFPROTO_IPV6: c_int = 10;
 pub const HZ: c_ulong = 100;
 
@@ -103,7 +102,7 @@ static nf_ct_icmpv6_timeout: c_ulong = 30 * HZ;
 pub unsafe extern "C" fn icmpv6_pkt_to_tuple(
     skb: *const sk_buff,
     dataoff: c_uint,
-    net: *const c_void,
+    _net: *mut c_void,
     tuple: *mut nf_conntrack_tuple,
 ) -> bool {
     let mut _hdr: [u8; 4] = [0; 4];
@@ -113,32 +112,48 @@ pub unsafe extern "C" fn icmpv6_pkt_to_tuple(
         return false;
     }
 
-    let hdr_ptr = hp as *const nf_conntrack_tuple_icmp;
-    (*tuple).dst.u.icmp.type_ = (*hdr_ptr).type_;
-    (*tuple).src.u.icmp.id = (*hdr_ptr).id;
-    (*tuple).dst.u.icmp.code = (*hdr_ptr).code;
+    let p = hp as *const u8;
+    let type_ = unsafe { *p.add(0) };
+    let code = unsafe { *p.add(1) };
+    let id = u16::from_be_bytes([unsafe { *p.add(2) }, unsafe { *p.add(3) }]);
 
+    unsafe {
+        (*tuple).dst.u.icmp.type_ = type_;
+        (*tuple).dst.u.icmp.code = code;
+        (*tuple).src.u.icmp.id = id;
+    }
     true
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_conntrack_invert_icmpv6_tuple(
     tuple: *mut nf_conntrack_tuple,
     orig: *const nf_conntrack_tuple,
 ) -> bool {
-    let type_offset = (*orig).dst.u.icmp.type_ - 128;
-    if type_offset < 0 || type_offset >= 8 || invmap[type_offset as usize] == 0 {
+    let t = unsafe { (*orig).dst.u.icmp.type_ };
+    if t < 128 {
+        return false;
+    }
+    let type_off = (t - 128) as usize;
+    if type_off >= INVMAP.len() || INVMAP[type_off] == 0 {
         return false;
     }
 
-    (*tuple).src.u.icmp.id = (*orig).src.u.icmp.id;
-    (*tuple).dst.u.icmp.type_ = invmap[type_offset as usize] - 1;
-    (*tuple).dst.u.icmp.code = (*orig).dst.u.icmp.code;
-
+    unsafe {
+        (*tuple).src.u.icmp.id = (*orig).src.u.icmp.id;
+        (*tuple).dst.u.icmp.type_ = INVMAP[type_off] - 1;
+        (*tuple).dst.u.icmp.code = (*orig).dst.u.icmp.code;
+    }
     true
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn icmpv6_get_timeouts(net: *mut c_void) -> *mut c_ulong {
+    let in_net = unsafe { nf_icmpv6_pernet(net) };
+    unsafe { &mut (*in_net).timeout }
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_conntrack_icmpv6_packet(
     ct: *mut nf_conn,
     skb: *mut sk_buff,
@@ -152,32 +167,30 @@ pub unsafe extern "C" fn nf_conntrack_icmpv6_packet(
         return -NF_ACCEPT;
     }
 
-    if !nf_ct_is_confirmed(ct) {
-        let type_offset = (*ct).tuplehash[0].tuple.dst.u.icmp.type_ - 128;
-        if type_offset < 0 || type_offset >= 6 || valid_new[type_offset as usize] == 0 {
+    if !unsafe { nf_ct_is_confirmed(ct) } {
+        let t = unsafe { (*ct).tuplehash[0].tuple.dst.u.icmp.type_ };
+        if t < 128 {
+            return -NF_ACCEPT;
+        }
+        let off = (t - 128) as usize;
+        if off >= VALID_NEW.len() || VALID_NEW[off] == 0 {
             return -NF_ACCEPT;
         }
     }
 
-    let net_timeout = if timeout.is_null() {
-        let net = (*state).net;
-        icmpv6_get_timeouts(net)
+    let timeout_ptr = unsafe { nf_ct_timeout_lookup(ct) };
+    let timeout = if timeout_ptr.is_null() {
+        unsafe { *icmpv6_get_timeouts((*state).net) }
     } else {
-        timeout
+        unsafe { *timeout_ptr }
     };
 
-    nf_ct_refresh_acct(ct, ctinfo, skb, *net_timeout);
-
+    unsafe { nf_ct_refresh_acct(ct, ctinfo, skb, timeout) };
     NF_ACCEPT
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn icmpv6_get_timeouts(
-    net: *const c_void,
-) -> *mut c_ulong {
-    let in_net = nf_icmpv6_pernet(net);
-    &mut (*in_net).timeout
-}
+#[unsafe(no_mangle)]
+pub static nf_ct_icmpv6_timeout: c_ulong = 30 * HZ;
 
 unsafe fn skb_header_pointer(
     skb: *const sk_buff,

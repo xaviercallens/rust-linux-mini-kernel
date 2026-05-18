@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-//!
-//! This module implements connection tracking timestamp functionality for the Linux kernel.
-//! The implementation is a direct FFI-compatible Rust translation of the original C code,
-//! preserving the exact ABI and memory layout required for kernel integration.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
@@ -12,9 +8,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use kernel_types::*;
 
-// Kernel constants
-const EINVAL: c_int = -22;
-const ENOMEM: c_int = -12;
+const NF_CT_EXT_TSTAMP: u32 = 0;
 
 // Kernel constants from headers
 const NF_CT_EXT_TSTAMP: u32 = 0; // Actual value defined in kernel headers
@@ -49,7 +43,11 @@ extern "C" {
     fn pr_err(fmt: *const c_char);
 }
 
-// Module parameter initialization
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_tstamp_pernet_init(net: *mut c_void) -> c_int {
     // SAFETY: Kernel guarantees valid net pointer during pernet init
@@ -61,22 +59,15 @@ pub unsafe extern "C" fn nf_conntrack_tstamp_pernet_init(net: *mut c_void) -> c_
     0
 }
 
-// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_tstamp_init() -> c_int {
-    let ret = unsafe { nf_ct_extend_register(&TSTAMP_EXTEND) };
-
+    let ret = nf_ct_extend_register(&TSTAMP_EXTEND as *const nf_ct_ext_type);
     if ret < 0 {
-        // SAFETY: Error message is valid C string
-        unsafe {
-            pr_err(b"Unable to register extension\n".as_ptr() as *const c_char);
-        }
+        pr_err(b"Unable to register extension\n\0".as_ptr() as *const c_char);
     }
-
     ret
 }
 
-// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_tstamp_fini() {
     // SAFETY: Extension must be registered before unregistration

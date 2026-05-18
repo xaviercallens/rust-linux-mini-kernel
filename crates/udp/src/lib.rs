@@ -1,27 +1,47 @@
-//! UDP over IPv6 implementation for Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_void;
-use core::ptr;
+use core::ffi::c_int;
 use core::mem;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
+pub const AF_INET6: c_int = 10;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct refcount_t {
     pub counter: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct list_head {
+    pub next: *mut list_head,
+    pub prev: *mut list_head,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union in6_addr_kcompat {
+    pub u6_addr32: [u32; 4],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct in6_addr {
+    pub in6_u: in6_addr_kcompat,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct udp_hslot {
+    pub head: list_head,
 }
 
 #[repr(C)]
@@ -32,41 +52,68 @@ pub struct udp_table {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct udp_hslot {
-    pub head: list_head,
+pub struct net {
+    _priv: [u8; 0],
 }
 
-// Function declarations for external C functions
-extern "C" {
+#[repr(C)]
+pub struct sk_buff {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct ipv6hdr {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_sock {
+    pub inet_dport: u16,
+}
+
+#[repr(C)]
+pub struct sock {
+    pub sk_v6_rcv_saddr: in6_addr,
+    pub sk_v6_daddr: in6_addr,
+    pub sk_family: c_int,
+    pub udp_port_hash: u16,
+    pub udp_portaddr_hash: u32,
+    pub inet_num: u16,
+    pub sk_bound_dev_if: c_int,
+    pub sk_incoming_cpu: c_int,
+    pub inet_sk: inet_sock,
+}
+
+unsafe extern "C" {
     fn net_get_random_once(buf: *mut u32, size: usize);
     fn ipv6_portaddr_hash(net: *const net, addr: *const in6_addr, port: u16) -> u32;
     fn __inet6_ehashfn(lhash: u32, lport: u16, fhash: u32, fport: u16, secret: u32) -> u32;
     fn net_hash_mix(net: *const net) -> u32;
-    fn bpf_sk_lookup_run_v6(net: *const net, proto: c_int,
-                            saddr: *const in6_addr, sport: u16,
-                            daddr: *const in6_addr, hnum: u16) -> *mut sock;
-    fn ipv6_recv_error(sk: *mut sock, msg: *mut c_void, len: usize, addr_len: *mut c_int) -> c_int;
-    fn ipv6_recv_rxpmtu(sk: *mut sock, msg: *mut c_void, len: usize, addr_len: *mut c_int) -> c_int;
-    fn __skb_recv_udp(sk: *mut sock, flags: c_int, noblock: c_int, off: *mut c_int, err: *mut c_int) -> *mut sk_buff;
-    fn copy_linear_skb(skb: *mut sk_buff, copied: usize, off: c_int, msg_iter: *mut c_void) -> c_int;
-    fn skb_copy_datagram(skb: *mut sk_buff, offset: c_int, to: *mut c_void, len: usize) -> c_int;
-    fn udp_skb_csum_unnecessary(skb: *mut sk_buff) -> c_int;
-    fn __udp_lib_checksum_complete(skb: *mut sk_buff) -> c_int;
-    fn refcount_inc_not_zero(ref: *mut refcount_t) -> c_int;
-    fn static_branch_unlikely(branch: *const c_void) -> c_int;
-    fn inet6_is_jumbogram(skb: *mut sk_buff) -> c_int;
-    fn udp_skb_len(skb: *mut sk_buff) -> c_int;
-    fn dev_net(dev: *mut c_void) -> *mut net;
-    fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
-    fn inet6_iif(skb: *mut sk_buff) -> c_int;
-    fn inet6_sdif(skb: *mut sk_buff) -> c_int;
-    fn reuseport_select_sock(sk: *mut sock, hash: u32, skb: *mut sk_buff, hlen: usize) -> *mut sock;
-    fn reuseport_has_conns(sk: *mut sock, has_conns: c_int) -> c_int;
-    fn sk_peek_offset(sk: *mut sock, flags: c_int) -> c_int;
+
+    fn sock_net(sk: *const sock) -> *const net;
+    fn udp_lib_get_port(sk: *mut sock, snum: u16, hash2_nulladdr: u32) -> c_int;
+    fn udp_lib_rehash(sk: *mut sock, new_hash: u32);
+
+    fn net_eq(a: *const net, b: *const net) -> bool;
+    fn ipv6_addr_equal(a1: *const in6_addr, a2: *const in6_addr) -> bool;
+    fn ipv6_addr_any(a: *const in6_addr) -> bool;
+    fn udp_sk_bound_dev_eq(net: *const net, bound_dev_if: c_int, dif: c_int, sdif: c_int) -> bool;
+    fn raw_smp_processor_id() -> c_int;
 }
 
-// Function implementations
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+#[no_mangle]
+pub static in6addr_any: in6_addr = in6_addr {
+    in6_u: in6_addr_kcompat {
+        u6_addr32: [0, 0, 0, 0],
+    },
+};
+
 #[no_mangle]
 pub unsafe extern "C" fn udp6_ehashfn(
     net: *const net,
@@ -78,11 +125,10 @@ pub unsafe extern "C" fn udp6_ehashfn(
     static mut UDP6_EHASH_SECRET: u32 = 0;
     static mut UDP_IPV6_HASH_SECRET: u32 = 0;
 
-    // Initialize secrets
-    net_get_random_once(&mut UDP6_EHASH_SECRET, mem::size_of::<u32>());
-    net_get_random_once(&mut UDP_IPV6_HASH_SECRET, mem::size_of::<u32>());
+    net_get_random_once(&raw mut UDP6_EHASH_SECRET, mem::size_of::<u32>());
+    net_get_random_once(&raw mut UDP_IPV6_HASH_SECRET, mem::size_of::<u32>());
 
-    let lhash = (*laddr).in6_u.u6_addr32[3] as u32;
+    let lhash = (*laddr).in6_u.u6_addr32[3];
     let fhash = ipv6_portaddr_hash(net, faddr, 0);
 
     __inet6_ehashfn(
@@ -90,15 +136,12 @@ pub unsafe extern "C" fn udp6_ehashfn(
         lport,
         fhash,
         fport,
-        UDP_IPV6_HASH_SECRET + net_hash_mix(net)
+        UDP_IPV6_HASH_SECRET.wrapping_add(net_hash_mix(net)),
     )
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn udp_v6_get_port(
-    sk: *mut sock,
-    snum: u16,
-) -> c_int {
+pub unsafe extern "C" fn udp_v6_get_port(sk: *mut sock, snum: u16) -> c_int {
     let hash2_nulladdr = ipv6_portaddr_hash(sock_net(sk), &in6addr_any, snum);
     let hash2_partial = ipv6_portaddr_hash(sock_net(sk), &(*sk).sk_v6_rcv_saddr, 0);
 
@@ -107,9 +150,7 @@ pub unsafe extern "C" fn udp_v6_get_port(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn udp_v6_rehash(
-    sk: *mut sock,
-) {
+pub unsafe extern "C" fn udp_v6_rehash(sk: *mut sock) {
     let new_hash = ipv6_portaddr_hash(sock_net(sk), &(*sk).sk_v6_rcv_saddr, (*sk).inet_num);
     udp_lib_rehash(sk, new_hash);
 }
@@ -150,8 +191,7 @@ pub unsafe extern "C" fn compute_score(
         score += 1;
     }
 
-    let dev_match = udp_sk_bound_dev_eq(net, (*sk).sk_bound_dev_if, dif, sdif);
-    if !dev_match {
+    if !udp_sk_bound_dev_eq(net, (*sk).sk_bound_dev_if, dif, sdif) {
         return -1;
     }
     score += 1;
@@ -165,13 +205,9 @@ pub unsafe extern "C" fn compute_score(
 
 #[no_mangle]
 pub unsafe extern "C" fn lookup_reuseport(
-    net: *const net,
-    sk: *mut sock,
-    skb: *mut sk_buff,
-    saddr: *const in6_addr,
-    sport: u16,
-    daddr: *const in6_addr,
-    hnum: u16,
+    _net: *const net,
+    _sk: *mut sock,
+    _skb: *mut sk_buff,
 ) -> *mut sock {
     if (*sk).sk_reuseport != 0 && (*sk).sk_state != TCP_ESTABLISHED {
         let hash = udp6_ehashfn(net, daddr, hnum, saddr, sport);

@@ -5,20 +5,22 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
+use core::ffi::c_void;
+use core::panic::PanicInfo;
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const INT_MAX: c_int = 2147483647;
+pub const FIB6_TABLE_HASHSZ: usize = 256;
 
-// Type definitions
 #[repr(C)]
 pub struct list_head {
     pub next: *mut list_head,
@@ -123,7 +125,6 @@ pub struct fib6_walker {
     pub sernum: c_int,
     pub arg: *mut c_void,
     pub skip_notify: bool,
-    _private: [u8; 0],
 }
 
 #[repr(C)]
@@ -136,12 +137,9 @@ pub struct fib6_cleaner {
     pub skip_notify: bool,
 }
 
-// Function implementations
+#[no_mangle]
+pub unsafe extern "C" fn fib6_link_table(_net: *mut net, _tb: *mut fib6_table) {}
 
-/// Initialize FIB6 tables for a network namespace
-///
-/// # Safety
-/// - `net` must be a valid pointer to a network namespace
 #[no_mangle]
 pub unsafe extern "C" fn fib6_tables_init(net: *mut net) {
     if !net.is_null() {
@@ -150,11 +148,6 @@ pub unsafe extern "C" fn fib6_tables_init(net: *mut net) {
     }
 }
 
-/// Allocate a new FIB6 table
-///
-/// # Safety
-/// - `net` must be a valid pointer to a network namespace
-/// - `id` must be a valid table ID
 #[no_mangle]
 pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_table {
     let mut table = ptr::null_mut::<fib6_table>();
@@ -165,21 +158,16 @@ pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_t
     table
 }
 
-/// Create a new FIB6 table
-///
-/// # Safety
-/// - `net` must be a valid pointer to a network namespace
-/// - `id` must be a valid table ID
 #[no_mangle]
 pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_table {
     let mut tb = ptr::null_mut::<fib6_table>();
     let mut id = id;
 
     if id == 0 {
-        id = 0x100; // RT6_TABLE_MAIN
+        id = 0x100;
     }
 
-    tb = fib6_get_table(net, id);
+    let mut tb = fib6_get_table(net, id);
     if tb.is_null() {
         tb = fib6_alloc_table(net, id);
         if !tb.is_null() {
@@ -189,11 +177,6 @@ pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_tab
     tb
 }
 
-/// Get an existing FIB6 table
-///
-/// # Safety
-/// - `net` must be a valid pointer to a network namespace
-/// - `id` must be a valid table ID
 #[no_mangle]
 pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_table {
     let mut tb: *mut fib6_table = ptr::null_mut();
@@ -204,8 +187,8 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
         id = 0x100; // RT6_TABLE_MAIN
     }
 
-    h = (id & (FIB6_TABLE_HASHSZ - 1)) as usize;
-    head = &mut (*net).ipv6.fib_table_hash[h];
+    let hash: usize = (id as usize) & (FIB6_TABLE_HASHSZ - 1);
+    let mut node = (*net).ipv6.fib_table_hash[hash].first;
 
     tb = ptr::null_mut();
     tb
@@ -223,6 +206,8 @@ pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
         } else {
         }
     }
+
+    ptr::null_mut()
 }
 
 /// Allocate a new FIB6 info structure
@@ -274,17 +259,7 @@ pub unsafe extern "C" fn fib6_new_sernum(net: *mut net) -> c_int {
     let mut new: c_int = 0;
 
     loop {
-        old = (*net).ipv6.fib6_sernum.load(Ordering::Relaxed);
-        new = if old < INT_MAX { old + 1 } else { 1 };
-
-        if (*net)
-            .ipv6
-            .fib6_sernum
-            .compare_exchange(old, new, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok()
-        {
-            break;
-        }
+        core::hint::spin_loop();
     }
     new
 }

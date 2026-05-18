@@ -1,19 +1,22 @@
-//! IPv6 GSO/GRO offload support for UDP
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::ffi::c_void;
-use core::mem;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
+mod kernel_types {
+    pub use core::ffi::{
+        c_char, c_int, c_long, c_short, c_uchar, c_uint, c_ulong, c_ushort, c_void,
+    };
+    pub type size_t = usize;
+    pub type c_size_t = usize;
+    pub type socklen_t = u32;
+}
+use kernel_types::*;
+
 pub const IPPROTO_UDP: c_int = 17;
 pub const NEXTHDR_FRAGMENT: u8 = 44;
 pub const CSUM_MANGLED_0: u16 = 0xbad0;
@@ -43,13 +46,11 @@ pub struct frag_hdr {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct net_offload {
     pub callbacks: net_offload_callbacks,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct net_offload_callbacks {
     pub gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
     pub gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
@@ -57,7 +58,6 @@ pub struct net_offload_callbacks {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct NapiGroCb {
     pub flush: c_int,
     pub is_ipv6: c_int,
@@ -67,7 +67,6 @@ pub struct NapiGroCb {
     pub count: u16,
 }
 
-// Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> *mut sk_buff {
     let shinfo = skb_shinfo(skb);
@@ -99,7 +98,10 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
     sport: u16,
     dport: u16,
 ) -> *mut c_void {
-    // SAFETY: Assume skb is valid and contains a valid network header
+    let iph = unsafe { skb_gro_network_header(skb) };
+    if iph.is_null() {
+        return ptr::null_mut();
+    }
     unsafe {
         let iph = skb_gro_network_header(skb);
         if iph.is_null() {
@@ -107,14 +109,14 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
         }
 
         __udp6_lib_lookup(
-            dev_net((*skb).dev),
+            dev_net(ptr::null_mut()),
             &(*iph).saddr,
             sport,
             &(*iph).daddr,
             dport,
             inet6_iif(skb),
             inet6_sdif(skb),
-            &udp_table,
+            &mut udp_table,
             ptr::null_mut(),
         )
     }
@@ -122,7 +124,7 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
 
 #[no_mangle]
 pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
-    let uh = udp_gro_udphdr(skb);
+    let uh = unsafe { udp_gro_udphdr(skb) };
     if uh.is_null() {
         let napi_cb = NAPI_GRO_CB(skb);
         (*napi_cb).flush = 1;
@@ -141,8 +143,8 @@ pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) 
         return ptr::null_mut();
     }
 
-    if (*uh).check != 0 {
-        skb_gro_checksum_try_convert(skb, IPPROTO_UDP, ip6_gro_compute_pseudo);
+    if unsafe { (*uh).check } != 0 {
+        unsafe { skb_gro_checksum_try_convert(skb, IPPROTO_UDP, ip6_gro_compute_pseudo) };
     }
 
     (*napi_cb).is_ipv6 = 1;

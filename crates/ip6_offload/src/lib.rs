@@ -5,19 +5,19 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
+use core::ffi::{c_int, c_uint};
+use core::panic::PanicInfo;
 use core::ptr;
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
 use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
-pub const NEXTHDR_HOP: c_int = 0;
+pub const NEXTHDR_HOP: u8 = 0;
 pub const INET6_PROTO_GSO_EXTHDR: c_int = 1;
 pub const ETH_P_IPV6: c_int = 0x86DD;
 pub const IPPROTO_UDP: c_int = 17;
@@ -66,14 +66,12 @@ pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -
     let mut ops: *const NetOffload = ptr::null();
 
     loop {
-        if proto != NEXTHDR_HOP {
-            ops = rcu_dereference(inet6_offloads(proto));
-
+        if proto_u8 != NEXTHDR_HOP {
+            let ops = rcu_dereference(inet6_offloads(proto_u8 as c_int));
             if ops.is_null() {
                 break;
             }
-
-            if (*ops).flags & INET6_PROTO_GSO_EXTHDR == 0 {
+            if ((*ops).flags & INET6_PROTO_GSO_EXTHDR) == 0 {
                 break;
             }
         }
@@ -85,15 +83,15 @@ pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -
         let opth = (*skb).data as *mut Ipv6OptHdr;
         let len = ipv6_optlen(opth);
 
-        if !pskb_may_pull(skb, len as c_int) {
+        if !pskb_may_pull(skb, len) {
             break;
         }
 
-        proto = (*opth).nexthdr;
-        __skb_pull(skb, len as c_int);
+        proto_u8 = (*opth).nexthdr;
+        __skb_pull(skb, len);
     }
 
-    proto
+    proto_u8 as c_int
 }
 
 #[no_mangle]

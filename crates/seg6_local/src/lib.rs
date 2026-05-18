@@ -1,23 +1,22 @@
-//! SR-IPv6 implementation for Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)]
 
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
-// Type definitions
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 #[repr(C)]
 struct seg6_local_lwtunnel_ops {
-    build_state: Option<unsafe extern "C" fn(*mut seg6_local_lwt, *const c_void, *mut c_void) -> c_int>,
+    build_state:
+        Option<unsafe extern "C" fn(*mut seg6_local_lwt, *const c_void, *mut c_void) -> c_int>,
     destroy_state: Option<unsafe extern "C" fn(*mut seg6_local_lwt)>,
 }
 
@@ -56,6 +55,22 @@ struct seg6_end_dt_info {
 }
 
 #[repr(C)]
+struct u64_stats_sync {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+struct in_addr {
+    s_addr: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct in6_addr {
+    s6_addr: [u8; 16],
+}
+
+#[repr(C)]
 struct pcpu_seg6_local_counters {
     packets: u64,
     bytes: u64,
@@ -80,8 +95,6 @@ struct seg6_local_lwt {
     iif: c_int,
     oif: c_int,
     bpf: bpf_lwt_prog,
-    #[cfg(CONFIG_NET_L3_MASTER_DEV)]
-    dt_info: seg6_end_dt_info,
     pcpu_counters: *mut pcpu_seg6_local_counters,
     headroom: c_int,
     desc: *mut seg6_action_desc,
@@ -96,11 +109,10 @@ struct lwtunnel_state {
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn seg6_local_lwtunnel(lwt: *mut lwtunnel_state) -> *mut seg6_local_lwt {
-    // SAFETY: lwt is valid pointer as per kernel API
-    &mut (*lwt).data as *mut seg6_local_lwt
+    (*lwt).data as *mut seg6_local_lwt
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_srh(skb: *mut sk_buff, flags: c_int) -> *mut ipv6_sr_hdr {
     let mut srhoff: c_int = 0;
 
@@ -114,7 +126,7 @@ pub unsafe extern "C" fn get_srh(skb: *mut sk_buff, flags: c_int) -> *mut ipv6_s
 
     let srh = (skb_data(skb) as *mut u8).add(srhoff as usize) as *mut ipv6_sr_hdr;
 
-    let len = ((*srh).hdrlen + 1) << 3;
+    let len = (((*srh).hdrlen as c_int) + 1) << 3;
     if !pskb_may_pull(skb, srhoff + len) {
         return ptr::null_mut();
     }
@@ -129,49 +141,30 @@ pub unsafe extern "C" fn get_srh(skb: *mut sk_buff, flags: c_int) -> *mut ipv6_s
     srh
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_and_validate_srh(skb: *mut sk_buff) -> *mut ipv6_sr_hdr {
-    let srh = get_srh(skb, IP6_FH_F_SKIP_RH);
-    if srh.is_null() {
-        return ptr::null_mut();
-    }
-
-    #[cfg(CONFIG_IPV6_SEG6_HMAC)]
-    if !seg6_hmac_validate_skb(skb) {
-        return ptr::null_mut();
-    }
-
-    srh
+    get_srh(skb, IP6_FH_F_SKIP_RH)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn decap_and_validate(skb: *mut sk_buff, proto: c_int) -> bool {
-    let mut srh = get_srh(skb, 0);
+    let srh = get_srh(skb, 0);
     if !srh.is_null() && (*srh).segments_left > 0 {
         return false;
     }
 
-    #[cfg(CONFIG_IPV6_SEG6_HMAC)]
-    if !srh.is_null() && !seg6_hmac_validate_skb(skb) {
-        return false;
-    }
-
     let mut off: c_int = 0;
-    if ipv6_find_hdr(skb, &mut off as *mut c_int, proto, ptr::null_mut(), ptr::null_mut()) < 0 {
+    if ipv6_find_hdr(skb, &mut off as *mut c_int, proto, ptr::null_mut(), ptr::null()) < 0 {
         return false;
     }
 
-    if !pskb_pull(skb, off as size_t) {
+    if !pskb_pull(skb, off as usize) {
         return false;
     }
 
-    skb_postpull_rcsum(skb, skb_network_header(skb), off as size_t);
-
+    skb_postpull_rcsum(skb, skb_network_header(skb), off as usize);
     skb_reset_network_header(skb);
     skb_reset_transport_header(skb);
-    if iptunnel_pull_offloads(skb) < 0 {
-        return false;
-    }
 
     true
 }

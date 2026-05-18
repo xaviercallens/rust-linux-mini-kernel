@@ -1,9 +1,6 @@
-//! IPv4 Forwarding Information Base: policy rules
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
+```rust
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
@@ -13,7 +10,6 @@ use core::ptr::{self, NonNull};
 use core::mem;
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
@@ -32,23 +28,24 @@ pub const FRA_FLOW: c_int = 3;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct fib4_rule {
-    common: fib_rule,
-    dst_len: u8,
-    src_len: u8,
-    tos: u8,
-    src: u32,
-    srcmask: u32,
-    dst: u32,
-    dstmask: u32,
+    pub common: fib_rule,
+    pub dst_len: u8,
+    pub src_len: u8,
+    pub tos: u8,
+    pub src: u32,
+    pub srcmask: u32,
+    pub dst: u32,
+    pub dstmask: u32,
     #[cfg(CONFIG_IP_ROUTE_CLASSID)]
-    tclassid: u32,
+    pub tclassid: u32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct fib_lookup_arg {
-    result: *mut fib_result,
-    flags: c_uint,
+    pub result: *mut fib_result,
+    pub flags: c_uint,
+    pub rule: *mut fib_rule,
 }
 
 #[repr(C)]
@@ -74,38 +71,38 @@ pub struct fib_rules_ops {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net_ipv4 {
-    rules_ops: *mut fib_rules_ops,
-    fib_has_custom_rules: bool,
-    fib_rules_require_fldissect: c_int,
+    pub rules_ops: *mut fib_rules_ops,
+    pub fib_has_custom_rules: bool,
+    pub fib_rules_require_fldissect: c_int,
     #[cfg(CONFIG_IP_ROUTE_CLASSID)]
-    fib_num_tclassid_users: c_int,
+    pub fib_num_tclassid_users: c_int,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct flowi4 {
-    daddr: u32,
-    saddr: u32,
-    flowi4_tos: u8,
-    flowi4_proto: u8,
-    fl4_sport: u16,
-    fl4_dport: u16,
+    pub daddr: u32,
+    pub saddr: u32,
+    pub flowi4_tos: u8,
+    pub flowi4_proto: u8,
+    pub fl4_sport: u16,
+    pub fl4_dport: u16,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct fib_rule_hdr {
-    dst_len: u8,
-    src_len: u8,
-    tos: u8,
-    ip_proto: u8,
+    pub dst_len: u8,
+    pub src_len: u8,
+    pub tos: u8,
+    pub ip_proto: u8,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nlattr {
-    len: c_ushort,
-    type_: c_ushort,
+    pub len: c_ushort,
+    pub type_: c_ushort,
 }
 
 // Helper functions for container_of pattern
@@ -114,15 +111,15 @@ unsafe fn container_of(ptr: *const c_void, offset: usize) -> *const c_void {
     (ptr as usize - offset) as *const c_void
 }
 
-#[inline]
-unsafe fn offset_of<T, U>(_: *const T, _: *const U) -> usize {
-    let t: *const T = ptr::null();
-    let u: *const U = &(*t).tos as *const _;
-    (u as usize) - (t as usize)
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
 }
 
-// Exported functions
-#[no_mangle]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_eh_personality() {}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn fib4_rule_matchall(rule: *const fib_rule) -> bool {
     let offset = offset_of::<fib4_rule, u8>(ptr::null(), &(*ptr::null::<fib4_rule>()).tos);
     let r = container_of(rule as *const c_void, offset) as *const fib4_rule;
@@ -135,8 +132,11 @@ pub unsafe extern "C" fn fib4_rule_matchall(rule: *const fib_rule) -> bool {
     fib_rule_matchall(c_rule)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn fib4_rule_default(rule: *const fib_rule) -> bool {
+    if rule.is_null() {
+        return false;
+    }
     if !fib4_rule_matchall(rule) || (*rule).action != 0 || (*rule).l3mdev != 0 {
         return false;
     }
@@ -149,16 +149,21 @@ pub unsafe extern "C" fn fib4_rule_default(rule: *const fib_rule) -> bool {
     true
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __fib_lookup(
     net: *mut net,
     flp: *mut flowi4,
     res: *mut fib_result,
     flags: c_uint,
 ) -> c_int {
+    if net.is_null() || flp.is_null() || res.is_null() {
+        return EINVAL;
+    }
+
     let mut arg = fib_lookup_arg {
         result: res,
         flags,
+        rule: core::ptr::null_mut(),
     };
     let mut err = 0;
 

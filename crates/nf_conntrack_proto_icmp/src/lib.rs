@@ -8,6 +8,7 @@
 //! low-level interface.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::transmutes_expressible_as_ptr_cast)]
@@ -15,15 +16,45 @@
 use core::ffi::{c_int, c_uint, c_void};
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const NF_ACCEPT: c_int = 1;
 pub const NF_DROP: c_int = 0;
-pub const HZ: c_int = 100; // Assuming standard HZ value
+pub const HZ: c_int = 100;
 
-// Type definitions
+pub const ICMP_ECHO: u8 = 8;
+pub const ICMP_ECHOREPLY: u8 = 0;
+pub const ICMP_TIMESTAMP: u8 = 13;
+pub const ICMP_TIMESTAMPREPLY: u8 = 14;
+pub const ICMP_INFO_REQUEST: u8 = 15;
+pub const ICMP_INFO_REPLY: u8 = 16;
+pub const ICMP_ADDRESS: u8 = 17;
+pub const ICMP_ADDRESSREPLY: u8 = 18;
+pub const NR_ICMP_TYPES: u8 = 18;
+
+pub const NFPROTO_IPV4: u8 = 2;
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct icmp_echo {
+    pub id: u16,
+    pub sequence: u16,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct icmp_ipv4 {
+    pub gateway: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union icmp_un {
+    pub echo: icmp_echo,
+    pub ipv4: icmp_ipv4,
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct icmphdr {
@@ -34,27 +65,24 @@ pub struct icmphdr {
 }
 
 #[repr(C)]
-union icmp_un {
-    pub echo: icmp_echo,
-    pub ipv4: icmp_ipv4,
-}
-
-#[repr(C)]
-struct icmp_echo {
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_icmp {
     pub id: u16,
-    pub sequence: u16,
-}
-
-#[repr(C)]
-struct icmp_ipv4 {
-    pub gateway: u32,
+    pub type_: u8,
+    pub code: u8,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_src,
-    pub dst: nf_conntrack_tuple_dst,
+pub struct nf_conntrack_tuple_u3 {
+    pub ip: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_conntrack_tuple_u {
+    pub icmp: nf_conntrack_tuple_icmp,
+    pub u3: nf_conntrack_tuple_u3,
 }
 
 #[repr(C)]
@@ -70,21 +98,21 @@ pub struct nf_conntrack_tuple_dst {
 }
 
 #[repr(C)]
-union nf_conntrack_tuple_u {
-    pub icmp: nf_conntrack_tuple_icmp,
-    pub u3: nf_conntrack_tuple_u3,
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple {
+    pub src: nf_conntrack_tuple_src,
+    pub dst: nf_conntrack_tuple_dst,
 }
 
 #[repr(C)]
-struct nf_conntrack_tuple_icmp {
-    pub id: u16,
-    pub type_: u8,
-    pub code: u8,
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_hash {
+    pub tuple: nf_conntrack_tuple,
 }
 
 #[repr(C)]
-struct nf_conntrack_tuple_u3 {
-    pub ip: u32,
+pub struct nf_conn {
+    pub tuplehash: [nf_conntrack_tuple_hash; 2],
 }
 
 // Static data
@@ -99,26 +127,11 @@ pub static INV_MAP: [u8; 256] = {
     arr[ICMP_ADDRESS as usize] = ICMP_ADDRESSREPLY + 1;
     arr[ICMP_ADDRESSREPLY as usize] = ICMP_ADDRESS + 1;
     arr
-};
+}
 
-// Constants
-pub const ICMP_ECHO: u8 = 8;
-pub const ICMP_ECHOREPLY: u8 = 0;
-pub const ICMP_TIMESTAMP: u8 = 13;
-pub const ICMP_TIMESTAMPREPLY: u8 = 14;
-pub const ICMP_INFO_REQUEST: u8 = 15;
-pub const ICMP_INFO_REPLY: u8 = 16;
-pub const ICMP_ADDRESS: u8 = 17;
-pub const ICMP_ADDRESSREPLY: u8 = 18;
-pub const NR_ICMP_TYPES: u8 = 18;
+static INVMAP: [u8; 256] = build_invmap();
+static VALID_NEW: [bool; 256] = [true; 256];
 
-// Function implementations
-/// Extracts ICMP header from skb and populates tuple
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `tuple` must be a valid pointer to nf_conntrack_tuple
-/// - `dataoff` must be a valid offset in the skb
 #[no_mangle]
 pub unsafe extern "C" fn icmp_pkt_to_tuple(
     skb: *const sk_buff,
@@ -133,7 +146,7 @@ pub unsafe extern "C" fn icmp_pkt_to_tuple(
         return false;
     }
 
-    let hp = hp as *const icmphdr;
+    let hp = hp.cast::<icmphdr>();
 
     (*tuple).dst.u.icmp.type_ = (*hp).type_;
     (*tuple).src.u.icmp.id = (*hp).un.echo.id;
@@ -142,10 +155,6 @@ pub unsafe extern "C" fn icmp_pkt_to_tuple(
     true
 }
 
-/// Inverts an ICMP tuple for connection tracking
-///
-/// # Safety
-/// - `tuple` and `orig` must be valid pointers to nf_conntrack_tuple
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_invert_icmp_tuple(
     tuple: *mut nf_conntrack_tuple,
@@ -164,16 +173,10 @@ pub unsafe extern "C" fn nf_conntrack_invert_icmp_tuple(
     true
 }
 
-/// Handles ICMP packet processing for connection tracking
-///
-/// # Safety
-/// - `ct` must be a valid pointer to nf_conn
-/// - `skb` must be a valid pointer to sk_buff
-/// - `state` must be a valid pointer to nf_hook_state
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_icmp_packet(
     ct: *mut nf_conn,
-    skb: *mut sk_buff,
+    _skb: *mut sk_buff,
     _ctinfo: c_int,
     state: *const nf_hook_state,
 ) -> c_int {
@@ -187,9 +190,6 @@ pub unsafe extern "C" fn nf_conntrack_icmp_packet(
     if type_ >= VALID_NEW.len() as u8 || VALID_NEW[type_ as usize] == 0 {
         return -NF_ACCEPT;
     }
-
-    // Implementation would continue here with actual timeout handling
-    // and connection tracking logic
 
     NF_ACCEPT
 }

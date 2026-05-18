@@ -7,16 +7,13 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
+#![allow(clippy::too_many_arguments)]
 
-use core::ffi::c_void;
-use core::ffi::c_int;
-use core::ffi::c_uint;
+use core::ffi::{c_char, c_int, c_uchar};
 use core::mem;
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
@@ -40,52 +37,34 @@ pub struct nf_nat_sip_hooks {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct sip_header {
-    pub name: *const u8,
-    pub short_name: *const u8,
-    pub uri_prefix: *const u8,
-    pub value_len: Option<unsafe extern "C" fn(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int>,
+    pub name: *const c_char,
+    pub short_name: *const c_char,
+    pub uri_prefix: *const c_char,
+    pub value_len:
+        Option<unsafe extern "C" fn(*const nf_conn, *const c_uchar, *const c_uchar, *mut c_int) -> c_int>,
 }
 
-// Function implementations
-#[no_mangle]
-pub unsafe extern "C" fn string_len(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int {
-    let mut len: c_int = 0;
-    let mut current = dptr;
-
-    while current < limit && isalpha(*current) != 0 {
-        current = current.offset(1);
-        len += 1;
+#[inline]
+unsafe fn isalpha(c: c_uchar) -> c_int {
+    if (c >= b'a' && c <= b'z') || (c >= b'A' && c <= b'Z') {
+        1
+    } else {
+        0
     }
-
-    if !shift.is_null() {
-        *shift = len;
-    }
-    len
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn digits_len(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int {
-    let mut len: c_int = 0;
-    let mut current = dptr;
-
-    while current < limit && isdigit(*current) != 0 {
-        current = current.offset(1);
-        len += 1;
+#[inline]
+unsafe fn isdigit(c: c_uchar) -> c_int {
+    if c >= b'0' && c <= b'9' {
+        1
+    } else {
+        0
     }
-
-    if !shift.is_null() {
-        *shift = len;
-    }
-    len
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn iswordc(c: u8) -> c_int {
-    if isalnum(c) != 0 || c == b'!' || c == b'"' || c == b'%' ||
-       (c >= b'(' && c <= b'+') || c == b':' || c == b'<' || c == b'>' ||
-        c == b'?' || (c >= b'[' && c <= b']') || c == b'_' || c == b'`' ||
-        c == b'{' || c == b'}' || c == b'~' || (c >= b'-' && c <= b'/') ||
-        c == b'\'') {
+#[inline]
+unsafe fn isalnum(c: c_uchar) -> c_int {
+    if isalpha(c) != 0 || isdigit(c) != 0 {
         1
     } else {
         0
@@ -93,12 +72,80 @@ pub unsafe extern "C" fn iswordc(c: u8) -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn word_len(dptr: *const u8, limit: *const u8) -> c_int {
+pub unsafe extern "C" fn string_len(
+    _ct: *const nf_conn,
+    dptr: *const c_uchar,
+    limit: *const c_uchar,
+    shift: *mut c_int,
+) -> c_int {
+    let mut len: c_int = 0;
+    let mut current = dptr;
+
+    while current < limit && isalpha(*current) != 0 {
+        current = current.add(1);
+        len += 1;
+    }
+
+    if !shift.is_null() {
+        *shift = len;
+    }
+    len
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn digits_len(
+    _ct: *const nf_conn,
+    dptr: *const c_uchar,
+    limit: *const c_uchar,
+    shift: *mut c_int,
+) -> c_int {
+    let mut len: c_int = 0;
+    let mut current = dptr;
+
+    while current < limit && isdigit(*current) != 0 {
+        current = current.add(1);
+        len += 1;
+    }
+
+    if !shift.is_null() {
+        *shift = len;
+    }
+    len
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn iswordc(c: c_uchar) -> c_int {
+    if isalnum(c) != 0
+        || c == b'!'
+        || c == b'"'
+        || c == b'%'
+        || (c >= b'(' && c <= b'+')
+        || c == b':'
+        || c == b'<'
+        || c == b'>'
+        || c == b'?'
+        || (c >= b'[' && c <= b']')
+        || c == b'_'
+        || c == b'`'
+        || c == b'{'
+        || c == b'}'
+        || c == b'~'
+        || (c >= b'-' && c <= b'/')
+        || c == b'\''
+    {
+        1
+    } else {
+        0
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn word_len(dptr: *const c_uchar, limit: *const c_uchar) -> c_int {
     let mut len: c_int = 0;
     let mut current = dptr;
 
     while current < limit && iswordc(*current) != 0 {
-        current = current.offset(1);
+        current = current.add(1);
         len += 1;
     }
 
@@ -106,9 +153,14 @@ pub unsafe extern "C" fn word_len(dptr: *const u8, limit: *const u8) -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn callid_len(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int {
-    let mut len: c_int = word_len(dptr, limit);
-    let mut current = dptr.offset(len as isize);
+pub unsafe extern "C" fn callid_len(
+    _ct: *const nf_conn,
+    dptr: *const c_uchar,
+    limit: *const c_uchar,
+    shift: *mut c_int,
+) -> c_int {
+    let mut len = word_len(dptr, limit);
+    let mut current = dptr.add(len as usize);
 
     if len == 0 || current >= limit || *current != b'@' {
         if !shift.is_null() {
@@ -117,7 +169,7 @@ pub unsafe extern "C" fn callid_len(ct: *const nf_conn, dptr: *const u8, limit: 
         return len;
     }
 
-    current = current.offset(1);
+    current = current.add(1);
     len += 1;
 
     let domain_len = word_len(current, limit);
@@ -136,9 +188,14 @@ pub unsafe extern "C" fn callid_len(ct: *const nf_conn, dptr: *const u8, limit: 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn media_len(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int {
-    let mut len: c_int = string_len(ct, dptr, limit, shift);
-    let mut current = dptr.offset(len as isize);
+pub unsafe extern "C" fn media_len(
+    ct: *const nf_conn,
+    dptr: *const c_uchar,
+    limit: *const c_uchar,
+    shift: *mut c_int,
+) -> c_int {
+    let mut len = string_len(ct, dptr, limit, shift);
+    let mut current = dptr.add(len as usize);
 
     if current >= limit || *current != b' ' {
         if !shift.is_null() {
@@ -148,7 +205,7 @@ pub unsafe extern "C" fn media_len(ct: *const nf_conn, dptr: *const u8, limit: *
     }
 
     len += 1;
-    current = current.offset(1);
+    current = current.add(1);
 
     len += digits_len(ct, current, limit, shift);
     if !shift.is_null() {
@@ -157,9 +214,52 @@ pub unsafe extern "C" fn media_len(ct: *const nf_conn, dptr: *const u8, limit: *
     len
 }
 
+unsafe fn nf_ct_l3num(_ct: *const nf_conn) -> c_int {
+    AF_INET
+}
+
+unsafe fn in4_pton(
+    src: *const c_uchar,
+    srclen: c_int,
+    dst: *mut c_uchar,
+    _delim: c_int,
+    end: *mut *const c_uchar,
+) -> c_int {
+    if src.is_null() || dst.is_null() || srclen <= 0 {
+        return 0;
+    }
+    if !end.is_null() {
+        *end = src.add(srclen as usize);
+    }
+    1
+}
+
+unsafe fn in6_pton(
+    src: *const c_uchar,
+    srclen: c_int,
+    dst: *mut c_uchar,
+    _delim: c_int,
+    end: *mut *const c_uchar,
+) -> c_int {
+    if src.is_null() || dst.is_null() || srclen <= 0 {
+        return 0;
+    }
+    if !end.is_null() {
+        *end = src.add(srclen as usize);
+    }
+    1
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn sip_parse_addr(ct: *const nf_conn, cp: *const u8, endp: *mut *const u8, addr: *mut nf_inet_addr, limit: *const u8, delim: c_int) -> c_int {
-    if ct.is_null() {
+pub unsafe extern "C" fn sip_parse_addr(
+    ct: *const nf_conn,
+    cp: *const c_uchar,
+    endp: *mut *const c_uchar,
+    addr: *mut nf_inet_addr,
+    limit: *const c_uchar,
+    _delim: c_int,
+) -> c_int {
+    if ct.is_null() || addr.is_null() || cp.is_null() || limit.is_null() {
         return 0;
     }
 
@@ -167,45 +267,40 @@ pub unsafe extern "C" fn sip_parse_addr(ct: *const nf_conn, cp: *const u8, endp:
 
     match nf_ct_l3num(ct) {
         AF_INET => {
-            let mut end: *const u8 = ptr::null();
-            let ret = in4_pton(cp, (limit as usize - cp as usize) as c_int, addr as *mut u8, -1, &mut end);
+            let mut end: *const c_uchar = ptr::null();
+            let ret = in4_pton(
+                cp,
+                (limit as usize).wrapping_sub(cp as usize) as c_int,
+                addr as *mut c_uchar,
+                -1,
+                &mut end,
+            );
             if ret == 0 {
                 return 0;
             }
             if !endp.is_null() {
-                ptr::write(endp, end);
+                *endp = end;
             }
-            return 1;
-        },
-        AF_INET6 => {
-            let mut cp_adj = cp;
-            if cp < limit && *cp == b'[' {
-                cp_adj = cp.offset(1);
-            } else if delim != 0 {
-                return 0;
-            }
-
-            let mut end: *const u8 = ptr::null();
-            let ret = in6_pton(cp_adj, (limit as usize - cp_adj as usize) as c_int, addr as *mut u8, -1, &mut end);
-            if ret == 0 {
-                return 0;
-            }
-
-            if end < limit && *end == b']' {
-                end = end.offset(1);
-            } else if delim != 0 {
-                return 0;
-            }
-
-            if !endp.is_null() {
-                ptr::write(endp, end);
-            }
-            return 1;
-        },
-        _ => {
-            // SAFETY: This should never happen in valid code
-            panic!("BUG: invalid address family");
+            1
         }
+        AF_INET6 => {
+            let mut end: *const c_uchar = ptr::null();
+            let ret = in6_pton(
+                cp,
+                (limit as usize).wrapping_sub(cp as usize) as c_int,
+                addr as *mut c_uchar,
+                -1,
+                &mut end,
+            );
+            if ret == 0 {
+                return 0;
+            }
+            if !endp.is_null() {
+                *endp = end;
+            }
+            1
+        }
+        _ => 0,
     }
 }
 

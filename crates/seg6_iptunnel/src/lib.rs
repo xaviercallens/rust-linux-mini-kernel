@@ -1,22 +1,23 @@
-//! SR-IPv6 implementation for Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_uint, c_void};
+use core::ffi::{c_int, c_void};
 use core::mem;
 use core::ptr;
 use core::slice;
 use kernel_types::*;
 
-// Constants from C
+mod kernel_types {
+    pub type size_t = usize;
+    pub type c_size_t = usize;
+    pub type socklen_t = u32;
+}
+use kernel_types::*;
+
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
-pub const ETH_P_IPV6: c_int = 0x86DD;
 pub const ETH_P_IP: c_int = 0x0800;
 pub const IPPROTO_IPV6: c_int = 41;
 pub const IPPROTO_IPIP: c_int = 4;
@@ -34,7 +35,7 @@ pub struct ipv6_sr_hdr {
     pub m: u8,
     pub reserved: u8,
     pub first_segment: u8,
-    pub segments: [in6_addr; 1], // Flexible array member
+    pub segments: [in6_addr; 1],
 }
 
 #[repr(C)]
@@ -46,16 +47,15 @@ pub struct seg6_iptunnel_encap {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct seg6_lwt {
-    pub cache: dst_cache,
-    pub tuninfo: [seg6_iptunnel_encap; 1], // Flexible array member
+pub struct dst_cache {
+    _private: [u8; 1],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct dst_cache {
-    // Simplified for FFI compatibility
-    _private: [u8; 1],
+pub struct seg6_lwt {
+    pub cache: dst_cache,
+    pub tuninfo: [seg6_iptunnel_encap; 1],
 }
 
 #[repr(C)]
@@ -66,64 +66,42 @@ pub struct lwtunnel_state {
 
 // Function implementations
 
-/// Calculate headroom for SR-IPv6 tunnel
-///
-/// # Safety
-/// - `tuninfo` must be a valid pointer to seg6_iptunnel_encap
-///
-/// # Returns
-/// Headroom size in bytes
 #[no_mangle]
-pub unsafe extern "C" fn seg6_lwt_headroom(tuninfo: *const seg6_iptunnel_encap) -> usize {
+pub unsafe extern "C" fn seg6_lwt_headroom(tuninfo: *const seg6_iptunnel_encap) -> size_t {
     if tuninfo.is_null() {
         return 0;
     }
 
     let mode = (*tuninfo).mode;
-    let mut head = 0;
+    let mut head: size_t = 0;
 
     match mode {
-        0 => {} // SEG6_IPTUN_MODE_INLINE
-        1 => {
-            // SEG6_IPTUN_MODE_ENCAP
-            head = mem::size_of::<ipv6hdr>();
-        }
-        2 => {
-            // SEG6_IPTUN_MODE_L2ENCAP
-            return 0;
-        }
+        0 => {}
+        1 => head = mem::size_of::<ipv6hdr>(),
+        2 => return 0,
         _ => {}
     }
 
     let hdrlen = (*tuninfo)
         .srh
         .as_ref()
-        .map_or(0, |srh| ((srh.hdrlen as usize) + 1) << 3);
+        .map_or(0, |srh| ((srh.hdrlen as size_t) + 1) << 3);
 
     hdrlen + head
 }
 
-/// Encapsulate IPv6 packet with SRH
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `osrh` must be a valid pointer to ipv6_sr_hdr
-/// - `proto` must be a valid protocol number
-///
-/// # Returns
-/// 0 on success, error code otherwise
 #[no_mangle]
 pub unsafe extern "C" fn seg6_do_srh_encap(
     skb: *mut sk_buff,
     osrh: *mut ipv6_sr_hdr,
-    proto: c_int,
+    _proto: c_int,
 ) -> c_int {
     if skb.is_null() || osrh.is_null() {
         return EINVAL;
     }
 
     let dst = skb_dst(skb);
-    if dst.is_null() {
+    if dst.is_null() || (*dst).dev.is_null() {
         return EINVAL;
     }
 
@@ -132,13 +110,13 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
         return EINVAL;
     }
 
-    let inner_hdr = ipv6_hdr(skb);
-    if inner_hdr.is_null() {
+    let inner_hdr_ptr = ipv6_hdr(skb);
+    if inner_hdr_ptr.is_null() {
         return EINVAL;
     }
 
     let osrh_ref = &*osrh;
-    let hdrlen = ((osrh_ref.hdrlen as usize) + 1) << 3;
+    let hdrlen = ((osrh_ref.hdrlen as size_t) + 1) << 3;
     let tot_len = hdrlen + mem::size_of::<ipv6hdr>();
 
     let err = skb_cow_head(skb, tot_len as c_int);
@@ -146,21 +124,29 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
         return err;
     }
 
-    let inner_hdr = &*inner_hdr;
-    let flowlabel = seg6_make_flowlabel(net, skb, inner_hdr);
+    let inner_hdr = &*inner_hdr_ptr;
+    let flowlabel = seg6_make_flowlabel(net, skb, inner_hdr as *const ipv6hdr);
 
     skb_push(skb, tot_len as c_int);
     skb_reset_network_header(skb);
     skb_mac_header_rebuild(skb);
+
     let hdr = ipv6_hdr(skb);
+    if hdr.is_null() {
+        return EINVAL;
+    }
 
     if (*skb).protocol == htons(ETH_P_IPV6 as u16) {
-        ip6_flow_hdr(hdr, ip6_tclass(ip6_flowinfo(inner_hdr)), flowlabel);
+        ip6_flow_hdr(hdr, ip6_tclass(ip6_flowinfo(inner_hdr as *const ipv6hdr)), flowlabel);
         (*hdr).hop_limit = inner_hdr.hop_limit;
     } else {
         ip6_flow_hdr(hdr, 0, flowlabel);
-        (*hdr).hop_limit = ip6_dst_hoplimit(skb_dst(skb));
-        memset(IP6CB(skb), 0, mem::size_of::<*mut c_void>() as c_int);
+        let ndst = skb_dst(skb);
+        if ndst.is_null() {
+            return EINVAL;
+        }
+        (*hdr).hop_limit = ip6_dst_hoplimit(ndst);
+        memset(IP6CB(skb), 0, mem::size_of::<*mut c_void>() as size_t);
     }
 
     (*hdr).nexthdr = NEXTHDR_ROUTING;

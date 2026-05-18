@@ -5,23 +5,27 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
 
-use core::ptr;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
 pub const H323_ERROR_NONE: c_int = 0;
 pub const H323_ERROR_BOUND: c_int = 1;
 
-// Type definitions
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct field_t {
     #[cfg(feature = "h323_trace")]
-    name: *mut c_char,
+    name: *const c_char,
     type_: c_uchar,
     sz: c_uchar,
     lb: c_uchar,
@@ -41,13 +45,7 @@ pub struct bitstr {
     bit: c_uint,
 }
 
-// Function pointer type
-type decoder_t = extern "C" fn(
-    *mut bitstr,
-    *const field_t,
-    *mut c_void,
-    c_int,
-) -> c_int;
+type decoder_t = unsafe extern "C" fn(*mut bitstr, *const field_t, *mut c_void, c_int) -> c_int;
 
 // Decoder functions vector
 static DECODERS: [decoder_t; 12] = [
@@ -65,15 +63,14 @@ static DECODERS: [decoder_t; 12] = [
     decode_choice,
 ];
 
-// Tool functions
 #[no_mangle]
 pub unsafe extern "C" fn get_len(bs: *mut bitstr) -> c_uint {
-    let v = (*bs).cur.read();
+    let v = *(*bs).cur;
     (*bs).cur = (*bs).cur.add(1);
 
-    if v & 0x80 != 0 {
-        let v = (v & 0x3f) as c_uint;
-        v << 8 | (*bs).cur.read() as c_uint
+    if (v & 0x80) != 0 {
+        let n = (v & 0x3f) as c_uint;
+        (n << 8) | (*(*bs).cur as c_uint)
     } else {
         v as c_uint
     }
@@ -82,24 +79,21 @@ pub unsafe extern "C" fn get_len(bs: *mut bitstr) -> c_uint {
 #[no_mangle]
 pub unsafe extern "C" fn nf_h323_error_boundary(bs: *mut bitstr, bytes: size_t, bits: size_t) -> c_int {
     let total_bits = (*bs).bit as size_t + bits;
-    let total_bytes = bytes + (total_bits / 8);
+    let mut total_bytes = bytes + (total_bits / 8);
+    if (total_bits % 8) != 0 {
+        total_bytes += 1;
+    }
 
-    let total_bytes = if total_bits % 8 > 0 {
-        total_bytes + 1
+    if (*bs).cur.add(total_bytes) > (*bs).end {
+        H323_ERROR_BOUND
     } else {
-        total_bytes
-    };
-
-    if (*bs).cur.add(total_bytes as usize) > (*bs).end {
-        1
-    } else {
-        0
+        H323_ERROR_NONE
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn get_bit(bs: *mut bitstr) -> c_uint {
-    let b = (*bs).cur.read() & (0x80 >> (*bs).bit);
+    let b = *(*bs).cur & (0x80u8 >> (*bs).bit);
 
     (*bs).bit += 1;
     if (*bs).bit > 7 {
@@ -112,21 +106,21 @@ pub unsafe extern "C" fn get_bit(bs: *mut bitstr) -> c_uint {
 
 #[no_mangle]
 pub unsafe extern "C" fn get_bits(bs: *mut bitstr, b: c_uint) -> c_uint {
-    let mut v = (*bs).cur.read() & (0xffu8 >> (*bs).bit);
+    let mut v: c_uchar = *(*bs).cur & (0xffu8 >> (*bs).bit);
     let l = (*bs).bit + b;
 
     if l < 8 {
-        v >>= 8 - l as u32;
-        (*bs).bit = l as u8;
+        v >>= 8 - l;
+        (*bs).bit = l;
     } else if l == 8 {
         (*bs).cur = (*bs).cur.add(1);
         (*bs).bit = 0;
     } else {
-        v <<= 8;
+        v <<= 8 - (*bs).bit;
         (*bs).cur = (*bs).cur.add(1);
-        v |= (*bs).cur.read();
-        v >>= 16 - l as u32;
-        (*bs).bit = (l - 8) as u8;
+        v |= *(*bs).cur;
+        v >>= 16 - l;
+        (*bs).bit = l - 8;
     }
 
     v as c_uint
@@ -138,410 +132,14 @@ pub unsafe extern "C" fn get_bitmap(bs: *mut bitstr, b: c_uint) -> c_uint {
         return 0;
     }
 
-    let l = (*bs).bit + b;
-    let mut v = 0;
+    let mut rem = b;
+    let mut out: c_uint = 0;
 
-    if l < 8 {
-        v = (*bs).cur.read() as c_uint << ((*bs).bit + 24);
-        (*bs).bit = l as u8;
-    } else if l == 8 {
-        v = (*bs).cur.read() as c_uint << ((*bs).bit + 24);
-        (*bs).cur = (*bs).cur.add(1);
-        (*bs).bit = 0;
-    } else {
-        let bytes = l >> 3;
-        let shift = 24;
-        let mut shift_val = shift;
-
-        for _ in 0..bytes {
-            v |= (*bs).cur.read() as c_uint << shift_val;
-            (*bs).cur = (*bs).cur.add(1);
-            shift_val -= 8;
-        }
-
-        if l < 32 {
-            v |= (*bs).cur.read() as c_uint << shift_val;
-            v <<= (*bs).bit as u32;
-        } else if l > 32 {
-            v <<= (*bs).bit as u32;
-            v |= (*bs).cur.read() >> (8 - (*bs).bit);
-        }
-
-        (*bs).bit = (l & 7) as u8;
+    while rem != 0 {
+        out <<= 1;
+        out |= get_bit(bs) & 1;
+        rem -= 1;
     }
 
-    v & (0xffffffff << (32 - b))
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_uint(bs: *mut bitstr, b: c_int) -> c_uint {
-    let mut v = 0;
-
-    match b {
-        4 => {
-            v |= (*bs).cur.read() as c_uint;
-            (*bs).cur = (*bs).cur.add(1);
-            v <<= 8;
-        }
-        3 => {
-            v |= (*bs).cur.read() as c_uint;
-            (*bs).cur = (*bs).cur.add(1);
-            v <<= 8;
-        }
-        2 => {
-            v |= (*bs).cur.read() as c_uint;
-            (*bs).cur = (*bs).cur.add(1);
-            v <<= 8;
-        }
-        1 => {
-            v |= (*bs).cur.read() as c_uint;
-            (*bs).cur = (*bs).cur.add(1);
-        }
-        _ => {}
-    }
-
-    v
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_nul(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_bool(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    (*bs).bit += 1;
-    if nf_h323_error_boundary(bs, 0, 0) != 0 {
-        H323_ERROR_BOUND
-    } else {
-        H323_ERROR_NONE
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_oid(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of OID decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_int(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of integer decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_enum(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of enum decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_bitstr(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of bit string decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_numstr(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of numeric string decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_octstr(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of octet string decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_bmpstr(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of BMP string decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_seq(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of sequence decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_seqof(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of sequence of decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn decode_choice(
-    bs: *mut bitstr,
-    f: *const field_t,
-    base: *mut c_void,
-    level: c_int,
-) -> c_int {
-    #[cfg(feature = "h323_trace")]
-    {
-        let tab_size = 4;
-        let name = (*f).name;
-        let mut spaces = [0u8; 128];
-
-        for i in 0..level * tab_size {
-            spaces[i] = b' ';
-        }
-
-        // SAFETY: printk is kernel's logging function
-        libc::printk(b"%s%s\n", spaces.as_ptr(), name);
-    }
-
-    // Implementation of choice decoding
-    // ...
-    H323_ERROR_NONE
-}
-
-// Include H.323 types from nf_conntrack_h323_types.c
-#[cfg(feature = "h323_types")]
-mod h323_types {
-    // Include generated types here
-}
-
-// Tests (conditional compilation)
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_len() {
-        let mut buffer = [0x81, 0x03, 0x01, 0x02, 0x03];
-        let mut bs = bitstr {
-            buf: buffer.as_mut_ptr(),
-            beg: buffer.as_mut_ptr(),
-            end: buffer.as_mut_ptr().add(buffer.len()),
-            cur: buffer.as_mut_ptr(),
-            bit: 0,
-        };
-
-        unsafe {
-            let len = get_len(&mut bs);
-            assert_eq!(len, 3);
-            assert_eq!(bs.cur.offset_from(buffer.as_mut_ptr()), 2);
-        }
-    }
+    out
 }

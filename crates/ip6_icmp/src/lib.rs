@@ -106,6 +106,12 @@ extern "C" {
     ) -> c_int;
 }
 
+#[inline]
+fn skb_cb_as_icmp(skb: NonNull<sk_buff>) -> *mut ip6_icmp {
+    let cb_ptr = unsafe { (*skb.as_ptr()).cb.as_mut_ptr() };
+    cb_ptr.cast::<ip6_icmp>()
+}
+
 pub fn ip6_icmp_send_echo_reply(
     skb: *mut sk_buff,
     type_: u8,
@@ -113,12 +119,13 @@ pub fn ip6_icmp_send_echo_reply(
     offset: c_int,
     mtu: __be32,
 ) -> c_int {
-    if skb.is_null() {
+    let Some(skb_nn) = NonNull::new(skb) else {
         return -1;
     }
 
     let icmp6h = unsafe { &mut (*skb).cb as *mut ip6_icmp };
 
+    let icmp6h = skb_cb_as_icmp(skb_nn);
     if icmp6h.is_null() {
         return -1;
     }
@@ -148,12 +155,13 @@ pub fn ip6_icmp_send_error(
     offset: c_int,
     mtu: __be32,
 ) -> c_int {
-    if skb.is_null() {
+    let Some(skb_nn) = NonNull::new(skb) else {
         return -1;
     }
 
     let icmp6h = unsafe { &mut (*skb).cb as *mut ip6_icmp };
 
+    let icmp6h = skb_cb_as_icmp(skb_nn);
     if icmp6h.is_null() {
         return -1;
     }

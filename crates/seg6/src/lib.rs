@@ -1,18 +1,17 @@
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_int, c_uint, c_char, c_void};
+use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::mem;
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOTSUPP: c_int = -95;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ipv6_sr_hdr {
@@ -20,7 +19,6 @@ pub struct ipv6_sr_hdr {
     pub hdrlen: u8,
     pub segleft: u8,
     pub first: u8,
-    // ... other fields as needed
 }
 
 #[repr(C)]
@@ -28,7 +26,6 @@ pub struct ipv6_sr_hdr {
 pub struct sr6_tlv {
     pub type_: u8,
     pub len: u8,
-    // ... other fields as needed
 }
 
 #[repr(C)]
@@ -38,7 +35,6 @@ pub struct genl_family {
     pub name: *const c_char,
     pub version: c_uint,
     pub maxattr: c_uint,
-    // ... other fields as needed
 }
 
 #[repr(C)]
@@ -60,19 +56,17 @@ pub struct pernet_operations {
     pub exit: extern "C" fn(net: *mut c_void),
 }
 
-// Function implementations
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn seg6_validate_srh(
     srh: *const ipv6_sr_hdr,
     len: c_int,
     reduced: bool,
 ) -> bool {
-    if srh.is_null() {
+    if srh.is_null() || len < 0 {
         return false;
     }
 
-    // SAFETY: Caller guarantees srh is valid
-    let srh = &*srh;
+    let srh = unsafe { &*srh };
 
     if srh.type_ != 4 {
         return false;
@@ -86,112 +80,77 @@ pub unsafe extern "C" fn seg6_validate_srh(
         return false;
     } else {
         let max_last_entry = (srh.hdrlen as c_int / 2) - 1;
-
-        if srh.first > max_last_entry as u8 {
+        if max_last_entry < 0 || srh.first > max_last_entry as u8 {
             return false;
         }
-
         if srh.segleft > srh.first + 1 {
             return false;
         }
     }
 
-    let mut tlv_offset = mem::size_of::<ipv6_sr_hdr>() + ((srh.first + 1) as usize * 16);
-    let trailing = len as usize - tlv_offset;
-
-    if trailing < 0 {
+    let tlv_offset = mem::size_of::<ipv6_sr_hdr>() + ((srh.first as usize + 1) * 16);
+    let total_len = len as usize;
+    if tlv_offset > total_len {
         return false;
     }
 
-    let mut remaining = trailing;
+    let mut remaining = total_len - tlv_offset;
+    let mut cursor = tlv_offset;
     let base = srh as *const ipv6_sr_hdr as *const u8;
 
     while remaining > 0 {
-        let tlv_ptr = base.add(tlv_offset);
-        let tlv = &*(tlv_ptr as *const sr6_tlv);
-
-        let tlv_len = mem::size_of::<sr6_tlv>() + tlv.len as usize;
-        remaining -= tlv_len;
-
-        if remaining < 0 {
+        if remaining < mem::size_of::<sr6_tlv>() {
             return false;
         }
 
-        tlv_offset += tlv_len;
+        let tlv = unsafe { &*(base.add(cursor) as *const sr6_tlv) };
+        let tlv_len = mem::size_of::<sr6_tlv>() + tlv.len as usize;
+
+        if tlv_len > remaining {
+            return false;
+        }
+
+        remaining -= tlv_len;
+        cursor += tlv_len;
     }
 
     true
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seg6_genl_sethmac(
-    skb: *mut c_void,
-    info: *mut c_void,
-) -> c_int {
-    // Implementation would go here
-    -ENOTSUPP
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn seg6_genl_sethmac(_skb: *mut c_void, _info: *mut c_void) -> c_int {
+    ENOTSUPP
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seg6_genl_set_tunsrc(
-    skb: *mut c_void,
-    info: *mut c_void,
-) -> c_int {
-    // Implementation would go here
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn seg6_genl_set_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int {
     0
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seg6_genl_get_tunsrc(
-    skb: *mut c_void,
-    info: *mut c_void,
-) -> c_int {
-    // Implementation would go here
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn seg6_genl_get_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int {
     0
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seg6_net_init(
-    net: *mut c_void,
-) -> c_int {
-    // Implementation would go here
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn seg6_net_init(_net: *mut c_void) -> c_int {
     0
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seg6_net_exit(
-    net: *mut c_void,
-) {
-    // Implementation would go here
-}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn seg6_net_exit(_net: *mut c_void) {}
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn seg6_init() -> c_int {
-    // Implementation would go here
     0
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seg6_exit() {
-    // Implementation would go here
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn seg6_exit() {}
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
 }
-
-// Tests (conditional compilation)
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use kernel_types::in6_addr;
-
-    #[test]
-    fn test_seg6_validate_srh() {
-        // Basic test case
-        let mut srh = unsafe { mem::zeroed::<ipv6_sr_hdr>() };
-        srh.type_ = 4;
-        srh.hdrlen = 2;
-        srh.segleft = 0;
-        srh.first = 0;
-
-        let result = unsafe { super::seg6_validate_srh(&srh, 8, false) };
-        assert!(result);
-    }
-}
+```

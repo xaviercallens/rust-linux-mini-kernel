@@ -7,35 +7,39 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
+use core::ffi::c_void;
 use core::mem::size_of;
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
-pub const HZ: c_int = 100; // System clock ticks per second
-pub const CTA_TIMEOUT_GENERIC_TIMEOUT: c_int = 1;
-pub const CTA_TIMEOUT_GENERIC_MAX: c_int = 2;
+pub const HZ: c_uint = 100;
+pub const CTA_TIMEOUT_GENERIC_TIMEOUT: usize = 1;
+pub const CTA_TIMEOUT_GENERIC_MAX: usize = 2;
 pub const ENOSPC: c_int = -12;
-pub const EINVAL: c_int = -22;
 
-// Type definitions
+pub const NLA_U32: c_uint = 1;
+pub const IPPROTO_RAW: u8 = 255;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nlattr {
     _unused: [u8; 0],
-} // Opaque type - actual layout defined in kernel headers
+}
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 struct NfGenericNet {
     timeout: c_uint,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 struct NlaPolicy {
     type_: c_uint,
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 struct NfCtnlTimeout {
     nlattr_to_obj: Option<
         unsafe extern "C" fn(tb: *mut *mut nlattr, net: *mut c_void, data: *mut c_void) -> c_int,
@@ -54,7 +58,14 @@ pub struct NfConntrackL4proto {
     ctnl_timeout: NfCtnlTimeout,
 }
 
-// Global data
+#[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
+#[no_mangle]
+static generic_timeout_nla_policy: [NlaPolicy; CTA_TIMEOUT_GENERIC_MAX + 1] = {
+    let mut arr = [NlaPolicy { type_: 0 }; CTA_TIMEOUT_GENERIC_MAX + 1];
+    arr[CTA_TIMEOUT_GENERIC_TIMEOUT] = NlaPolicy { type_: NLA_U32 };
+    arr
+};
+
 #[no_mangle]
 pub static NF_CONNTRACK_L4PROTO_GENERIC: NfConntrackL4proto = NfConntrackL4proto {
     l4proto: 255,
@@ -82,9 +93,15 @@ extern "C" {
     fn nf_generic_pernet(net: *mut c_void) -> *mut NfGenericNet;
     fn nla_get_be32(attr: *const nlattr) -> u32;
     fn nla_put_be32(skb: *mut c_void, type_: c_int, data: u32) -> c_int;
+    fn ntohl(x: u32) -> u32;
+    fn htonl(x: u32) -> u32;
 }
 
-// Function implementations
+#[inline(always)]
+unsafe extern "C" fn nf_ct_generic_timeout() -> c_uint {
+    600 * HZ
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_generic_init_net(net: *mut c_void) {
     let gn = nf_generic_pernet(net);
@@ -98,21 +115,18 @@ pub unsafe extern "C" fn generic_timeout_nlattr_to_obj(
     data: *mut c_void,
 ) -> c_int {
     let gn = nf_generic_pernet(net);
-    let timeout = data as *mut c_uint;
-
-    // SAFETY: Caller guarantees valid net pointer
+    let mut timeout = data as *mut c_uint;
     let gn_timeout = &mut (*gn).timeout;
 
     if timeout.is_null() {
         return EINVAL;
     }
 
-    let attr_index = CTA_TIMEOUT_GENERIC_TIMEOUT as isize;
-    let attr = *tb.offset(attr_index);
+    let attr = *tb.add(CTA_TIMEOUT_GENERIC_TIMEOUT);
 
     if !attr.is_null() {
         let value = nla_get_be32(attr);
-        *timeout = libc::ntohl(value) * HZ as u32;
+        *timeout = ntohl(value) * HZ;
     } else {
         *timeout = *gn_timeout;
     }
@@ -128,13 +142,7 @@ pub unsafe extern "C" fn generic_timeout_obj_to_nlattr(
     let timeout = data as *const c_uint;
     let timeout_val = *timeout;
 
-    // SAFETY: Caller guarantees valid skb pointer
-    if nla_put_be32(
-        skb,
-        CTA_TIMEOUT_GENERIC_TIMEOUT,
-        libc::htonl(timeout_val / HZ as u32),
-    ) != 0
-    {
+    if nla_put_be32(skb, CTA_TIMEOUT_GENERIC_TIMEOUT as c_int, htonl(timeout_val / HZ)) != 0 {
         return ENOSPC;
     }
 
