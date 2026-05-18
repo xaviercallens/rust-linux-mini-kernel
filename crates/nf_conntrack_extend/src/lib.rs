@@ -1,4 +1,6 @@
 use kernel_types::*;
+use core::ffi::c_void;
+use core::mem::MaybeUninit;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -41,40 +43,38 @@ pub struct nf_nat_ipv6 {
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_conntrack_extend {
-    let extend = core::ptr::null_mut();
-    if extend.is_null() {
-        return core::ptr::null_mut();
-    }
+    let mut extend_uninit = MaybeUninit::<nf_conntrack_extend>::uninit();
 
-    (*extend).ct = ct;
-    (*extend).timeout = 0;
-    (*extend).flags = 0;
-    (*extend).helper = core::ptr::null_mut();
-    (*extend).master = core::ptr::null_mut();
-    (*extend).tstamp = 0;
-    (*extend).status = 0;
-    (*extend).nat.nat_ipv4.min_addr = 0;
-    (*extend).nat.nat_ipv4.max_addr = 0;
-    (*extend).nat.nat_ipv4.min_proto = 0;
-    (*extend).nat.nat_ipv4.max_proto = 0;
-    (*extend).nat.nat_ipv6.min_addr = in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } };
-    (*extend).nat.nat_ipv6.max_addr = in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } };
-    (*extend).nat.nat_ipv6.min_proto = 0;
-    (*extend).nat.nat_ipv6.max_proto = 0;
-    (*extend).timeout_data = [0; 4];
+    (*extend_uninit.as_mut_ptr()).ct = ct;
+    (*extend_uninit.as_mut_ptr()).timeout = 0;
+    (*extend_uninit.as_mut_ptr()).flags = 0;
+    (*extend_uninit.as_mut_ptr()).helper = core::ptr::null_mut();
+    (*extend_uninit.as_mut_ptr()).master = core::ptr::null_mut();
+    (*extend_uninit.as_mut_ptr()).tstamp = 0;
+    (*extend_uninit.as_mut_ptr()).status = 0;
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv4.min_addr = 0;
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv4.max_addr = 0;
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv4.min_proto = 0;
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv4.max_proto = 0;
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv6.min_addr =
+        in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } };
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv6.max_addr =
+        in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } };
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv6.min_proto = 0;
+    (*extend_uninit.as_mut_ptr()).nat.nat_ipv6.max_proto = 0;
+    (*extend_uninit.as_mut_ptr()).timeout_data = [0; 4];
 
-    extend
+    extend_uninit.as_mut_ptr()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_destroy(extend: *mut nf_conntrack_extend) {
-    if !extend.is_null() {
-        // Additional cleanup if needed
-    }
-}
+pub unsafe extern "C" fn nf_conntrack_extend_destroy(_extend: *mut nf_conntrack_extend) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_timeout(extend: *mut nf_conntrack_extend, timeout: u32) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_timeout(
+    extend: *mut nf_conntrack_extend,
+    timeout: u32,
+) {
     if !extend.is_null() {
         (*extend).timeout = timeout;
     }
@@ -88,28 +88,40 @@ pub unsafe extern "C" fn nf_conntrack_extend_set_flags(extend: *mut nf_conntrack
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_helper(extend: *mut nf_conntrack_extend, helper: *mut c_void) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_helper(
+    extend: *mut nf_conntrack_extend,
+    helper: *mut c_void,
+) {
     if !extend.is_null() {
         (*extend).helper = helper;
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_master(extend: *mut nf_conntrack_extend, master: *mut c_void) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_master(
+    extend: *mut nf_conntrack_extend,
+    master: *mut c_void,
+) {
     if !extend.is_null() {
         (*extend).master = master;
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_tstamp(extend: *mut nf_conntrack_extend, tstamp: u64) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_tstamp(
+    extend: *mut nf_conntrack_extend,
+    tstamp: u64,
+) {
     if !extend.is_null() {
         (*extend).tstamp = tstamp;
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_status(extend: *mut nf_conntrack_extend, status: u32) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_status(
+    extend: *mut nf_conntrack_extend,
+    status: u32,
+) {
     if !extend.is_null() {
         (*extend).status = status;
     }
@@ -148,7 +160,10 @@ pub unsafe extern "C" fn nf_conntrack_extend_set_nat_ipv6(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_extend_set_timeout_data(extend: *mut nf_conntrack_extend, data: [u32; 4]) {
+pub unsafe extern "C" fn nf_conntrack_extend_set_timeout_data(
+    extend: *mut nf_conntrack_extend,
+    data: [u32; 4],
+) {
     if !extend.is_null() {
         (*extend).timeout_data = data;
     }

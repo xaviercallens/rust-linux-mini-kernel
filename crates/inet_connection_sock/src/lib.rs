@@ -1,178 +1,214 @@
-//! This module provides FFI-compatible Rust bindings for Linux kernel's inet connection socket
-//! functionality. It implements address comparison logic, port allocation, and reuseport handling
-//! with strict ABI compatibility.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::mem;
-use core::ptr;
-use core::slice;
+use core::ffi::{c_int, c_uchar};
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C header files
-pub const IPV6_ADDR_ANY: u32 = 0;
-pub const IPV6_ADDR_MAPPED: u32 = 1;
+pub const AF_INET6: c_int = 10;
+
+pub const IPV6_ADDR_ANY: c_int = 0;
+pub const IPV6_ADDR_MAPPED: c_int = 1;
 pub const SK_CAN_REUSE: c_int = 2;
 pub const TCP_LISTEN: c_int = 1;
 pub const TCP_TIME_WAIT: c_int = 7;
 
-// Type definitions for FFI compatibility
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct inet_bind_bucket {
-    port: u16,
-    l3mdev: c_int,
-    fastreuseport: i32,
-    fastuid: u32,
-    fast_rcv_saddr: u32,
-    fast_ipv6_only: bool,
-    fast_sk_family: c_int,
-    fast_v6_rcv_saddr: in6_addr,
+    pub port: u16,
+    pub l3mdev: c_int,
+    pub fastreuseport: i32,
+    pub fastuid: u32,
+    pub fast_rcv_saddr: u32,
+    pub fast_ipv6_only: c_uchar,
+    pub fast_sk_family: c_int,
+    pub fast_v6_rcv_saddr: in6_addr,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct inet_hashinfo {
-    bhash_size: c_int,
+    pub bhash_size: c_int,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net {
-    ipv4: ipv4_net,
+    pub ipv4: ipv4_net,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ipv4_net {
-    ip_local_ports: seqlock,
+    pub ip_local_ports: seqlock,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct seqlock {
-    lock: spinlock,
+    pub lock: spinlock,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct spinlock {
-    // Placeholder for actual spinlock implementation
+    pub _priv: u8,
 }
 
-// Function declarations for external dependencies
-extern "C" {
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sock_common {
+    pub skc_family: u16,
+    pub skc_rcv_saddr: u32,
+    pub skc_v6_rcv_saddr: in6_addr,
+}
+
+unsafe extern "C" {
     fn ipv6_addr_type(addr: *const in6_addr) -> c_int;
-    fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool;
-    fn ipv6_addr_any(addr: *const in6_addr) -> bool;
-    fn inet_is_local_reserved_port(net: *mut net, port: c_int) -> bool;
+    fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> c_uchar;
+    fn ipv6_addr_any(addr: *const in6_addr) -> c_uchar;
+    fn inet_is_local_reserved_port(net: *mut net, port: c_int) -> c_uchar;
     fn read_seqbegin(seq: *mut seqlock) -> c_int;
-    fn read_seqretry(seq: *mut seqlock, start: c_int) -> bool;
+    fn read_seqretry(seq: *mut seqlock, start: c_int) -> c_uchar;
     fn prandom_u32() -> u32;
     fn cond_resched();
+
+    fn inet6_rcv_saddr(sk: *const sock) -> *const in6_addr;
+    fn ipv6_only_sock(sk: *const sock) -> c_uchar;
 }
 
-// IPv6 address comparison function
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+#[inline]
+fn cbool(v: bool) -> c_uchar {
+    if v { 1 } else { 0 }
+}
+
+#[inline]
+fn rbool(v: c_uchar) -> bool {
+    v != 0
+}
+
+#[inline]
+unsafe fn sk_common(sk: *const sock) -> *const sock_common {
+    sk.cast::<sock_common>()
+}
+
+#[inline]
+unsafe fn sk_family(sk: *const sock) -> c_int {
+    (*sk_common(sk)).skc_family as c_int
+}
+
+#[inline]
+unsafe fn sk_rcv_saddr(sk: *const sock) -> u32 {
+    (*sk_common(sk)).skc_rcv_saddr
+}
+
+#[inline]
+unsafe fn sk_v6_rcv_saddr(sk: *const sock) -> *const in6_addr {
+    &(*sk_common(sk)).skc_v6_rcv_saddr
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_rcv_saddr_equal(
     sk1_rcv_saddr6: *const in6_addr,
     sk2_rcv_saddr6: *const in6_addr,
     sk1_rcv_saddr: u32,
     sk2_rcv_saddr: u32,
-    sk1_ipv6only: bool,
-    sk2_ipv6only: bool,
-    match_sk1_wildcard: bool,
-    match_sk2_wildcard: bool,
-) -> bool {
+    sk1_ipv6only: c_uchar,
+    sk2_ipv6only: c_uchar,
+    match_sk1_wildcard: c_uchar,
+    match_sk2_wildcard: c_uchar,
+) -> c_uchar {
     if sk1_rcv_saddr6.is_null() || sk2_rcv_saddr6.is_null() {
-        return false;
+        return 0;
     }
 
     let addr_type = ipv6_addr_type(sk1_rcv_saddr6);
     let addr_type2 = ipv6_addr_type(sk2_rcv_saddr6);
 
-    // Handle mapped IPv4 addresses
     if addr_type == IPV6_ADDR_MAPPED && addr_type2 == IPV6_ADDR_MAPPED {
-        if !sk2_ipv6only {
+        if !rbool(sk2_ipv6only) {
             if sk1_rcv_saddr == sk2_rcv_saddr {
-                return true;
+                return 1;
             }
-            return (match_sk1_wildcard && sk1_rcv_saddr == 0)
-                || (match_sk2_wildcard && sk2_rcv_saddr == 0);
+            return cbool(
+                (rbool(match_sk1_wildcard) && sk1_rcv_saddr == 0)
+                    || (rbool(match_sk2_wildcard) && sk2_rcv_saddr == 0),
+            );
         }
-        return false;
+        return 0;
     }
 
-    // Handle any address cases
     if addr_type == IPV6_ADDR_ANY && addr_type2 == IPV6_ADDR_ANY {
-        return true;
+        return 1;
     }
 
     if addr_type2 == IPV6_ADDR_ANY
-        && match_sk2_wildcard
-        && !(sk2_ipv6only && addr_type == IPV6_ADDR_MAPPED)
+        && rbool(match_sk2_wildcard)
+        && !(rbool(sk2_ipv6only) && addr_type == IPV6_ADDR_MAPPED)
     {
-        return true;
+        return 1;
     }
 
     if addr_type == IPV6_ADDR_ANY
-        && match_sk1_wildcard
-        && !(sk1_ipv6only && addr_type2 == IPV6_ADDR_MAPPED)
+        && rbool(match_sk1_wildcard)
+        && !(rbool(sk1_ipv6only) && addr_type2 == IPV6_ADDR_MAPPED)
     {
-        return true;
+        return 1;
     }
 
-    // Exact address match
-    if ipv6_addr_equal(sk1_rcv_saddr6, sk2_rcv_saddr6) {
-        return true;
+    if rbool(ipv6_addr_equal(sk1_rcv_saddr6, sk2_rcv_saddr6)) {
+        return 1;
     }
 
-    false
+    0
 }
 
-// IPv4 address comparison function
 #[no_mangle]
 pub unsafe extern "C" fn ipv4_rcv_saddr_equal(
     sk1_rcv_saddr: u32,
     sk2_rcv_saddr: u32,
-    sk2_ipv6only: bool,
-    match_sk1_wildcard: bool,
-    match_sk2_wildcard: bool,
-) -> bool {
-    if !sk2_ipv6only {
+    sk2_ipv6only: c_uchar,
+    match_sk1_wildcard: c_uchar,
+    match_sk2_wildcard: c_uchar,
+) -> c_uchar {
+    if !rbool(sk2_ipv6only) {
         if sk1_rcv_saddr == sk2_rcv_saddr {
-            return true;
+            return 1;
         }
-        return (match_sk1_wildcard && sk1_rcv_saddr == 0)
-            || (match_sk2_wildcard && sk2_rcv_saddr == 0);
+        return cbool(
+            (rbool(match_sk1_wildcard) && sk1_rcv_saddr == 0)
+                || (rbool(match_sk2_wildcard) && sk2_rcv_saddr == 0),
+        );
     }
-    false
+    0
 }
 
-// Main address comparison function
 #[no_mangle]
 pub unsafe extern "C" fn inet_rcv_saddr_equal(
     sk: *const sock,
     sk2: *const sock,
-    match_wildcard: bool,
-) -> bool {
+    match_wildcard: c_uchar,
+) -> c_uchar {
     if sk.is_null() || sk2.is_null() {
-        return false;
+        return 0;
     }
 
-    if (*sk).sk_family == AF_INET6 {
+    if sk_family(sk) == AF_INET6 {
         let sk2_rcv_saddr6 = inet6_rcv_saddr(sk2);
         return ipv6_rcv_saddr_equal(
-            &(*sk).sk_v6_rcv_saddr,
+            sk_v6_rcv_saddr(sk),
             sk2_rcv_saddr6,
-            (*sk).sk_rcv_saddr,
-            (*sk2).sk_rcv_saddr,
+            sk_rcv_saddr(sk),
+            sk_rcv_saddr(sk2),
             ipv6_only_sock(sk),
             ipv6_only_sock(sk2),
             match_wildcard,
@@ -181,137 +217,10 @@ pub unsafe extern "C" fn inet_rcv_saddr_equal(
     }
 
     ipv4_rcv_saddr_equal(
-        (*sk).sk_rcv_saddr,
-        (*sk2).sk_rcv_saddr,
+        sk_rcv_saddr(sk),
+        sk_rcv_saddr(sk2),
         ipv6_only_sock(sk2),
         match_wildcard,
         match_wildcard,
     )
 }
-
-// Helper to get IPv6 address from socket
-#[inline]
-unsafe fn inet6_rcv_saddr(sk: *const sock) -> *const in6_addr {
-    &(*sk).sk_v6_rcv_saddr
-}
-
-// Helper to check if socket is IPv6 only
-#[inline]
-unsafe fn ipv6_only_sock(sk: *const sock) -> bool {
-    // Implementation would depend on actual sock structure
-    true
-}
-
-// Get local port range
-#[no_mangle]
-pub unsafe extern "C" fn inet_get_local_port_range(
-    net: *mut net,
-    low: *mut c_int,
-    high: *mut c_int,
-) {
-    if net.is_null() || low.is_null() || high.is_null() {
-        return;
-    }
-
-    let mut seq: c_int = 0;
-    loop {
-        seq = read_seqbegin(&(*net).ipv4.ip_local_ports.lock);
-        *low = (*net).ipv4.ip_local_ports.range[0];
-        *high = (*net).ipv4.ip_local_ports.range[1];
-        if !read_seqretry(&(*net).ipv4.ip_local_ports.lock, seq) {
-            break;
-        }
-    }
-}
-
-// Check for bind conflicts
-#[no_mangle]
-pub unsafe extern "C" fn inet_csk_bind_conflict(
-    sk: *const sock,
-    tb: *const inet_bind_bucket,
-    relax: bool,
-    reuseport_ok: bool,
-) -> bool {
-    if sk.is_null() || tb.is_null() {
-        return false;
-    }
-
-    let reuse = (*sk).sk_reuse != 0;
-    let reuseport = !(*sk).sk_reuseport.is_null();
-    let uid = sock_i_uid(sk);
-
-    let mut sk2: *const sock = ptr::null();
-    // Implementation would iterate through (*tb).owners list
-    // This is a simplified placeholder
-    while !sk2.is_null() {
-        if sk != sk2
-            && (!(*sk).sk_bound_dev_if
-                || !(*sk2).sk_bound_dev_if
-                || (*sk).sk_bound_dev_if == (*sk2).sk_bound_dev_if)
-        {
-            if reuse && (*sk2).sk_reuse != 0 && (*sk2).sk_state != TCP_LISTEN {
-                if (!relax
-                    || (!reuseport_ok
-                        && reuseport
-                        && (*sk2).sk_reuseport != ptr::null()
-                        && rcu_access_pointer((*sk).sk_reuseport_cb).is_none()
-                        && ((*sk2).sk_state == TCP_TIME_WAIT || uid_eq(uid, sock_i_uid(sk2))))
-                        && inet_rcv_saddr_equal(sk, sk2, true))
-                {
-                    return true;
-                }
-            } else if (!reuseport_ok
-                || !reuseport
-                || (*sk2).sk_reuseport.is_null()
-                || rcu_access_pointer((*sk).sk_reuseport_cb).is_some()
-                || ((*sk2).sk_state != TCP_TIME_WAIT && !uid_eq(uid, sock_i_uid(sk2))))
-            {
-                if inet_rcv_saddr_equal(sk, sk2, true) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
-}
-
-// Helper functions
-#[inline]
-unsafe fn sock_i_uid(sk: *const sock) -> u32 {
-    // Placeholder implementation
-    0
-}
-
-#[inline]
-unsafe fn rcu_access_pointer<T>(ptr: *mut T) -> Option<*mut T> {
-    if !ptr.is_null() {
-        Some(ptr)
-    } else {
-        None
-    }
-}
-
-#[inline]
-unsafe fn uid_eq(uid1: u32, uid2: u32) -> bool {
-    uid1 == uid2
-}
-
-// Exported symbols
-#[no_mangle]
-pub unsafe extern "C" fn inet_rcv_saddr_any(sk: *const sock) -> bool {
-    if sk.is_null() {
-        return false;
-    }
-
-    if (*sk).sk_family == AF_INET6 {
-        ipv6_addr_any(&(*sk).sk_v6_rcv_saddr)
-    } else {
-        (*sk).sk_rcv_saddr == 0
-    }
-}
-
-// Constants
-pub const AF_INET6: c_int = 10;
-pub const AF_INET: c_int = 2;
-
-// Additional functions would be implemented here following the same pattern

@@ -1,126 +1,120 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_snmp':
-
-```rust
-//! SNMP service broadcast connection tracking helper
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::mem::ManuallyDrop;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
 pub const SNMP_PORT: u16 = 161;
 pub const NFPROTO_IPV4: u8 = 2;
 pub const IPPROTO_UDP: u8 = 17;
-pub const IPS_NAT_MASK: u32 = 0x00000004; // Example bitmask
+pub const IPS_NAT_MASK: u32 = 0x00000004;
 pub const NF_ACCEPT: c_int = 1;
 
-// Type definitions
 #[repr(C)]
-struct NfConntrackTupleUdp {
-    port: u16,
+pub struct NfConn {
+    _priv: [u8; 0],
 }
 
 #[repr(C)]
-struct NfConntrackTupleSrcUnion {
-    udp: NfConntrackTupleUdp,
+#[derive(Copy, Clone)]
+pub struct NfConntrackTupleUdp {
+    pub port: u16,
 }
 
 #[repr(C)]
-struct NfConntrackTupleSrc {
-    l3num: u8,
-    u: NfConntrackTupleSrcUnion,
+pub union NfConntrackTupleSrcUnion {
+    pub udp: ManuallyDrop<NfConntrackTupleUdp>,
 }
 
 #[repr(C)]
-struct NfConntrackTupleDst {
-    protonum: u8,
+pub struct NfConntrackTupleSrc {
+    pub l3num: u8,
+    pub u: NfConntrackTupleSrcUnion,
 }
 
 #[repr(C)]
-struct NfConntrackTuple {
-    src: NfConntrackTupleSrc,
-    dst: NfConntrackTupleDst,
+pub struct NfConntrackTupleDst {
+    pub protonum: u8,
 }
 
 #[repr(C)]
-struct NfConntrackExpectPolicy {
-    max_expected: c_uint,
-    timeout: c_uint,
+pub struct NfConntrackTuple {
+    pub src: NfConntrackTupleSrc,
+    pub dst: NfConntrackTupleDst,
 }
 
 #[repr(C)]
-struct NfConntrackHelper {
-    name: *const c_char,
-    tuple: NfConntrackTuple,
-    me: *mut c_void,
-    help: Option<extern "C" fn(*mut c_void, c_uint, *mut NfConn, c_int) -> c_int>,
-    expect_policy: *mut NfConntrackExpectPolicy,
+pub struct NfConntrackExpectPolicy {
+    pub max_expected: c_uint,
+    pub timeout: c_uint,
 }
+
+pub type NfNatSnmpHook = extern "C" fn(*mut c_void, c_uint, *mut NfConn, c_int) -> c_int;
 
 #[repr(C)]
-struct NfConn {
-    status: u32,
+pub struct NfConntrackHelper {
+    pub name: *const c_char,
+    pub tuple: NfConntrackTuple,
+    pub me: *mut c_void,
+    pub help: Option<extern "C" fn(*mut c_void, c_uint, *mut NfConn, c_int) -> c_int>,
+    pub expect_policy: *mut NfConntrackExpectPolicy,
 }
 
-// Function pointer type
-type NfNatSnmpHook = extern "C" fn(*mut c_void, c_uint, *mut NfConn, c_int) -> c_int;
+unsafe extern "C" {
+    fn nf_conntrack_broadcast_help(
+        skb: *mut c_void,
+        ct: *mut NfConn,
+        ctinfo: c_int,
+        timeout: c_uint,
+    );
+    fn nf_conntrack_helper_register(helper: *mut NfConntrackHelper) -> c_int;
+    fn nf_conntrack_helper_unregister(helper: *mut NfConntrackHelper);
+    fn nf_ct_is_nat(ct: *mut NfConn) -> c_int;
+}
 
-// Exported symbol
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static mut nf_nat_snmp_hook: Option<NfNatSnmpHook> = None;
 
-// Internal static variables
 static mut timeout: c_uint = 30;
 
-// Helper function implementation
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn snmp_conntrack_help(
     skb: *mut c_void,
     protoff: c_uint,
     ct: *mut NfConn,
     ctinfo: c_int,
 ) -> c_int {
-    // Call broadcast helper
-    extern "C" {
-        fn nf_conntrack_broadcast_help(
-            skb: *mut c_void,
-            ct: *mut NfConn,
-            ctinfo: c_int,
-            timeout: c_uint,
-        );
-    }
-    nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout);
+    unsafe {
+        nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout);
 
-    // SAFETY: nf_nat_snmp_hook is a function pointer managed by the kernel
-    if let Some(nf_nat_snmp) = nf_nat_snmp_hook {
-        // Check NAT status flag
-        if (*ct).status & IPS_NAT_MASK != 0 {
-            return nf_nat_snmp(skb, protoff, ct, ctinfo);
+        if let Some(hook) = nf_nat_snmp_hook {
+            if nf_ct_is_nat(ct) != 0 {
+                return hook(skb, protoff, ct, ctinfo);
+            }
         }
     }
 
     NF_ACCEPT
 }
 
-// Static helper configuration
 static mut exp_policy: NfConntrackExpectPolicy = NfConntrackExpectPolicy {
     max_expected: 1,
     timeout: 0,
 };
 
+static SNMP_NAME: &[u8] = b"snmp\0";
+
 static mut helper: NfConntrackHelper = NfConntrackHelper {
-    name: b"snmp\0".as_ptr() as *const c_char,
+    name: SNMP_NAME.as_ptr() as *const c_char,
     tuple: NfConntrackTuple {
         src: NfConntrackTupleSrc {
             l3num: NFPROTO_IPV4,
             u: NfConntrackTupleSrcUnion {
-                udp: NfConntrackTupleUdp { port: SNMP_PORT },
+                udp: ManuallyDrop::new(NfConntrackTupleUdp { port: SNMP_PORT }),
             },
         },
         dst: NfConntrackTupleDst {
@@ -129,27 +123,26 @@ static mut helper: NfConntrackHelper = NfConntrackHelper {
     },
     me: core::ptr::null_mut(),
     help: Some(snmp_conntrack_help),
-    expect_policy: &mut exp_policy,
+    expect_policy: core::ptr::null_mut(),
 };
 
-// Module initialization
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_conntrack_snmp_init() -> c_int {
-    // Set timeout in expect policy
-    exp_policy.timeout = timeout;
-
-    // Register helper
-    extern "C" {
-        fn nf_conntrack_helper_register(helper: *mut NfConntrackHelper) -> c_int;
+    unsafe {
+        exp_policy.timeout = timeout;
+        helper.expect_policy = core::ptr::addr_of_mut!(exp_policy);
+        nf_conntrack_helper_register(core::ptr::addr_of_mut!(helper))
     }
-    nf_conntrack_helper_register(&mut helper)
 }
 
-// Module cleanup
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_conntrack_snmp_fini() {
-    extern "C" {
-        fn nf_conntrack_helper_unregister(helper: *mut NfConntrackHelper);
+    unsafe {
+        nf_conntrack_helper_unregister(core::ptr::addr_of_mut!(helper));
     }
-    nf_conntrack_helper_unregister(&mut helper);
+}
+
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
 }

@@ -1,3 +1,5 @@
+use core::ffi::c_int;
+use core::ptr::NonNull;
 use kernel_types::*;
 
 #[repr(C)]
@@ -72,7 +74,7 @@ pub struct ip6_icmp_unreach {
     pub unused: __be32,
 }
 
-extern "C" {
+unsafe extern "C" {
     pub fn ip6_icmp_send(
         skb: *mut sk_buff,
         type_: u8,
@@ -90,6 +92,12 @@ extern "C" {
     ) -> c_int;
 }
 
+#[inline]
+fn skb_cb_as_icmp(skb: NonNull<sk_buff>) -> *mut ip6_icmp {
+    let cb_ptr = unsafe { (*skb.as_ptr()).cb.as_mut_ptr() };
+    cb_ptr.cast::<ip6_icmp>()
+}
+
 pub fn ip6_icmp_send_echo_reply(
     skb: *mut sk_buff,
     type_: u8,
@@ -97,28 +105,27 @@ pub fn ip6_icmp_send_echo_reply(
     offset: c_int,
     mtu: __be32,
 ) -> c_int {
-    if skb.is_null() {
+    let Some(skb_nn) = NonNull::new(skb) else {
         return -1;
-    }
+    };
 
-    let icmp6h = unsafe { (*skb).cb as *mut ip6_icmp };
-
+    let icmp6h = skb_cb_as_icmp(skb_nn);
     if icmp6h.is_null() {
         return -1;
     }
 
-    if unsafe { (*icmp6h).type_ } != type_ || unsafe { (*icmp6h).code } != code {
+    let (hdr_type, hdr_code) = unsafe { ((*icmp6h).type_, (*icmp6h).code) };
+    if hdr_type != type_ || hdr_code != code {
         return -1;
     }
 
-    let echo = unsafe { &mut (*icmp6h).un.u_echo };
-    echo.identifier = unsafe { (*icmp6h).un.u_echo.identifier };
-    echo.sequence = unsafe { (*icmp6h).un.u_echo.sequence };
-
-    unsafe { (*icmp6h).type_ = type_ };
-    unsafe { (*icmp6h).code = code };
-
-    ip6_icmp_send(skb, type_, code, offset, mtu)
+    unsafe {
+        let echo = (*icmp6h).un.u_echo;
+        (*icmp6h).un.u_echo = echo;
+        (*icmp6h).type_ = type_;
+        (*icmp6h).code = code;
+        ip6_icmp_send(skb, type_, code, offset, mtu)
+    }
 }
 
 pub fn ip6_icmp_send_error(
@@ -128,22 +135,23 @@ pub fn ip6_icmp_send_error(
     offset: c_int,
     mtu: __be32,
 ) -> c_int {
-    if skb.is_null() {
+    let Some(skb_nn) = NonNull::new(skb) else {
         return -1;
-    }
+    };
 
-    let icmp6h = unsafe { (*skb).cb as *mut ip6_icmp };
-
+    let icmp6h = skb_cb_as_icmp(skb_nn);
     if icmp6h.is_null() {
         return -1;
     }
 
-    if unsafe { (*icmp6h).type_ } != type_ || unsafe { (*icmp6h).code } != code {
+    let (hdr_type, hdr_code) = unsafe { ((*icmp6h).type_, (*icmp6h).code) };
+    if hdr_type != type_ || hdr_code != code {
         return -1;
     }
 
-    unsafe { (*icmp6h).type_ = type_ };
-    unsafe { (*icmp6h).code = code };
-
-    ip6_icmp_error(skb, type_, code, offset, mtu)
+    unsafe {
+        (*icmp6h).type_ = type_;
+        (*icmp6h).code = code;
+        ip6_icmp_error(skb, type_, code, offset, mtu)
+    }
 }

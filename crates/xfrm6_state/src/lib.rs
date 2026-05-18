@@ -1,28 +1,37 @@
-Here's the fixed Rust code for the 'xfrm6_state' module:
-
 ```rust
-//! IPv6 XFRM state management module
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
+use core::ffi::c_int;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
 pub const AF_INET6: c_int = 10;
 pub const IPPROTO_IPV6: c_int = 41;
 
-// Function pointer types
-type OutputFn = extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int;
-type TransportFinishFn = extern "C" fn(*mut sk_buff, *mut xfrm_state) -> c_int;
-type LocalErrorFn = extern "C" fn(*mut sk_buff, *mut sockaddr, *mut xfrm_state) -> c_int;
+type OutputFn = unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int;
+type TransportFinishFn = unsafe extern "C" fn(*mut sk_buff, *mut xfrm_state) -> c_int;
+type LocalErrorFn = unsafe extern "C" fn(*mut sk_buff, *mut sockaddr, *mut xfrm_state) -> c_int;
 
 #[repr(C)]
-struct xfrm_state_afinfo {
+pub struct xfrm_state {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct sk_buff {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct sockaddr {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct xfrm_state_afinfo {
     family: c_int,
     proto: c_int,
     output: OutputFn,
@@ -30,20 +39,15 @@ struct xfrm_state_afinfo {
     local_error: LocalErrorFn,
 }
 
-// External functions from kernel
-extern "C" {
+unsafe extern "C" {
     fn xfrm_state_register_afinfo(info: *mut xfrm_state_afinfo) -> c_int;
     fn xfrm_state_unregister_afinfo(info: *mut xfrm_state_afinfo);
-}
 
-// External functions from other modules
-extern "C" {
     fn xfrm6_output(x: *mut xfrm_state, skb: *mut sk_buff) -> c_int;
     fn xfrm6_transport_finish(skb: *mut sk_buff, x: *mut xfrm_state) -> c_int;
     fn xfrm6_local_error(skb: *mut sk_buff, addr: *mut sockaddr, x: *mut xfrm_state) -> c_int;
 }
 
-// Static variable - must be mutable to match C behavior
 static mut XFRM6_STATE_AFINFO: xfrm_state_afinfo = xfrm_state_afinfo {
     family: AF_INET6,
     proto: IPPROTO_IPV6,
@@ -52,20 +56,18 @@ static mut XFRM6_STATE_AFINFO: xfrm_state_afinfo = xfrm_state_afinfo {
     local_error: xfrm6_local_error,
 };
 
-// Function implementations
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xfrm6_state_init() -> c_int {
-    // SAFETY: The static variable is properly initialized and mutable
-    xfrm_state_register_afinfo(&mut XFRM6_STATE_AFINFO)
+    unsafe { xfrm_state_register_afinfo(&raw mut XFRM6_STATE_AFINFO) }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn xfrm6_state_fini() {
-    // SAFETY: The static variable is properly initialized and mutable
-    xfrm_state_unregister_afinfo(&mut XFRM6_STATE_AFINFO)
+    unsafe { xfrm_state_unregister_afinfo(&raw mut XFRM6_STATE_AFINFO) }
 }
 
-#[cfg(test)]
-mod tests {
-    // No tests for this simple module
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
 }
+```

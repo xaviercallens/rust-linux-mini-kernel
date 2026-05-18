@@ -1,4 +1,14 @@
 use kernel_types::*;
+use core::ffi::{c_int, c_void};
+
+type socklen_t = u32;
+
+#[repr(C)]
+pub struct sk_buff_compat {
+    pub data: *mut u8,
+    pub len: u32,
+    pub cb: [u8; 48],
+}
 
 /// Calculate UDP checksum for IPv6 packets
 ///
@@ -21,54 +31,69 @@ pub unsafe extern "C" fn ip6_udp_checksum(
         return -EINVAL;
     }
 
-    let skb = &mut *skb;
-    let sk = &mut *sk;
+    if proto < 0 || proto > u8::MAX as c_int || len < 0 {
+        return -EINVAL;
+    }
 
-    let udp_len = len as u32;
-    let udp_offset = UDP_SKB_CB(skb) as usize;
+    let _sk = &mut *sk;
+    let skb_compat = &mut *(skb as *mut sk_buff_compat);
 
-    // Calculate pseudo-header checksum
-    let mut csum = 0u32;
+    let udp_len: usize = len as usize;
+    if udp_len > skb_compat.len as usize {
+        return -EINVAL;
+    }
+
+    let udp_offset = UDP_SKB_CB(skb);
+    if udp_offset < 0 {
+        return udp_offset;
+    }
+    let udp_offset = udp_offset as usize;
+
     let saddr = &*saddr;
     let daddr = &*daddr;
 
-    // Add source and destination addresses
+    let mut csum: u32 = 0;
+
     for i in 0..4 {
-        csum += u32::from_be(saddr.in6_u.u6_addr32[i]);
-        csum += u32::from_be(daddr.in6_u.u6_addr32[i]);
+        csum = csum.wrapping_add(u32::from_be(saddr.in6_u.u6_addr32[i]));
+        csum = csum.wrapping_add(u32::from_be(daddr.in6_u.u6_addr32[i]));
     }
 
-    // Add protocol and length
-    csum += proto as u32;
-    csum += udp_len;
+    csum = csum.wrapping_add((proto as u8) as u32);
+    csum = csum.wrapping_add((udp_len as socklen_t) as u32);
 
-    // Add UDP header and data
-    let udp_data = skb.head as *const u8;
-    let udp_data = unsafe { core::slice::from_raw_parts(udp_data, udp_len as usize) };
+    let data_ptr = skb_compat.data as *const u8;
+    if data_ptr.is_null() {
+        return -EINVAL;
+    }
 
-    let mut i = 0;
+    let udp_data = core::slice::from_raw_parts(data_ptr, udp_len);
+
+    let mut i = 0usize;
     while i < udp_len {
         let word = if i + 1 < udp_len {
-            u16::from_be_bytes([udp_data[i as usize], udp_data[(i + 1) as usize]])
+            u16::from_be_bytes([udp_data[i], udp_data[i + 1]])
         } else {
-            u16::from_be_bytes([udp_data[i as usize], 0])
+            u16::from_be_bytes([udp_data[i], 0])
         };
-        csum += word as u32;
+        csum = csum.wrapping_add(word as u32);
         i += 2;
     }
 
-    // Fold checksum
-    while csum >> 16 != 0 {
+    while (csum >> 16) != 0 {
         csum = (csum & 0xFFFF) + (csum >> 16);
     }
 
-    let csum = !csum as u16;
+    let check = !(csum as u16);
 
-    // Store checksum in UDP header
-    let udp_header = (skb.head as *mut udphdr).add(udp_offset);
-    unsafe {
-        (*udp_header).check = csum;
+    if udp_offset.checked_add(core::mem::size_of::<udphdr>()).is_none()
+        || udp_offset + core::mem::size_of::<udphdr>() > skb_compat.len as usize
+    {
+        return -EINVAL;
     }
+
+    let udp_header = (skb_compat.data as *mut udphdr).add(udp_offset);
+    (*udp_header).check = check;
 
     0
 }
@@ -83,8 +108,8 @@ pub unsafe extern "C" fn UDP_SKB_CB(skb: *mut sk_buff) -> c_int {
         return -EINVAL;
     }
 
-    let skb = &*skb;
-    let cb = skb.cb.as_ptr() as *const c_void;
-    let udp_cb = cb.add(4) as *const c_int;
-    unsafe { *udp_cb }
+    let skb_compat = &*(skb as *const sk_buff_compat);
+    let cb = skb_compat.cb.as_ptr() as *const c_void;
+    let udp_cb = (cb as *const u8).add(4) as *const c_int;
+    *udp_cb
 }

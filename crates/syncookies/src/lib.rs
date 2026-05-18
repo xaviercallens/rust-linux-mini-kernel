@@ -1,21 +1,16 @@
-//! IPv6 Syncookies implementation for the Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ptr;
 use core::mem;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
 const COOKIEBITS: u32 = 24;
 const COOKIEMASK: u32 = (1 << COOKIEBITS) - 1;
+const MAX_SYNCOOKIE_AGE: u32 = 3;
 
-// Type definitions
 #[repr(C)]
 struct Combined {
     saddr: in6_addr,
@@ -25,26 +20,23 @@ struct Combined {
     dport: u16,
 }
 
-// Static data
-static msstab: [u16; 4] = [
-    1280 - 60, // IPV6_MIN_MTU - 60
-    1480 - 60,
-    1500 - 60,
-    9000 - 60,
-];
-
-// SIPHASH alignment (assuming 16 bytes as common alignment)
-const SIPHASH_ALIGNMENT: usize = 16;
-
-// SIPHASH key type (simplified for example)
 #[repr(C)]
+#[derive(Copy, Clone)]
 struct siphash_key_t {
     key: [u64; 2],
 }
 
-static mut syncookie6_secret: [siphash_key_t; 2] = [siphash_key_t { key: [0; 2] }; 2];
+#[repr(C)]
+pub struct tcphdr {
+    pub source: u16,
+    pub dest: u16,
+    pub seq: u32,
+}
 
-// Function implementations
+static MSSTAB: [u16; 4] = [1280 - 60, 1480 - 60, 1500 - 60, 9000 - 60];
+static mut SYNCOKIE6_SECRET: [siphash_key_t; 2] = [siphash_key_t { key: [0; 2] }; 2];
+
+#[inline]
 fn cookie_hash(
     saddr: *const in6_addr,
     daddr: *const in6_addr,
@@ -53,7 +45,6 @@ fn cookie_hash(
     count: u32,
     c: c_int,
 ) -> u32 {
-    // SAFETY: Caller guarantees valid pointers
     let combined = unsafe {
         Combined {
             saddr: *saddr,
@@ -64,20 +55,25 @@ fn cookie_hash(
         }
     };
 
-    // Initialize secret if needed
     unsafe {
-        net_get_random_once(&mut syncookie6_secret as *mut _ as *mut c_void, mem::size_of_val(&syncookie6_secret) as size_t);
+        net_get_random_once(
+            core::ptr::addr_of_mut!(SYNCOKIE6_SECRET) as *mut c_void,
+            mem::size_of::<[siphash_key_t; 2]>() as size_t,
+        );
     }
 
-    // Calculate size up to dport (offsetofend)
     let size = mem::size_of::<Combined>() - mem::size_of::<u16>();
 
-    // Call SIPHASH (simplified for example)
     unsafe {
-        siphash(&combined as *const _ as *const c_void, size as size_t, &syncookie6_secret[c as usize])
+        siphash(
+            &combined as *const _ as *const c_void,
+            size as size_t,
+            core::ptr::addr_of!(SYNCOKIE6_SECRET[c as usize]),
+        )
     }
 }
 
+#[inline]
 fn secure_tcp_syn_cookie(
     saddr: *const in6_addr,
     daddr: *const in6_addr,
@@ -90,9 +86,13 @@ fn secure_tcp_syn_cookie(
     let hash1 = cookie_hash(saddr, daddr, sport, dport, 0, 0);
     let hash2 = cookie_hash(saddr, daddr, sport, dport, count, 1);
 
-    hash1 + sseq + (count << COOKIEBITS) + ((hash2 + data) & COOKIEMASK)
+    hash1
+        .wrapping_add(sseq)
+        .wrapping_add(count << COOKIEBITS)
+        .wrapping_add((hash2.wrapping_add(data)) & COOKIEMASK)
 }
 
+#[inline]
 fn check_tcp_syn_cookie(
     cookie: u32,
     saddr: *const in6_addr,
@@ -102,16 +102,23 @@ fn check_tcp_syn_cookie(
     sseq: u32,
 ) -> u32 {
     let count = tcp_cookie_time();
-    let mut cookie = cookie;
+    let mut val = cookie;
 
-    cookie -= cookie_hash(saddr, daddr, sport, dport, 0, 0) + sseq;
+    val = val.wrapping_sub(cookie_hash(saddr, daddr, sport, dport, 0, 0).wrapping_add(sseq));
 
-    let diff = (count - (cookie >> COOKIEBITS)) & ((u32::MAX as u64 >> COOKIEBITS) as u32);
+    let diff = count.wrapping_sub(val >> COOKIEBITS);
     if diff >= MAX_SYNCOOKIE_AGE {
         return u32::MAX;
     }
 
-    cookie - cookie_hash(saddr, daddr, sport, dport, count - diff, 1) & COOKIEMASK
+    val.wrapping_sub(cookie_hash(
+        saddr,
+        daddr,
+        sport,
+        dport,
+        count.wrapping_sub(diff),
+        1,
+    )) & COOKIEMASK
 }
 
 #[no_mangle]
@@ -120,77 +127,63 @@ pub unsafe extern "C" fn __cookie_v6_init_sequence(
     th: *const tcphdr,
     mssp: *mut u16,
 ) -> u32 {
-    let mut mssind: c_int = msstab.len() as c_int - 1;
-    let mss = *mssp;
+    let mut mssind: c_int = MSSTAB.len() as c_int - 1;
+    let mss = unsafe { *mssp };
 
     while mssind > 0 {
-        if mss >= msstab[mssind as usize] {
+        if mss >= MSSTAB[mssind as usize] {
             break;
         }
         mssind -= 1;
     }
 
-    *mssp = msstab[mssind as usize];
+    unsafe {
+        *mssp = MSSTAB[mssind as usize];
+    }
 
     secure_tcp_syn_cookie(
-        &(*iph).saddr,
-        &(*iph).daddr,
-        (*th).source,
-        (*th).dest,
-        ntohl((*th).seq),
+        unsafe { core::ptr::addr_of!((*iph).saddr) },
+        unsafe { core::ptr::addr_of!((*iph).daddr) },
+        unsafe { (*th).source },
+        unsafe { (*th).dest },
+        ntohl(unsafe { (*th).seq }),
         mssind as u32,
     )
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn __cookie_v6_check(
-    iph: *const ipv6hdr,
-    th: *const tcphdr,
-    cookie: u32,
-) -> c_int {
-    let seq = ntohl((*th).seq) - 1;
-    let mssind = check_tcp_syn_cookie(cookie, &(*iph).saddr, &(*iph).daddr, (*th).source, (*th).dest, seq);
+pub unsafe extern "C" fn __cookie_v6_check(iph: *const ipv6hdr, th: *const tcphdr, cookie: u32) -> c_int {
+    let seq = ntohl(unsafe { (*th).seq }).wrapping_sub(1);
+    let mssind = check_tcp_syn_cookie(
+        cookie,
+        unsafe { core::ptr::addr_of!((*iph).saddr) },
+        unsafe { core::ptr::addr_of!((*iph).daddr) },
+        unsafe { (*th).source },
+        unsafe { (*th).dest },
+        seq,
+    );
 
-    if mssind < msstab.len() as u32 {
-        return msstab[mssind as usize] as c_int;
+    if mssind < MSSTAB.len() as u32 {
+        return MSSTAB[mssind as usize] as c_int;
     }
     0
 }
 
-// Helper functions (simplified for example)
-fn net_get_random_once(_ptr: *mut c_void, _len: size_t) {
-    // Kernel function to initialize random secret
-}
+unsafe fn net_get_random_once(_ptr: *mut c_void, _len: size_t) {}
 
-fn siphash(_data: *const c_void, _len: size_t, _key: *const siphash_key_t) -> u32 {
-    // SIPHASH implementation
+unsafe fn siphash(_data: *const c_void, _len: size_t, _key: *const siphash_key_t) -> u32 {
     0
 }
 
 fn tcp_cookie_time() -> u32 {
-    // Kernel function to get current cookie time
     0
 }
 
 fn ntohl(n: u32) -> u32 {
-    // Network to host long
     u32::from_be(n)
 }
 
-// Error codes
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
-
-// Constants from C
-const MAX_SYNCOOKIE_AGE: u32 = 3; // Example value
-
-// Tests (conditional compilation)
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_cookie_hash() {
-        // Basic test for cookie_hash function
-        // Would need actual data to test
-    }
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {}
 }

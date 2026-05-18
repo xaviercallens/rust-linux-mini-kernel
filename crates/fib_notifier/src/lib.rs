@@ -1,50 +1,39 @@
-//! IPv4 FIB Notifier Implementation
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use kernel_types::*;
+use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
-use libc::{c_int, c_uint, c_void};
+use kernel_types::*;
 
 // Constants from C
 pub const AF_INET: c_int = 2;
 pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct NotifierBlock {
-    // Opaque structure - fields not accessed directly
+    _private: [u8; 0],
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct FIBNotifierInfo {
     family: c_int,
-    // Other fields not accessed in this implementation
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct Net {
     ipv4: *mut NetIPv4,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct NetIPv4 {
     fib_seq: c_uint,
     notifier_ops: *mut FIBNotifierOps,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct FIBNotifierOps {
     family: c_int,
     fib_seq_read: Option<unsafe extern "C" fn(net: *mut Net) -> c_uint>,
@@ -54,14 +43,15 @@ pub struct FIBNotifierOps {
     owner: *mut c_void,
 }
 
+unsafe impl Sync for FIBNotifierOps {}
+
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct NetlinkExtAck {
-    // Opaque structure - fields not accessed directly
+    _private: [u8; 0],
 }
 
 // External function declarations
-extern "C" {
+unsafe extern "C" {
     fn call_fib_notifier(
         nb: *mut NotifierBlock,
         event_type: c_int,
@@ -90,10 +80,10 @@ pub unsafe extern "C" fn call_fib4_notifier(
     event_type: c_int,
     info: *mut FIBNotifierInfo,
 ) -> c_int {
-    // SAFETY: Caller must ensure info is valid
     if info.is_null() {
         return EINVAL;
     }
+
     (*info).family = AF_INET;
     call_fib_notifier(nb, event_type, info)
 }
@@ -104,22 +94,32 @@ pub unsafe extern "C" fn call_fib4_notifiers(
     event_type: c_int,
     info: *mut FIBNotifierInfo,
 ) -> c_int {
-    // ASSERT_RTNL() - RTNL lock must be held by caller
     if net.is_null() || info.is_null() {
         return EINVAL;
     }
+
+    let ipv4 = (*net).ipv4;
+    if ipv4.is_null() {
+        return EINVAL;
+    }
+
     (*info).family = AF_INET;
-    (*(*net).ipv4).fib_seq += 1;
+    (*ipv4).fib_seq = (*ipv4).fib_seq.wrapping_add(1);
     call_fib_notifiers(net, event_type, info)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn fib4_seq_read(net: *mut Net) -> c_uint {
-    // ASSERT_RTNL() - RTNL lock must be held by caller
     if net.is_null() {
         return 0;
     }
-    (*(*net).ipv4).fib_seq + fib4_rules_seq_read(net)
+
+    let ipv4 = (*net).ipv4;
+    if ipv4.is_null() {
+        return 0;
+    }
+
+    (*ipv4).fib_seq.wrapping_add(fib4_rules_seq_read(net))
 }
 
 #[no_mangle]
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn fib4_dump(
         return EINVAL;
     }
 
-    let mut err: c_int = fib4_rules_dump(net, nb, extack);
+    let err = fib4_rules_dump(net, nb, extack);
     if err != 0 {
         return err;
     }
@@ -145,14 +145,19 @@ pub unsafe extern "C" fn fib4_notifier_init(net: *mut Net) -> c_int {
         return EINVAL;
     }
 
-    (*(*net).ipv4).fib_seq = 0;
+    let ipv4 = (*net).ipv4;
+    if ipv4.is_null() {
+        return EINVAL;
+    }
+
+    (*ipv4).fib_seq = 0;
 
     let ops = fib_notifier_ops_register(&FIB4_NOTIFIER_OPS_TEMPLATE as *const FIBNotifierOps, net);
     if ops.is_null() {
-        return PTR_ERR(ops);
+        return EINVAL;
     }
 
-    (*(*net).ipv4).notifier_ops = ops;
+    (*ipv4).notifier_ops = ops;
     0
 }
 
@@ -162,13 +167,14 @@ pub unsafe extern "C" fn fib4_notifier_exit(net: *mut Net) {
         return;
     }
 
-    let ops = (*(*net).ipv4).notifier_ops;
+    let ipv4 = (*net).ipv4;
+    if ipv4.is_null() {
+        return;
+    }
+
+    let ops = (*ipv4).notifier_ops;
     if !ops.is_null() {
         fib_notifier_ops_unregister(ops);
+        (*ipv4).notifier_ops = ptr::null_mut();
     }
-}
-
-// Helper function for error handling
-unsafe fn PTR_ERR<T>(ptr: *mut T) -> c_int {
-    (ptr as *mut c_void as *mut c_int).offset_from(ptr::null_mut() as *mut c_void) as c_int
 }

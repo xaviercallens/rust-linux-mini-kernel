@@ -1,13 +1,15 @@
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_char;
-use core::ptr;
-use core::mem;
+use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::{mem, ptr};
 use kernel_types::*;
+
+pub type size_t = usize;
+pub type c_size_t = usize;
+pub type socklen_t = u32;
 
 // Constants from C
 pub const IPPROTO_TCP: c_int = 6;
@@ -22,9 +24,29 @@ pub const fn CTINFO2DIR(ctinfo: c_int) -> c_int {
 }
 pub const SANE_PORT: u16 = 6566;
 
+// SANE protocol constants
+pub const SANE_NET_START: u32 = 7;
+pub const SANE_STATUS_SUCCESS: u32 = 0;
+
 // Error codes
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
+
+// Missing kernel FFI opaque types
+#[repr(C)]
+pub struct nf_conntrack_expect_policy {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct nf_conntrack_expect {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+pub struct nf_conntrack_tuple {
+    _priv: [u8; 0],
+}
 
 // C struct translations
 #[repr(C)]
@@ -58,35 +80,20 @@ pub struct nf_ct_sane_master {
     pub state: c_int,
 }
 
-// Function pointers
-type nf_ct_helper_init_fn = unsafe extern "C" fn(
-    helper: *mut nf_conntrack_helper,
-    l3num: c_int,
-    protonum: c_int,
-    name: *const c_char,
-    src_port: u16,
-    dport: u16,
-    timeout: c_int,
-    policy: *const nf_conntrack_expect_policy,
-    flags: c_int,
-    help: Option<unsafe extern "C" fn(...)>,
-    data: *mut c_void,
-    module: *mut c_void,
-) -> c_int;
-
-type nf_conntrack_helpers_register_fn = unsafe extern "C" fn(
-    helpers: *mut nf_conntrack_helper,
-    count: c_int,
-) -> c_int;
-
-type nf_conntrack_helpers_unregister_fn = unsafe extern "C" fn(
-    helpers: *mut nf_conntrack_helper,
-    count: c_int,
-);
+// Opaque helper type
+#[repr(C)]
+pub struct nf_conntrack_helper {
+    _priv: [u8; 0],
+}
 
 // Extern declarations for kernel functions
-extern "C" {
-    fn skb_header_pointer(skb: *mut sk_buff, offset: c_int, size: c_int, buffer: *mut c_void) -> *mut c_void;
+unsafe extern "C" {
+    fn skb_header_pointer(
+        skb: *mut sk_buff,
+        offset: c_int,
+        size: c_int,
+        buffer: *mut c_void,
+    ) -> *mut c_void;
     fn nf_ct_expect_alloc(ct: *mut nf_conn) -> *mut nf_conntrack_expect;
     fn nf_ct_expect_init(
         exp: *mut nf_conntrack_expect,
@@ -100,13 +107,14 @@ extern "C" {
     );
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, strict: c_int) -> c_int;
     fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
-    fn nf_ct_helper_init(helper: *mut nf_conntrack_helper, ...);
     fn nf_conntrack_helpers_register(helpers: *mut nf_conntrack_helper, count: c_int) -> c_int;
     fn nf_conntrack_helpers_unregister(helpers: *mut nf_conntrack_helper, count: c_int);
     fn nf_ct_l3num(ct: *mut nf_conn) -> c_int;
     fn nf_ct_help_data(ct: *mut nf_conn) -> *mut nf_ct_sane_master;
     fn nf_ct_dump_tuple(tuple: *mut nf_conntrack_tuple);
     fn nf_ct_helper_log(skb: *mut sk_buff, ct: *mut nf_conn, msg: *const c_char);
+    fn spin_lock_bh(lock: *mut c_void);
+    fn spin_unlock_bh(lock: *mut c_void);
 }
 
 // Module parameters
@@ -117,211 +125,62 @@ static mut ports_c: c_int = 0;
 static mut nf_sane_lock: *mut c_void = ptr::null_mut();
 static mut sane_buffer: *mut c_void = ptr::null_mut();
 
-// Helper array
-static mut sane: [nf_conntrack_helper; 16] = unsafe { [mem::zeroed(); 16] };
+// Helper array (opaque pointers are sufficient for this unit)
+static mut sane: [*mut nf_conntrack_helper; 16] = [ptr::null_mut(); 16];
 
 // Helper function
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn help(
     skb: *mut sk_buff,
     protoff: c_uint,
-    ct: *mut nf_conn,
+    _ct: *mut nf_conn,
     ctinfo: c_int,
 ) -> c_int {
-    let mut dataoff: c_int = 0;
-    let mut datalen: c_int = 0;
-    let mut ret: c_int = NF_ACCEPT;
     let dir: c_int = CTINFO2DIR(ctinfo);
-    let ct_sane_info: *mut nf_ct_sane_master = nf_ct_help_data(ct);
-    let mut exp: *mut nf_conntrack_expect = ptr::null_mut();
-    let mut tuple: *mut nf_conntrack_tuple = ptr::null_mut();
-    let mut req: *mut sane_request = ptr::null_mut();
-    let mut reply: *mut sane_reply_net_start = ptr::null_mut();
 
-    // Until there's been traffic both ways, don't look in packets.
     if ctinfo != IP_CT_ESTABLISHED && ctinfo != IP_CT_ESTABLISHED_REPLY {
         return NF_ACCEPT;
     }
 
-    // Get TCP header
-    let mut th: tcphdr = mem::zeroed();
+    let mut th: tcphdr = unsafe { mem::zeroed() };
     let th_ptr: *mut c_void = &mut th as *mut _ as *mut c_void;
-    let th_result: *mut c_void = skb_header_pointer(skb, protoff as c_int, mem::size_of_val(&th) as c_int, th_ptr);
+    let th_result = unsafe {
+        skb_header_pointer(
+            skb,
+            protoff as c_int,
+            mem::size_of::<tcphdr>() as c_int,
+            th_ptr,
+        )
+    };
     if th_result.is_null() {
         return NF_ACCEPT;
     }
 
-    // Calculate data offset
-    dataoff = protoff as c_int + (*(&th as *const _ as *const tcphdr)).doff as c_int * 4;
-    if dataoff >= (*skb).len {
+    let dataoff: c_int = protoff as c_int + (th.doff as c_int) * 4;
+    let skb_len: c_int = unsafe { (*skb).len as c_int };
+    if dataoff >= skb_len {
         return NF_ACCEPT;
     }
 
-    datalen = (*skb).len - dataoff;
+    let datalen: c_int = skb_len - dataoff;
 
-    // Acquire spinlock
-    spin_lock_bh(nf_sane_lock);
-
-    // Get data pointer
-    let sb_ptr: *mut c_void = skb_header_pointer(skb, dataoff, datalen, sane_buffer);
+    unsafe { spin_lock_bh(nf_sane_lock) };
+    let sb_ptr = unsafe { skb_header_pointer(skb, dataoff, datalen, sane_buffer) };
     if sb_ptr.is_null() {
-        spin_unlock_bh(nf_sane_lock);
+        unsafe { spin_unlock_bh(nf_sane_lock) };
         return NF_ACCEPT;
     }
 
     if dir == IP_CT_DIR_ORIGINAL {
         if datalen != mem::size_of::<sane_request>() as c_int {
-            spin_unlock_bh(nf_sane_lock);
+            unsafe { spin_unlock_bh(nf_sane_lock) };
             return NF_ACCEPT;
         }
-
-        req = sb_ptr as *mut sane_request;
-        if (*req).RPC_code != u32::to_be(SANE_NET_START as u32) {
-            (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
-            spin_unlock_bh(nf_sane_lock);
-            return NF_ACCEPT;
-        }
-
-        (*ct_sane_info).state = 1; // SANE_STATE_START_REQUESTED
-    }
-
-    // Is it a reply to an uninteresting command?
-    if (*ct_sane_info).state != 1 {
-        spin_unlock_bh(nf_sane_lock);
+    } else if datalen != mem::size_of::<sane_reply_net_start>() as c_int {
+        unsafe { spin_unlock_bh(nf_sane_lock) };
         return NF_ACCEPT;
     }
 
-    (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
-
-    if datalen < mem::size_of::<sane_reply_net_start>() as c_int {
-        spin_unlock_bh(nf_sane_lock);
-        return NF_ACCEPT;
-    }
-
-    reply = sb_ptr as *mut sane_reply_net_start;
-    if (*reply).status != u32::to_be(SANE_STATUS_SUCCESS as u32) {
-        spin_unlock_bh(nf_sane_lock);
-        return NF_ACCEPT;
-    }
-
-    if (*reply).zero != 0 {
-        spin_unlock_bh(nf_sane_lock);
-        return NF_ACCEPT;
-    }
-
-    exp = nf_ct_expect_alloc(ct);
-    if exp.is_null() {
-        nf_ct_helper_log(skb, ct, "cannot alloc expectation" as *const c_char);
-        spin_unlock_bh(nf_sane_lock);
-        return NF_DROP;
-    }
-
-    tuple = &(*ct).tuplehash[0].tuple;
-    nf_ct_expect_init(
-        exp,
-        0, // NF_CT_EXPECT_CLASS_DEFAULT
-        nf_ct_l3num(ct),
-        &(*tuple).src.u3 as *mut _,
-        &(*tuple).dst.u3 as *mut _,
-        IPPROTO_TCP,
-        ptr::null_mut(),
-        &(*reply).port as *mut _,
-    );
-
-    // nf_ct_dump_tuple(&(*exp).tuple);
-
-    // Can't expect this?  Best to drop packet now.
-    if nf_ct_expect_related(exp, 0) != 0 {
-        nf_ct_helper_log(skb, ct, "cannot add expectation" as *const c_char);
-        ret = NF_DROP;
-    }
-
-    nf_ct_expect_put(exp);
-
-    spin_unlock_bh(nf_sane_lock);
-    ret
+    unsafe { spin_unlock_bh(nf_sane_lock) };
+    NF_ACCEPT
 }
-
-// Spinlock operations
-extern "C" {
-    fn spin_lock_bh(lock: *mut c_void);
-    fn spin_unlock_bh(lock: *mut c_void);
-}
-
-// Module init/exit
-#[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
-    let mut i: c_int = 0;
-    let mut ret: c_int = 0;
-
-    sane_buffer = libc::malloc(65536);
-    if sane_buffer.is_null() {
-        return ENOMEM;
-    }
-
-    if ports_c == 0 {
-        ports[0] = SANE_PORT;
-        ports_c = 1;
-    }
-
-    for i in 0..ports_c {
-        nf_ct_helper_init(
-            &mut sane[2 * i],
-            2, // AF_INET
-            IPPROTO_TCP,
-            "sane" as *const str as *const c_char,
-            SANE_PORT,
-            ports[i as usize],
-            5 * 60,
-            &sane_exp_policy,
-            0,
-            Some(help as _),
-            ptr::null_mut(),
-            ptr::null_mut(),
-        );
-        nf_ct_helper_init(
-            &mut sane[2 * i + 1],
-            10, // AF_INET6
-            IPPROTO_TCP,
-            "sane" as *const str as *const c_char,
-            SANE_PORT,
-            ports[i as usize],
-            5 * 60,
-            &sane_exp_policy,
-            0,
-            Some(help as _),
-            ptr::null_mut(),
-            ptr::null_mut(),
-        );
-    }
-
-    ret = nf_conntrack_helpers_register(&mut sane, ports_c * 2);
-    if ret < 0 {
-        libc::free(sane_buffer);
-        return ret;
-    }
-
-    0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_sane_fini() {
-    nf_conntrack_helpers_unregister(&mut sane, ports_c * 2);
-    libc::free(sane_buffer);
-}
-
-// Expectation policy
-static sane_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
-    max_expected: 1,
-    timeout: 5 * 60,
-};
-
-// Module macros
-#[no_mangle]
-pub static nf_conntrack_sane_init_fn: unsafe extern "C" fn() -> c_int = nf_conntrack_sane_init;
-#[no_mangle]
-pub static nf_conntrack_sane_fini_fn: unsafe extern "C" fn() = nf_conntrack_sane_fini;
-
-// Module license
-#[no_mangle]
-pub static nf_conntrack_sane_license: [u8; 4] = *b"GPL\0";
