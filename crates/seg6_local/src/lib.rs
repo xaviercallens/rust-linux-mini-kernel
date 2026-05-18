@@ -7,7 +7,7 @@
 #![allow(non_camel_case_types)]  // For C-style type names
 
 use core::ptr;
-use libc::{c_int, c_uint, c_ulong, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -93,30 +93,6 @@ struct lwtunnel_state {
     data: *mut c_void,
 }
 
-#[repr(C)]
-struct sk_buff {
-    dev: *mut c_void,
-    data: *mut u8,
-    len: c_int,
-    mark: c_int,
-    // ... other fields as needed
-}
-
-#[repr(C)]
-struct ipv6hdr {
-    saddr: in6_addr,
-    daddr: in6_addr,
-    nexthdr: u8,
-    // ... other fields as needed
-}
-
-#[repr(C)]
-struct ipv6_sr_hdr {
-    hdrlen: u8,
-    segments_left: u8,
-    segments: [in6_addr; 0], // Flexible array member
-}
-
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn seg6_local_lwtunnel(lwt: *mut lwtunnel_state) -> *mut seg6_local_lwt {
@@ -127,16 +103,16 @@ pub unsafe extern "C" fn seg6_local_lwtunnel(lwt: *mut lwtunnel_state) -> *mut s
 #[no_mangle]
 pub unsafe extern "C" fn get_srh(skb: *mut sk_buff, flags: c_int) -> *mut ipv6_sr_hdr {
     let mut srhoff: c_int = 0;
-    
+
     if ipv6_find_hdr(skb, &mut srhoff as *mut c_int, IPPROTO_ROUTING, ptr::null_mut(), &flags) < 0 {
         return ptr::null_mut();
     }
 
-    if !pskb_may_pull(skb, srhoff + size_of::<ipv6_sr_hdr>()) {
+    if !pskb_may_pull(skb, srhoff + core::mem::size_of::<ipv6_sr_hdr>() as c_int) {
         return ptr::null_mut();
     }
 
-    let srh = (skb_data(skb) as *mut u8).offset(srhoff as isize) as *mut ipv6_sr_hdr;
+    let srh = (skb_data(skb) as *mut u8).add(srhoff as usize) as *mut ipv6_sr_hdr;
 
     let len = ((*srh).hdrlen + 1) << 3;
     if !pskb_may_pull(skb, srhoff + len) {
@@ -144,7 +120,7 @@ pub unsafe extern "C" fn get_srh(skb: *mut sk_buff, flags: c_int) -> *mut ipv6_s
     }
 
     // Reload srh after pull
-    let srh = (skb_data(skb) as *mut u8).offset(srhoff as isize) as *mut ipv6_sr_hdr;
+    let srh = (skb_data(skb) as *mut u8).add(srhoff as usize) as *mut ipv6_sr_hdr;
 
     if !seg6_validate_srh(srh, len, true) {
         return ptr::null_mut();
@@ -217,8 +193,8 @@ pub unsafe extern "C" fn seg6_lookup_any_nexthop(
     let net = dev_net((*skb).dev);
     let hdr = ipv6_hdr(skb);
     let mut fl6 = Default::default();
-    
-    fl6.flowi6_iif = (*skb).(*dev).ifindex;
+
+    fl6.flowi6_iif = (*skb).dev.ifindex;
     fl6.daddr = if !nhaddr.is_null() { (*nhaddr).s6_addr } else { (*hdr).daddr.s6_addr };
     fl6.saddr = (*hdr).saddr.s6_addr;
     fl6.flowlabel = ip6_flowinfo(hdr);
@@ -230,7 +206,7 @@ pub unsafe extern "C" fn seg6_lookup_any_nexthop(
     }
 
     let mut dst: *mut dst_entry = ptr::null_mut();
-    
+
     if tbl_id == 0 {
         dst = ip6_route_input_lookup(net, (*skb).dev, &fl6, skb, RT6_LOOKUP_F_HAS_SADDR);
     } else {
@@ -241,8 +217,8 @@ pub unsafe extern "C" fn seg6_lookup_any_nexthop(
     }
 
     let dev_flags = if !local_delivery { IFF_LOOPBACK } else { 0 };
-    
-    if !dst.is_null() && ( (*dst).(*dev).flags & dev_flags ) != 0 && (*dst).error == 0 {
+
+    if !dst.is_null() && ( (*dst).dev.flags & dev_flags ) != 0 && (*dst).error == 0 {
         dst_release(dst);
         dst = ptr::null_mut();
     }
@@ -272,7 +248,7 @@ pub unsafe extern "C" fn input_action_end(skb: *mut sk_buff, slwt: *mut seg6_loc
 
     advance_nextseg(srh, &mut (*ipv6_hdr(skb)).daddr);
     seg6_lookup_nexthop(skb, ptr::null_mut(), 0);
-    
+
     dst_input(skb)
 }
 
@@ -286,7 +262,7 @@ pub unsafe extern "C" fn input_action_end_x(skb: *mut sk_buff, slwt: *mut seg6_l
 
     advance_nextseg(srh, &mut (*ipv6_hdr(skb)).daddr);
     seg6_lookup_nexthop(skb, &(*slwt).nh6, 0);
-    
+
     dst_input(skb)
 }
 
@@ -300,7 +276,7 @@ pub unsafe extern "C" fn input_action_end_t(skb: *mut sk_buff, slwt: *mut seg6_l
 
     advance_nextseg(srh, &mut (*ipv6_hdr(skb)).daddr);
     seg6_lookup_nexthop(skb, ptr::null_mut(), (*slwt).table as u32);
-    
+
     dst_input(skb)
 }
 
@@ -308,7 +284,7 @@ pub unsafe extern "C" fn input_action_end_t(skb: *mut sk_buff, slwt: *mut seg6_l
 pub unsafe extern "C" fn input_action_end_dx2(skb: *mut sk_buff, slwt: *mut seg6_local_lwt) -> c_int {
     let net = dev_net((*skb).dev);
     let mut eth = ptr::null_mut();
-    
+
     if !decap_and_validate(skb, IPPROTO_ETHERNET) {
         kfree_skb(skb);
         return EINVAL;
@@ -344,7 +320,7 @@ pub unsafe extern "C" fn input_action_end_dx2(skb: *mut sk_buff, slwt: *mut seg6
     }
 
     skb_orphan(skb);
-    
+
     if skb_warn_if_lro(skb) {
         kfree_skb(skb);
         return EINVAL;
@@ -359,20 +335,20 @@ pub unsafe extern "C" fn input_action_end_dx2(skb: *mut sk_buff, slwt: *mut seg6
 
     (*skb).dev = odev;
     (*skb).protocol = (*eth).h_proto;
-    
+
     dev_queue_xmit(skb)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn input_action_end_dx6(skb: *mut sk_buff, slwt: *mut seg6_local_lwt) -> c_int {
     let mut nhaddr: *mut in6_addr = ptr::null_mut();
-    
+
     if !decap_and_validate(skb, IPPROTO_IPV6) {
         kfree_skb(skb);
         return EINVAL;
     }
 
-    if !pskb_may_pull(skb, size_of::<ipv6hdr>()) {
+    if !pskb_may_pull(skb, core::mem::size_of::<ipv6hdr>()) {
         kfree_skb(skb);
         return EINVAL;
     }
@@ -381,16 +357,16 @@ pub unsafe extern "C" fn input_action_end_dx6(skb: *mut sk_buff, slwt: *mut seg6
         nhaddr = &(*slwt).nh6;
     }
 
-    skb_set_transport_header(skb, size_of::<ipv6hdr>());
-    
+    skb_set_transport_header(skb, core::mem::size_of::<ipv6hdr>());
+
     seg6_lookup_nexthop(skb, nhaddr, 0);
-    
+
     dst_input(skb)
 }
 
 // Helper functions (extern declarations)
 extern "C" {
-    fn ipv6_find_hdr(skb: *mut sk_buff, offset: *mut c_int, proto: c_int, 
+    fn ipv6_find_hdr(skb: *mut sk_buff, offset: *mut c_int, proto: c_int,
                      csum: *mut u16, flags: *mut c_int) -> c_int;
     fn pskb_may_pull(skb: *mut sk_buff, len: size_t) -> bool;
     fn skb_data(skb: *mut sk_buff) -> *mut u8;
@@ -400,10 +376,10 @@ extern "C" {
     fn dev_net(dev: *mut c_void) -> *mut c_void;
     fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
     fn ip6_flowinfo(hdr: *mut ipv6hdr) -> u32;
-    fn ip6_route_input_lookup(net: *mut c_void, dev: *mut c_void, fl6: *mut c_void, 
+    fn ip6_route_input_lookup(net: *mut c_void, dev: *mut c_void, fl6: *mut c_void,
                              skb: *mut sk_buff, flags: c_int) -> *mut dst_entry;
     fn fib6_get_table(net: *mut c_void, id: u32) -> *mut c_void;
-    fn ip6_pol_route(net: *mut c_void, table: *mut c_void, flags: c_int, 
+    fn ip6_pol_route(net: *mut c_void, table: *mut c_void, flags: c_int,
                     fl6: *mut c_void, skb: *mut sk_buff, flags2: c_int) -> *mut rt6_info;
     fn dst_input(skb: *mut sk_buff) -> c_int;
     fn kfree_skb(skb: *mut sk_buff);

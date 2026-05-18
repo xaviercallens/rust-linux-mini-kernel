@@ -106,10 +106,7 @@ pub unsafe extern "C" fn xfrm6_rcv_cb(skb: *mut sk_buff, protocol: u8, err: c_in
         return 0;
     }
 
-    let mut handler = (*head)
-        .as_ref()
-        .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-        .unwrap_or(ptr::null_mut());
+    let mut handler = (*head).load(Ordering::Acquire);
 
     while !handler.is_null() {
         let ret = ((*(*handler).cb_handler)(skb, err));
@@ -133,10 +130,7 @@ pub unsafe extern "C" fn xfrm6_rcv_encap(
     let mut ret = 0;
 
     if !head.is_null() {
-        let mut handler = (*head)
-            .as_ref()
-            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-            .unwrap_or(ptr::null_mut());
+        let mut handler = (*head).load(Ordering::Acquire);
 
         while !handler.is_null() {
             ret = ((*(*handler).input_handler)(skb, nexthdr, spi, encap_type));
@@ -168,10 +162,7 @@ pub unsafe extern "C" fn xfrm6_protocol_register(
     mutex.lock();
 
     let mut pprev = head;
-    let mut t = (*pprev)
-        .as_ref()
-        .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-        .unwrap_or(ptr::null_mut());
+    let mut t = (*pprev).load(Ordering::Acquire);
     let mut add_netproto = t.is_null();
     let mut ret = 0;
 
@@ -184,15 +175,12 @@ pub unsafe extern "C" fn xfrm6_protocol_register(
             break;
         }
         pprev = &mut (*t).next;
-        t = (*pprev)
-            .as_ref()
-            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-            .unwrap_or(ptr::null_mut());
+        t = (*pprev).load(Ordering::Acquire);
     }
 
     if ret == 0 {
-        (*handler).next = *pprev;
-        *pprev = handler;
+        (*handler).next = (*pprev).load(Ordering::Acquire);
+        (*pprev).store(handler, Ordering::Release);
     }
 
     mutex.unlock();
@@ -221,33 +209,23 @@ pub unsafe extern "C" fn xfrm6_protocol_deregister(
     mutex.lock();
 
     let mut pprev = head;
-    let mut t = (*pprev)
-        .as_ref()
-        .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-        .unwrap_or(ptr::null_mut());
+    let mut t = (*pprev).load(Ordering::Acquire);
     let mut ret = ENOENT;
 
     while !t.is_null() {
         if t == handler {
-            *pprev = (*handler).next;
+            (*pprev).store((*handler).next, Ordering::Release);
             ret = 0;
             break;
         }
         pprev = &mut (*t).next;
-        t = (*pprev)
-            .as_ref()
-            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-            .unwrap_or(ptr::null_mut());
+        t = (*pprev).load(Ordering::Acquire);
     }
 
     mutex.unlock();
 
     if ret == 0 {
-        let empty = (*head)
-            .as_ref()
-            .map(|p| p as *const xfrm6_protocol as *mut xfrm6_protocol)
-            .unwrap_or(ptr::null_mut())
-            .is_null();
+        let empty = (*head).load(Ordering::Acquire).is_null();
         if empty {
             if inet6_del_protocol(netproto(protocol), protocol) < 0 {
                 pr_err(

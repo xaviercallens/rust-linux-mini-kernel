@@ -1,3 +1,4 @@
+
 //! SIP connection tracking helper for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -23,17 +24,6 @@ pub const SIP_PORT: u16 = 5060;
 pub const SIP_TIMEOUT: u32 = 1200;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_helper {
-    pub _private: [u8; 0],
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -299,9 +289,9 @@ pub unsafe extern "C" fn ct_sip_parse_request(ct: *const nf_conn, dptr: *const u
             return -1;
         }
         if *current == b's' || *current == b'S' {
-            if (current.offset(1) as *const u8).read() == b'i' &&
-               (current.offset(2) as *const u8).read() == b'p' &&
-               (current.offset(3) as *const u8).read() == b':' {
+            if *(current.offset(1)) == b'i' &&
+               *(current.offset(2)) == b'p' &&
+               *(current.offset(3)) == b':' {
                 current = current.offset(4);
                 break;
             }
@@ -352,7 +342,7 @@ pub unsafe extern "C" fn ct_sip_parse_request(ct: *const nf_conn, dptr: *const u
 }
 
 #[no_mangle]
-pub static mut nf_nat_sip_hooks: *mut nf_nat_sip_hooks = ptr::null_mut();
+pub static mut NF_NAT_SIP_HOOKS: *mut nf_nat_sip_hooks = ptr::null_mut();
 
 // Helper functions (would be implemented in C headers)
 #[no_mangle]
@@ -402,12 +392,12 @@ pub unsafe extern "C" fn pr_debug(fmt: *const u8, args: ...) {
 }
 
 // Module parameters (simplified)
-static mut ports: [u16; 8] = [0; 8];
-static mut ports_c: usize = 0;
-static mut sip_timeout: u32 = SIP_TIMEOUT;
-static mut sip_direct_signalling: c_int = 1;
-static mut sip_direct_media: c_int = 1;
-static mut sip_external_media: c_int = 0;
+static mut PORTS: [u16; 8] = [0; 8];
+static mut PORTS_C: usize = 0;
+static mut SIP_TIMEOUT: u32 = SIP_TIMEOUT;
+static mut SIP_DIRECT_SIGNALLING: c_int = 1;
+static mut SIP_DIRECT_MEDIA: c_int = 1;
+static mut SIP_EXTERNAL_MEDIA: c_int = 0;
 
 // These would be implemented with proper module_param macros in a real kernel module
 #[no_mangle]

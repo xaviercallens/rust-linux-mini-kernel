@@ -1,5 +1,4 @@
 use kernel_types::*;
-use core::alloc::Layout;
 use core::ptr;
 
 #[repr(C)]
@@ -55,15 +54,15 @@ pub extern "C" fn h323_expect_create(
         return ptr::null_mut();
     }
 
-    let layout = Layout::new::<h323_expect>();
-    let expect = unsafe { core::alloc::alloc(layout) };
+    let layout = core::alloc::Layout::new::<h323_expect>();
+    let expect_ptr = unsafe { core::alloc::alloc(layout) };
 
-    if expect.is_null() {
+    if expect_ptr.is_null() {
         return ptr::null_mut();
     }
 
     unsafe {
-        let expect = expect as *mut h323_expect;
+        let expect = expect_ptr as *mut h323_expect;
         ptr::write(expect, h323_expect {
             call: *call,
             timeout,
@@ -81,7 +80,7 @@ pub extern "C" fn h323_expect_destroy(expect: *mut h323_expect) {
     if !expect.is_null() {
         unsafe {
             ptr::drop_in_place(expect);
-            let layout = Layout::new::<h323_expect>();
+            let layout = core::alloc::Layout::new::<h323_expect>();
             core::alloc::dealloc(expect as *mut u8, layout);
         }
     }

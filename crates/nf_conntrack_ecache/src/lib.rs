@@ -1,3 +1,4 @@
+
 //! Event cache for netfilter connection tracking
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -6,7 +7,6 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::missing_docs_in_private_items)]
 
 use core::ffi::c_int;
 use core::ffi::c_uint;
@@ -14,6 +14,7 @@ use core::ffi::c_void;
 use core::mem;
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
+use kernel_types::*;
 
 // Constants from C
 const ECACHE_RETRY_WAIT: u32 = 1; // HZ/10
@@ -46,11 +47,6 @@ struct hlist_nulls_node {
 
 #[repr(C)]
 struct nf_conn {
-    _unused: [u8; 0],
-}
-
-#[repr(C)]
-struct nf_conntrack_net {
     _unused: [u8; 0],
 }
 
@@ -143,13 +139,13 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
             let ct = nf_ct_tuplehash_to_ctrack(h);
 
             if !nf_ct_is_confirmed(ct) {
-                n = (*n).cast::<hlist_nulls_node>().offset(1);
+                n = (*n).next;
                 continue;
             }
 
             let e = nf_ct_ecache_find(ct);
             if e.is_null() || (*e).state != NFCT_ECACHE_DESTROY_FAIL as c_uint {
-                n = (*n).cast::<hlist_nulls_node>().offset(1);
+                n = (*n).next;
                 continue;
             }
 
@@ -167,7 +163,7 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
                 break;
             }
 
-            n = (*n).cast::<hlist_nulls_node>().offset(1);
+            n = (*n).next;
         }
 
         // Simulate spin_unlock
@@ -187,8 +183,8 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
 
 // ecache_work
 fn ecache_work(work: *mut delayed_work) {
-    let cnet = work.offset(-mem::size_of::<nf_conntrack_net>() as isize) as *mut nf_conntrack_net;
-    let ctnet = (*cnet).ct_net;
+    let cnet = unsafe { work.offset(-(mem::size_of::<nf_conntrack_net>() as isize)) as *mut nf_conntrack_net };
+    let ctnet = unsafe { (*cnet).ct_net };
 
     unsafe {
         local_bh_disable();
@@ -198,7 +194,7 @@ fn ecache_work(work: *mut delayed_work) {
 
         while cpu < 1 {
             // for_each_possible_cpu
-            let pcpu = (*ctnet).offset(cpu as isize);
+            let pcpu = unsafe { (*ctnet).offset(cpu as isize) };
             let ret = ecache_work_evict_list(pcpu);
 
             match ret {
@@ -216,9 +212,13 @@ fn ecache_work(work: *mut delayed_work) {
 
         local_bh_enable();
 
-        (*ctnet).ecache_dwork_pending = delay > 0;
+        unsafe {
+            (*ctnet).ecache_dwork_pending = delay > 0;
+        }
         if delay >= 0 {
-            schedule_delayed_work(work, delay as u32);
+            unsafe {
+                schedule_delayed_work(work, delay as u32);
+            }
         }
     }
 }

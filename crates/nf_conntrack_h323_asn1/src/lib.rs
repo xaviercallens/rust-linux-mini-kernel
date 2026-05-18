@@ -1,3 +1,4 @@
+
 //! H.323 ASN.1 Decoder for Linux Kernel Connection Tracking
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -49,7 +50,7 @@ type decoder_t = extern "C" fn(
 ) -> c_int;
 
 // Decoder functions vector
-static Decoders: [decoder_t; 12] = [
+static DECODERS: [decoder_t; 12] = [
     decode_nul,
     decode_bool,
     decode_oid,

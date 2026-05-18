@@ -155,7 +155,7 @@ pub unsafe extern "C" fn gre_gso_segment(
     let mut current_skb = segs;
 
     loop {
-        let greh = current_skb as *mut c_void as *mut gre_base_hdr;
+        let greh = current_skb as *mut gre_base_hdr;
         let pcsum = (greh as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>()) as *mut u16;
 
         if (*current_skb).ip_summed == CHECKSUM_PARTIAL {

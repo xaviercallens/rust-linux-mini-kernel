@@ -1,3 +1,4 @@
+//!
 //! IPv6 tunneling device implementation for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -104,7 +105,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
     }
 
     let hash = HASH(remote, local);
-    let ip6n = net_generic(net, ip6_tnl_net_id);
+    let ip6n = net_generic(net, IP6_TNL_NET_ID);
     let any = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
     let mut cand: *mut ip6_tnl = ptr::null_mut();
 
@@ -267,7 +268,7 @@ unsafe fn ipv6_addr_any(addr: *const in6_addr) -> bool {
         true
     } else {
         let zero = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
-        *addr == zero
+        ptr::read(addr) == zero
     }
 }
 
@@ -290,8 +291,8 @@ unsafe fn net_generic(net: *mut c_void, id: c_int) -> *mut ip6_tnl_net {
 }
 
 // Module parameters
-static mut ip6_tnl_net_id: c_int = 0;
-static mut log_ecn_error: bool = true;
+static mut IP6_TNL_NET_ID: c_int = 0;
+static mut LOG_ECN_ERROR: bool = true;
 
 // Tests (conditional compilation)
 #[cfg(test)]

@@ -7,7 +7,6 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::all)]
 
-
 use kernel_types::*;
 use core::mem;
 use core::ptr;
@@ -59,12 +58,7 @@ pub struct frag_hdr {
 /// true if extension header, false otherwise
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_ext_hdr(nexthdr: u8) -> bool {
-    (nexthdr == NEXTHDR_HOP)
-        || (nexthdr == NEXTHDR_ROUTING)
-        || (nexthdr == NEXTHDR_FRAGMENT)
-        || (nexthdr == NEXTHDR_AUTH)
-        || (nexthdr == NEXTHDR_NONE)
-        || (nexthdr == NEXTHDR_DEST)
+    matches!(nexthdr, NEXTHDR_HOP | NEXTHDR_ROUTING | NEXTHDR_FRAGMENT | NEXTHDR_AUTH | NEXTHDR_NONE | NEXTHDR_DEST)
 }
 
 /// Calculate length of authentication header
@@ -99,7 +93,7 @@ pub unsafe extern "C" fn ipv6_optlen(hp: *const ipv6_opt_hdr) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_skip_exthdr(
     skb: *const c_void,
-    start: c_int,
+    mut start: c_int,
     nexthdrp: *mut u8,
     frag_offp: *mut u16,
 ) -> c_int {
@@ -108,7 +102,7 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
 
     while ipv6_ext_hdr(nexthdr) {
         let mut _hdr: ipv6_opt_hdr = mem::zeroed();
-        let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &_hdr as *mut _);
+        let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &mut _hdr as *mut _ as *mut c_void);
 
         if hp.is_null() {
             return -1;
@@ -125,9 +119,9 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
             let mut _frag_off: u16 = 0;
             let frag_off = skb_header_pointer(
                 skb,
-                start + mem::offset_of!(frag_hdr, frag_off) as _,
+                start + mem::size_of::<u8>() as c_int * 2,
                 mem::size_of_val(&_frag_off) as _,
-                &_frag_off as *mut _,
+                &mut _frag_off as *mut _ as *mut c_void,
             ) as *mut u16;
 
             if frag_off.is_null() {
@@ -232,7 +226,7 @@ pub unsafe extern "C" fn ipv6_find_hdr(
 
     if !offset.is_null() && *offset != 0 {
         let mut _ip6: ipv6hdr = mem::zeroed();
-        let ip6 = skb_header_pointer(skb, *offset, mem::size_of_val(&_ip6) as _, &_ip6 as *mut _)
+        let ip6 = skb_header_pointer(skb, *offset, mem::size_of_val(&_ip6) as _, &mut _ip6 as *mut _ as *mut c_void)
             as *const ipv6hdr;
 
         if ip6.is_null() || (*ip6).version != 6 {
@@ -245,14 +239,14 @@ pub unsafe extern "C" fn ipv6_find_hdr(
 
     loop {
         let mut _hdr: ipv6_opt_hdr = mem::zeroed();
-        let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &_hdr as *mut _)
+        let hp = skb_header_pointer(skb, start, mem::size_of_val(&_hdr) as _, &mut _hdr as *mut _ as *mut c_void)
             as *const ipv6_opt_hdr;
 
         if hp.is_null() {
             return EBADMSG;
         }
 
-        found = (nexthdr == target) as c_int;
+        found = (nexthdr == target as u8) as c_int;
 
         if !ipv6_ext_hdr(nexthdr) || nexthdr == NEXTHDR_NONE {
             if target < 0 || found != 0 {
@@ -263,7 +257,7 @@ pub unsafe extern "C" fn ipv6_find_hdr(
 
         if nexthdr == NEXTHDR_ROUTING {
             let mut _rh: ipv6_rt_hdr = mem::zeroed();
-            let rh = skb_header_pointer(skb, start, mem::size_of_val(&_rh) as _, &_rh as *mut _)
+            let rh = skb_header_pointer(skb, start, mem::size_of_val(&_rh) as _, &mut _rh as *mut _ as *mut c_void)
                 as *const ipv6_rt_hdr;
 
             if rh.is_null() {
@@ -283,9 +277,9 @@ pub unsafe extern "C" fn ipv6_find_hdr(
             let mut _frag_off: u16 = 0;
             let frag_off = skb_header_pointer(
                 skb,
-                start + mem::offset_of!(frag_hdr, frag_off) as _,
+                start + mem::size_of::<u8>() as c_int * 2,
                 mem::size_of_val(&_frag_off) as _,
-                &_frag_off as *mut _,
+                &mut _frag_off as *mut _ as *mut c_void,
             ) as *mut u16;
 
             if frag_off.is_null() {
@@ -298,7 +292,7 @@ pub unsafe extern "C" fn ipv6_find_hdr(
                     if !fragoff.is_null() {
                         *fragoff = frag_off_val as c_int;
                     }
-                    return (*hp).nexthdr;
+                    return (*hp).nexthdr as c_int;
                 }
 
                 if found == 0 {
@@ -333,8 +327,10 @@ pub unsafe extern "C" fn ipv6_find_hdr(
         }
     }
 
-    *offset = start;
-    nexthdr
+    if !offset.is_null() {
+        *offset = start;
+    }
+    nexthdr as c_int
 }
 
 // Helper functions (assumed to exist in the kernel)
@@ -375,19 +371,6 @@ pub unsafe extern "C" fn skb_header_pointer(
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_hdr(skb: *const c_void) -> *const ipv6hdr {
     skb as *const ipv6hdr
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    pub version: u8,
-    pub traffic_class: u8,
-    pub flow_label: u32,
-    pub payload_length: u16,
-    pub nexthdr: u8,
-    pub hop_limit: u8,
-    pub saddr: [u8; 16],
-    pub daddr: [u8; 16],
 }
 
 #[cfg(test)]

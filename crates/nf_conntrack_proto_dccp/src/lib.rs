@@ -1,3 +1,4 @@
+
 //! DCCP connection tracking protocol helper
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -6,7 +7,6 @@
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
-use core::ptr;
 use kernel_types::*;
 
 // Constants from C
@@ -149,14 +149,19 @@ pub unsafe extern "C" fn dccp_get_next_state(
 /// # Returns
 /// true (1) if connection tracking initialized, false (0) otherwise
 #[no_mangle]
-pub unsafe extern "C" fn dccp_new(ct: *mut c_void, skb: *const c_void, dh: *const c_void) -> c_int {
+pub unsafe extern "C" fn dccp_new(ct: *mut nf_conn, skb: *const sk_buff, dh: *const dccp_hdr) -> c_int {
     if ct.is_null() || skb.is_null() || dh.is_null() {
         return 0;
     }
 
     // Example implementation - actual logic would be more complex
     // SAFETY: Caller guarantees pointers are valid
-    let pkt_type = (*(dh as *const u8)).wrapping_offset(0) as c_int; // Simplified packet type extraction
+    let pkt_type = if !dh.is_null() {
+        let dh_ptr = dh as *const u8;
+        *dh_ptr as c_int
+    } else {
+        return 0;
+    };
 
     // Get initial state based on packet type
     let initial_state = if pkt_type == DCCP_PKT_REQUEST {
@@ -167,7 +172,8 @@ pub unsafe extern "C" fn dccp_new(ct: *mut c_void, skb: *const c_void, dh: *cons
 
     // Set state in connection tracking struct
     // SAFETY: Caller guarantees ct is valid and properly aligned
-    ptr::write(ct as *mut c_int, initial_state);
+    let ct_ptr = ct as *mut c_int;
+    *ct_ptr = initial_state;
 
     1 // Success
 }

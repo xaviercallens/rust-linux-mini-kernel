@@ -1,26 +1,78 @@
-### Key Implementation Notes:
+use kernel_types::*;
 
-1. **FFI Compatibility**:
-   - All structs use `#[repr(C)]` for memory layout compatibility
-   - Function signatures match C prototypes exactly with `extern "C"`
-   - Raw pointers (`*mut T`, `*const T`) used for all pointer parameters
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct raw_v6_lookup_args {
+    pub skb: *mut sk_buff,
+    pub flowi: *mut flowi,
+    pub oif: c_int,
+    pub saddr: *const in6_addr,
+    pub daddr: *const in6_addr,
+    pub nexthdr: c_int,
+    pub hdr_len: c_int,
+    pub dev: *mut net_device,
+    pub flags: c_uint,
+    pub sdif: c_int,
+    pub connected: c_int,
+    pub flow: *mut flowi,
+    pub loc_sk: *mut sock,
+    pub loc_addr: *mut in6_addr,
+    pub loc_port: c_int,
+    pub loc_rcv_saddr: *mut in6_addr,
+    pub loc_rcv_port: c_int,
+}
 
-2. **Memory Safety**:
-   - All unsafe blocks include SAFETY comments explaining why operations are safe
-   - Null checks are performed before dereferencing pointers
-   - Raw pointer arithmetic is minimized and only used where necessary
+#[no_mangle]
+pub unsafe extern "C" fn raw_v6_lookup(
+    skb: *mut sk_buff,
+    flowi: *mut flowi,
+    oif: c_int,
+    saddr: *const in6_addr,
+    daddr: *const in6_addr,
+    nexthdr: c_int,
+    hdr_len: c_int,
+    dev: *mut net_device,
+    flags: c_uint,
+    sdif: c_int,
+    connected: c_int,
+    flow: *mut flowi,
+    loc_sk: *mut sock,
+    loc_addr: *mut in6_addr,
+    loc_port: c_int,
+    loc_rcv_saddr: *mut in6_addr,
+    loc_rcv_port: c_int,
+) -> c_int {
+    if skb.is_null() || flowi.is_null() || saddr.is_null() || daddr.is_null() || dev.is_null() {
+        return -EINVAL;
+    }
 
-3. **Error Handling**:
-   - Error codes match Linux errno values
-   - Return types use `c_int` for compatibility with C error codes
+    let skb = &mut *skb;
+    let flowi = &mut *flowi;
+    let saddr = &*saddr;
+    let daddr = &*daddr;
+    let dev = &mut *dev;
 
-4. **Algorithm Preservation**:
-   - The socket lookup logic from `__raw_v6_lookup` is preserved with the same condition checks
-   - ICMP filtering logic is implemented with the same bitwise operations
-   - Binding logic maintains the same address validation rules
+    if ipv6_addr_is_multicast(daddr) {
+        if !ipv6_chk_mcast_addr(dev, daddr) {
+            return -EINVAL;
+        }
+    }
 
-5. **Kernel Abstractions**:
-   - Placeholder implementations for kernel helper functions (like `ipv6_addr_is_multicast`)
-   - These would need to be implemented with actual kernel functionality in a real integration
+    if !ipv6_addr_valid(daddr) {
+        return -EINVAL;
+    }
 
-This implementation provides a production-ready FFI-compatible Rust translation that maintains the exact behavior of the original C code while adhering to Rust's safety guarantees where possible.
+    if !ipv6_addr_valid(saddr) {
+        return -EINVAL;
+    }
+
+    if !ipv6_chk_addr(dev, saddr) {
+        return -EINVAL;
+    }
+
+    if !ipv6_chk_addr(dev, daddr) {
+        return -EINVAL;
+    }
+
+    0
+}

@@ -12,11 +12,11 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr::{self, NonNull};
+use kernel_types::*;
 
 // Constants from C
 pub const MAX_STAT_DEPTH: c_int = 32;
@@ -116,8 +116,8 @@ pub unsafe extern "C" fn get_cindex(key: c_uint, kv: *mut key_vector) -> c_uint 
 ///
 /// # Safety
 /// - `ptr` must be a valid pointer to a struct member
-/// - `type` must be the type containing the member
-/// - `member` must be a valid field name in `type`
+/// - `type_` must be the type containing the member
+/// - `member` must be a valid field name in `type_`
 #[no_mangle]
 pub unsafe extern "C" fn container_of<T, U>(
     ptr: *const T,

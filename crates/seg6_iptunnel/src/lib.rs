@@ -6,43 +6,25 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr;
 use core::slice;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ETH_P_IPV6: c_int = 0x86DD;
 pub const ETH_P_IP: c_int = 0x0800;
-pub const ETH_P_IPV6: c_int = 0x86DD;
 pub const IPPROTO_IPV6: c_int = 41;
 pub const IPPROTO_IPIP: c_int = 4;
 pub const IPPROTO_ETHERNET: c_int = 143;
 pub const IPV6_FLOWLABEL_MASK: u32 = 0x000FFFFF;
+pub const NEXTHDR_ROUTING: u8 = 43;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    pub priority: u8,
-    pub version: u8,
-    pub flow_lbl: u32,
-    pub payload_len: u16,
-    pub nexthdr: u8,
-    pub hop_limit: u8,
-    pub saddr: in6_addr,
-    pub daddr: in6_addr,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -80,32 +62,6 @@ pub struct dst_cache {
 #[derive(Copy, Clone)]
 pub struct lwtunnel_state {
     pub data: *mut c_void,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct sk_buff {
-    // Simplified for FFI compatibility
-    _private: [u8; 1],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct net {
-    _private: [u8; 1],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct net_device {
-    _private: [u8; 1],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct dst_entry {
-    pub dev: *mut net_device,
-    pub lwtstate: *mut lwtunnel_state,
 }
 
 // Function implementations
@@ -209,7 +165,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
 
     (*hdr).nexthdr = NEXTHDR_ROUTING;
 
-    let isrh = (hdr as *mut u8).offset(mem::size_of::<ipv6hdr>() as isize) as *mut ipv6_sr_hdr;
+    let isrh = (hdr as *mut u8).add(mem::size_of::<ipv6hdr>()) as *mut ipv6_sr_hdr;
     ptr::copy_nonoverlapping(osrh, isrh, hdrlen);
 
     (*isrh).nexthdr = proto as u8;
@@ -270,7 +226,7 @@ pub unsafe extern "C" fn seg6_do_srh_inline(skb: *mut sk_buff, osrh: *mut ipv6_s
         mem::size_of::<ipv6hdr>(),
     );
 
-    let isrh = (hdr as *mut u8).offset(mem::size_of::<ipv6hdr>() as isize) as *mut ipv6_sr_hdr;
+    let isrh = (hdr as *mut u8).add(mem::size_of::<ipv6hdr>()) as *mut ipv6_sr_hdr;
     ptr::copy_nonoverlapping(osrh, isrh, hdrlen);
 
     (*isrh).nexthdr = (*hdr).nexthdr;
@@ -432,6 +388,8 @@ pub unsafe extern "C" fn htons(x: u16) -> u16 {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_seg6_lwt_headroom() {
         // Basic test case

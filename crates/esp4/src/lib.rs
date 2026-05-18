@@ -11,11 +11,7 @@
 use kernel_types::*;
 use core::ptr;
 use core::mem;
-use core::ffi::c_void;
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_ulong;
-use core::ffi::size_t;
+use core::ffi::{c_void, c_int, c_uint, c_ulong};
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -57,7 +53,8 @@ pub struct esp_output_extra {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct aead_request {
-    _private: [u8; 0],
+    pub src: *mut scatterlist,
+    pub dst: *mut scatterlist,
 }
 
 #[repr(C)]
@@ -79,12 +76,27 @@ pub struct xfrm_state {
     pub props: xfrm_state_props,
     pub encap: *mut xfrm_encap_tmpl,
     pub lock: spinlock_t,
+    pub encap_sk: *mut sock,
+    pub id: xfrm_id,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_id {
+    pub daddr: xfrm_address,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_address {
+    pub a4: __be32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct xfrm_state_props {
     pub flags: u32,
+    pub saddr: xfrm_address,
 }
 
 #[repr(C)]
@@ -199,13 +211,13 @@ pub unsafe extern "C" fn esp_tmp_iv(
 
     let ivsize = crypto_aead_ivsize(aead);
     if ivsize == 0 {
-        return (tmp as *mut u8).offset(extralen as isize);
+        return (tmp as *mut u8).add(extralen as usize);
     }
 
     let align_mask = crypto_aead_alignmask(aead) + 1;
     let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
 
-    (tmp as *mut u8).offset(offset as isize)
+    (tmp as *mut u8).add(offset)
 }
 
 #[no_mangle]
@@ -220,7 +232,7 @@ pub unsafe extern "C" fn esp_tmp_req(
     let ivsize = crypto_aead_ivsize(aead);
     let offset = ivsize + (crypto_tfm_ctx_alignment() - 1) & !(crypto_tfm_ctx_alignment() - 1);
 
-    let req = (iv as *mut u8).offset(offset as isize) as *mut aead_request;
+    let req = (iv as *mut u8).add(offset) as *mut aead_request;
     aead_request_set_tfm(req, aead);
     req
 }
@@ -235,7 +247,7 @@ pub unsafe extern "C" fn esp_req_sg(
     }
 
     let reqsize = crypto_aead_reqsize(aead);
-    let offset = (req as *mut u8).offset(mem::size_of::<aead_request>() as isize) as usize + reqsize as usize;
+    let offset = (req as *mut u8).add(mem::size_of::<aead_request>() + reqsize as usize) as usize;
 
     let aligned = offset + (mem::align_of::<scatterlist>() - 1) & !(mem::align_of::<scatterlist>() - 1);
 

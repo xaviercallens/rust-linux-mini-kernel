@@ -6,13 +6,10 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use kernel_types::*;
 use core::ptr;
-use core::ffi::c_int;
-use core::ffi::c_void;
-use core::ffi::size_t;
+use core::ffi::{c_int, c_void};
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -23,67 +20,15 @@ pub const EPERM: c_int = -1;
 pub const ENOBUFS: c_int = -55;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct sock {
-    sk_receive_queue: skb_queue_head_t,
-    sk_rx_skb_cache: *mut sk_buff,
-    sk_error_queue: skb_queue_head_t,
-    sk_type: c_int,
-    sk_state: c_int,
-    sk_max_ack_backlog: c_int,
-    sk_dst_cache: *mut dst_entry,
-    sk_rx_dst: *mut dst_entry,
-    sk_rmem_alloc: atomic_t,
-    sk_wmem_alloc: refcount_t,
-    sk_wmem_queued: size_t,
-    sk_forward_alloc: size_t,
-    sk_backlog_rcv: *mut c_void,
-    sk_prot: *mut proto,
-    sk_destruct: unsafe extern "C" fn(*mut sock),
-    sk_protocol: c_int,
-    sk_users: atomic_t,
-    sk_refcnt: atomic_t,
-    sk_shutdown: c_int,
-    sk_no_check: c_int,
-    sk_lingertime: c_int,
-    sk_reuse: c_int,
-    sk_bound_dev_if: c_int,
-    sk_bind_mark: c_int,
-    sk_priority: c_int,
-    sk_rcvlowat: size_t,
-    sk_rcvtimeo: c_int,
-    sk_sndtimeo: c_int,
-    sk_linger: linger,
-    sk_info_cache: *mut c_void,
-    sk_prot_creator: *mut proto,
-    sk_wq: *mut wait_queue_head_t,
-    sk_user_data: *mut c_void,
-    sk_clockid: c_int,
-    sk_flags: c_int,
-    sk_tsflags: c_int,
-    sk_peek_off: size_t,
-    sk_rxhash: c_int,
-    sk_filter: *mut c_void,
-    sk_timer: timer_list,
-    sk_stamp: timeval,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct inet_protosw {
-    list: list_head,
-    protocol: c_int,
-    ops: *mut socket_ops,
-    prot: *mut proto,
-    flags: c_int,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct list_head {
-    next: *mut list_head,
-    prev: *mut list_head,
+    pub list: list_head,
+    pub protocol: c_int,
+    pub ops: *mut socket_ops,
+    pub prot: *mut proto,
+    pub flags: c_int,
 }
 
 // Function implementations
@@ -171,7 +116,7 @@ pub unsafe extern "C" fn inet_listen(sock: *mut socket, backlog: c_int) -> c_int
     if old_state != TCP_LISTEN {
         // Enable TFO w/o requiring TCP_FASTOPEN socket option
         tcp_fastopen = sock_net(sk).ipv4.sysctl_tcp_fastopen;
-        if (tcp_fastopen & TFO_SERVER_WO_SOCKOPT1) != 0 &&
+        if (tcp_fastopen & TFO_SERVER_WO_SOCKOPT) != 0 &&
            (tcp_fastopen & TFO_SERVER_ENABLE) != 0 &&
            inet_csk(sk).icsk_accept_queue.fastopenq.max_qlen == 0 {
             fastopen_queue_tune(sk, backlog);
@@ -315,7 +260,7 @@ pub unsafe extern "C" fn inet_create(
     inet.inet_id = 0;
     sock_init_data(sock, sk);
 
-    (*sk).sk_destruct = inet_sock_destruct;
+    (*sk).sk_destruct = Some(inet_sock_destruct);
     (*sk).sk_protocol = protocol;
     (*sk).sk_backlog_rcv = (*sk).sk_prot.backlog_rcv;
 
@@ -407,7 +352,9 @@ pub const IPPROTO_RAW: c_int = 255;
 pub const PF_INET: c_int = 2;
 pub const GFP_KERNEL: c_int = 0;
 pub const CAP_NET_RAW: c_int = 1;
-pub const BPF_CGROUP_RUN_PROG_INET_SOCK: c_int = 1;
+pub const BPF_SOCK_OPS_TCP_LISTEN_CB: c_int = 1;
+pub const TFO_SERVER_WO_SOCKOPT: c_int = 1 << 1;
+pub const TFO_SERVER_ENABLE: c_int = 1;
 
 // Tests (conditional compilation)
 #[cfg(test)]

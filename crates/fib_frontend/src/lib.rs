@@ -9,7 +9,6 @@
 
 use kernel_types::*;
 use core::ffi::c_int;
-use core::ffi::c_uint;
 use core::ptr;
 
 // Constants from C

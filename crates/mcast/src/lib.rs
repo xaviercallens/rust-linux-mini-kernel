@@ -102,7 +102,7 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
     ifindex: c_int,
     addr: *const in6_addr,
 ) -> c_int {
-    let np = &mut (*sk).pinet6 as *mut *mut ipv6_pinfo;
+    let np = (*sk).sk_protocol as *mut ipv6_pinfo;
     let net = ptr::null_mut(); // Placeholder for net namespace
 
     // Validate inputs
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
         return -EINVAL;
     }
 
-    let mut lnk = &mut (*(*np)).ipv6_mc_list;
+    let mut lnk = &mut (*np).ipv6_mc_list;
     while let Some(mc_lst) = ptr::read(lnk) {
         if (ifindex == 0 || (*mc_lst).ifindex == ifindex) && ipv6_addr_equal(&(*mc_lst).addr, addr)
         {
@@ -170,7 +170,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
         return -EINVAL;
     }
 
-    let np = &mut (*sk).pinet6 as *mut *mut ipv6_pinfo;
+    let np = (*sk).sk_protocol as *mut ipv6_pinfo;
     let net = ptr::null_mut(); // Placeholder for net namespace
 
     // Check if address is multicast
@@ -179,7 +179,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
     }
 
     // Check for existing entry
-    let mut pmc = (*(*np)).ipv6_mc_list;
+    let mut pmc = (*np).ipv6_mc_list;
     while !pmc.is_null() {
         if (ifindex == 0 || (*pmc).ifindex == ifindex) && ipv6_addr_equal(&(*pmc).addr, addr) {
             return -EADDRINUSE;
@@ -196,7 +196,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
 
     // Initialize new entry
     unsafe {
-        (*mc_lst).next = (*(*np)).ipv6_mc_list;
+        (*mc_lst).next = (*np).ipv6_mc_list;
         (*mc_lst).addr = *addr;
         (*mc_lst).ifindex = ifindex;
         (*mc_lst).sfmode = mode;
@@ -208,7 +208,8 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
         let group = &(*addr);
         let rt = rt6_lookup(net, group, ptr::null_mut(), 0, ptr::null_mut(), 0);
         if !rt.is_null() {
-            let dev = (*(rt as *mut sk_buff)).dst.dev;
+            let rt_skb = rt as *mut sk_buff;
+            let dev = (*rt_skb).dst.dev;
             ip6_rt_put(rt);
             dev
         } else {
@@ -232,7 +233,7 @@ fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mod
     }
 
     // Add to list
-    (*(*np)).ipv6_mc_list = mc_lst;
+    (*np).ipv6_mc_list = mc_lst;
     0
 }
 

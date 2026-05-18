@@ -77,7 +77,9 @@ pub unsafe extern "C" fn call_fib6_notifier(
     event_type: c_int,
     info: *mut fib_notifier_info,
 ) -> c_int {
-    // SAFETY: info is not null (validated by kernel)
+    if info.is_null() {
+        return EINVAL;
+    }
     (*info).family = AF_INET6;
     call_fib_notifier(nb, event_type, info)
 }
@@ -88,7 +90,9 @@ pub unsafe extern "C" fn call_fib6_notifiers(
     event_type: c_int,
     info: *mut fib_notifier_info,
 ) -> c_int {
-    // SAFETY: info is not null (validated by kernel)
+    if info.is_null() {
+        return EINVAL;
+    }
     (*info).family = AF_INET6;
     call_fib_notifiers(net, event_type, info)
 }
@@ -115,21 +119,40 @@ pub unsafe extern "C" fn fib6_dump(
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_notifier_init(net: *mut c_void) -> c_int {
+    if net.is_null() {
+        return EINVAL;
+    }
+
     let ops = fib_notifier_ops_register(&FIB6_NOTIFIER_OPS_TEMPLATE, net);
     if IS_ERR(ops) {
         return PTR_ERR(ops);
     }
-    // SAFETY: net is valid and has an ipv6 field with notifier_ops
+
     let ipv6_net_ptr = net as *mut ipv6_net;
+    if ipv6_net_ptr.is_null() {
+        fib_notifier_ops_unregister(ops);
+        return EINVAL;
+    }
+
     (*ipv6_net_ptr).notifier_ops = ops;
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_notifier_exit(net: *mut c_void) {
+    if net.is_null() {
+        return;
+    }
+
     let ipv6_net_ptr = net as *mut ipv6_net;
+    if ipv6_net_ptr.is_null() {
+        return;
+    }
+
     let ops = (*ipv6_net_ptr).notifier_ops;
-    fib_notifier_ops_unregister(ops);
+    if !ops.is_null() {
+        fib_notifier_ops_unregister(ops);
+    }
 }
 
 // Tests (conditional compilation)

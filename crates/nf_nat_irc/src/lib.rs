@@ -1,3 +1,4 @@
+
 // SPDX-License-Identifier: GPL-2.0-or-later
 //!
 //! This module implements an FFI-compatible Rust translation of the Linux kernel's
@@ -58,6 +59,7 @@ pub struct nf_conntrack_address {
 #[derive(Copy, Clone)]
 pub union nf_conntrack_address_union {
     ip: __be32,
+    tcp: nf_ct_tcp,
 }
 
 #[repr(C)]
@@ -90,6 +92,7 @@ extern "C" {
     fn nf_nat_helper_register(helper: *mut nf_conntrack_nat_helper);
     fn nf_nat_helper_unregister(helper: *mut nf_conntrack_nat_helper);
     fn synchronize_rcu();
+    fn pr_info(fmt: *const c_char, ...);
 }
 
 // Global statics
@@ -97,6 +100,7 @@ static NAT_HELPER_NAME: &[u8] = b"irc\0";
 static mut NAT_HELPER_IRC: nf_conntrack_nat_helper = nf_conntrack_nat_helper {
     name: NAT_HELPER_NAME.as_ptr() as *const c_char,
 };
+static mut NF_NAT_IRC_HOOK: *const c_void = ptr::null();
 
 // Module initialization
 #[no_mangle]
@@ -104,7 +108,7 @@ pub unsafe extern "C" fn nf_nat_irc_init() -> c_int {
     // SAFETY: This is the module initialization function, which should only run once.
     // The RCU_INIT_POINTER macro is implemented as a direct assignment in this context.
     let hook = help as *const c_void;
-    ptr::write_volatile(&mut nf_nat_irc_hook as *mut *const c_void, hook);
+    ptr::write_volatile(&mut NF_NAT_IRC_HOOK as *mut *const c_void, hook);
 
     nf_nat_helper_register(&mut NAT_HELPER_IRC);
     0
@@ -114,7 +118,7 @@ pub unsafe extern "C" fn nf_nat_irc_init() -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_irc_fini() {
     nf_nat_helper_unregister(&mut NAT_HELPER_IRC);
-    ptr::write_volatile(&mut nf_nat_irc_hook as *mut *const c_void, ptr::null());
+    ptr::write_volatile(&mut NF_NAT_IRC_HOOK as *mut *const c_void, ptr::null());
     synchronize_rcu();
 }
 
@@ -138,7 +142,8 @@ pub unsafe extern "C" fn help(
     (*exp).expectfn = ptr::null();
 
     // Try to find an available port
-    for current_port in port..=65535 {
+    let mut current_port = port;
+    while current_port <= 65535 {
         (*exp).tuple.dst.u.tcp.port = htons(current_port);
 
         match nf_ct_expect_related(exp, 0) {
@@ -146,7 +151,10 @@ pub unsafe extern "C" fn help(
                 port = current_port;
                 break;
             },
-            -EBUSY => continue,
+            -EBUSY => {
+                current_port += 1;
+                continue;
+            },
             _ => {
                 port = 0;
                 break;
@@ -230,7 +238,7 @@ pub unsafe extern "C" fn snprintf(
 
     // SAFETY: This is a simplified implementation for demonstration purposes
     // In a real kernel module, this would use the actual snprintf implementation
-    let formatted = format!("{} {} ", arg1, arg2);
+    let formatted = format!("{} {}", arg1, arg2);
     let bytes = formatted.as_bytes_with_nul();
 
     if !buf.is_null() && size > 0 {
@@ -267,6 +275,6 @@ mod tests {
     fn test_port_allocation() {
         // This would require actual kernel environment to test
         // For demonstration purposes, we just verify the function signature
-        assert_eq!(size_of_val(&NAT_HELPER_IRC), 8);
+        assert_eq!(core::mem::size_of_val(&NAT_HELPER_IRC), 8);
     }
 }

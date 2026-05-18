@@ -1,3 +1,4 @@
+
 //! Amanda NAT helper for TCP NAT alteration in Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -14,7 +15,6 @@ pub const IP_CT_DIR_ORIGINAL: c_int = 0;
 pub const NF_DROP: c_int = 0xFFFFFFFF;
 pub const NF_ACCEPT: c_int = 0x00000001;
 pub const EBUSY: c_int = 16;
-pub const EINVAL: c_int = 22;
 
 // Type definitions
 #[repr(C)]
@@ -55,6 +55,11 @@ struct nf_conntrack_expect {
     expectfn: *mut c_void,
 }
 
+#[repr(C)]
+struct nf_conntrack_nat_helper {
+    name: *const u8,
+}
+
 // Function declarations for kernel functions
 extern "C" {
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_int) -> c_int;
@@ -75,19 +80,14 @@ extern "C" {
     fn synchronize_rcu();
 }
 
-#[repr(C)]
-struct nf_conntrack_nat_helper {
-    name: *const u8,
-}
-
 // Helper macro for initializing nf_conntrack_nat_helper
 const fn nf_ct_nat_helper_init(name: *const u8) -> nf_conntrack_nat_helper {
     nf_conntrack_nat_helper { name }
 }
 
 // Global static variables
-static mut nat_helper_amanda: nf_conntrack_nat_helper = nf_ct_nat_helper_init(b"amanda\0".as_ptr() as *const u8);
-static mut nf_nat_amanda_hook: Option<unsafe extern "C" fn(
+pub static mut NAT_HELPER_AMANDA: nf_conntrack_nat_helper = nf_ct_nat_helper_init(b"amanda\0".as_ptr() as *const u8);
+pub static mut NF_NAT_AMANDA_HOOK: Option<unsafe extern "C" fn(
     skb: *mut sk_buff,
     ctinfo: c_uint,
     protoff: c_uint,
@@ -186,8 +186,8 @@ pub unsafe extern "C" fn help(
 // Module exit handler
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_amanda_fini() {
-    nf_nat_helper_unregister(&mut nat_helper_amanda);
-    nf_nat_amanda_hook = None;
+    nf_nat_helper_unregister(&mut NAT_HELPER_AMANDA);
+    NF_NAT_AMANDA_HOOK = None;
     synchronize_rcu();
 }
 
@@ -195,10 +195,10 @@ pub unsafe extern "C" fn nf_nat_amanda_fini() {
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_amanda_init() {
     // SAFETY: This is a module init function, called once at load time
-    assert!(nf_nat_amanda_hook.is_none(), "Hook already initialized");
+    assert!(NF_NAT_AMANDA_HOOK.is_none(), "Hook already initialized");
 
-    nf_nat_helper_register(&mut nat_helper_amanda);
-    nf_nat_amanda_hook = Some(help);
+    nf_nat_helper_register(&mut NAT_HELPER_AMANDA);
+    NF_NAT_AMANDA_HOOK = Some(help);
 }
 
 // Helper functions for byte order conversion

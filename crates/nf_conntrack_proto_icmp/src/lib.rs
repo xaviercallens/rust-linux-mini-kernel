@@ -1,3 +1,4 @@
+
 //! This module provides FFI-compatible Rust bindings for the Linux kernel's
 //! nf_conntrack_proto_icmp implementation. It handles ICMP protocol-specific
 //! connection tracking logic for netfilter.
@@ -12,8 +13,6 @@
 #![allow(clippy::transmutes_expressible_as_ptr_cast)]
 
 use core::ffi::{c_int, c_uint, c_void};
-use core::mem;
-use core::ptr;
 use kernel_types::*;
 
 // Constants from C
@@ -89,7 +88,7 @@ struct nf_conntrack_tuple_u3 {
 }
 
 // Static data
-static invmap: [u8; 256] = {
+pub static INV_MAP: [u8; 256] = {
     let mut arr = [0u8; 256];
     arr[ICMP_ECHO as usize] = ICMP_ECHOREPLY + 1;
     arr[ICMP_ECHOREPLY as usize] = ICMP_ECHO + 1;
@@ -127,8 +126,8 @@ pub unsafe extern "C" fn icmp_pkt_to_tuple(
     _net: *mut c_void,
     tuple: *mut nf_conntrack_tuple,
 ) -> bool {
-    let mut _hdr: icmphdr = mem::zeroed();
-    let hp = skb_header_pointer(skb, dataoff, mem::size_of_val(&_hdr) as c_uint, &_hdr as *mut _ as *mut c_void);
+    let mut _hdr: icmphdr = core::mem::zeroed();
+    let hp = skb_header_pointer(skb, dataoff, core::mem::size_of_val(&_hdr) as c_uint, &mut _hdr as *mut _ as *mut c_void);
 
     if hp.is_null() {
         return false;
@@ -154,12 +153,12 @@ pub unsafe extern "C" fn nf_conntrack_invert_icmp_tuple(
 ) -> bool {
     let orig_type = (*orig).dst.u.icmp.type_;
 
-    if orig_type >= invmap.len() as u8 || invmap[orig_type as usize] == 0 {
+    if orig_type >= INV_MAP.len() as u8 || INV_MAP[orig_type as usize] == 0 {
         return false;
     }
 
     (*tuple).src.u.icmp.id = (*orig).src.u.icmp.id;
-    (*tuple).dst.u.icmp.type_ = invmap[orig_type as usize] - 1;
+    (*tuple).dst.u.icmp.type_ = INV_MAP[orig_type as usize] - 1;
     (*tuple).dst.u.icmp.code = (*orig).dst.u.icmp.code;
 
     true
@@ -185,7 +184,7 @@ pub unsafe extern "C" fn nf_conntrack_icmp_packet(
     let tuple = &(*ct).tuplehash[0].tuple;
     let type_ = tuple.dst.u.icmp.type_;
 
-    if type_ >= mem::size_of_val(&valid_new) as u8 || !valid_new[type_ as usize] {
+    if type_ >= VALID_NEW.len() as u8 || VALID_NEW[type_ as usize] == 0 {
         return -NF_ACCEPT;
     }
 
@@ -207,9 +206,9 @@ pub unsafe extern "C" fn nf_conntrack_icmpv4_error(
     dataoff: c_uint,
     state: *const nf_hook_state,
 ) -> c_int {
-    let mut outer_daddr: nf_inet_addr = mem::zeroed();
-    let mut _ih: icmphdr = mem::zeroed();
-    let icmph = skb_header_pointer(skb, dataoff, mem::size_of_val(&_ih) as c_uint, &_ih as *mut _ as *mut c_void);
+    let mut outer_daddr: nf_inet_addr = core::mem::zeroed();
+    let mut _ih: icmphdr = core::mem::zeroed();
+    let icmph = skb_header_pointer(skb, dataoff, core::mem::size_of_val(&_ih) as c_uint, &mut _ih as *mut _ as *mut c_void);
 
     if icmph.is_null() {
         icmp_error_log(skb, state, b"short packet\0".as_ptr() as *const c_char);
@@ -227,10 +226,10 @@ pub unsafe extern "C" fn nf_conntrack_icmpv4_error(
         return NF_ACCEPT;
     }
 
-    outer_daddr.ip = ip_hdr(skb).daddr;
+    outer_daddr.ip = (*ip_hdr(skb)).daddr;
 
-    dataoff += mem::size_of::<icmphdr>() as c_uint;
-    nf_conntrack_inet_error(_tmpl, skb, dataoff, state, IPPROTO_ICMP, &outer_daddr as *const _)
+    let new_dataoff = dataoff + core::mem::size_of::<icmphdr>() as c_uint;
+    nf_conntrack_inet_error(_tmpl, skb, new_dataoff, state, IPPROTO_ICMP, &outer_daddr as *const _)
 }
 
 // Helper functions (these would be implemented in the kernel)
@@ -272,7 +271,7 @@ pub const NFPROTO_IPV4: c_int = 2;
 pub const NF_INET_PRE_ROUTING: c_int = 0;
 
 // Static data
-static valid_new: [u8; 256] = {
+pub static VALID_NEW: [u8; 256] = {
     let mut arr = [0u8; 256];
     arr[ICMP_ECHO as usize] = 1;
     arr[ICMP_TIMESTAMP as usize] = 1;

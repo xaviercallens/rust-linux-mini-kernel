@@ -1,6 +1,5 @@
 Here's the fixed Rust code for the Linux kernel FFI module 'ip6mr':
 
-```rust
 //! IPv6 multicast routing support for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -72,12 +71,6 @@ pub struct mr_table {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct rhltable {
-    // ... fields as needed
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct timer_list {
     // ... fields as needed
 }
 
@@ -267,7 +260,7 @@ pub unsafe extern "C" fn ip6mr_rule_default(rule: *const fib_rule) -> bool {
     fib_rule_matchall(rule)
         && rule.action == FR_ACT_TO_TBL
         && rule.table == RT6_TABLE_DFLT
-        && !rule.l3mdev
+        && rule.l3mdev.is_null()
 }
 
 // Helper functions (simplified for example)

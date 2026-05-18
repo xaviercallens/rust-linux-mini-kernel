@@ -16,15 +16,6 @@ pub const EINPROGRESS: c_int = -115;
 pub const ENOENT: c_int = -2;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    pub payload_len: u16,
-    pub nexthdr: u8,
-    pub hop_limit: u8,
-    pub saddr: [u8; 16],
-    pub daddr: [u8; 16],
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -124,7 +115,7 @@ pub unsafe extern "C" fn ip6_frag_reasm(
 
     inet_frag_kill(&mut fq.q);
 
-    let ecn = ip6_frag_ecn(&ipv6_hdr(skb));
+    let ecn = ip6_frag_ecn(ipv6_hdr(skb));
     if ecn == 0xff {
         return -1;
     }
@@ -217,8 +208,8 @@ pub unsafe extern "C" fn fq_find(
 ) -> *mut frag_queue {
     let mut key = frag_v6_compare_key {
         id,
-        saddr: (*hdr).saddr,
-        daddr: (*hdr).daddr,
+        saddr: (*hdr).saddr.in6_u.u6_addr8,
+        daddr: (*hdr).daddr.in6_u.u6_addr8,
         user: 1, // IP6_DEFRAG_LOCAL_DELIVER
         iif,
     };
@@ -263,7 +254,7 @@ pub unsafe extern "C" fn ip6_frag_queue(
     let end = offset + (payload_len - payload_offset as u16);
 
     if end > 0xFFFF {
-        *prob_offset = (offsetof!(frag_hdr, frag_off) as u32) - skb_network_header_offset(skb);
+        *prob_offset = (core::mem::offset_of!(frag_hdr, frag_off) as u32) - skb_network_header_offset(skb);
         return -1;
     }
 
@@ -284,7 +275,7 @@ pub unsafe extern "C" fn ip6_frag_queue(
         fq.q.len = end;
     } else {
         if end & 0x7 != 0 {
-            *prob_offset = offsetof!(ipv6hdr, payload_len) as u32;
+            *prob_offset = core::mem::offset_of!(ipv6hdr, payload_len) as u32;
             return -1;
         }
         if end > fq.q.len {
@@ -377,4 +368,11 @@ extern "C" {
     fn ip6frag_expire_frag_queue(net: *mut net, fq: *mut frag_queue);
     fn container_of(ptr: *mut c_void, container_type: *mut c_void, member: *mut c_void) -> *mut c_void;
     fn from_timer(t: *mut timer_list) -> *mut inet_frag_queue;
+    fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
+    fn ipv6_addr_type(addr: *const [u8; 16]) -> u32;
+    fn inet_frag_find(fqdir: *mut inet_frags, key: *const frag_v6_compare_key) -> *mut inet_frag_queue;
+    fn skb_network_offset(skb: *mut sk_buff) -> c_int;
+    fn skb_network_header_offset(skb: *mut sk_buff) -> c_int;
+    fn skb_dst(skb: *mut sk_buff) -> *mut sk_buff;
+    fn skb_dst_drop(skb: *mut sk_buff);
 }

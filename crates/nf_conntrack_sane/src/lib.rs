@@ -110,15 +110,15 @@ extern "C" {
 }
 
 // Module parameters
-static mut ports: [u16; 8] = [0; 8];
-static mut ports_c: c_int = 0;
+static mut PORTS: [u16; 8] = [0; 8];
+static mut PORTS_C: c_int = 0;
 
 // Spinlock and buffer
-static mut nf_sane_lock: *mut c_void = ptr::null_mut();
-static mut sane_buffer: *mut c_void = ptr::null_mut();
+static mut NF_SANE_LOCK: *mut c_void = ptr::null_mut();
+static mut SANE_BUFFER: *mut c_void = ptr::null_mut();
 
 // Helper array
-static mut sane: [nf_conntrack_helper; 16] = unsafe { [mem::zeroed(); 16] };
+static mut SANE: [nf_conntrack_helper; 16] = unsafe { [mem::zeroed(); 16] };
 
 // Helper function
 #[no_mangle]
@@ -160,25 +160,25 @@ pub unsafe extern "C" fn help(
     datalen = (*skb).len - dataoff;
 
     // Acquire spinlock
-    spin_lock_bh(nf_sane_lock);
+    spin_lock_bh(NF_SANE_LOCK);
 
     // Get data pointer
-    let sb_ptr: *mut c_void = skb_header_pointer(skb, dataoff, datalen, sane_buffer);
+    let sb_ptr: *mut c_void = skb_header_pointer(skb, dataoff, datalen, SANE_BUFFER);
     if sb_ptr.is_null() {
-        spin_unlock_bh(nf_sane_lock);
+        spin_unlock_bh(NF_SANE_LOCK);
         return NF_ACCEPT;
     }
 
     if dir == IP_CT_DIR_ORIGINAL {
         if datalen != mem::size_of::<sane_request>() as c_int {
-            spin_unlock_bh(nf_sane_lock);
+            spin_unlock_bh(NF_SANE_LOCK);
             return NF_ACCEPT;
         }
 
         req = sb_ptr as *mut sane_request;
         if (*req).RPC_code != u32::to_be(SANE_NET_START as u32) {
             (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
-            spin_unlock_bh(nf_sane_lock);
+            spin_unlock_bh(NF_SANE_LOCK);
             return NF_ACCEPT;
         }
 
@@ -187,32 +187,32 @@ pub unsafe extern "C" fn help(
 
     // Is it a reply to an uninteresting command?
     if (*ct_sane_info).state != 1 {
-        spin_unlock_bh(nf_sane_lock);
+        spin_unlock_bh(NF_SANE_LOCK);
         return NF_ACCEPT;
     }
 
     (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
 
     if datalen < mem::size_of::<sane_reply_net_start>() as c_int {
-        spin_unlock_bh(nf_sane_lock);
+        spin_unlock_bh(NF_SANE_LOCK);
         return NF_ACCEPT;
     }
 
     reply = sb_ptr as *mut sane_reply_net_start;
     if (*reply).status != u32::to_be(SANE_STATUS_SUCCESS as u32) {
-        spin_unlock_bh(nf_sane_lock);
+        spin_unlock_bh(NF_SANE_LOCK);
         return NF_ACCEPT;
     }
 
     if (*reply).zero != 0 {
-        spin_unlock_bh(nf_sane_lock);
+        spin_unlock_bh(NF_SANE_LOCK);
         return NF_ACCEPT;
     }
 
     exp = nf_ct_expect_alloc(ct);
     if exp.is_null() {
         nf_ct_helper_log(skb, ct, "cannot alloc expectation" as *const c_char);
-        spin_unlock_bh(nf_sane_lock);
+        spin_unlock_bh(NF_SANE_LOCK);
         return NF_DROP;
     }
 
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn help(
 
     nf_ct_expect_put(exp);
 
-    spin_unlock_bh(nf_sane_lock);
+    spin_unlock_bh(NF_SANE_LOCK);
     ret
 }
 
@@ -254,40 +254,40 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
     let mut i: c_int = 0;
     let mut ret: c_int = 0;
 
-    sane_buffer = libc::malloc(65536);
-    if sane_buffer.is_null() {
+    SANE_BUFFER = libc::malloc(65536);
+    if SANE_BUFFER.is_null() {
         return ENOMEM;
     }
 
-    if ports_c == 0 {
-        ports[0] = SANE_PORT;
-        ports_c = 1;
+    if PORTS_C == 0 {
+        PORTS[0] = SANE_PORT;
+        PORTS_C = 1;
     }
 
-    for i in 0..ports_c {
+    for i in 0..PORTS_C {
         nf_ct_helper_init(
-            &mut sane[2 * i],
+            &mut SANE[2 * i],
             2, // AF_INET
             IPPROTO_TCP,
             "sane" as *const str as *const c_char,
             SANE_PORT,
-            ports[i as usize],
+            PORTS[i as usize],
             5 * 60,
-            &sane_exp_policy,
+            &SANE_EXP_POLICY,
             0,
             Some(help as _),
             ptr::null_mut(),
             ptr::null_mut(),
         );
         nf_ct_helper_init(
-            &mut sane[2 * i + 1],
+            &mut SANE[2 * i + 1],
             10, // AF_INET6
             IPPROTO_TCP,
             "sane" as *const str as *const c_char,
             SANE_PORT,
-            ports[i as usize],
+            PORTS[i as usize],
             5 * 60,
-            &sane_exp_policy,
+            &SANE_EXP_POLICY,
             0,
             Some(help as _),
             ptr::null_mut(),
@@ -295,9 +295,9 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
         );
     }
 
-    ret = nf_conntrack_helpers_register(&mut sane, ports_c * 2);
+    ret = nf_conntrack_helpers_register(&mut SANE, PORTS_C * 2);
     if ret < 0 {
-        libc::free(sane_buffer);
+        libc::free(SANE_BUFFER);
         return ret;
     }
 
@@ -306,22 +306,22 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_sane_fini() {
-    nf_conntrack_helpers_unregister(&mut sane, ports_c * 2);
-    libc::free(sane_buffer);
+    nf_conntrack_helpers_unregister(&mut SANE, PORTS_C * 2);
+    libc::free(SANE_BUFFER);
 }
 
 // Expectation policy
-static sane_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
+static SANE_EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
     max_expected: 1,
     timeout: 5 * 60,
 };
 
 // Module macros
 #[no_mangle]
-pub static nf_conntrack_sane_init_fn: unsafe extern "C" fn() -> c_int = nf_conntrack_sane_init;
+pub static NF_CONNTRACK_SANE_INIT_FN: unsafe extern "C" fn() -> c_int = nf_conntrack_sane_init;
 #[no_mangle]
-pub static nf_conntrack_sane_fini_fn: unsafe extern "C" fn() = nf_conntrack_sane_fini;
+pub static NF_CONNTRACK_SANE_FINI_FN: unsafe extern "C" fn() = nf_conntrack_sane_fini;
 
 // Module license
 #[no_mangle]
-pub static nf_conntrack_sane_license: [u8; 4] = *b"GPL\0";
+pub static NF_CONNTRACK_SANE_LICENSE: [u8; 4] = *b"GPL\0";

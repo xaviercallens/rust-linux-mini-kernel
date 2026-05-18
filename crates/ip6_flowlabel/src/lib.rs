@@ -1,3 +1,4 @@
+
 //! IPv6 flowlabel manager for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -11,6 +12,7 @@
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use libc::{c_int, c_uint, c_ulong, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const FL_MIN_LINGER: c_ulong = 6; // 6 seconds
@@ -27,40 +29,10 @@ pub const EPERM: c_int = -1;
 // Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct RcuHead {
-    _unused: [u8; 0], // Placeholder - actual implementation depends on kernel RCU
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct TimerList {
-    _unused: [u8; 0], // Placeholder - actual implementation depends on kernel timers
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct SpinLock {
-    _unused: [u8; 0], // Placeholder - actual implementation depends on kernel spinlocks
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Net {
-    _unused: [u8; 0], // Placeholder - actual implementation depends on kernel net namespace
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct In6FlowlabelReq {
     flr_label: u32,
     flr_linger: c_ulong,
     _unused: [u8; 0], // ... rest of struct
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Sock {
-    _unused: [u8; 0], // Placeholder - actual implementation depends on kernel sock
 }
 
 #[repr(C)]
@@ -85,18 +57,6 @@ pub struct Ip6FlSocklist {
     fl: *mut Ip6Flowlabel,
     next: *mut Ip6FlSocklist,
     rcu: RcuHead,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Ipv6Txoptions {
-    hopopt: *mut c_void,
-    dst0opt: *mut c_void,
-    srcrt: *mut c_void,
-    dst1opt: *mut c_void,
-    opt_nflen: c_int,
-    opt_flen: c_int,
-    tot_len: c_int,
 }
 
 // Static variables
@@ -225,14 +185,14 @@ pub unsafe extern "C" fn fl_release(fl: *mut Ip6Flowlabel) {
         }
         ttd = (*fl).expires;
 
-        if (*fl).opt.is_some() && (*fl).share == 1 {
+        if !(*fl).opt.is_null() && (*fl).share == 1 {
             // Assuming IPV6_FL_S_EXCL
             let opt = (*fl).opt;
             (*fl).opt = ptr::null_mut();
             kfree(opt);
         }
 
-        if !timer_pending(&mut IP6_FL_GC_TIMER) || time_after(ip6_fl_gc_timer.expires, ttd) {
+        if !timer_pending(&mut IP6_FL_GC_TIMER) || time_after(IP6_FL_GC_TIMER.expires, ttd) {
             mod_timer(&mut IP6_FL_GC_TIMER, ttd);
         }
     }
@@ -469,4 +429,9 @@ unsafe extern "C" fn mod_timer(timer: *mut TimerList, expires: c_ulong) {}
 #[no_mangle]
 unsafe extern "C" fn static_branch_slow_dec_deferred(branch: *mut AtomicUsize) {
     (*branch).fetch_sub(1, Ordering::Relaxed);
+}
+
+#[no_mangle]
+unsafe extern "C" fn FL_HASH(label: u32) -> u32 {
+    label & FL_HASH_MASK
 }

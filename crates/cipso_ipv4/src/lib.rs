@@ -331,6 +331,9 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
     let entry = entry_ptr as *mut cipso_v4_map_cache_entry;
     (*entry).key = kmalloc(cipso_ptr_len as size_t, 0) as *mut u8;
     if (*entry).key.is_null() {
+        extern "C" {
+            fn kfree(ptr: *mut c_void);
+        }
         kfree(entry as *mut c_void);
         return ENOMEM;
     }

@@ -6,12 +6,12 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::missing_docs_in_private_items)]
 
 use core::ffi::c_int;
 use core::ffi::c_void;
 use core::mem;
 use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const IPPROTO_UDP: c_int = 17;
@@ -21,96 +21,61 @@ pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 
 // Type definitions
+
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sk_buff {
-    head: *mut u8,
-    data: *mut u8,
-    len: usize,
-    ip_summed: c_int,
-    csum_level: c_int,
-    mac_header: isize,
-    network_header: isize,
-    encapsulation: c_int,
-    encap_hdr_csum: c_int,
-    dev: *mut c_void,
-    pub headroom: usize,
+pub struct skb_shared_info {
     pub data_len: usize,
-    pub truesize: usize,
+    pub nr_frags: u16,
+    pub gso_size: u16,
+    pub gso_type: u16,
+    pub gso_segs: u16,
     pub _padding: [u8; 128], // Placeholder for other fields
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct skb_shared_info {
-    data_len: usize,
-    nr_frags: u16,
-    gso_size: u16,
-    gso_type: u16,
-    gso_segs: u16,
-    _padding: [u8; 128], // Placeholder for other fields
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    pub saddr: [u8; 16],
-    pub daddr: [u8; 16],
-    _padding: [u8; 40], // Placeholder for other fields
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct udphdr {
-    source: u16,
-    dest: u16,
-    len: u16,
-    check: u16,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct frag_hdr {
-    nexthdr: u8,
-    reserved: u16,
-    frag_off: u16,
-    identification: u32,
+    pub nexthdr: u8,
+    pub reserved: u16,
+    pub frag_off: u16,
+    pub identification: u32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net_offload {
-    callbacks: net_offload_callbacks,
+    pub callbacks: net_offload_callbacks,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net_offload_callbacks {
-    gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
-    gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
-    gro_complete: extern "C" fn(skb: *mut sk_buff, nhoff: c_int) -> c_int,
+    pub gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
+    pub gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
+    pub gro_complete: extern "C" fn(skb: *mut sk_buff, nhoff: c_int) -> c_int,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct NapiGroCb {
-    flush: c_int,
-    is_ipv6: c_int,
-    is_flist: c_int,
-    encap_mark: c_int,
-    mac_offset: isize,
-    count: u16,
+    pub flush: c_int,
+    pub is_ipv6: c_int,
+    pub is_flist: c_int,
+    pub encap_mark: c_int,
+    pub mac_offset: isize,
+    pub count: u16,
 }
 
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> *mut sk_buff {
-    let segs = ptr::addr_of_mut!(*skb).segs;
-    if segs.is_null() {
-        return ptr::addr_of_mut!(*skb).segs;
+    let shinfo = skb_shinfo(skb);
+    if shinfo.is_null() {
+        return ptr::null_mut();
     }
 
-    let mss = (*skb_shinfo(skb)).gso_size;
+    let mss = (*shinfo).gso_size;
     let unfrag_ip6hlen = 0; // Placeholder
     let unfrag_len = 0; // Placeholder
     let packet_start = ptr::null_mut();
@@ -124,7 +89,7 @@ pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> 
     unsafe {
         // ... (actual implementation would go here)
         // This is a simplified skeleton due to the complexity of the original code
-        ptr::addr_of_mut!(*skb).segs
+        ptr::null_mut()
     }
 }
 
@@ -137,6 +102,10 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
     // SAFETY: Assume skb is valid and contains a valid network header
     unsafe {
         let iph = skb_gro_network_header(skb);
+        if iph.is_null() {
+            return ptr::null_mut();
+        }
+
         __udp6_lib_lookup(
             dev_net((*skb).dev),
             &(*iph).saddr,
@@ -155,18 +124,20 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
 pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
     let uh = udp_gro_udphdr(skb);
     if uh.is_null() {
-        NAPI_GRO_CB(skb).flush = 1;
+        let napi_cb = NAPI_GRO_CB(skb);
+        (*napi_cb).flush = 1;
         return ptr::null_mut();
     }
 
-    if NAPI_GRO_CB(skb).flush != 0 {
+    let napi_cb = NAPI_GRO_CB(skb);
+    if (*napi_cb).flush != 0 {
         return ptr::null_mut();
     }
 
     if skb_gro_checksum_validate_zero_check(skb, IPPROTO_UDP, (*uh).check, ip6_gro_compute_pseudo)
         != 0
     {
-        NAPI_GRO_CB(skb).flush = 1;
+        (*napi_cb).flush = 1;
         return ptr::null_mut();
     }
 
@@ -174,7 +145,7 @@ pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) 
         skb_gro_checksum_try_convert(skb, IPPROTO_UDP, ip6_gro_compute_pseudo);
     }
 
-    NAPI_GRO_CB(skb).is_ipv6 = 1;
+    (*napi_cb).is_ipv6 = 1;
     rcu_read_lock();
 
     if static_branch_unlikely(&udpv6_encap_needed_key) != 0 {
@@ -193,16 +164,26 @@ pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) 
 #[no_mangle]
 pub unsafe extern "C" fn udp6_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
     let ipv6h = ipv6_hdr(skb);
-    let uh = (skb.offset(nhoff as isize) as *mut udphdr)
-        .as_mut()
-        .unwrap();
+    if ipv6h.is_null() {
+        return EINVAL;
+    }
 
-    if NAPI_GRO_CB(skb).is_flist != 0 && NAPI_GRO_CB(skb).encap_mark == 0 {
-        (*uh).len = ((skb.len - nhoff as usize) as u16).to_be();
+    let uh = (skb.offset(nhoff as isize) as *mut udphdr);
+    if uh.is_null() {
+        return EINVAL;
+    }
+
+    let napi_cb = NAPI_GRO_CB(skb);
+    if (*napi_cb).is_flist != 0 && (*napi_cb).encap_mark == 0 {
+        (*uh).len = ((*skb).len - nhoff as usize) as u16;
 
         let shinfo = skb_shinfo(skb);
+        if shinfo.is_null() {
+            return EINVAL;
+        }
+
         (*shinfo).gso_type |= (1 << 1) | (1 << 2); // SKB_GSO_FRAGLIST | SKB_GSO_UDP_L4
-        (*shinfo).gso_segs = NAPI_GRO_CB(skb).count;
+        (*shinfo).gso_segs = (*napi_cb).count;
 
         if (*skb).ip_summed == 1 {
             // CHECKSUM_UNNECESSARY
@@ -220,7 +201,7 @@ pub unsafe extern "C" fn udp6_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c
 
     if (*uh).check != 0 {
         (*uh).check = !udp_v6_check(
-            (skb.len - nhoff as usize) as u16,
+            ((*skb).len - nhoff as usize) as u16,
             &(*ipv6h).saddr,
             &(*ipv6h).daddr,
             0,
@@ -289,14 +270,16 @@ extern "C" {
     fn udp6_lib_lookup_skb(...) -> *mut c_void;
     fn inet6_add_offload(offload: *const net_offload, protocol: c_int) -> c_int;
     fn inet6_del_offload(offload: *const net_offload, protocol: c_int) -> c_int;
+    fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut NapiGroCb;
+    fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
 }
 
 // Static data
 static udpv6_offload: net_offload = net_offload {
     callbacks: net_offload_callbacks {
-        gso_segment: Some(udp6_ufo_fragment),
-        gro_receive: Some(udp6_gro_receive),
-        gro_complete: Some(udp6_gro_complete),
+        gso_segment: udp6_ufo_fragment,
+        gro_receive: udp6_gro_receive,
+        gro_complete: udp6_gro_complete,
     },
 };
 

@@ -6,7 +6,6 @@
 #![no_std]
 #![allow(non_camel_case_types)] // For C-style type names
 
-
 use kernel_types::*;
 use core::ffi::c_int;
 
@@ -17,8 +16,8 @@ pub const INET6_PROTO_GSO_EXTHDR: c_int = 0x0001; // Assuming this value; actual
 
 // Type definitions
 #[repr(C)]
-struct NetOffload {
-    flags: c_int,
+pub struct NetOffload {
+    pub flags: c_int,
 }
 
 // Static offload instances
@@ -58,9 +57,10 @@ pub unsafe extern "C" fn ipv6_exthdrs_offload_init() -> c_int {
     if ret != 0 {
         // SAFETY: RTHDR_OFFLOAD is still valid and IPPROTO_ROUTING is a valid protocol
         inet6_del_offload(&RTHDR_OFFLOAD, IPPROTO_ROUTING);
+        return ret;
     }
 
-    ret
+    0
 }
 
 // Tests (conditional compilation)

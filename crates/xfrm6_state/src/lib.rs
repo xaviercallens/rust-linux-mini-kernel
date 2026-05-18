@@ -1,6 +1,3 @@
-Here's the fixed Rust code for the 'xfrm6_state' module:
-
-```rust
 //! IPv6 XFRM state management module
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -17,9 +14,9 @@ pub const AF_INET6: c_int = 10;
 pub const IPPROTO_IPV6: c_int = 41;
 
 // Function pointer types
-type OutputFn = extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int;
-type TransportFinishFn = extern "C" fn(*mut sk_buff, *mut xfrm_state) -> c_int;
-type LocalErrorFn = extern "C" fn(*mut sk_buff, *mut sockaddr, *mut xfrm_state) -> c_int;
+type OutputFn = extern "C" fn(*mut c_void, *mut c_void) -> c_int;
+type TransportFinishFn = extern "C" fn(*mut c_void, *mut c_void) -> c_int;
+type LocalErrorFn = extern "C" fn(*mut c_void, *mut sockaddr, *mut c_void) -> c_int;
 
 #[repr(C)]
 struct xfrm_state_afinfo {
@@ -38,9 +35,9 @@ extern "C" {
 
 // External functions from other modules
 extern "C" {
-    fn xfrm6_output(x: *mut xfrm_state, skb: *mut sk_buff) -> c_int;
-    fn xfrm6_transport_finish(skb: *mut sk_buff, x: *mut xfrm_state) -> c_int;
-    fn xfrm6_local_error(skb: *mut sk_buff, addr: *mut sockaddr, x: *mut xfrm_state) -> c_int;
+    fn xfrm6_output(x: *mut c_void, skb: *mut c_void) -> c_int;
+    fn xfrm6_transport_finish(skb: *mut c_void, x: *mut c_void) -> c_int;
+    fn xfrm6_local_error(skb: *mut c_void, addr: *mut sockaddr, x: *mut c_void) -> c_int;
 }
 
 // Static variable - must be mutable to match C behavior

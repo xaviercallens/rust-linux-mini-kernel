@@ -157,7 +157,7 @@ pub unsafe extern "C" fn gre_parse_header(
     }
 
     let greh = (skb.add(nhs)) as *const gre_base_hdr;
-    if (greh as *const u8).read_volatile() & (GRE_VERSION | GRE_ROUTING) != 0 {
+    if (*greh).flags & (GRE_VERSION | GRE_ROUTING) != 0 {
         return EINVAL;
     }
 
@@ -172,35 +172,38 @@ pub unsafe extern "C" fn gre_parse_header(
     let greh = (skb.add(nhs)) as *const gre_base_hdr;
     (*tpi).proto = (*greh).protocol;
 
-    let options = (greh as *const u8).add(core::mem::size_of::<gre_base_hdr>()) as *const u32;
+    let mut options = (greh as *const u8).add(core::mem::size_of::<gre_base_hdr>()) as *const u32;
 
     if (*greh).flags & GRE_CSUM != 0 {
         if !skb_checksum_simple_validate(skb) {
             skb_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo);
         } else if !csum_err.is_null() {
-            *csum_err.write_volatile(true);
+            *csum_err = true;
             return EINVAL;
         }
-        options.add(1);
+        // SAFETY: options is valid pointer
+        options = options.add(1);
     }
 
     if (*greh).flags & GRE_KEY != 0 {
         (*tpi).key = *options;
-        options.add(1);
+        // SAFETY: options is valid pointer
+        options = options.add(1);
     } else {
         (*tpi).key = 0;
     }
 
     if (*greh).flags & GRE_SEQ != 0 {
         (*tpi).seq = *options;
-        options.add(1);
+        // SAFETY: options is valid pointer
+        options = options.add(1);
     } else {
         (*tpi).seq = 0;
     }
 
     // WCCP version handling
     if (*greh).flags == 0 && (*tpi).proto == htons(ETH_P_WCCP) {
-        let val = skb_header_pointer(skb, nhs + hdr_len, 1, 0 as *mut u8) as *const u8;
+        let val = skb_header_pointer(skb, nhs + hdr_len, 1, ptr::null_mut()) as *const u8;
         if val.is_null() {
             return EINVAL;
         }
@@ -237,7 +240,7 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
         return -1;
     }
 
-    let ver = (*skb as *mut u8).add(1).read_volatile() & 0x7f;
+    let ver = (*(skb as *mut u8).add(1)).read_volatile() & 0x7f;
     if ver as usize >= GREPROTO_MAX {
         goto_drop(skb);
         return -1;

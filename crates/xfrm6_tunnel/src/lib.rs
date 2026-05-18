@@ -108,7 +108,7 @@ static mut xfrm6_tunnel_spi_lock: spinlock_t = spinlock_t { _private: 0 };
 static mut xfrm6_tunnel_net_ops: pernet_operations = pernet_operations {
     init: xfrm6_tunnel_net_init,
     exit: xfrm6_tunnel_net_exit,
-    id: &xfrm6_tunnel_net_id,
+    id: &mut xfrm6_tunnel_net_id,
     size: mem::size_of::<xfrm6_tunnel_net>() as c_int,
 };
 
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_spi_lookup(
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
 
-        let head = &xfrm6_tn.spi_byaddr[h as usize];
+        let head = &(*xfrm6_tn).spi_byaddr[h as usize];
         let mut node = head.first;
 
         while !node.is_null() {
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
 
-        let head = &xfrm6_tn.spi_byaddr[h as usize];
+        let head = &(*xfrm6_tn).spi_byaddr[h as usize];
         let mut node = head.first;
 
         while !node.is_null() {
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_free_spi(net: *mut net, saddr: *mut xfrm_a
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
 
-        let head = &xfrm6_tn.spi_byaddr[h as usize];
+        let head = &(*xfrm6_tn).spi_byaddr[h as usize];
         let mut node = head.first;
         let mut prev: *mut *mut hlist_node = head.first as *mut *mut hlist_node;
 
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_spi_check(net: *mut net, spi: u32) -> c_
     let xfrm6_tn = xfrm6_tunnel_pernet(net);
     let h = xfrm6_tunnel_spi_hash_byspi(spi);
 
-    let head = &xfrm6_tn.spi_byspi[h as usize];
+    let head = &(*xfrm6_tn).spi_byspi[h as usize];
     let mut node = head.first;
 
     while !node.is_null() {
@@ -309,13 +309,13 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
     let mut spi: u32 = 0;
     let mut index: c_int = -1;
 
-    if xfrm6_tn.spi < XFRM6_TUNNEL_SPI_MIN || xfrm6_tn.spi >= XFRM6_TUNNEL_SPI_MAX {
-        xfrm6_tn.spi = XFRM6_TUNNEL_SPI_MIN;
+    if (*xfrm6_tn).spi < XFRM6_TUNNEL_SPI_MIN || (*xfrm6_tn).spi >= XFRM6_TUNNEL_SPI_MAX {
+        (*xfrm6_tn).spi = XFRM6_TUNNEL_SPI_MIN;
     } else {
-        xfrm6_tn.spi += 1;
+        (*xfrm6_tn).spi += 1;
     }
 
-    for spi in xfrm6_tn.spi..=XFRM6_TUNNEL_SPI_MAX {
+    for spi in (*xfrm6_tn).spi..=XFRM6_TUNNEL_SPI_MAX {
         index = __xfrm6_tunnel_spi_check(net, spi);
         if index >= 0 {
             break;
@@ -323,7 +323,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
     }
 
     if index < 0 {
-        for spi in XFRM6_TUNNEL_SPI_MIN..xfrm6_tn.spi {
+        for spi in XFRM6_TUNNEL_SPI_MIN..(*xfrm6_tn).spi {
             index = __xfrm6_tunnel_spi_check(net, spi);
             if index >= 0 {
                 break;
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
     }
 
     if index >= 0 {
-        xfrm6_tn.spi = spi;
+        (*xfrm6_tn).spi = spi;
 
         // Allocate new SPI entry
         let x6spi = kmem_cache_alloc(xfrm6_tunnel_spi_kmem, 0) as *mut xfrm6_tunnel_spi;
@@ -345,13 +345,13 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
             let h_byspi = xfrm6_tunnel_spi_hash_byspi(spi);
             hlist_add_head_rcu(
                 &mut (*x6spi).list_byspi,
-                &mut xfrm6_tn.spi_byspi[h_byspi as usize],
+                &mut (*xfrm6_tn).spi_byspi[h_byspi as usize],
             );
 
             let h_byaddr = xfrm6_tunnel_spi_hash_byaddr(&(*x6spi).addr);
             hlist_add_head_rcu(
                 &mut (*x6spi).list_byaddr,
-                &mut xfrm6_tn.spi_byaddr[h_byaddr as usize],
+                &mut (*xfrm6_tn).spi_byaddr[h_byaddr as usize],
             );
         }
     }

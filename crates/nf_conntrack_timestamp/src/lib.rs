@@ -1,6 +1,3 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_timestamp':
-
-```rust
 // SPDX-License-Identifier: GPL-2.0-or-later
 //!
 //! This module implements connection tracking timestamp functionality for the Linux kernel.
@@ -12,7 +9,7 @@ Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_timesta
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use core::ffi::{c_char, c_int};
+use core::ffi::{c_char, c_int, c_void};
 use kernel_types::*;
 
 // Kernel constants
@@ -23,35 +20,43 @@ const ENOMEM: c_int = -12;
 const NF_CT_EXT_TSTAMP: u32 = 0; // Actual value defined in kernel headers
 
 // Module parameter
-static mut nf_ct_tstamp: bool = false;
+static mut NF_CT_TSTAMP: bool = false;
 
 // Extension descriptor
-static TSTAMP_EXTEND: nf_ct_ext_type = nf_ct_ext_type {
-    len: core::mem::size_of::<nf_conn_tstamp>() as u32,
-    align: core::mem::align_of::<nf_conn_tstamp>() as u32,
+#[repr(C)]
+struct NF_CT_EXT_TYPE {
+    len: u32,
+    align: u32,
+    id: u32,
+}
+
+static TSTAMP_EXTEND: NF_CT_EXT_TYPE = NF_CT_EXT_TYPE {
+    len: core::mem::size_of::<NF_CONN_TSTAMP>() as u32,
+    align: core::mem::align_of::<NF_CONN_TSTAMP>() as u32,
     id: NF_CT_EXT_TSTAMP,
 };
 
 // Opaque type from kernel headers
 #[repr(C)]
-struct nf_conn_tstamp {
+struct NF_CONN_TSTAMP {
     // Actual fields defined in kernel headers
 }
 
 // External kernel functions
 extern "C" {
-    fn nf_ct_extend_register(ext: *const nf_ct_ext_type) -> c_int;
-    fn nf_ct_extend_unregister(ext: *const nf_ct_ext_type);
+    fn nf_ct_extend_register(ext: *const NF_CT_EXT_TYPE) -> c_int;
+    fn nf_ct_extend_unregister(ext: *const NF_CT_EXT_TYPE);
     fn pr_err(fmt: *const c_char);
 }
 
 // Module parameter initialization
 #[no_mangle]
-pub unsafe extern "C" fn nf_conntrack_tstamp_pernet_init(net: *mut net) -> c_int {
+pub unsafe extern "C" fn nf_conntrack_tstamp_pernet_init(net: *mut c_void) -> c_int {
     // SAFETY: Kernel guarantees valid net pointer during pernet init
     //         and exclusive access to sysctl_tstamp field
     unsafe {
-        (*net).ct.sysctl_tstamp = nf_ct_tstamp;
+        let net_ptr = net as *mut net;
+        (*net_ptr).ct.sysctl_tstamp = NF_CT_TSTAMP;
     }
     0
 }
@@ -86,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_extension_size() {
-        assert!(core::mem::size_of::<nf_conn_tstamp>() > 0);
-        assert!(core::mem::align_of::<nf_conn_tstamp>() > 0);
+        assert!(core::mem::size_of::<NF_CONN_TSTAMP>() > 0);
+        assert!(core::mem::align_of::<NF_CONN_TSTAMP>() > 0);
     }
 }

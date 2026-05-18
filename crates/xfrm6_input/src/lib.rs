@@ -1,6 +1,3 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'xfrm6_input':
-
-```rust
 //! IPv6 XFRM (IPsec) Input Processing
 //!
 //! This module implements the IPv6-specific input path for XFRM (IPsec) in the Linux kernel.

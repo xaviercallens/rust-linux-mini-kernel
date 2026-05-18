@@ -1,3 +1,4 @@
+
 //! Connection tracking support for PPTP (Point to Point Tunneling Protocol).
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -113,14 +114,6 @@ pub struct nf_conntrack_gre_address {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub proto: nf_conn_proto,
-    pub master: *mut nf_conn,
-    pub status: c_int,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conn_proto {
     pub gre: nf_conn_proto_gre,
 }
@@ -170,10 +163,10 @@ pub type nf_nat_pptp_hook_exp_gre_t =
 pub type nf_nat_pptp_hook_expectfn_t = unsafe extern "C" fn(*mut nf_conn, *mut nf_conntrack_expect);
 
 // Exported symbols
-static mut nf_nat_pptp_hook_outbound: nf_nat_pptp_hook_outbound_t = ptr::null_mut();
-static mut nf_nat_pptp_hook_inbound: nf_nat_pptp_hook_inbound_t = ptr::null_mut();
-static mut nf_nat_pptp_hook_exp_gre: nf_nat_pptp_hook_exp_gre_t = ptr::null_mut();
-static mut nf_nat_pptp_hook_expectfn: nf_nat_pptp_hook_expectfn_t = ptr::null_mut();
+pub static mut NF_NAT_PPTP_HOOK_OUTBOUND: nf_nat_pptp_hook_outbound_t = ptr::null_mut();
+pub static mut NF_NAT_PPTP_HOOK_INBOUND: nf_nat_pptp_hook_inbound_t = ptr::null_mut();
+pub static mut NF_NAT_PPTP_HOOK_EXP_GRE: nf_nat_pptp_hook_exp_gre_t = ptr::null_mut();
+pub static mut NF_NAT_PPTP_HOOK_EXPECTFN: nf_nat_pptp_hook_expectfn_t = ptr::null_mut();
 
 // Spinlock (opaque type for kernel compatibility)
 #[repr(C)]
@@ -182,7 +175,7 @@ pub struct spinlock_t {
     _private: [u8; 0],
 }
 
-static nf_pptp_lock: spinlock_t = spinlock_t { _private: [] };
+static NF_PPTP_LOCK: spinlock_t = spinlock_t { _private: [] };
 
 // Function implementations
 /// Increase timeouts for GRE data channel
@@ -200,7 +193,7 @@ pub unsafe extern "C" fn pptp_expectfn(ct: *mut nf_conn, exp: *mut nf_conntrack_
     (*ct).proto.gre.timeout = PPTP_GRE_TIMEOUT;
     (*ct).proto.gre.stream_timeout = PPTP_GRE_STREAM_TIMEOUT;
 
-    let nf_nat_pptp_expectfn = nf_nat_pptp_hook_expectfn;
+    let nf_nat_pptp_expectfn = NF_NAT_PPTP_HOOK_EXPECTFN;
     if !nf_nat_pptp_expectfn.is_null() && !(*ct).master.is_null() && (*(*ct).master).status & 1 != 0
     {
         nf_nat_pptp_expectfn(ct, exp);

@@ -44,7 +44,7 @@ pub struct ip_tunnel_prl_entry {
 #[derive(Copy, Clone)]
 pub struct ip_tunnel {
     pub parms: ip_tunnel_parm,
-    pub dev: *mut net_device,
+    pub dev: *mut c_void,
     pub next: *mut ip_tunnel,
     pub prl: *mut ip_tunnel_prl_entry,
     pub prl_count: c_int,
@@ -59,7 +59,7 @@ pub struct sit_net {
     pub tunnels_l: [*mut ip_tunnel; IP6_SIT_HASH_SIZE],
     pub tunnels_wc: [*mut ip_tunnel; 1],
     pub tunnels: [*mut ip_tunnel; 4],
-    pub fb_tunnel_dev: *mut net_device,
+    pub fb_tunnel_dev: *mut c_void,
 }
 
 // Function implementations
@@ -72,7 +72,7 @@ pub struct sit_net {
 /// # Returns
 /// 0 on success, error code on failure
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_init(dev: *mut net_device) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_init(dev: *mut c_void) -> c_int {
     if dev.is_null() {
         return -EINVAL;
     }
@@ -86,7 +86,7 @@ pub unsafe extern "C" fn ipip6_tunnel_init(dev: *mut net_device) -> c_int {
 /// # Safety
 /// - `dev` must be a valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_setup(dev: *mut net_device) {
+pub unsafe extern "C" fn ipip6_tunnel_setup(dev: *mut c_void) {
     if dev.is_null() {
         return;
     }
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn ipip6_tunnel_setup(dev: *mut net_device) {
 /// # Safety
 /// - `dev` must be a valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_dev_free(dev: *mut net_device) {
+pub unsafe extern "C" fn ipip6_dev_free(dev: *mut c_void) {
     if dev.is_null() {
         return;
     }
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn ipip6_dev_free(dev: *mut net_device) {
 #[no_mangle]
 pub unsafe extern "C" fn ipip6_tunnel_lookup(
     net: *mut c_void,
-    dev: *mut net_device,
+    dev: *mut c_void,
     remote: __be32,
     local: __be32,
     sifindex: c_int,
@@ -199,7 +199,7 @@ pub unsafe extern "C" fn ipip6_tunnel_link(sitn: *mut sit_net, t: *mut ip_tunnel
 /// - `dev` must be valid pointer to net_device
 /// - `sitn` must be valid pointer to sit_net
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(dev: *mut net_device, sitn: *mut sit_net) {
+pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(dev: *mut c_void, sitn: *mut sit_net) {
     if dev.is_null() || sitn.is_null() {
         return;
     }
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn ipip6_tunnel_clone_6rd(dev: *mut net_device, sitn: *mut
 /// # Safety
 /// - `dev` must be valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_create(dev: *mut net_device) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_create(dev: *mut c_void) -> c_int {
     if dev.is_null() {
         return -EINVAL;
     }
@@ -264,7 +264,7 @@ pub unsafe extern "C" fn __ipip6_tunnel_locate_prl(
 /// - `dev` must be valid pointer to net_device
 /// - `ifr` must be valid pointer to ifreq
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_get_prl(dev: *mut net_device, ifr: *mut c_void) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_get_prl(dev: *mut c_void, ifr: *mut c_void) -> c_int {
     if dev.is_null() || ifr.is_null() {
         return -EINVAL;
     }
@@ -319,7 +319,7 @@ const INADDR_ANY: u32 = 0; // 0.0.0.0
 /// # Safety
 /// - `dev` must be valid pointer to net_device
 #[no_mangle]
-pub unsafe extern "C" fn dev_to_sit_net(dev: *mut net_device) -> *mut sit_net {
+pub unsafe extern "C" fn dev_to_sit_net(dev: *mut c_void) -> *mut sit_net {
     if dev.is_null() {
         return ptr::null_mut();
     }

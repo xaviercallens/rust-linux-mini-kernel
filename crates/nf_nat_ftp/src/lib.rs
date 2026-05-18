@@ -1,3 +1,4 @@
+
 //! FTP NAT helper for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -60,21 +61,8 @@ pub struct nf_ct_port {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conn_tuplehash; 2],
-    pub nfct_net: *mut c_void,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conn_tuplehash {
     pub tuple: nf_conntrack_tuple,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_helper {
-    pub name: *const u8,
 }
 
 #[repr(C)]
@@ -109,7 +97,7 @@ pub unsafe extern "C" fn nf_nat_ftp_fmt_cmd(
             len as c_int
         },
         NF_CT_FTP_EPRT => {
-            if (*ct).nfct_net as u32 == NFPROTO_IPV4 {
+            if nf_ct_l3num(ct) == NFPROTO_IPV4 {
                 let mut result = format_args!("|1|%pI4|%u|", &addr.ip, port);
                 let len = write(buffer, buflen, &result);
                 len as c_int
@@ -190,18 +178,18 @@ pub unsafe extern "C" fn nf_nat_ftp(
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_ftp_fini() {
-    nf_nat_helper_unregister(&nat_helper_ftp);
-    RCU_INIT_POINTER(nf_nat_ftp_hook, ptr::null_mut());
+    nf_nat_helper_unregister(&NAT_HELPER_FTP);
+    RCU_INIT_POINTER(&mut NF_NAT_FTP_HOOK, ptr::null_mut());
     synchronize_rcu();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_ftp_init() -> c_int {
-    if !nf_nat_ftp_hook.is_null() {
+    if !NF_NAT_FTP_HOOK.is_null() {
         return -1; // BUG_ON
     }
-    nf_nat_helper_register(&nat_helper_ftp);
-    RCU_INIT_POINTER(nf_nat_ftp_hook, nf_nat_ftp);
+    nf_nat_helper_register(&NAT_HELPER_FTP);
+    RCU_INIT_POINTER(&mut NF_NAT_FTP_HOOK, nf_nat_ftp as *mut c_void);
     0
 }
 
@@ -218,13 +206,13 @@ static NF_CT_NAT_HELPER_INIT: nf_conntrack_helper = nf_conntrack_helper {
     name: NAT_HELPER_NAME.as_ptr() as *const u8,
 };
 
-static mut nat_helper_ftp: nf_nat_helper = nf_nat_helper {
+static mut NAT_HELPER_FTP: nf_nat_helper = nf_nat_helper {
     name: NAT_HELPER_NAME.as_ptr() as *const u8,
 };
 
 // Module macros
 #[no_mangle]
-pub static nf_nat_ftp_hook: extern "C" fn() = nf_nat_ftp;
+pub static mut NF_NAT_FTP_HOOK: *mut c_void = ptr::null_mut();
 
 // FFI compatibility functions
 #[no_mangle]
@@ -307,10 +295,10 @@ pub unsafe extern "C" fn pr_info(msg: *const u8) {
 
 // Module exports
 #[no_mangle]
-pub static nf_nat_ftp_module: Module = Module {
-    license: "GPL\0".as_ptr() as *const u8,
-    author: "Rusty Russell <rusty@rustcorp.com.au>\0".as_ptr() as *const u8,
-    description: "ftp NAT helper\0".as_ptr() as *const u8,
+pub static NF_NAT_FTP_MODULE: Module = Module {
+    license: b"GPL\0".as_ptr() as *const u8,
+    author: b"Rusty Russell <rusty@rustcorp.com.au>\0".as_ptr() as *const u8,
+    description: b"ftp NAT helper\0".as_ptr() as *const u8,
 };
 
 #[repr(C)]

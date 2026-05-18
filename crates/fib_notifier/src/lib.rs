@@ -132,7 +132,7 @@ pub unsafe extern "C" fn fib4_dump(
         return EINVAL;
     }
 
-    let mut err: c_int = fib4_rules_dump(net, nb, extack);
+    let err = fib4_rules_dump(net, nb, extack);
     if err != 0 {
         return err;
     }

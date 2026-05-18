@@ -1,6 +1,3 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'ipcomp6':
-
-```rust
 //! IP Payload Compression Protocol (IPComp) for IPv6 - RFC3173
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -19,6 +16,10 @@ pub const XFRM_STATE_DEAD: c_int = 2;
 pub const ENOMEM: c_int = -12;
 pub const EINVAL: c_int = -22;
 pub const EAGAIN: c_int = -11;
+pub const AF_INET6: c_int = 10;
+pub const IPPROTO_IPV6: c_int = 41;
+pub const XFRM_MODE_TRANSPORT: c_int = 0;
+pub const XFRM_MODE_TUNNEL: c_int = 1;
 
 // Type definitions
 #[repr(C)]
@@ -65,7 +66,7 @@ pub unsafe extern "C" fn ipcomp6_err(
         &(*iph).daddr as *const _ as *const xfrm_address_t,
         spi,
         IPPROTO_COMP,
-        10, // AF_INET6
+        AF_INET6,
     );
 
     if x.is_null() {
@@ -177,7 +178,7 @@ pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
             &(*x).id.daddr as *const _ as *const xfrm_address_t,
             spi,
             IPPROTO_IPV6,
-            10 // AF_INET6
+            AF_INET6
         );
     }
 
@@ -210,8 +211,8 @@ pub unsafe extern "C" fn ipcomp6_init_state(x: *mut xfrm_state) -> c_int {
     (*x).props.header_len = 0;
 
     match (*x).props.mode {
-        1 => {} // XFRM_MODE_TRANSPORT
-        2 => { // XFRM_MODE_TUNNEL
+        XFRM_MODE_TRANSPORT => {}
+        XFRM_MODE_TUNNEL => {
             (*x).props.header_len += core::mem::size_of::<ipv6hdr>() as c_int;
         },
         _ => return -EINVAL,
@@ -222,7 +223,7 @@ pub unsafe extern "C" fn ipcomp6_init_state(x: *mut xfrm_state) -> c_int {
         return err;
     }
 
-    if (*x).props.mode == 2 {
+    if (*x).props.mode == XFRM_MODE_TUNNEL {
         err = ipcomp6_tunnel_attach(x);
         if err != 0 {
             return err;
@@ -248,13 +249,13 @@ pub unsafe extern "C" fn ipcomp6_rcv_cb(skb: *mut sk_buff, err: c_int) -> c_int 
 // Module initialization and cleanup
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_init() -> c_int {
-    if xfrm_register_type(&ipcomp6_type, 10) < 0 {
+    if xfrm_register_type(&ipcomp6_type, AF_INET6) < 0 {
         return -EAGAIN;
     }
 
     if xfrm6_protocol_register(&ipcomp6_protocol, IPPROTO_COMP) < 0 {
         pr_info(b"ipcomp6_init: can't add protocol\n".as_ptr() as *const c_char);
-        xfrm_unregister_type(&ipcomp6_type, 10);
+        xfrm_unregister_type(&ipcomp6_type, AF_INET6);
         return -EAGAIN;
     }
 
@@ -266,7 +267,7 @@ pub unsafe extern "C" fn ipcomp6_fini() {
     if xfrm6_protocol_deregister(&ipcomp6_protocol, IPPROTO_COMP) < 0 {
         pr_info(b"ipcomp6_fini: can't remove protocol\n".as_ptr() as *const c_char);
     }
-    xfrm_unregister_type(&ipcomp6_type, 10);
+    xfrm_unregister_type(&ipcomp6_type, AF_INET6);
 }
 
 // Static data

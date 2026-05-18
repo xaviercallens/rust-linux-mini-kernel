@@ -10,9 +10,7 @@
 use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_void;
-use core::mem;
 use core::ptr;
-use core::slice;
 use kernel_types::*;
 
 // Constants from C header files
@@ -215,10 +213,10 @@ pub unsafe extern "C" fn inet_get_local_port_range(
 
     let mut seq: c_int = 0;
     loop {
-        seq = read_seqbegin(&(*net).ipv4.ip_local_ports.lock);
+        seq = read_seqbegin(&mut (*net).ipv4.ip_local_ports.lock);
         *low = (*net).ipv4.ip_local_ports.range[0];
         *high = (*net).ipv4.ip_local_ports.range[1];
-        if !read_seqretry(&(*net).ipv4.ip_local_ports.lock, seq) {
+        if !read_seqretry(&mut (*net).ipv4.ip_local_ports.lock, seq) {
             break;
         }
     }
@@ -313,5 +311,3 @@ pub unsafe extern "C" fn inet_rcv_saddr_any(sk: *const sock) -> bool {
 // Constants
 pub const AF_INET6: c_int = 10;
 pub const AF_INET: c_int = 2;
-
-// Additional functions would be implemented here following the same pattern

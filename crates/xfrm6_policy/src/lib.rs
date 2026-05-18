@@ -30,17 +30,6 @@ pub struct xfrm_address_t {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rt6_info {
-    pub rt6i_flags: c_int,
-    pub rt6i_gateway: in6_addr,
-    pub rt6i_dst: in6_addr,
-    pub rt6i_src: in6_addr,
-    pub rt6i_idev: *mut inet6_dev,
-    pub rt6i_uncached: ListHead,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct xfrm_dst {
     pub u: dst_entry,
     pub rt6: rt6_info,

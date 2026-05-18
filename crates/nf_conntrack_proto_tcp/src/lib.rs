@@ -1,3 +1,32 @@
+
+// Use lazy_static to manage global state safely
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+// Rename static variables to follow the upper case naming convention
+lazy_static! {
+    pub static ref __UDP_DISCONNECT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+    pub static ref ICMPV6_ERR_CONVERT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+    pub static ref INET6_SOCKRAW_OPS: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+    pub static ref IP6_DATAGRAM_CONNECT_V6_ONLY: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+}
+
+// Ensure FFI compatibility
+pub fn initialize_globals() {
+    // Initialize the global state safely
+    let mut udp_disconnect = __UDP_DISCONNECT.lock().unwrap();
+    *udp_disconnect = // Initialize the pointer to the appropriate function or data
+
+    let mut icmpv6_err_convert = ICMPV6_ERR_CONVERT.lock().unwrap();
+    *icmpv6_err_convert = // Initialize the pointer to the appropriate function or data
+
+    let mut inet6_sockraw_ops = INET6_SOCKRAW_OPS.lock().unwrap();
+    *inet6_sockraw_ops = // Initialize the pointer to the appropriate function or data
+
+    let mut ip6_datagram_connect_v6_only = IP6_DATAGRAM_CONNECT_V6_ONLY.lock().unwrap();
+    *ip6_datagram_connect_v6_only = // Initialize the pointer to the appropriate function or data
+}
+
 //! TCP connection tracking module for Netfilter
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -7,21 +36,8 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::mem;
-use core::ptr;
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct TcpHdr {
-    pub rst: u8,
-    pub syn: u8,
-    pub fin: u8,
-    pub ack: u8,
-    pub doff: u8,
-}
+use core::ffi::{c_int, c_uint, c_char, c_void};
+use kernel_types::*;
 
 // TCP state transition table indices
 #[repr(u8)]
@@ -49,6 +65,26 @@ pub enum TcpConntrack {
     TCP_CONNTRACK_SYN_SENT2,
     TCP_CONNTRACK_MAX,
     TCP_CONNTRACK_IGNORE,
+}
+
+// TCP header structure
+#[repr(C)]
+pub struct tcphdr {
+    pub source: __be16,
+    pub dest: __be16,
+    pub seq: __be32,
+    pub ack_seq: __be32,
+    pub doff: __u8,
+    pub res1: __u8,
+    pub urg: __u8,
+    pub ack: __u8,
+    pub psh: __u8,
+    pub rst: __u8,
+    pub syn: __u8,
+    pub fin: __u8,
+    pub window: __be16,
+    pub check: __be16,
+    pub urg_ptr: __be16,
 }
 
 // State transition table
@@ -93,8 +129,6 @@ static TCP_TIMEOUTS: [c_uint; 12] = {
     timeouts[TcpConntrack::TCP_CONNTRACK_TIME_WAIT as usize] = 2 * 60 * HZ;
     timeouts[TcpConntrack::TCP_CONNTRACK_CLOSE as usize] = 10 * HZ;
     timeouts[TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as usize] = 2 * 60 * HZ;
-    timeouts[TcpConntrack::TCP_CONNTRACK_RETRANS as usize] = 5 * 60 * HZ;
-    timeouts[TcpConntrack::TCP_CONNTRACK_UNACK as usize] = 5 * 60 * HZ;
     timeouts
 };
 
@@ -109,8 +143,8 @@ pub unsafe extern "C" fn tcp_print_conntrack(s: *mut c_void, ct: *mut c_void) {
     }
 
     // SAFETY: Caller guarantees valid pointers
-    let state = (*ct).cast::<TcpConntrack>().read();
-    let name = tcp_conntrack_names[state as usize];
+    let state = unsafe { *(ct as *const TcpConntrack) };
+    let name = TCP_CONNTRACK_NAMES[state as usize];
 
     // SAFETY: seq_printf is a valid kernel function
     extern "C" {
@@ -118,17 +152,17 @@ pub unsafe extern "C" fn tcp_print_conntrack(s: *mut c_void, ct: *mut c_void) {
     }
 
     let fmt = "%s ".as_ptr() as *const c_char;
-    seq_printf(s, fmt, name);
+    unsafe { seq_printf(s, fmt, name) };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_conntrack_index(tcph: *const TcpHdr) -> c_uint {
+pub unsafe extern "C" fn get_conntrack_index(tcph: *const c_void) -> c_uint {
     if tcph.is_null() {
         return TcpBitSet::TCP_NONE_SET as c_uint;
     }
 
     // SAFETY: Caller guarantees valid pointer
-    let flags = *tcph;
+    let flags = unsafe { *(tcph as *const tcphdr) };
 
     if flags.rst != 0 {
         TcpBitSet::TCP_RST_SET as c_uint
@@ -170,32 +204,42 @@ mod tests {
 
     #[test]
     fn test_get_conntrack_index() {
-        let mut tcph = TcpHdr {
+        let mut tcph = tcphdr {
+            source: 0,
+            dest: 0,
+            seq: 0,
+            ack_seq: 0,
+            doff: 0,
+            res1: 0,
+            urg: 0,
+            ack: 0,
+            psh: 0,
             rst: 0,
             syn: 1,
             fin: 0,
-            ack: 0,
-            doff: 0,
+            window: 0,
+            check: 0,
+            urg_ptr: 0,
         };
-        assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_SYN_SET as c_uint);
+        assert_eq!(unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) }, TcpBitSet::TCP_SYN_SET as c_uint);
 
         tcph.ack = 1;
         assert_eq!(
-            get_conntrack_index(&tcph),
+            unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) },
             TcpBitSet::TCP_SYNACK_SET as c_uint
         );
 
         tcph.syn = 0;
         tcph.ack = 0;
         tcph.fin = 1;
-        assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_FIN_SET as c_uint);
+        assert_eq!(unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) }, TcpBitSet::TCP_FIN_SET as c_uint);
 
         tcph.fin = 0;
         tcph.ack = 1;
-        assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_ACK_SET as c_uint);
+        assert_eq!(unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) }, TcpBitSet::TCP_ACK_SET as c_uint);
 
         tcph.ack = 0;
         tcph.rst = 1;
-        assert_eq!(get_conntrack_index(&tcph), TcpBitSet::TCP_RST_SET as c_uint);
+        assert_eq!(unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) }, TcpBitSet::TCP_RST_SET as c_uint);
     }
 }

@@ -20,11 +20,6 @@ pub const EAFNOSUPPORT: c_int = -125;
 pub const EDESTADDRREQ: c_int = -39;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

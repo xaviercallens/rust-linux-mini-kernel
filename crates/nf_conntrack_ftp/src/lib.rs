@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_ftp':
 
-```rust
 //! FTP connection tracking helper for Netfilter
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -13,7 +11,6 @@ Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_ftp':
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr;
-use libc::{size_t, IPPROTO_TCP, PF_INET, PF_INET6};
 use kernel_types::*;
 
 // Constants from C
@@ -57,12 +54,6 @@ pub struct nf_ct_ftp_type {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_helper {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conntrack_ftp {
     _private: [u8; 0],
 }
@@ -79,12 +70,12 @@ pub struct ftp_search {
 }
 
 // Function implementations
-static mut nf_ftp_lock: spinlock_t = spinlock_t { _private: [0; 0] };
+static mut NF_FTP_LOCK: spinlock_t = spinlock_t { _private: [0; 0] };
 
-static ports: [__be16; 8] = [0; 8];
-static ports_c: c_uint = 0;
+static PORTS: [__be16; 8] = [0; 8];
+static PORTS_C: c_uint = 0;
 
-static loose: bool = false;
+static LOOSE: bool = false;
 
 type nf_nat_ftp_hook_type = extern "C" fn(
     skb: *mut sk_buff,
@@ -96,7 +87,7 @@ type nf_nat_ftp_hook_type = extern "C" fn(
     exp: *mut nf_conntrack_expect,
 ) -> c_uint;
 
-static mut nf_nat_ftp_hook: nf_nat_ftp_hook_type = ptr::null_mut();
+static mut NF_NAT_FTP_HOOK: nf_nat_ftp_hook_type = ptr::null_mut();
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_ftp_hook_fn(
@@ -112,9 +103,9 @@ pub unsafe extern "C" fn nf_nat_ftp_hook_fn(
     0
 }
 
-static search: [ftp_search; 2] = [
+static SEARCH: [ftp_search; 2] = [
     ftp_search {
-        pattern: b"PORT\0" as *const u8,
+        pattern: b"PORT\0".as_ptr(),
         plen: 4,
         skip: b' ',
         term: b'\r',
@@ -122,7 +113,7 @@ static search: [ftp_search; 2] = [
         getnum: try_rfc959,
     },
     ftp_search {
-        pattern: b"EPRT\0" as *const u8,
+        pattern: b"EPRT\0".as_ptr(),
         plen: 4,
         skip: b' ',
         term: b'\r',

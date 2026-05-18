@@ -21,6 +21,8 @@ pub const ENOTSUPP: c_int = -95;
 pub const EEXIST: c_int = -17;
 pub const EACCES: c_int = -13;
 pub const NOT_INIT: c_int = -1;
+pub const TCP_CONG_MASK: c_uint = 0x00000007;
+pub const MAX_BPF_FUNC_ARGS: usize = 4;
 
 // Type definitions
 #[repr(C)]
@@ -134,6 +136,7 @@ extern "C" {
 static mut tcp_sock_type: *mut BtfType = ptr::null_mut();
 static mut tcp_sock_id: c_uint = 0;
 static mut sock_id: c_uint = 0;
+static mut btf_vmlinux: *mut Btf = ptr::null_mut();
 
 // BPF function prototypes
 #[no_mangle]
@@ -196,7 +199,7 @@ pub unsafe extern "C" fn is_unsupported(member_offset: c_uint) -> bool {
 
 #[no_mangle]
 pub unsafe extern "C" fn bpf_tcp_ca_is_valid_access(off: c_int, size: c_int, type_: c_int, prog: *const BpfProg, info: *mut BpfInsnAccessAux) -> bool {
-    if off < 0 || off >= (8 * 4) { // MAX_BPF_FUNC_ARGS = 4
+    if off < 0 || off >= (MAX_BPF_FUNC_ARGS * 4) {
         return false;
     }
     if type_ != 1 { // BPF_READ
@@ -365,6 +368,15 @@ pub static mut bpf_tcp_congestion_ops: BpfStructOps = BpfStructOps {
     name: b"tcp_congestion_ops\0" as *const u8,
 };
 
+// BPF verifier ops definition
+#[no_mangle]
+pub static mut bpf_tcp_ca_verifier_ops: BpfVerifierOps = BpfVerifierOps {
+    get_func_proto: bpf_tcp_ca_get_func_proto,
+    is_valid_access: bpf_tcp_ca_is_valid_access,
+    btf_struct_access: bpf_tcp_ca_btf_struct_access,
+    check_kfunc_call: bpf_tcp_ca_check_kfunc_call,
+};
+
 // Helper functions
 #[no_mangle]
 pub unsafe extern "C" fn btf_member_bit_offset(t: *const BtfType, member: *const BtfMember) -> c_int {
@@ -396,6 +408,16 @@ pub unsafe extern "C" fn bpf_base_func_proto(func_id: c_int) -> *const BpfFuncPr
 
 // BPF function proto
 static mut bpf_tcp_send_ack_proto: BpfFuncProto = BpfFuncProto {
+    // Actual fields would be initialized with appropriate values
+    _private: [0; 0],
+};
+
+static mut bpf_sk_storage_get_proto: BpfFuncProto = BpfFuncProto {
+    // Actual fields would be initialized with appropriate values
+    _private: [0; 0],
+};
+
+static mut bpf_sk_storage_delete_proto: BpfFuncProto = BpfFuncProto {
     // Actual fields would be initialized with appropriate values
     _private: [0; 0],
 };

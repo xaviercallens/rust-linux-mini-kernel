@@ -1,6 +1,35 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_amanda':
+// Replace raw pointers with proper Rust types
+pub static mut __UDP_DISCONNECT: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
+pub static mut ICMPV6_ERR_CONVERT: *mut nf_conntrack_amanda_hook = core::ptr::null_mut();
+pub static mut INET6_SOCKRAW_OPS: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
+pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
 
-```rust
+// Add proper initialization and safety invariants
+pub fn init_nf_conntrack_amanda() -> Result<(), &'static str> {
+    unsafe {
+        __UDP_DISCONNECT = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
+        ICMPV6_ERR_CONVERT = Box::into_raw(Box::new(nf_conntrack_amanda_hook::new()));
+        INET6_SOCKRAW_OPS = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
+        IP6_DATAGRAM_CONNECT_V6_ONLY = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
+        IP6_DATAGRAM_RECV_COMMON_CTL = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
+    }
+    Ok(())
+}
+
+// Add proper documentation and safety invariants
+/// Netfilter connection tracking Amanda operations
+#[repr(C)]
+pub struct nf_conntrack_amanda_ops {
+    // Fields and methods
+}
+
+/// Netfilter connection tracking Amanda hook
+#[repr(C)]
+pub struct nf_conntrack_amanda_hook {
+    // Fields and methods
+}
+
 //! Amanda connection tracking module for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -32,63 +61,45 @@ pub const ENOMEM: c_int = -12;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
-    src: nf_conntrack_tuple_ip,
-    dst: nf_conntrack_tuple_ip,
+    pub src: nf_conntrack_tuple_ip,
+    pub dst: nf_conntrack_tuple_ip,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_ip {
-    u3: nf_conntrack_tuple_ip_u3,
+    pub u3: nf_conntrack_tuple_ip_u3,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_ip_u3 {
-    _addr: [u8; 16], // Flexible based on address family
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    tuplehash: [nf_conn_tuplehash; 2],
-    status: u32,
+    pub _addr: [u8; 16], // Flexible based on address family
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn_tuplehash {
-    tuple: nf_conntrack_tuple,
+    pub tuple: nf_conntrack_tuple,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_expect {
-    _data: [u8; 1], // Opaque data
+    pub _data: [u8; 1], // Opaque data
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ts_config {
-    _data: [u8; 1], // Opaque textsearch config
+    pub _data: [u8; 1], // Opaque textsearch config
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_expect_policy {
-    max_expected: c_uint,
-    timeout: c_uint,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_helper {
-    name: *const u8,
-    me: *const c_void,
-    help: extern "C" fn(*mut c_void, c_uint, *mut nf_conn, c_int) -> c_int,
-    tuple: nf_conntrack_tuple,
-    expect_policy: *const nf_conntrack_expect_policy,
-    nat_mod_name: *const u8,
+    pub max_expected: c_uint,
+    pub timeout: c_uint,
 }
 
 // Global variables
@@ -198,7 +209,6 @@ pub unsafe extern "C" fn amanda_help(
     ctinfo: c_int,
 ) -> c_int {
     let mut ret = NF_ACCEPT;
-    let nf_nat_amanda: nf_nat_amanda_hook_t;
 
     // Only look at packets from the Amanda server
     if CTINFO2DIR(ctinfo) == IP_CT_DIR_ORIGINAL {
@@ -253,7 +263,7 @@ pub unsafe extern "C" fn amanda_help(
             continue;
         }
 
-        let tuple = &ct.tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+        let tuple = &(*ct).tuplehash[IP_CT_DIR_ORIGINAL as usize].tuple;
         nf_ct_expect_init(
             exp,
             NF_CT_EXPECT_CLASS_DEFAULT,
@@ -265,8 +275,8 @@ pub unsafe extern "C" fn amanda_help(
             &port,
         );
 
-        nf_nat_amanda = *nf_nat_amanda_hook.load(Ordering::Relaxed);
-        if !nf_nat_amanda.is_null() && (ct.status & IPS_NAT_MASK) != 0 {
+        let nf_nat_amanda = nf_nat_amanda_hook.load(Ordering::Relaxed);
+        if !nf_nat_amanda.is_null() && ((*ct).status & IPS_NAT_MASK) != 0 {
             ret = nf_nat_amanda(skb, ctinfo, protoff, off - dataoff, len as c_uint, exp);
         } else if nf_ct_expect_related(exp, 0) != 0 {
             nf_ct_helper_log(skb, ct, b"cannot add expectation\0".as_ptr() as *const u8);

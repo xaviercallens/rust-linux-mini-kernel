@@ -1,3 +1,5 @@
+// Refactored nf_conntrack_expect module
+
 //! Connection tracking expectation handling for nf_conntrack
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -21,7 +23,7 @@ pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const IPEXP_DESTROY: c_int = 1;
-pub const nf_conntrack_net_id: c_ulong = 1;
+pub const NF_CONNTRACK_NET_ID: c_ulong = 1;
 
 // Type definitions
 #[repr(C)]
@@ -99,7 +101,7 @@ pub unsafe extern "C" fn nf_ct_unlink_expect_report(
     // SAFETY: Caller must ensure exp is valid and not null
     let master_help = nfct_help((*exp).master);
     let net = nf_ct_exp_net(exp);
-    let cnet = net_generic(net, nf_conntrack_net_id);
+    let cnet = net_generic(net, NF_CONNTRACK_NET_ID);
 
     // SAFETY: These are kernel assertions
     // WARN_ON(!master_help);
@@ -132,13 +134,13 @@ pub unsafe extern "C" fn __nf_ct_expect_find(
     zone: *const nf_conntrack_zone,
     tuple: *const nf_conntrack_tuple,
 ) -> *mut nf_conntrack_expect {
-    let cnet = net_generic(net, nf_conntrack_net_id);
+    let cnet = net_generic(net, NF_CONNTRACK_NET_ID);
     if (*cnet).expect_count == 0 {
         return ptr::null_mut();
     }
 
     let h = nf_ct_expect_dst_hash(net, tuple);
-    let head = &(*nf_ct_expect_hash.offset(h as isize));
+    let head = &(*NF_CT_EXPECT_HASH.offset(h as isize));
 
     let mut i = hlist_entry(head.first, nf_conntrack_expect, hnode);
     while !i.is_null() {
@@ -196,11 +198,11 @@ extern "C" {
 
 // Exported Symbols
 #[no_mangle]
-pub static mut nf_ct_expect_hsize: c_uint = 0;
+pub static mut NF_CT_EXPECT_HSIZE: c_uint = 0;
 #[no_mangle]
-pub static mut nf_ct_expect_hash: *mut hlist_head = ptr::null_mut();
+pub static mut NF_CT_EXPECT_HASH: *mut hlist_head = ptr::null_mut();
 #[no_mangle]
-pub static mut nf_ct_expect_max: c_uint = 0;
+pub static mut NF_CT_EXPECT_MAX: c_uint = 0;
 
 // Additional required functions and types would be defined here
 // ... (omitted for brevity)

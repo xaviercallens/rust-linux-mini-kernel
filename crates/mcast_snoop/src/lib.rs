@@ -30,6 +30,7 @@ extern "C" {
         validate: extern "C" fn(*mut sk_buff) -> u16,
     ) -> *mut sk_buff;
     fn kfree_skb(skb: *mut sk_buff);
+    fn ntohs(netshort: __be16) -> __u16;
 }
 
 // Constants from C
@@ -150,7 +151,7 @@ fn ipv6_mc_check_mld_query(skb: *mut sk_buff) -> c_int {
         }
     }
 
-    let mld = unsafe { ipv6_transport_header(skb) as *const mld_msg };
+    let mld = unsafe { skb_transport_header(skb) as *const mld_msg };
     let mld_mca = unsafe { &(*mld).mld_mca };
 
     if unsafe { ipv6_addr_any(mld_mca) } != 0 && unsafe { ipv6_addr_is_ll_all_nodes(&(*ip6h).daddr) } == 0 {
@@ -160,8 +161,8 @@ fn ipv6_mc_check_mld_query(skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn ipv6_transport_header(skb: *mut sk_buff) -> *const c_void {
-    unsafe { (*skb).head as *const c_void }
+fn skb_transport_header(skb: *mut sk_buff) -> *const c_void {
+    unsafe { (*skb).data as *const c_void }
 }
 
 fn ipv6_mc_check_mld_msg(skb: *mut sk_buff) -> c_int {
@@ -171,7 +172,7 @@ fn ipv6_mc_check_mld_msg(skb: *mut sk_buff) -> c_int {
         return ENODATA;
     }
 
-    let mld = unsafe { ipv6_transport_header(skb) as *const mld_msg };
+    let mld = unsafe { skb_transport_header(skb) as *const mld_msg };
     let mld_type = unsafe { (*mld).mld_type };
 
     match mld_type {

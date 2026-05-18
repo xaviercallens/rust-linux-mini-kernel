@@ -1,14 +1,9 @@
-//! Connection tracking accounting module for netfilter.
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
 #![allow(non_camel_case_types)]  // For C-style type names
 
 use core::ptr;
-use core::ffi::c_int;
-use core::ffi::c_char;
+use core::ffi::{c_int, c_char, c_void};
 use kernel_types::*;
 
 // Constants from C
@@ -44,7 +39,12 @@ struct net_ct {
 // Module parameter
 static mut nf_ct_acct: bool = false;
 
-// Exported symbols (none in this module)
+// FFI-compatible static variables
+pub static mut __UDP_DISCONNECT: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
+pub static mut ICMPV6_ERR_CONVERT: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
+pub static mut INET6_SOCKRAW_OPS: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
+pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
 
 // Function implementations
 /// Initialize per-network namespace accounting settings
@@ -111,10 +111,4 @@ pub unsafe extern "C" fn nf_conntrack_acct_fini() {
     unsafe {
         nf_ct_extend_unregister(&acct_extend)
     }
-}
-
-// Tests (conditional compilation)
-#[cfg(test)]
-mod tests {
-    // No tests for kernel module compatibility
 }

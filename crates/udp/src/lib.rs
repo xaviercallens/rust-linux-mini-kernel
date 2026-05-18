@@ -196,7 +196,7 @@ pub unsafe extern "C" fn udp6_lib_lookup2(
     let mut badness: c_int = -1;
 
     let mut sk = (*hslot2).head.next;
-    while !sk.is_null() && sk != &(*hslot2).head {
+    while !sk.is_null() && sk != &(*hslot2).head as *const _ as *mut _ {
         let score = compute_score(sk as *mut sock, net, saddr, sport, daddr, hnum, dif, sdif);
         if score > badness {
             let reuse_sk = lookup_reuseport(net, sk as *mut sock, skb, saddr, sport, daddr, hnum);
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn udp6_lookup_run_bpf(
     daddr: *const in6_addr,
     hnum: u16,
 ) -> *mut sock {
-    if udptable != &udp_table {
+    if udptable != &udp_table as *const _ as *mut _ {
         return ptr::null_mut();
     }
 
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn __udp6_lib_lookup(
     let hnum = ntohs(dport);
     let hash2 = ipv6_portaddr_hash(net, daddr, hnum);
     let slot2 = hash2 & (*udptable).mask;
-    let hslot2 = &(*udptable).hash2[slot2];
+    let hslot2 = &(*udptable).hash2[slot2 as usize];
 
     let mut result = udp6_lib_lookup2(net, saddr, sport, daddr, hnum, dif, sdif, hslot2, skb);
     if !result.is_null() && (*result).sk_state == TCP_ESTABLISHED {
@@ -273,7 +273,7 @@ pub unsafe extern "C" fn __udp6_lib_lookup(
     if result.is_null() {
         let hash2 = ipv6_portaddr_hash(net, &in6addr_any, hnum);
         let slot2 = hash2 & (*udptable).mask;
-        let hslot2 = &(*udptable).hash2[slot2];
+        let hslot2 = &(*udptable).hash2[slot2 as usize];
         result = udp6_lib_lookup2(net, saddr, sport, &in6addr_any, hnum, dif, sdif, hslot2, skb);
     }
 
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn udp6_lib_lookup_skb(
     dport: u16,
 ) -> *mut sock {
     let iph = ipv6_hdr(skb as *mut sk_buff);
-    __udp6_lib_lookup(dev_net((*skb).dev), &(*iph).saddr, sport, &(*iph).daddr, dport, inet6_iif(skb as *mut sk_buff), inet6_sdif(skb as *mut sk_buff), &udp_table, ptr::null_mut())
+    __udp6_lib_lookup(dev_net((*skb).dev), &(*iph).saddr, sport, &(*iph).daddr, dport, inet6_iif(skb as *mut sk_buff), inet6_sdif(skb as *mut sk_buff), &udp_table as *const _ as *mut _, ptr::null_mut())
 }
 
 #[no_mangle]
@@ -310,7 +310,7 @@ pub unsafe extern "C" fn udp6_lib_lookup(
     dport: u16,
     dif: c_int,
 ) -> *mut sock {
-    let sk = __udp6_lib_lookup(net, saddr, sport, daddr, dport, dif, 0, &udp_table, ptr::null_mut());
+    let sk = __udp6_lib_lookup(net, saddr, sport, daddr, dport, dif, 0, &udp_table as *const _ as *mut _, ptr::null_mut());
     if !sk.is_null() && refcount_inc_not_zero(&(*sk).sk_refcnt) != 0 {
         sk
     } else {
@@ -364,8 +364,8 @@ pub unsafe extern "C" fn udpv6_recvmsg(
 
     ulen = udp6_skb_len(skb);
     copied = len;
-    if copied > ulen - off as usize {
-        copied = ulen - off as usize;
+    if copied > ulen as usize - off as usize {
+        copied = ulen as usize - off as usize;
         (*msg).msg_flags |= MSG_TRUNC;
     }
 

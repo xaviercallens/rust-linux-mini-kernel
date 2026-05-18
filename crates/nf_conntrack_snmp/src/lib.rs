@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_snmp':
 
-```rust
 //! SNMP service broadcast connection tracking helper
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -73,10 +71,10 @@ type NfNatSnmpHook = extern "C" fn(*mut c_void, c_uint, *mut NfConn, c_int) -> c
 
 // Exported symbol
 #[no_mangle]
-pub static mut nf_nat_snmp_hook: Option<NfNatSnmpHook> = None;
+pub static mut NF_NAT_SNMP_HOOK: Option<NfNatSnmpHook> = None;
 
 // Internal static variables
-static mut timeout: c_uint = 30;
+static mut TIMEOUT: c_uint = 30;
 
 // Helper function implementation
 #[no_mangle]
@@ -95,10 +93,10 @@ pub unsafe extern "C" fn snmp_conntrack_help(
             timeout: c_uint,
         );
     }
-    nf_conntrack_broadcast_help(skb, ct, ctinfo, timeout);
+    nf_conntrack_broadcast_help(skb, ct, ctinfo, TIMEOUT);
 
-    // SAFETY: nf_nat_snmp_hook is a function pointer managed by the kernel
-    if let Some(nf_nat_snmp) = nf_nat_snmp_hook {
+    // SAFETY: NF_NAT_SNMP_HOOK is a function pointer managed by the kernel
+    if let Some(nf_nat_snmp) = NF_NAT_SNMP_HOOK {
         // Check NAT status flag
         if (*ct).status & IPS_NAT_MASK != 0 {
             return nf_nat_snmp(skb, protoff, ct, ctinfo);
@@ -109,12 +107,12 @@ pub unsafe extern "C" fn snmp_conntrack_help(
 }
 
 // Static helper configuration
-static mut exp_policy: NfConntrackExpectPolicy = NfConntrackExpectPolicy {
+static mut EXP_POLICY: NfConntrackExpectPolicy = NfConntrackExpectPolicy {
     max_expected: 1,
     timeout: 0,
 };
 
-static mut helper: NfConntrackHelper = NfConntrackHelper {
+static mut HELPER: NfConntrackHelper = NfConntrackHelper {
     name: b"snmp\0".as_ptr() as *const c_char,
     tuple: NfConntrackTuple {
         src: NfConntrackTupleSrc {
@@ -129,20 +127,20 @@ static mut helper: NfConntrackHelper = NfConntrackHelper {
     },
     me: core::ptr::null_mut(),
     help: Some(snmp_conntrack_help),
-    expect_policy: &mut exp_policy,
+    expect_policy: &mut EXP_POLICY,
 };
 
 // Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_snmp_init() -> c_int {
     // Set timeout in expect policy
-    exp_policy.timeout = timeout;
+    EXP_POLICY.timeout = TIMEOUT;
 
     // Register helper
     extern "C" {
         fn nf_conntrack_helper_register(helper: *mut NfConntrackHelper) -> c_int;
     }
-    nf_conntrack_helper_register(&mut helper)
+    nf_conntrack_helper_register(&mut HELPER)
 }
 
 // Module cleanup
@@ -151,5 +149,5 @@ pub unsafe extern "C" fn nf_conntrack_snmp_fini() {
     extern "C" {
         fn nf_conntrack_helper_unregister(helper: *mut NfConntrackHelper);
     }
-    nf_conntrack_helper_unregister(&mut helper);
+    nf_conntrack_helper_unregister(&mut HELPER);
 }

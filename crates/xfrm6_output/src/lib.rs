@@ -10,7 +10,7 @@ use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_ulong;
 use core::ffi::c_void;
-use core::ptr;
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -18,11 +18,6 @@ pub const ENOMEM: c_int = -12;
 pub const EMSGSIZE: c_int = -90;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -38,36 +33,15 @@ pub struct xfrm_state_props {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct dst_entry {
-    xfrm: *mut xfrm_state,
+pub struct ip6_skb_cb {
+    flags: c_ulong,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct sock {
-    sk_bound_dev_if: c_int,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct net {
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct flowi6 {
-    flowi6_oif: c_int,
-    daddr: u32,
-    fl6_dport: u16,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    daddr: u32,
-}
+const ETH_P_IPV6: c_int = 0x86DD;
+const XFRM_MODE_TUNNEL: c_int = 2;
+const IP6SKB_REROUTED: c_ulong = 1 << 0;
+const NFPROTO_IPV6: c_int = 10;
+const NF_INET_POST_ROUTING: c_int = 3;
 
 // Function pointers for external C functions
 extern "C" {
@@ -236,38 +210,6 @@ pub unsafe extern "C" fn xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk
 }
 
 // Helper functions (assumed to exist in C)
-#[repr(C)]
-struct inet_sock {
-    inet_dport: u16,
-}
-
-#[repr(C)]
-struct ip6_skb_cb {
-    flags: c_ulong,
-}
-
-#[repr(C)]
-struct ip6_skb {
-    dev: *mut c_void,
-    ignore_df: c_int,
-    len: c_int,
-    protocol: c_int,
-    encapsulation: c_int,
-    sk: *mut sock,
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-struct IP6CB {
-    flags: c_ulong,
-}
-
-const ETH_P_IPV6: c_int = 0x86DD;
-const XFRM_MODE_TUNNEL: c_int = 2;
-const IP6SKB_REROUTED: c_ulong = 1 << 0;
-const NFPROTO_IPV6: c_int = 10;
-const NF_INET_POST_ROUTING: c_int = 3;
-
 #[inline(always)]
 unsafe fn htons(x: c_int) -> c_int {
     ((x >> 8) & 0xff) | ((x & 0xff) << 8)
@@ -281,9 +223,4 @@ unsafe fn inet_sk(sk: *mut sock) -> *mut inet_sock {
 #[inline(always)]
 unsafe fn IP6CB(skb: *mut sk_buff) -> *mut ip6_skb_cb {
     (skb as *mut u8).offset(0) as *mut ip6_skb_cb
-}
-
-#[inline(always)]
-unsafe fn IP6CB(skb: *mut sk_buff) -> *mut IP6CB {
-    (skb as *mut u8).offset(0) as *mut IP6CB
 }

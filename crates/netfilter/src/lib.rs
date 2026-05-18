@@ -60,15 +60,10 @@ pub unsafe extern "C" fn ip6_route_me_harder(
 
     let iph = ipv6_hdr(skb);
     let sk = sk_to_full_sk(sk_partial);
-    let flkeys = ptr::null_mut();
-    let mut hh_len: u32 = 0;
-    let mut dst: *mut c_void = ptr::null_mut();
-    let strict = (ipv6_addr_type(&(*iph).daddr) & (1 << 19 | 1 << 31)) != 0;
-
     let mut fl6 = flowi6 {
         flowi6_oif: if !sk.is_null() && (*sk).sk_bound_dev_if != 0 {
             (*sk).sk_bound_dev_if
-        } else if strict {
+        } else if (ipv6_addr_type(&(*iph).daddr) & (1 << 19 | 1 << 31)) != 0 {
             (*(*skb).dev).ifindex
         } else {
             0
@@ -79,7 +74,10 @@ pub unsafe extern "C" fn ip6_route_me_harder(
         saddr: (*iph).saddr,
     };
 
-    fib6_rules_early_flow_dissect(net, skb, &mut fl6, flkeys);
+    let mut dst: *mut c_void = ptr::null_mut();
+    let strict = (ipv6_addr_type(&(*iph).daddr) & (1 << 19 | 1 << 31)) != 0;
+
+    fib6_rules_early_flow_dissect(net, skb, &mut fl6, ptr::null_mut());
 
     dst = ip6_route_output(net, sk, &mut fl6);
     let err = (*dst).error;
@@ -95,7 +93,7 @@ pub unsafe extern "C" fn ip6_route_me_harder(
     skb_dst_set(skb, dst);
 
     // XFRM handling
-    if !(IP6CB(skb).flags & 1 << 0) != 0 {
+    if (IP6CB(skb).flags & 1 << 0) == 0 {
         let fl = flowi6_to_flowi(&fl6);
         if xfrm_decode_session(skb, fl, 10) == 0 {
             skb_dst_set(skb, ptr::null_mut());
@@ -107,7 +105,7 @@ pub unsafe extern "C" fn ip6_route_me_harder(
         }
     }
 
-    hh_len = (*(*skb).dst).dev.hard_header_len;
+    let hh_len = (*(*skb).dst).dev.hard_header_len;
     if skb_headroom(skb) < hh_len {
         if pskb_expand_head(skb, HH_DATA_ALIGN(hh_len - skb_headroom(skb)), 0, 1) != 0 {
             return -ENOMEM;
@@ -188,7 +186,7 @@ pub unsafe extern "C" fn __nf_ip6_route(
     };
 
     let sk = if strict { &mut fake_sk } else { ptr::null_mut() };
-    let result = ip6_route_output(net, sk, &mut fl.u.ip6);
+    let result = ip6_route_output(net, sk, &mut (*fl).u.ip6);
     let err = (*result).error;
 
     if err != 0 {

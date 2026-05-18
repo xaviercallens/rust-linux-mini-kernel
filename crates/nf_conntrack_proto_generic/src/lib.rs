@@ -1,3 +1,4 @@
+
 //! This module provides FFI-compatible Rust bindings for the Linux kernel's
 //! generic protocol connection tracking implementation. It maintains ABI
 //! compatibility with the original C implementation for netfilter/conntrack.
@@ -8,7 +9,7 @@
 
 use core::mem::size_of;
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
 // Constants from C
 pub const HZ: c_int = 100; // System clock ticks per second
@@ -55,7 +56,7 @@ pub struct NfConntrackL4proto {
 
 // Global data
 #[no_mangle]
-pub static nf_conntrack_l4proto_generic: NfConntrackL4proto = NfConntrackL4proto {
+pub static NF_CONNTRACK_L4PROTO_GENERIC: NfConntrackL4proto = NfConntrackL4proto {
     l4proto: 255,
     #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
     ctnl_timeout: NfCtnlTimeout {
@@ -63,14 +64,14 @@ pub static nf_conntrack_l4proto_generic: NfConntrackL4proto = NfConntrackL4proto
         obj_to_nlattr: Some(generic_timeout_obj_to_nlattr),
         nlattr_max: CTA_TIMEOUT_GENERIC_MAX,
         obj_size: size_of::<c_uint>(),
-        nla_policy: &generic_timeout_nla_policy as *const NlaPolicy,
+        nla_policy: &GENERIC_TIMEOUT_NLA_POLICY as *const NlaPolicy,
     },
 };
 
 // Static data
 #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
 #[no_mangle]
-static generic_timeout_nla_policy: [NlaPolicy; CTA_TIMEOUT_GENERIC_MAX as usize + 1] = {
+static GENERIC_TIMEOUT_NLA_POLICY: [NlaPolicy; CTA_TIMEOUT_GENERIC_MAX as usize + 1] = {
     let mut arr = [NlaPolicy { type_: 0 }; CTA_TIMEOUT_GENERIC_MAX as usize + 1];
     arr[CTA_TIMEOUT_GENERIC_TIMEOUT as usize] = NlaPolicy { type_: 1 }; // NLA_U32
     arr
@@ -87,7 +88,7 @@ extern "C" {
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_generic_init_net(net: *mut c_void) {
     let gn = nf_generic_pernet(net);
-    (*gn).timeout = nf_ct_generic_timeout();
+    (*gn).timeout = NF_CT_GENERIC_TIMEOUT();
 }
 
 #[no_mangle]
@@ -103,7 +104,7 @@ pub unsafe extern "C" fn generic_timeout_nlattr_to_obj(
     let gn_timeout = &mut (*gn).timeout;
 
     if timeout.is_null() {
-        timeout = gn_timeout as *mut c_uint;
+        return EINVAL;
     }
 
     let attr_index = CTA_TIMEOUT_GENERIC_TIMEOUT as isize;
@@ -142,5 +143,5 @@ pub unsafe extern "C" fn generic_timeout_obj_to_nlattr(
 
 // Constants
 #[no_mangle]
-pub static nf_ct_generic_timeout: unsafe extern "C" fn() -> c_uint =
+pub static NF_CT_GENERIC_TIMEOUT: unsafe extern "C" fn() -> c_uint =
     || -> c_uint { 600 * HZ as u32 };

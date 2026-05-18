@@ -8,17 +8,17 @@ pub const ENOMEM: c_int = -12;
 
 // Type definitions
 #[repr(C)]
-struct napi_gro_cb {
+struct NapiGroCb {
     flush: u8,
 }
 
 #[repr(C)]
-struct net_offload {
-    callbacks: net_offload_callbacks,
+struct NetOffload {
+    callbacks: NetOffloadCallbacks,
 }
 
 #[repr(C)]
-struct net_offload_callbacks {
+struct NetOffloadCallbacks {
     gso_segment: extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
     gro_receive: extern "C" fn(*mut core::ffi::c_void, *mut sk_buff) -> *mut sk_buff,
     gro_complete: extern "C" fn(*mut sk_buff, c_int) -> c_int,
@@ -78,13 +78,13 @@ pub unsafe extern "C" fn tcp6_gso_segment(
         return ERR_PTR(EINVAL);
     }
 
-    if (*skb).ip_summed != CHECKSUM_PARTIAL {
+    if (*skb).csum != CHECKSUM_PARTIAL {
         let ipv6h = ipv6_hdr(skb);
         let th = tcp_hdr(skb);
 
         // Set up pseudo header
         (*th).check = 0;
-        (*skb).ip_summed = CHECKSUM_PARTIAL;
+        (*skb).csum = CHECKSUM_PARTIAL;
         __tcp_v6_send_check(skb, &(*ipv6h).saddr, &(*ipv6h).daddr);
     }
 
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn tcp6_gso_segment(
 
 #[no_mangle]
 pub extern "C" fn tcpv6_offload_init() -> c_int {
-    inet6_add_offload(&TCPV6_OFFLOAD, IPPROTO_TCP)
+    unsafe { inet6_add_offload(&TCPV6_OFFLOAD, IPPROTO_TCP) }
 }
 
 // Constants
@@ -103,11 +103,11 @@ const CHECKSUM_PARTIAL: c_int = 2;
 
 // Helper macros translated to functions
 #[inline]
-unsafe fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut napi_gro_cb {
+unsafe fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut NapiGroCb {
     // In real implementation, this would use offsetof from Linux's napi_gro_cb location
     // For demonstration, we'll assume it's at a fixed offset
     let offset = 128; // Example offset - actual value depends on sk_buff layout
-    (skb as *mut u8).add(offset) as *mut napi_gro_cb
+    (skb as *mut u8).add(offset) as *mut NapiGroCb
 }
 
 #[inline]
@@ -122,27 +122,27 @@ unsafe fn skb_gro_checksum_validate(
 
 #[inline]
 unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
-    // In real implementation, this would access (*skb).data
-    let data = (*skb).data; // Assuming data field exists
-    data as *mut ipv6hdr
+    // In real implementation, this would access (*skb).head
+    let head = (*skb).head;
+    head as *mut ipv6hdr
 }
 
 #[inline]
 unsafe fn tcp_hdr(skb: *mut sk_buff) -> *mut udphdr {
-    // In real implementation, this would access (*skb).data + transport header offset
-    let data = (*skb).data; // Assuming data field exists
-    data.add(40) as *mut udphdr // IPv6 header is 40 bytes
+    // In real implementation, this would access (*skb).head + transport header offset
+    let head = (*skb).head;
+    head.add(40) as *mut udphdr // IPv6 header is 40 bytes
 }
 
 #[inline]
-unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut skb_shared_info {
+unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut SkbSharedInfo {
     // In real implementation, this would point to (*skb).shares_info
     let offset = 256; // Example offset - actual depends on sk_buff layout
-    (skb as *mut u8).add(offset) as *mut skb_shared_info
+    (skb as *mut u8).add(offset) as *mut SkbSharedInfo
 }
 
 #[repr(C)]
-struct skb_shared_info {
+struct SkbSharedInfo {
     gso_type: netdev_features_t,
 }
 
@@ -181,8 +181,8 @@ unsafe fn ip6_gro_compute_pseudo(skb: *mut sk_buff) -> c_int {
 
 // Global static
 #[no_mangle]
-static TCPV6_OFFLOAD: net_offload = net_offload {
-    callbacks: net_offload_callbacks {
+static TCPV6_OFFLOAD: NetOffload = NetOffload {
+    callbacks: NetOffloadCallbacks {
         gso_segment: tcp6_gso_segment,
         gro_receive: tcp6_gro_receive,
         gro_complete: tcp6_gro_complete,
@@ -194,5 +194,5 @@ extern "C" {
     fn tcp_gro_receive(head: *mut core::ffi::c_void, skb: *mut sk_buff) -> *mut sk_buff;
     fn tcp_gro_complete(skb: *mut sk_buff) -> c_int;
     fn tcp_gso_segment(skb: *mut sk_buff, features: netdev_features_t) -> *mut sk_buff;
-    fn inet6_add_offload(offload: *const net_offload, proto: c_int) -> c_int;
+    fn inet6_add_offload(offload: *const NetOffload, proto: c_int) -> c_int;
 }

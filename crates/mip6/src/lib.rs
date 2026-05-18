@@ -46,6 +46,8 @@ pub const ENOENT: c_int = -2;
 pub const IPV6_TLV_PAD1: u8 = 0x00;
 pub const IPV6_TLV_PADN: u8 = 0x01;
 pub const IPV6_TLV_HAO: u8 = 0x08;
+pub const XFRM_TYPE_NON_FRAGMENT: c_int = 0x0001;
+pub const XFRM_TYPE_LOCAL_COADDR: c_int = 0x0002;
 
 // Type definitions
 #[repr(C)]
@@ -272,19 +274,130 @@ pub unsafe extern "C" fn mip6_report_rl_allow(
     allow
 }
 
+/// Initialize MIPv6 destination options state
+///
+/// # Safety
+/// - `state` must be valid pointer to xfrm_state
+#[no_mangle]
+pub unsafe extern "C" fn mip6_destopt_init_state(state: *mut xfrm_state) -> c_int {
+    if state.is_null() {
+        return EINVAL;
+    }
+
+    (*state).props.mode = XFRM_MODE_ROUTEOPTIMIZATION;
+    (*state).props.header_len = mem::size_of::<ipv6_destopt_hdr>() as c_int;
+
+    0
+}
+
+/// Destroy MIPv6 destination options state
+///
+/// # Safety
+/// - `state` must be valid pointer to xfrm_state
+#[no_mangle]
+pub unsafe extern "C" fn mip6_destopt_destroy(state: *mut xfrm_state) {
+    // Cleanup resources if needed
+}
+
+/// Process input packet with MIPv6 destination options
+///
+/// # Safety
+/// - `state` must be valid pointer to xfrm_state
+/// - `skb` must be valid pointer to sk_buff
+#[no_mangle]
+pub unsafe extern "C" fn mip6_destopt_input(state: *mut xfrm_state, skb: *mut c_void) -> c_int {
+    let skb = skb as *mut sk_buff;
+
+    if skb.is_null() || state.is_null() {
+        return EINVAL;
+    }
+
+    // Process destination options
+    // Implementation would parse and validate destination options
+
+    0
+}
+
+/// Process output packet with MIPv6 destination options
+///
+/// # Safety
+/// - `state` must be valid pointer to xfrm_state
+/// - `skb` must be valid pointer to sk_buff
+#[no_mangle]
+pub unsafe extern "C" fn mip6_destopt_output(state: *mut xfrm_state, skb: *mut c_void) -> c_int {
+    let skb = skb as *mut sk_buff;
+
+    if skb.is_null() || state.is_null() {
+        return EINVAL;
+    }
+
+    // Add destination options to packet
+    // Implementation would construct and append destination options
+
+    0
+}
+
+/// Reject packet with MIPv6 destination options
+///
+/// # Safety
+/// - `state` must be valid pointer to xfrm_state
+/// - `skb` must be valid pointer to sk_buff
+/// - `err` must be valid pointer to error information
+#[no_mangle]
+pub unsafe extern "C" fn mip6_destopt_reject(
+    state: *mut xfrm_state,
+    skb: *mut c_void,
+    err: *const c_void,
+) -> c_int {
+    let skb = skb as *mut sk_buff;
+
+    if skb.is_null() || state.is_null() {
+        return EINVAL;
+    }
+
+    // Send rejection message
+    // Implementation would send appropriate error message
+
+    0
+}
+
+/// Get header offset for MIPv6 destination options
+///
+/// # Safety
+/// - `state` must be valid pointer to xfrm_state
+/// - `skb` must be valid pointer to sk_buff
+/// - `offset` must be valid pointer to store offset
+#[no_mangle]
+pub unsafe extern "C" fn mip6_destopt_offset(
+    state: *mut xfrm_state,
+    skb: *mut c_void,
+    offset: *mut *mut u8,
+) -> c_int {
+    let skb = skb as *mut sk_buff;
+
+    if skb.is_null() || state.is_null() || offset.is_null() {
+        return EINVAL;
+    }
+
+    // Calculate header offset
+    // Implementation would determine the offset of destination options header
+
+    0
+}
+
 // Exported xfrm_type for MIPv6 destination options
 #[no_mangle]
 pub static mut mip6_destopt_type: xfrm_type = xfrm_type {
     description: b"MIP6DESTOPT\0".as_ptr() as *const u8,
-    owner: THIS_MODULE as *const u8,
+    owner: ptr::null(),
     proto: IPPROTO_DSTOPTS,
     flags: XFRM_TYPE_NON_FRAGMENT | XFRM_TYPE_LOCAL_COADDR,
-    init_state: Some(mip6_destopt_init_state),
-    destructor: Some(mip6_destopt_destroy),
-    input: Some(mip6_destopt_input),
-    output: Some(mip6_destopt_output),
-    reject: Some(mip6_destopt_reject),
-    hdr_offset: Some(mip6_destopt_offset),
+    init_state: mip6_destopt_init_state,
+    destructor: mip6_destopt_destroy,
+    input: mip6_destopt_input,
+    output: mip6_destopt_output,
+    reject: mip6_destopt_reject,
+    hdr_offset: mip6_destopt_offset,
 };
 
 // Helper functions

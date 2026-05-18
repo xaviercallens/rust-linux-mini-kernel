@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_seqadj':
 
-```rust
 //! TCP Sequence Adjustment for Netfilter Connection Tracking
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -12,15 +10,6 @@ Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_seqadj'
 
 use core::ffi::{c_int, c_uint, c_void};
 use kernel_types::*;
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: u32,
-    pub lock: *mut c_void, // Spinlock
-    pub proctnum: u16,
-    pub tcph: *mut tcphdr,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -183,10 +172,6 @@ pub unsafe extern "C" fn nf_ct_tcp_seqadj_set(
         return;
     }
 
-    if (*ct).proctnum != IPPROTO_TCP {
-        return;
-    }
-
     let network_header = unsafe { skb_network_header(skb) };
     let ip_header_len = unsafe { ip_hdrlen(skb) };
     let tcp_header = (network_header as *mut u8).add(ip_header_len as usize) as *mut tcphdr;
@@ -237,8 +222,8 @@ pub unsafe extern "C" fn nf_ct_sack_block_adjust(
 
         // Update checksum
         unsafe {
-            inet_proto_csum_replace4(&(*tcph).check, skb, &(*sack).start_seq as *mut c_void, &new_start_seq as *mut c_void, 0);
-            inet_proto_csum_replace4(&(*tcph).check, skb, &(*sack).end_seq as *mut c_void, &new_end_seq as *mut c_void, 0);
+            inet_proto_csum_replace4(&mut (*tcph).check, skb, &(*sack).start_seq as *mut c_void, &new_start_seq as *mut c_void, 0);
+            inet_proto_csum_replace4(&mut (*tcph).check, skb, &(*sack).end_seq as *mut c_void, &new_end_seq as *mut c_void, 0);
         }
 
         (*sack).start_seq = new_start_seq;
@@ -275,7 +260,7 @@ pub unsafe extern "C" fn nf_ct_sack_adjust(
 
     let dir = unsafe { CTINFO2DIR(ctinfo) } as usize;
     let mut optoff = protoff + core::mem::size_of::<tcphdr>() as c_int;
-    let optend = protoff + (*(*ct).tcph).doff as c_int * 4;
+    let optend = protoff + (*(*ct).sk).sk_protocol as c_int * 4;
 
     if unsafe { skb_ensure_writable(skb, optend) } != 0 {
         return 0;
@@ -302,7 +287,7 @@ pub unsafe extern "C" fn nf_ct_sack_adjust(
                     unsafe {
                         nf_ct_sack_block_adjust(
                             skb,
-                            (*ct).tcph,
+                            (*ct).sk as *mut tcphdr,
                             optoff + 2,
                             optoff + len,
                             &mut (*seqadj).seq[!dir],
@@ -362,7 +347,7 @@ pub unsafe extern "C" fn nf_ct_seq_adjust(
         };
 
         let newseq = htonl(ntohl((*tcph).seq) + seqoff);
-        inet_proto_csum_replace4(&(*tcph).check, skb, &(*tcph).seq as *mut c_void, &newseq as *mut c_void, 0);
+        inet_proto_csum_replace4(&mut (*tcph).check, skb, &(*tcph).seq as *mut c_void, &newseq as *mut c_void, 0);
         (*tcph).seq = newseq;
 
         if (*tcph).ack != 0 {
@@ -376,7 +361,7 @@ pub unsafe extern "C" fn nf_ct_seq_adjust(
             };
 
             let newack = htonl(ntohl((*tcph).ack_seq) - ackoff);
-            inet_proto_csum_replace4(&(*tcph).check, skb, &(*tcph).ack_seq as *mut c_void, &newack as *mut c_void, 0);
+            inet_proto_csum_replace4(&mut (*tcph).check, skb, &(*tcph).ack_seq as *mut c_void, &newack as *mut c_void, 0);
             (*tcph).ack_seq = newack;
         }
 

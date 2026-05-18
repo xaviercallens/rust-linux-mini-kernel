@@ -1,3 +1,4 @@
+
 //! Network Filter NAT Protocol Manipulation
 //!
 //! This module implements protocol-specific NAT manipulation for various transport
@@ -29,14 +30,6 @@ pub const NF_NAT_MANIP_SRC: c_int = 0;
 pub const NF_NAT_MANIP_DST: c_int = 1;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct udphdr {
-    pub source: __be16,
-    pub dest: __be16,
-    pub len: __be16,
-    pub check: __be16,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -186,7 +179,7 @@ fn udp_manip_pkt(
             return false;
         }
 
-        let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut udphdr;
+        let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut udphdr;
         __udp_manip_pkt(skb, iphdroff, hdr, tuple, maniptype, (*hdr).check != 0);
         true
     }
@@ -205,7 +198,7 @@ fn udplite_manip_pkt(
             return false;
         }
 
-        let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut udphdr;
+        let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut udphdr;
         __udp_manip_pkt(skb, iphdroff, hdr, tuple, maniptype, true);
         true
     }
@@ -244,7 +237,7 @@ fn sctp_manip_pkt(
                 return false;
             }
 
-            let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut sctphdr;
+            let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut sctphdr;
 
             if maniptype == NF_NAT_MANIP_SRC {
                 (*hdr).source = (*tuple).src.u.sctp;
@@ -286,7 +279,7 @@ fn tcp_manip_pkt(
             return false;
         }
 
-        let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut tcphdr;
+        let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut tcphdr;
 
         let newport = if maniptype == NF_NAT_MANIP_SRC {
             (*tuple).src.u.tcp
@@ -335,7 +328,7 @@ fn dccp_manip_pkt(
                 return false;
             }
 
-            let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut dccp_hdr;
+            let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut dccp_hdr;
 
             let newport = if maniptype == NF_NAT_MANIP_SRC {
                 (*tuple).src.u.dccp
@@ -375,7 +368,7 @@ fn icmp_manip_pkt(
             return false;
         }
 
-        let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut icmphdr;
+        let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut icmphdr;
         let hdr = &mut *hdr;
 
         match hdr.type_ {
@@ -407,7 +400,7 @@ fn icmpv6_manip_pkt(
             return false;
         }
 
-        let hdr = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut icmp6hdr;
+        let hdr = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut icmp6hdr;
         nf_csum_update(skb, iphdroff, &mut (*hdr).icmp6_cksum, tuple, maniptype);
 
         if (*hdr).icmp6_type == 128 || (*hdr).icmp6_type == 129 {
@@ -438,7 +431,7 @@ fn gre_manip_pkt(
                 return false;
             }
 
-            let greh = (skb.add(iphdroff as usize).add(hdroff as usize)) as *mut __u8;
+            let greh = (skb.add(iphdroff as usize) as *mut u8).add(hdroff as usize) as *mut __u8;
             let greh = greh as *mut __be16;
 
             if maniptype != NF_NAT_MANIP_DST {
@@ -513,10 +506,10 @@ pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
     // Update IP header checksum
     if maniptype == NF_NAT_MANIP_SRC {
         // SAFETY: Valid pointer and data
-        inet_proto_csum_replace4(&mut iph.check, skb, iph.saddr, (*target).src.u3.ip);
+        inet_proto_csum_replace2(&mut iph.check, skb, iph.saddr, (*target).src.u3.s_addr, false);
     } else {
         // SAFETY: Valid pointer and data
-        inet_proto_csum_replace4(&mut iph.check, skb, iph.daddr, (*target).dst.u3.ip);
+        inet_proto_csum_replace2(&mut iph.check, skb, iph.daddr, (*target).dst.u3.s_addr, false);
     }
 
     0 // Success

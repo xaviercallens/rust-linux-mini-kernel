@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'ip6_input':
 
-```rust
 //! IPv6 input processing for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -21,18 +19,6 @@ pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    pub priority: u8,
-    pub version: u8,
-    pub flow_lbl: [u8; 3],
-    pub payload_len: u16,
-    pub nexthdr: u8,
-    pub hop_limit: u8,
-    pub saddr: in6_addr,
-    pub daddr: in6_addr,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

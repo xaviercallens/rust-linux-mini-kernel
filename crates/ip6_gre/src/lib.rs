@@ -50,6 +50,9 @@ pub struct ip6gre_net {
     pub fb_tunnel_dev: *mut net_device,
 }
 
+// Static variables
+pub static mut IP6GRE_NET_ID: c_int = 0;
+
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn ip6gre_tunnel_lookup(
@@ -67,7 +70,7 @@ pub unsafe extern "C" fn ip6gre_tunnel_lookup(
     let link = (*dev).ifindex;
     let h0 = HASH_ADDR(remote);
     let h1 = HASH_KEY(key);
-    let ign = net_generic(net, ip6gre_net_id);
+    let ign = net_generic(net, IP6GRE_NET_ID);
     let dev_type = if gre_proto == htons(ETH_P_TEB) as u16 ||
                    gre_proto == htons(ETH_P_ERSPAN) as u16 ||
                    gre_proto == htons(ETH_P_ERSPAN2) as u16 {

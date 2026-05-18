@@ -1,3 +1,4 @@
+
 //! IPv6 virtual tunneling interface
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -16,6 +17,10 @@ pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
+// Constants from kernel headers
+pub const IFNAMSIZ: usize = 16;
+pub const IFF_UP: c_int = 1 << 0;
+
 // Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -25,7 +30,7 @@ pub struct net_device {
     pub tstats: *mut c_void,
     pub dev: *mut net_device,
     pub next: *mut net_device,
-    pub priv: *mut c_void,
+    pub priv_data: *mut c_void,
 }
 
 #[repr(C)]
@@ -78,7 +83,7 @@ pub unsafe extern "C" fn vti6_tnl_lookup(
     }
 
     let ip6n = &*ip6n;
-    let mut t: *mut ip6_tnl = ptr::null_mut();
+    let mut t: *mut ip6_tnl;
     let mut hash = HASH(remote, local);
     let any: in6_addr = unsafe { core::mem::zeroed() };
 
@@ -201,7 +206,7 @@ pub unsafe extern "C" fn vti6_tnl_unlink(
 pub unsafe extern "C" fn vti6_dev_free(
     dev: *mut net_device,
 ) {
-    free_percpu(dev.tstats);
+    free_percpu((*dev).tstats);
 }
 
 /// Create tunnel device
@@ -216,7 +221,7 @@ pub unsafe extern "C" fn vti6_tnl_create2(
     let net = dev_net(dev);
     let ip6n = get_vti6_net(net);
 
-    (*dev).rtnl_link_ops = &vti6_link_ops;
+    // (*dev).rtnl_link_ops = &vti6_link_ops;
     let err = register_netdevice(dev);
     if err < 0 {
         return err;
@@ -285,7 +290,7 @@ fn HASH(addr1: *const in6_addr, addr2: *const in6_addr) -> c_uint {
 #[inline]
 fn hash_32(mut val: u32, bits: u32) -> c_uint {
     val = val.wrapping_mul(0x9e3779b9);
-    val >> (32 - bits)
+    (val >> (32 - bits)) as c_uint
 }
 
 #[inline]
@@ -308,7 +313,7 @@ unsafe fn get_vti6_net(net: *mut c_void) -> *mut vti6_net {
 
 #[inline]
 unsafe fn netdev_priv(dev: *mut net_device) -> *mut ip6_tnl {
-    (*dev).priv as *mut ip6_tnl
+    (*dev).priv_data as *mut ip6_tnl
 }
 
 #[inline]

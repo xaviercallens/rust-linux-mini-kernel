@@ -1,10 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-//!
-//! Segment Routing with IPv6 implementation
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
@@ -12,8 +5,6 @@
 
 use core::ffi::{c_int, c_uint, c_char, c_void};
 use core::mem;
-use core::ptr;
-use core::slice;
 use kernel_types::*;
 
 // Constants from C

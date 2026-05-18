@@ -1,6 +1,3 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'af_inet6':
-
-```rust
 //! IPv6 protocol stack for Linux
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -215,7 +212,7 @@ pub unsafe extern "C" fn inet6_create(
         (*sk).sk_reuse = SK_CAN_REUSE;
     }
 
-    inet = &mut (*sk).is_icsk as *mut _;
+    inet = &mut (*sk).inet as *mut _;
     (*inet).is_icsk = (INET_PROTOSW_ICSK & answer_flags) != 0;
 
     if (*sock).sk_type == SOCK_RAW {

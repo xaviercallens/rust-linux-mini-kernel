@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_standalone':
 
-```rust
 //! nf_conntrack Standalone Module
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -11,14 +9,7 @@ Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_standal
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::c_char;
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_ulong;
-use core::ffi::c_ulonglong;
-use core::ffi::c_void;
-use core::mem;
-use core::ptr;
+use core::ffi::{c_char, c_int, c_uint, c_ulong, c_ulonglong, c_void};
 use kernel_types::*;
 
 // Constants from C
@@ -147,12 +138,14 @@ pub unsafe extern "C" fn print_tuple(
     l4proto: *const nf_conntrack_l4proto,
 ) {
     // SAFETY: Function is called with valid pointers as per contract
-    let l3num = (*tuple).src_l3num;
+    let tuple_ref = &*tuple;
+    let l4proto_ref = &*l4proto;
+    let l3num = tuple_ref.src_l3num;
 
     match l3num {
         NFPROTO_IPV4 => {
-            let src_ip = (*tuple).src.u3.ip;
-            let dst_ip = (*tuple).dst.u3.ip;
+            let src_ip = tuple_ref.src.u3.ip;
+            let dst_ip = tuple_ref.dst.u3.ip;
             seq_printf(
                 s,
                 b"src=%pI4 dst=%pI4 \0" as *const _ as *const c_char,
@@ -161,25 +154,25 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         NFPROTO_IPV6 => {
-            let src_ip6 = (*tuple).src.u3.ip6.as_ptr();
-            let dst_ip6 = (*tuple).dst.u3.ip6.as_ptr();
+            let src_ip6 = tuple_ref.src.u3.ip6;
+            let dst_ip6 = tuple_ref.dst.u3.ip6;
             seq_printf(
                 s,
                 b"src=%pI6 dst=%pI6 \0" as *const _ as *const c_char,
-                src_ip6 as *const c_void,
-                dst_ip6 as *const c_void,
+                &src_ip6 as *const _ as *const c_void,
+                &dst_ip6 as *const _ as *const c_void,
             );
         }
         _ => {}
     }
 
-    let l4proto_num = (*l4proto).l4proto;
+    let l4proto_num = l4proto_ref.l4proto;
 
     match l4proto_num {
         IPPROTO_ICMP => {
-            let icmp_type = (*tuple).dst.u.icmp.type_;
-            let icmp_code = (*tuple).dst.u.icmp.code;
-            let icmp_id = u16::from_be((*tuple).src.u.icmp.id);
+            let icmp_type = tuple_ref.dst.u.icmp.type_;
+            let icmp_code = tuple_ref.dst.u.icmp.code;
+            let icmp_id = u16::from_be(tuple_ref.src.u.icmp.id);
             seq_printf(
                 s,
                 b"type=%u code=%u id=%u \0" as *const _ as *const c_char,
@@ -189,8 +182,8 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         IPPROTO_TCP => {
-            let sport = u16::from_be((*tuple).src.u.tcp.port);
-            let dport = u16::from_be((*tuple).dst.u.tcp.port);
+            let sport = u16::from_be(tuple_ref.src.u.tcp.port);
+            let dport = u16::from_be(tuple_ref.dst.u.tcp.port);
             seq_printf(
                 s,
                 b"sport=%hu dport=%hu \0" as *const _ as *const c_char,
@@ -199,8 +192,8 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         IPPROTO_UDPLITE | IPPROTO_UDP => {
-            let sport = u16::from_be((*tuple).src.u.udp.port);
-            let dport = u16::from_be((*tuple).dst.u.udp.port);
+            let sport = u16::from_be(tuple_ref.src.u.udp.port);
+            let dport = u16::from_be(tuple_ref.dst.u.udp.port);
             seq_printf(
                 s,
                 b"sport=%hu dport=%hu \0" as *const _ as *const c_char,
@@ -209,8 +202,8 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         IPPROTO_DCCP => {
-            let sport = u16::from_be((*tuple).src.u.dccp.port);
-            let dport = u16::from_be((*tuple).dst.u.dccp.port);
+            let sport = u16::from_be(tuple_ref.src.u.dccp.port);
+            let dport = u16::from_be(tuple_ref.dst.u.dccp.port);
             seq_printf(
                 s,
                 b"sport=%hu dport=%hu \0" as *const _ as *const c_char,
@@ -219,8 +212,8 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         IPPROTO_SCTP => {
-            let sport = u16::from_be((*tuple).src.u.sctp.port);
-            let dport = u16::from_be((*tuple).dst.u.sctp.port);
+            let sport = u16::from_be(tuple_ref.src.u.sctp.port);
+            let dport = u16::from_be(tuple_ref.dst.u.sctp.port);
             seq_printf(
                 s,
                 b"sport=%hu dport=%hu \0" as *const _ as *const c_char,
@@ -229,9 +222,9 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         IPPROTO_ICMPV6 => {
-            let icmp_type = (*tuple).dst.u.icmp.type_;
-            let icmp_code = (*tuple).dst.u.icmp.code;
-            let icmp_id = u16::from_be((*tuple).src.u.icmp.id);
+            let icmp_type = tuple_ref.dst.u.icmp.type_;
+            let icmp_code = tuple_ref.dst.u.icmp.code;
+            let icmp_id = u16::from_be(tuple_ref.src.u.icmp.id);
             seq_printf(
                 s,
                 b"type=%u code=%u id=%u \0" as *const _ as *const c_char,
@@ -241,8 +234,8 @@ pub unsafe extern "C" fn print_tuple(
             );
         }
         IPPROTO_GRE => {
-            let srckey = u16::from_be((*tuple).src.u.gre.key);
-            let dstkey = u16::from_be((*tuple).dst.u.gre.key);
+            let srckey = u16::from_be(tuple_ref.src.u.gre.key);
+            let dstkey = u16::from_be(tuple_ref.dst.u.gre.key);
             seq_printf(
                 s,
                 b"srckey=0x%x dstkey=0x%x \0" as *const _ as *const c_char,

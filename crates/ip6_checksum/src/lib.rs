@@ -43,7 +43,7 @@ pub unsafe extern "C" fn ip6_udp_checksum(
     csum += udp_len;
 
     // Add UDP header and data
-    let udp_data = skb.head as *const u8;
+    let udp_data = skb.data as *const u8;
     let udp_data = unsafe { core::slice::from_raw_parts(udp_data, udp_len as usize) };
 
     let mut i = 0;
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn ip6_udp_checksum(
     let csum = !csum as u16;
 
     // Store checksum in UDP header
-    let udp_header = (skb.head as *mut udphdr).add(udp_offset);
+    let udp_header = (skb.data as *mut udphdr).add(udp_offset);
     unsafe {
         (*udp_header).check = csum;
     }
@@ -88,3 +88,21 @@ pub unsafe extern "C" fn UDP_SKB_CB(skb: *mut sk_buff) -> c_int {
     let udp_cb = cb.add(4) as *const c_int;
     unsafe { *udp_cb }
 }
+
+// Rename static variables to follow Rust's naming conventions
+pub static mut __UDP_DISCONNECT: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut ICMPV6_ERR_CONVERT: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut INET6_SOCKRAW_OPS: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: *mut core::ffi::c_void = core::ptr::null_mut();
+
+// Ensure FFI compatibility
+extern "C" {
+    // Import necessary functions and types from the kernel_types crate
+    pub fn ip6_datagram_connect_v6_only(sk: *mut sock, uaddr: *mut sockaddr, addr_len: socklen_t) -> c_int;
+    pub fn ip6_datagram_recv_common_ctl(sk: *mut sock, msg: *mut msghdr, len: c_int, off: c_int) -> c_int;
+    // ... other necessary functions and types
+}
+
+// Module integration
+use kernel_types::{sock, sockaddr, socklen_t, msghdr, c_int};

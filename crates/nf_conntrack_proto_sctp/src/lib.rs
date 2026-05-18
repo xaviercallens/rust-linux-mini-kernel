@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_proto_sctp':
 
-```rust
 //! Connection tracking protocol helper module for SCTP.
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -53,12 +51,6 @@ pub struct sctp_chunkhdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub proto: nf_conntrack_proto,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conntrack_proto {
     pub sctp: sctp_conntrack,
 }
@@ -71,7 +63,7 @@ pub struct sctp_conntrack {
 }
 
 // Static data
-static sctp_conntrack_names: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
+static SCTP_CONNTRACK_NAMES: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
     "NONE",
     "CLOSED",
     "COOKIE_WAIT",
@@ -85,7 +77,7 @@ static sctp_conntrack_names: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
     "MAX",
 ];
 
-static sctp_timeouts: [u32; SCTP_CONNTRACK_MAX as usize] = [
+static SCTP_TIMEOUTS: [u32; SCTP_CONNTRACK_MAX as usize] = [
     10,     // SCTP_CONNTRACK_CLOSED
     3,      // SCTP_CONNTRACK_COOKIE_WAIT
     3,      // SCTP_CONNTRACK_COOKIE_ECHOED
@@ -97,7 +89,7 @@ static sctp_timeouts: [u32; SCTP_CONNTRACK_MAX as usize] = [
     210,    // SCTP_CONNTRACK_HEARTBEAT_ACKED
 ];
 
-static sctp_conntracks: [[[u8; SCTP_CONNTRACK_MAX as usize]; 11]; 2] = {
+static SCTP_CONNTRACKS: [[[u8; SCTP_CONNTRACK_MAX as usize]; 11]; 2] = {
     let mut arr = [[[0u8; 10]; 11]; 2];
     // Original direction transitions
     arr[0][0] = [1, 1, 2, 3, 4, 5, 6, 7, 2, 9]; // INIT
@@ -161,7 +153,7 @@ pub unsafe extern "C" fn do_basic_checks(
             skb,
             offset,
             core::mem::size_of::<sctp_chunkhdr>() as size_t,
-            &_sch as *mut sctp_chunkhdr as *mut c_void,
+            &mut _sch as *mut sctp_chunkhdr as *mut c_void,
         );
         if sch.is_null() {
             break;
@@ -220,7 +212,7 @@ pub unsafe extern "C" fn sctp_new_state(dir: c_int, cur_state: u8, chunk_type: u
         _ => return cur_state,
     }
 
-    sctp_conntracks[dir as usize][i as usize][cur_state as usize]
+    SCTP_CONNTRACKS[dir as usize][i as usize][cur_state as usize]
 }
 
 #[no_mangle]
@@ -252,7 +244,7 @@ pub unsafe extern "C" fn sctp_new(
             skb,
             offset,
             core::mem::size_of::<sctp_chunkhdr>() as size_t,
-            &_sch as *mut sctp_chunkhdr as *mut c_void,
+            &mut _sch as *mut sctp_chunkhdr as *mut c_void,
         );
         if sch.is_null() {
             break;
@@ -270,7 +262,7 @@ pub unsafe extern "C" fn sctp_new(
                 skb,
                 offset + (core::mem::size_of::<sctp_chunkhdr>() as u32),
                 16,
-                &_inithdr as *mut [u8; 16] as *mut c_void,
+                &mut _inithdr as *mut [u8; 16] as *mut c_void,
             );
             if ih.is_null() {
                 return 0;

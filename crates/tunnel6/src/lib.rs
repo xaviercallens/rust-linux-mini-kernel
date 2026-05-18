@@ -24,7 +24,7 @@ pub const IPPROTO_MPLS: c_int = 137;
 pub type handler_func = unsafe extern "C" fn(*mut sk_buff) -> c_int;
 pub type cb_handler_func = unsafe extern "C" fn(*mut sk_buff, c_int) -> c_int;
 pub type err_handler_func =
-    unsafe extern "C" fn(*mut sk_buff, *mut inet6_skb_parm, u8, u8, c_int, u32) -> c_int;
+    unsafe extern "C" fn(*mut sk_buff, *mut c_void, u8, u8, c_int, u32) -> c_int;
 
 // Define the xfrm6_tunnel struct with #[repr(C)] for ABI compatibility
 #[repr(C)]
@@ -43,7 +43,7 @@ static mut tunnel46_handlers: *mut xfrm6_tunnel = core::ptr::null_mut();
 static mut tunnelmpls6_handlers: *mut xfrm6_tunnel = core::ptr::null_mut();
 
 // Mutex for synchronization - represented as a raw mutex handle
-static mut tunnel6_mutex: c_void = 0 as c_void;
+static mut tunnel6_mutex: *mut c_void = core::ptr::null_mut();
 
 // Define the inet6_protocol struct with #[repr(C)] for ABI compatibility
 #[repr(C)]
@@ -117,15 +117,15 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
     let priority = (*handler).priority;
 
     // Lock the mutex before modifying the list
-    mutex_lock(&mut tunnel6_mutex as *mut _);
+    mutex_lock(tunnel6_mutex);
 
-    let pprev: *mut *mut xfrm6_tunnel;
+    let mut pprev: *mut *mut xfrm6_tunnel;
     match family {
-        AF_INET6 => pprev = &mut tunnel6_handlers as *mut _,
-        AF_INET => pprev = &mut tunnel46_handlers as *mut _,
-        AF_MPLS => pprev = &mut tunnelmpls6_handlers as *mut _,
+        AF_INET6 => pprev = &mut tunnel6_handlers,
+        AF_INET => pprev = &mut tunnel46_handlers,
+        AF_MPLS => pprev = &mut tunnelmpls6_handlers,
         _ => {
-            mutex_unlock(&mut tunnel6_mutex as *mut _);
+            mutex_unlock(tunnel6_mutex);
             return EINVAL;
         }
     }
@@ -139,10 +139,10 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
         }
         if current_priority == priority {
             // Priority already exists
-            mutex_unlock(&mut tunnel6_mutex as *mut _);
+            mutex_unlock(tunnel6_mutex);
             return EEXIST;
         }
-        pprev = &mut (*current).next as *mut _;
+        pprev = &mut (*current).next;
         current = *pprev;
     }
 
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
 
     ret = 0;
 
-    mutex_unlock(&mut tunnel6_mutex as *mut _);
+    mutex_unlock(tunnel6_mutex);
     ret
 }
 
@@ -164,15 +164,15 @@ pub unsafe extern "C" fn xfrm6_tunnel_deregister(
 ) -> c_int {
     let mut ret: c_int = ENOENT;
 
-    mutex_lock(&mut tunnel6_mutex as *mut _);
+    mutex_lock(tunnel6_mutex);
 
-    let pprev: *mut *mut xfrm6_tunnel;
+    let mut pprev: *mut *mut xfrm6_tunnel;
     match family {
-        AF_INET6 => pprev = &mut tunnel6_handlers as *mut _,
-        AF_INET => pprev = &mut tunnel46_handlers as *mut _,
-        AF_MPLS => pprev = &mut tunnelmpls6_handlers as *mut _,
+        AF_INET6 => pprev = &mut tunnel6_handlers,
+        AF_INET => pprev = &mut tunnel46_handlers,
+        AF_MPLS => pprev = &mut tunnelmpls6_handlers,
         _ => {
-            mutex_unlock(&mut tunnel6_mutex as *mut _);
+            mutex_unlock(tunnel6_mutex);
             return EINVAL;
         }
     }
@@ -184,11 +184,11 @@ pub unsafe extern "C" fn xfrm6_tunnel_deregister(
             ret = 0;
             break;
         }
-        pprev = &mut (*current).next as *mut _;
+        pprev = &mut (*current).next;
         current = *pprev;
     }
 
-    mutex_unlock(&mut tunnel6_mutex as *mut _);
+    mutex_unlock(tunnel6_mutex);
 
     // Synchronize with network
     synchronize_net();
@@ -213,7 +213,7 @@ pub unsafe extern "C" fn tunnelmpls6_rcv(skb: *mut sk_buff) -> c_int {
 
     let mut handler: *mut xfrm6_tunnel = tunnelmpls6_handlers;
     while !handler.is_null() {
-        if (*handler).handler(skb) == 0 {
+        if ((*handler).handler)(skb) == 0 {
             return 0;
         }
         handler = (*handler).next;
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn tunnel6_rcv(skb: *mut sk_buff) -> c_int {
 
     let mut handler: *mut xfrm6_tunnel = tunnel6_handlers;
     while !handler.is_null() {
-        if (*handler).handler(skb) == 0 {
+        if ((*handler).handler)(skb) == 0 {
             return 0;
         }
         handler = (*handler).next;
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn tunnel46_rcv(skb: *mut sk_buff) -> c_int {
 
     let mut handler: *mut xfrm6_tunnel = tunnel46_handlers;
     while !handler.is_null() {
-        if (*handler).handler(skb) == 0 {
+        if ((*handler).handler)(skb) == 0 {
             return 0;
         }
         handler = (*handler).next;
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn tunnel46_rcv(skb: *mut sk_buff) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn tunnel6_err(
     skb: *mut sk_buff,
-    opt: *mut inet6_skb_parm,
+    opt: *mut c_void,
     type_: u8,
     code: u8,
     offset: c_int,
@@ -316,7 +316,7 @@ pub unsafe extern "C" fn tunnel6_err(
 #[no_mangle]
 pub unsafe extern "C" fn tunnel46_err(
     skb: *mut sk_buff,
-    opt: *mut inet6_skb_parm,
+    opt: *mut c_void,
     type_: u8,
     code: u8,
     offset: c_int,
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn tunnel46_err(
 #[no_mangle]
 pub unsafe extern "C" fn tunnelmpls6_err(
     skb: *mut sk_buff,
-    opt: *mut inet6_skb_parm,
+    opt: *mut c_void,
     type_: u8,
     code: u8,
     offset: c_int,

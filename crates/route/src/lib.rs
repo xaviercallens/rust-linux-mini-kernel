@@ -27,28 +27,6 @@ pub struct net_device {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct dst_entry {
-    __refcnt: AtomicI32,
-    __use: c_int,
-    obsolete: c_int,
-    error: c_int,
-    input: extern "C" fn(*mut c_void) -> c_int,
-    output: extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> c_int,
-    dev: *mut net_device,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct rt6_info {
-    dst: dst_entry,
-    rt6i_flags: c_int,
-    rt6i_idev: *mut c_void,
-    rt6i_uncached: list_head,
-    rt6i_uncached_list: *mut uncached_list,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct list_head {
     next: *mut list_head,
     prev: *mut list_head,
@@ -122,7 +100,8 @@ pub unsafe extern "C" fn ip6_dst_alloc(
     let rt = ptr as *mut rt6_info;
     (*rt).rt6i_idev = ptr::null_mut();
     (*rt).rt6i_flags = 0;
-    INIT_LIST_HEAD(&mut (*rt).rt6i_uncached);
+    (*rt).rt6i_uncached.next = &mut (*rt).rt6i_uncached;
+    (*rt).rt6i_uncached.prev = &mut (*rt).rt6i_uncached;
 
     // Initialize dst_entry
     (*rt).dst.__refcnt = AtomicI32::new(1);

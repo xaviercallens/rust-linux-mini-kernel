@@ -38,34 +38,29 @@ pub struct nf_hook_entry {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_hook_entries_rcu_head {
     allocation: *mut c_void,
     head: c_void,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_hook_entries {
     num_hook_entries: c_uint,
     hooks: [nf_hook_entry; 0],
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_hook_state {
     // Opaque structure - actual fields would be defined in the kernel headers
     _private: [u8; 0],
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct net {
     nf: nf_net,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_net {
     hooks_arp: *mut nf_hook_entries,
     hooks_bridge: *mut nf_hook_entries,
@@ -75,7 +70,6 @@ pub struct nf_net {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct net_device {
     nf_hooks_ingress: *mut nf_hook_entries,
 }
@@ -85,14 +79,12 @@ type HookFn = extern "C" fn(priv_data: *mut c_void, skb: *mut c_void, state: *co
 
 // Static mutex implementation (simplified for FFI compatibility)
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct mutex {
     _private: [u8; 0],
 }
 
 // Static key implementation (simplified for FFI compatibility)
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct static_key {
     _private: [u8; 0],
 }

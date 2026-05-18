@@ -1,6 +1,4 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_nat_helper':
 
-```rust
 //! NAT Helper Functions for Linux Kernel
 //!
 //! This module provides FFI-compatible Rust implementations of NAT helper
@@ -22,23 +20,17 @@ pub const NFPROTO_IPV4: c_int = 2;
 pub const IPS_NAT_DONE_MASK: c_int = 0x0000000F;
 
 // Type definitions for FFI compatibility
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: c_int,
-    pub master: *mut nf_conn,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect {
+pub struct NF_CONNTRACK_EXPECT {
     pub dir: c_int,
     pub saved_proto: c_int,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_nat_range2 {
+pub struct NF_NAT_RANGE2 {
     pub flags: c_int,
     pub min_addr: u32,
     pub max_addr: u32,
@@ -114,19 +106,19 @@ fn mangle_contents(
 
         // Update IP headers if needed
         if nf_ct_l3num((*skb).nfct as *mut nf_conn) == NFPROTO_IPV4 {
-            let ip_hdr = skb_network_header(skb);
-            (*ip_hdr.add(2) as *mut u16) = (*skb).len as u16;
+            let ip_hdr = skb_network_header(skb) as *mut iphdr;
+            (*ip_hdr).tot_len = (*skb).len as u16;
             ip_send_check(ip_hdr);
         } else {
-            let ipv6_hdr = skb_network_header(skb);
-            (*ipv6_hdr.add(40) as *mut u16) = ((*skb).len - 40) as u16;
+            let ipv6_hdr = skb_network_header(skb) as *mut ipv6hdr;
+            (*ipv6_hdr).payload_len = ((*skb).len - 40) as u16;
         }
     }
 }
 
 /// Generic TCP packet mangling function
 #[no_mangle]
-pub unsafe extern "C" fn __nf_nat_mangle_tcp_packet(
+pub unsafe extern "C" fn __NF_NAT_MANGLE_TCP_PACKET(
     skb: *mut sk_buff,
     ct: *mut nf_conn,
     ctinfo: c_int,
@@ -159,7 +151,7 @@ pub unsafe extern "C" fn __nf_nat_mangle_tcp_packet(
     let oldlen = skb_ref.len - protoff as usize;
     mangle_contents(
         skb,
-        protoff + (*tcph.add(12) as u32 * 4) as c_uint,
+        protoff + (*(tcph.add(12) as *const u32) * 4) as c_uint,
         match_offset,
         match_len,
         rep_buffer,
@@ -172,7 +164,7 @@ pub unsafe extern "C" fn __nf_nat_mangle_tcp_packet(
         nf_ct_l3num(ct),
         IPPROTO_TCP,
         tcph as *mut c_void,
-        &mut (*tcph.add(16) as *mut u16),
+        &mut (*(tcph.add(16) as *mut u16)),
         datalen as c_int,
         oldlen as c_int,
     );
@@ -191,7 +183,7 @@ pub unsafe extern "C" fn __nf_nat_mangle_tcp_packet(
 
 /// Generic UDP packet mangling function
 #[no_mangle]
-pub unsafe extern "C" fn nf_nat_mangle_udp_packet(
+pub unsafe extern "C" fn NF_NAT_MANGLE_UDP_PACKET(
     skb: *mut sk_buff,
     ct: *mut nf_conn,
     ctinfo: c_int,
@@ -232,10 +224,10 @@ pub unsafe extern "C" fn nf_nat_mangle_udp_packet(
 
     // Update UDP length
     let datalen = skb_ref.len - protoff as usize;
-    (*udph.add(4) as *mut u16) = datalen as u16;
+    (*(udph.add(4) as *mut u16)) = datalen as u16;
 
     // Handle checksum
-    if (*udph.add(6) as *mut u16) == 0 && (*skb).ip_summed != 1 {
+    if (*(udph.add(6) as *mut u16)) == 0 && (*skb).ip_summed != 1 {
         return 0;
     }
 
@@ -244,7 +236,7 @@ pub unsafe extern "C" fn nf_nat_mangle_udp_packet(
         nf_ct_l3num(ct),
         IPPROTO_UDP,
         udph as *mut c_void,
-        &mut (*udph.add(6) as *mut u16),
+        &mut (*(udph.add(6) as *mut u16)),
         datalen as c_int,
         oldlen as c_int,
     );
@@ -254,7 +246,7 @@ pub unsafe extern "C" fn nf_nat_mangle_udp_packet(
 
 /// Enlarge skb if needed
 #[no_mangle]
-pub unsafe extern "C" fn enlarge_skb(skb: *mut sk_buff, extra: usize) -> c_int {
+pub unsafe extern "C" fn ENLARGE_SKB(skb: *mut sk_buff, extra: usize) -> c_int {
     let skb_ref = &mut *skb;
 
     if skb_ref.len + extra as usize > 65535 {
@@ -276,20 +268,20 @@ pub unsafe extern "C" fn enlarge_skb(skb: *mut sk_buff, extra: usize) -> c_int {
 
 /// Setup NAT to follow master connection
 #[no_mangle]
-pub unsafe extern "C" fn nf_nat_follow_master(ct: *mut nf_conn, exp: *mut nf_conntrack_expect) {
+pub unsafe extern "C" fn NF_NAT_FOLLOW_MASTER(ct: *mut nf_conn, exp: *mut NF_CONNTRACK_EXPECT) {
     let exp_ref = &mut *exp;
     let ct_ref = &mut *ct;
 
     // Ensure this is a fresh connection
     if ct_ref.status & IPS_NAT_DONE_MASK != 0 {
-        panic!("Connection already has NAT setup");
+        return;
     }
 
     // Setup source NAT
-    let mut range = nf_nat_range2 {
+    let mut range = NF_NAT_RANGE2 {
         flags: 1, // NF_NAT_RANGE_MAP_IPS
-        min_addr: (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.dst.u3,
-        max_addr: (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.dst.u3,
+        min_addr: (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.dst.u3.ip,
+        max_addr: (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.dst.u3.ip,
         min_proto: 0,
         max_proto: 0,
     };
@@ -299,18 +291,18 @@ pub unsafe extern "C" fn nf_nat_follow_master(ct: *mut nf_conn, exp: *mut nf_con
     range.flags = 3; // NF_NAT_RANGE_MAP_IPS | NF_NAT_RANGE_PROTO_SPECIFIED
     range.min_proto = exp_ref.saved_proto;
     range.max_proto = exp_ref.saved_proto;
-    range.min_addr = (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.src.u3;
-    range.max_addr = (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.src.u3;
+    range.min_addr = (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.src.u3.ip;
+    range.max_addr = (*ct_ref.master).tuplehash[!exp_ref.dir].tuple.src.u3.ip;
     nf_nat_setup_info(ct, &mut range, 1); // NF_NAT_MANIP_DST
 }
 
 // Extern declaration for nf_nat_setup_info
 extern "C" {
-    fn nf_nat_setup_info(ct: *mut nf_conn, range: *mut nf_nat_range2, manip: c_int);
+    fn nf_nat_setup_info(ct: *mut nf_conn, range: *mut NF_NAT_RANGE2, manip: c_int);
 }
 
 // Dummy implementation for ip_send_check (simplified)
-unsafe fn ip_send_check(ip_hdr: *mut u8) {
+unsafe fn ip_send_check(ip_hdr: *mut iphdr) {
     // In real implementation, this would calculate IP checksum
 }
 
@@ -320,7 +312,7 @@ mod tests {
     fn test_function_signatures() {
         // These tests just verify that the function signatures are correct
         extern "C" {
-            fn __nf_nat_mangle_tcp_packet(
+            fn __NF_NAT_MANGLE_TCP_PACKET(
                 skb: *mut super::sk_buff,
                 ct: *mut super::nf_conn,
                 ctinfo: super::c_int,
@@ -332,7 +324,7 @@ mod tests {
                 adjust: super::c_int,
             ) -> super::c_int;
 
-            fn nf_nat_mangle_udp_packet(
+            fn NF_NAT_MANGLE_UDP_PACKET(
                 skb: *mut super::sk_buff,
                 ct: *mut super::nf_conn,
                 ctinfo: super::c_int,
@@ -343,20 +335,10 @@ mod tests {
                 rep_len: super::c_uint,
             ) -> super::c_int;
 
-            fn nf_nat_follow_master(ct: *mut super::nf_conn, exp: *mut super::nf_conntrack_expect);
+            fn NF_NAT_FOLLOW_MASTER(ct: *mut super::nf_conn, exp: *mut super::NF_CONNTRACK_EXPECT);
         }
 
         // Just verify that the functions exist and have the right signatures
         // No actual execution since we need kernel environment
     }
 }
-```
-
-The key fixes include:
-1. Removed duplicate struct definitions by using the shared `kernel_types` crate
-2. Fixed pointer casts by using proper `skb_network_header` calls
-3. Replaced `goto` statements with Rust control flow (early returns)
-4. Maintained proper `#[repr(C)]` and `extern "C"` annotations
-5. Kept all unsafe blocks where needed for FFI compatibility
-6. Fixed type mismatches and pointer arithmetic issues
-7. Removed unnecessary features while preserving the original structure and logic

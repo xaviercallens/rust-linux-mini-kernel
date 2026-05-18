@@ -23,36 +23,26 @@ pub const ENOSYS: c_int = -38;
 
 // Type definitions
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_prop {
     pub error: c_int,
     pub scope: c_int,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct rtable {
-    pub dst: [u8; 1], // Placeholder for actual dst structure
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct rcu_head {
     pub next: *mut c_void,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_nh_common {
     pub nhc_dev: *mut c_void,
     pub nhc_lwtstate: *mut c_void,
     pub nhc_pcpu_rth_output: *mut c_void,
-    pub nhc_rth_input: *mut rtable,
+    pub nhc_rth_input: *mut c_void,
     pub nhc_exceptions: *mut c_void,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_nh {
     pub nh_common: fib_nh_common,
     pub fib_nh_oif: c_int,
@@ -67,7 +57,6 @@ pub struct fib_nh {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_info {
     pub fib_net: *mut c_void,
     pub fib_nhs: c_int,
@@ -151,10 +140,10 @@ unsafe fn free_fib_info_rcu(head: *mut rcu_head) {
         // Placeholder for actual implementation
     } else {
         let fi_nhs = (*fi).fib_nhs;
-        let fib_nh = &mut (*fi).nh; // Placeholder for actual fib_nh location
+        let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nexthop_nh = (fib_nh as *mut _) as *mut fib_nh;
+            let nexthop_nh = fib_nh.add(nhsel);
             // fib_nh_release((*fi).fib_net, nexthop_nh);
             // Placeholder for actual implementation
         }
@@ -184,10 +173,10 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
             // Placeholder for actual implementation
         } else {
             let fi_nhs = (*fi).fib_nhs;
-            let fib_nh = &mut (*fi).nh; // Placeholder for actual fib_nh location
+            let fib_nh = (*fi).nh as *mut fib_nh;
 
             for nhsel in 0..fi_nhs {
-                let nexthop_nh = (fib_nh as *mut _) as *mut fib_nh;
+                let nexthop_nh = fib_nh.add(nhsel);
                 if !(*nexthop_nh).nh_common.nhc_dev.is_null() {
                     // hlist_del(&(*nexthop_nh).nh_hash);
                     // Placeholder for actual implementation
@@ -247,10 +236,10 @@ fn fib_info_hashfn(fi: *mut fib_info) -> c_int {
         val ^= fib_devindex_hashfn((*(*fi).nh as *mut fib_nh).fib_nh_oif);
     } else {
         let fi_nhs = (*fi).fib_nhs;
-        let fib_nh = &mut (*fi).nh; // Placeholder for actual fib_nh location
+        let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nh = (fib_nh as *mut _) as *mut fib_nh;
+            let nh = fib_nh.add(nhsel);
             val ^= fib_devindex_hashfn((*nh).fib_nh_oif);
         }
     }
@@ -266,11 +255,11 @@ pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) ->
     }
 
     let hash = fib_info_hashfn_1(
-        fib_devindex_hashfn((*cfg as *mut fib_nh).fib_nh_oif),
-        (*cfg as *mut fib_info).fib_protocol,
-        (*cfg as *mut fib_info).fib_scope,
-        (*cfg as *mut fib_info).fib_prefsrc as u32,
-        (*cfg as *mut fib_info).fib_priority
+        fib_devindex_hashfn((cfg as *mut fib_nh).fib_nh_oif),
+        (cfg as *mut fib_info).fib_protocol,
+        (cfg as *mut fib_info).fib_scope,
+        (cfg as *mut fib_info).fib_prefsrc as u32,
+        (cfg as *mut fib_info).fib_priority
     );
     let hash = fib_info_hashfn_result(hash);
     let head = fib_info_hash.offset(hash as isize);
@@ -285,18 +274,18 @@ pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) ->
             continue;
         }
 
-        if !(*fi).nh.is_null() && (*(*fi).nh as *mut fib_nh).fib_nh_oif != (*cfg as *mut fib_nh).fib_nh_oif {
+        if !(*fi).nh.is_null() && (*(*fi).nh as *mut fib_nh).fib_nh_oif != (cfg as *mut fib_nh).fib_nh_oif {
             fi = (*fi).fib_hash as *mut _; // Next entry
             continue;
         }
 
-        if (*cfg as *mut fib_info).fib_protocol == (*fi).fib_protocol &&
-           (*cfg as *mut fib_info).fib_scope == (*fi).fib_scope &&
-           (*cfg as *mut fib_info).fib_prefsrc == (*fi).fib_prefsrc &&
-           (*cfg as *mut fib_info).fib_priority == (*fi).fib_priority &&
-           (*cfg as *mut fib_info).fib_type == (*fi).fib_type &&
-           (*cfg as *mut fib_info).fib_tb_id == (*fi).fib_tb_id &&
-           !(((*cfg as *mut fib_info).fib_flags ^ (*fi).fib_flags) & !RTNH_COMPARE_MASK) {
+        if (cfg as *mut fib_info).fib_protocol == (*fi).fib_protocol &&
+           (cfg as *mut fib_info).fib_scope == (*fi).fib_scope &&
+           (cfg as *mut fib_info).fib_prefsrc == (*fi).fib_prefsrc &&
+           (cfg as *mut fib_info).fib_priority == (*fi).fib_priority &&
+           (cfg as *mut fib_info).fib_type == (*fi).fib_type &&
+           (cfg as *mut fib_info).fib_tb_id == (*fi).fib_tb_id &&
+           !(((cfg as *mut fib_info).fib_flags ^ (*fi).fib_flags) & !RTNH_COMPARE_MASK) {
             return fi;
         }
 

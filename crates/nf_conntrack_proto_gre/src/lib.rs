@@ -73,17 +73,8 @@ pub struct nf_gre_net {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: u32,
-    pub proto: nf_conn_gre,
-    pub _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conn_gre {
     pub timeout: c_uint,
-    pub stream_timeout: c_uint,
 }
 
 #[repr(C)]
@@ -125,7 +116,7 @@ extern "C" {
 }
 
 // Module-level statics
-static mut keymap_lock: c_int = 0; // Simplified spinlock representation
+static mut KEYMAP_LOCK: c_int = 0; // Simplified spinlock representation
 
 // Helper functions
 fn spin_lock_bh(lock: *mut c_int) {
@@ -210,9 +201,9 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
     ptr::copy_nonoverlapping(t, &mut (*km).tuple as *mut _ as *mut _, 1);
     *kmp = km;
 
-    spin_lock_bh(&mut keymap_lock);
+    spin_lock_bh(&mut KEYMAP_LOCK);
     list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
-    spin_unlock_bh(&mut keymap_lock);
+    spin_unlock_bh(&mut KEYMAP_LOCK);
 
     0
 }
@@ -224,7 +215,7 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
     }
 
     let ct_pptp_info = nfct_help_data(ct);
-    spin_lock_bh(&mut keymap_lock);
+    spin_lock_bh(&mut KEYMAP_LOCK);
 
     for dir in 0..IP_CT_DIR_MAX {
         let km = (*ct_pptp_info).keymap[dir];
@@ -235,7 +226,7 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
         }
     }
 
-    spin_unlock_bh(&mut keymap_lock);
+    spin_unlock_bh(&mut KEYMAP_LOCK);
 }
 
 #[no_mangle]
@@ -301,21 +292,19 @@ pub unsafe extern "C" fn nf_conntrack_gre_packet(
         if timeouts.is_null() {
             let net = nf_ct_net(ct);
             let net_gre = gre_pernet(net);
-            (*ct).proto.gre.timeout = (*net_gre).timeouts[GRE_CT_UNREPLIED];
-            (*ct).proto.gre.stream_timeout = (*net_gre).timeouts[GRE_CT_REPLIED];
+            (*ct).timeout = (*net_gre).timeouts[GRE_CT_UNREPLIED];
         } else {
-            (*ct).proto.gre.timeout = *timeouts.offset(GRE_CT_UNREPLIED as isize);
-            (*ct).proto.gre.stream_timeout = *timeouts.offset(GRE_CT_REPLIED as isize);
+            (*ct).timeout = *timeouts.offset(GRE_CT_UNREPLIED as isize);
         }
     }
 
     if (*ct).status & IPS_SEEN_REPLY != 0 {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).proto.gre.stream_timeout);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout);
         if !(*ct).status & IPS_ASSURED_BIT {
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).proto.gre.timeout);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout);
     }
 
     0 // NF_ACCEPT

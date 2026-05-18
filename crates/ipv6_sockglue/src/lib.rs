@@ -89,15 +89,15 @@ static mut ip6_ra_lock: [u8; 0] = [0; 0]; // Placeholder for lock structure
 
 // Function implementations
 #[no_mangle]
-pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int { // Changed from *mut sock to *mut c_void
+pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
     if sk.is_null() {
         return EINVAL;
     }
 
     // Check socket type
     // SAFETY: Caller guarantees sk is valid
-    let sk_type = unsafe { (*(sk as *mut inet_sock)).inet.sk_type };
-    let inet_num = unsafe { (*(sk as *mut inet_sock)).inet.inet_num };
+    let sk_type = unsafe { (*(sk as *mut inet_sock)).sk.sk_type };
+    let inet_num = unsafe { (*(sk as *mut inet_sock)).inet_id };
 
     if sk_type != 1 /* SOCK_RAW */ || inet_num != 255 /* IPPROTO_RAW */ {
         return ENOPROTOOPT;
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int { 
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_update_options(
-    sk: *mut c_void, // Changed from *mut sock to *mut c_void
+    sk: *mut c_void,
     opt: *mut ipv6_txoptions,
 ) -> *mut ipv6_txoptions {
     if sk.is_null() || opt.is_null() {
@@ -197,7 +197,7 @@ fn setsockopt_needs_rtnl(optname: c_int) -> bool {
 
 #[no_mangle]
 pub unsafe extern "C" fn do_ipv6_setsockopt(
-    sk: *mut c_void, // Changed from *mut sock to *mut c_void
+    sk: *mut c_void,
     level: c_int,
     optname: c_int,
     optval: *const c_void,

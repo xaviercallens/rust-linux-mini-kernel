@@ -1,3 +1,4 @@
+//!
 //! This module provides FFI-compatible Rust bindings for the Linux kernel's UDP connection tracking
 //! functionality. It implements connection tracking for UDP and UDPLITE protocols with timeout
 //! management and error checking capabilities.
@@ -41,13 +42,6 @@ pub struct nf_hook_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: c_int,
-    pub proto: nf_conn_proto,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conn_proto {
     pub udp: nf_conn_udp,
 }
@@ -83,7 +77,7 @@ type nf_ct_port_nlattr_to_tuple_t = unsafe extern "C" fn(tb: *mut c_void, data: 
 type nf_ct_port_nlattr_tuple_size_t = unsafe extern "C" fn() -> c_int;
 
 // Static data
-static udp_timeouts: [c_int; UDP_CT_MAX as usize] = [30, 120]; // *HZ
+static UDP_TIMEOUTS: [c_int; UDP_CT_MAX as usize] = [30, 120]; // *HZ
 
 // Extern functions (kernel APIs)
 extern "C" {
@@ -140,7 +134,7 @@ pub unsafe extern "C" fn udp_error(
     }
 
     if (*state).hook == NF_INET_PRE_ROUTING &&
-       (*(*state).net as *mut net_t).ct.sysctl_checksum &&
+       (*(*state).net as *mut net).ct.sysctl_checksum &&
        nf_checksum(skb, (*state).hook, dataoff, IPPROTO_UDP, (*state).pf) {
         udp_error_log(skb, state, b"bad checksum\0".as_ptr() as *const c_char);
         return true;
@@ -167,7 +161,7 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
     if ct_timeout.is_null() {
         let net = nf_ct_net(ct);
         let un = nf_udp_pernet(net);
-        timeouts = un.timeouts.as_mut_ptr();
+        timeouts = (*un).timeouts.as_mut_ptr();
     } else {
         timeouts = ct_timeout;
     }
@@ -229,7 +223,7 @@ pub unsafe extern "C" fn udplite_error(
     }
 
     if (*state).hook == NF_INET_PRE_ROUTING &&
-       (*(*state).net as *mut net_t).ct.sysctl_checksum &&
+       (*(*state).net as *mut net).ct.sysctl_checksum &&
        nf_checksum_partial(skb, (*state).hook, dataoff, cscov as c_int, IPPROTO_UDP, (*state).pf) {
         udplite_error_log(skb, state, b"bad checksum\0".as_ptr() as *const c_char);
         return true;
@@ -256,7 +250,7 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
     if ct_timeout.is_null() {
         let net = nf_ct_net(ct);
         let un = nf_udp_pernet(net);
-        timeouts = un.timeouts.as_mut_ptr();
+        timeouts = (*un).timeouts.as_mut_ptr();
     } else {
         timeouts = ct_timeout;
     }
@@ -282,7 +276,7 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
 pub unsafe extern "C" fn nf_conntrack_udp_init_net(net: *mut c_void) {
     let un = nf_udp_pernet(net);
     for i in 0..UDP_CT_MAX as usize {
-        (*un).timeouts[i] = udp_timeouts[i] * HZ();
+        (*un).timeouts[i] = UDP_TIMEOUTS[i] * HZ();
     }
 }
 
@@ -333,7 +327,7 @@ fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {
 
 // Module exports
 #[no_mangle]
-pub static nf_conntrack_l4proto_udp: nf_conntrack_l4proto = nf_conntrack_l4proto {
+pub static NF_CONNTRACK_L4PROTO_UDP: nf_conntrack_l4proto = nf_conntrack_l4proto {
     l4proto: IPPROTO_UDP,
     allow_clash: true,
     // ... (other fields omitted for brevity)
@@ -341,7 +335,7 @@ pub static nf_conntrack_l4proto_udp: nf_conntrack_l4proto = nf_conntrack_l4proto
 
 #[cfg(feature = "udplite")]
 #[no_mangle]
-pub static nf_conntrack_l4proto_udplite: nf_conntrack_l4proto = nf_conntrack_l4proto {
+pub static NF_CONNTRACK_L4PROTO_UDPLITE: nf_conntrack_l4proto = nf_conntrack_l4proto {
     l4proto: IPPROTO_UDPLITE,
     allow_clash: true,
     // ... (other fields omitted for brevity)

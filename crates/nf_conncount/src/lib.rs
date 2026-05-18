@@ -45,20 +45,6 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_zone {
-    // Opaque structure - actual fields would be defined in the kernel headers
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    // Opaque structure - actual fields would be defined in the kernel headers
-    _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_hash {
     // Opaque structure - actual fields would be defined in the kernel headers
     _private: [u8; 0],
@@ -169,7 +155,7 @@ extern "C" {
 pub unsafe extern "C" fn already_closed(conn: *const nf_conn) -> c_int {
     if nf_ct_protonum(conn) == IPPROTO_TCP {
         let state = nf_ct_tcp_state(conn);
-        (state == TCP_CONNTRACK_TIME_WAIT) as c_int | (state == TCP_CONNTRACK_CLOSE) as c_int
+        (state == TCP_CONNTRACK_TIME_WAIT || state == TCP_CONNTRACK_CLOSE) as c_int
     } else {
         0
     }
@@ -193,7 +179,7 @@ pub unsafe extern "C" fn key_diff(a: *const u32, b: *const u32, klen: c_uint) ->
 /// - `conn` must be a valid pointer to nf_conncount_tuple in list
 #[no_mangle]
 pub unsafe extern "C" fn conn_free(list: *mut nf_conncount_list, conn: *mut nf_conncount_tuple) {
-    (*list).count = (*list).count.checked_sub(1).unwrap();
+    (*list).count = (*list).count.checked_sub(1).unwrap_or(0);
     list_del(&mut (*conn).node);
     kmem_cache_free(conncount_conn_cachep(), conn as *mut c_void);
 }
@@ -357,19 +343,19 @@ pub unsafe extern "C" fn nf_conncount_gc_list(
 }
 
 // Global variables
-static mut conncount_rnd: u32 = 0;
-static mut conncount_rb_cachep: *mut c_void = ptr::null_mut();
-static mut conncount_conn_cachep: *mut c_void = ptr::null_mut();
+static mut CONNCOUNT_RND: u32 = 0;
+static mut CONNCOUNT_RB_CACHEP: *mut c_void = ptr::null_mut();
+static mut CONNCOUNT_CONN_CACHEP: *mut c_void = ptr::null_mut();
 
 // Helper functions for memory management
 #[no_mangle]
 pub unsafe extern "C" fn conncount_rb_cachep() -> *mut c_void {
-    conncount_rb_cachep
+    CONNCOUNT_RB_CACHEP
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn conncount_conn_cachep() -> *mut c_void {
-    conncount_conn_cachep
+    CONNCOUNT_CONN_CACHEP
 }
 
 // Tests (conditional compilation)

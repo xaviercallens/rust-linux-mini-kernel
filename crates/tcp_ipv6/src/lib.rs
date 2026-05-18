@@ -1,3 +1,4 @@
+
 //! TCP over IPv6 implementation for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -14,6 +15,12 @@ pub const ENOMEM: c_int = -12;
 pub const ENETUNREACH: c_int = -101;
 pub const EAFNOSUPPORT: c_int = -97;
 pub const ENOENT: c_int = -2;
+
+// Static variables
+pub static mut __UDP_DISCONNECT: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut ICMPV6_ERR_CONVERT: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut INET6_SOCKRAW_OPS: *mut core::ffi::c_void = core::ptr::null_mut();
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut core::ffi::c_void = core::ptr::null_mut();
 
 // Function implementations
 
@@ -57,8 +64,8 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
     let ipv6_hdr = (*skb).ipv6_hdr;
     let tcp_hdr = (*skb).tcp_hdr;
     secure_tcpv6_seq(
-        ipv6_hdr.daddr.s6_addr32,
-        ipv6_hdr.saddr.s6_addr32,
+        ipv6_hdr.daddr.in6_u.u6_addr32,
+        ipv6_hdr.saddr.in6_u.u6_addr32,
         tcp_hdr.dest,
         tcp_hdr.source,
     )
@@ -72,7 +79,7 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_ts_off(net: *const c_void, skb: *const sk_buff) -> u32 {
     let ipv6_hdr = (*skb).ipv6_hdr;
-    secure_tcpv6_ts_off(net, ipv6_hdr.daddr.s6_addr32, ipv6_hdr.saddr.s6_addr32)
+    secure_tcpv6_ts_off(net, ipv6_hdr.daddr.in6_u.u6_addr32, ipv6_hdr.saddr.in6_u.u6_addr32)
 }
 
 /// Pre-connect processing for IPv6

@@ -1,3 +1,4 @@
+use std::sync::Mutex;
 use kernel_types::*;
 
 #[repr(C)]
@@ -72,6 +73,21 @@ pub struct ip6_icmp_unreach {
     pub unused: __be32,
 }
 
+/// Pointer to the UDP disconnect function.
+pub static mut __UDP_DISCONNECT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+
+/// Pointer to the ICMPv6 error conversion function.
+pub static mut ICMPV6_ERR_CONVERT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+
+/// Pointer to the IPv6 sockraw operations.
+pub static mut INET6_SOCKRAW_OPS: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+
+/// Pointer to the IPv6 datagram connect function for v6 only.
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+
+/// Pointer to the IPv6 datagram receive common control function.
+pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+
 extern "C" {
     pub fn ip6_icmp_send(
         skb: *mut sk_buff,
@@ -101,22 +117,26 @@ pub fn ip6_icmp_send_echo_reply(
         return -1;
     }
 
-    let icmp6h = unsafe { (*skb).cb as *mut ip6_icmp };
+    let icmp6h = unsafe { &mut (*skb).cb as *mut ip6_icmp };
 
     if icmp6h.is_null() {
         return -1;
     }
 
-    if unsafe { (*icmp6h).type_ } != type_ || unsafe { (*icmp6h).code } != code {
+    let icmp6h_ref = unsafe { &*icmp6h };
+
+    if icmp6h_ref.type_ != type_ || icmp6h_ref.code != code {
         return -1;
     }
 
-    let echo = unsafe { &mut (*icmp6h).un.u_echo };
-    echo.identifier = unsafe { (*icmp6h).un.u_echo.identifier };
-    echo.sequence = unsafe { (*icmp6h).un.u_echo.sequence };
+    let echo = unsafe { &mut icmp6h_ref.un.u_echo };
+    echo.identifier = icmp6h_ref.un.u_echo.identifier;
+    echo.sequence = icmp6h_ref.un.u_echo.sequence;
 
-    unsafe { (*icmp6h).type_ = type_ };
-    unsafe { (*icmp6h).code = code };
+    unsafe {
+        (*icmp6h).type_ = type_;
+        (*icmp6h).code = code;
+    }
 
     ip6_icmp_send(skb, type_, code, offset, mtu)
 }
@@ -132,18 +152,22 @@ pub fn ip6_icmp_send_error(
         return -1;
     }
 
-    let icmp6h = unsafe { (*skb).cb as *mut ip6_icmp };
+    let icmp6h = unsafe { &mut (*skb).cb as *mut ip6_icmp };
 
     if icmp6h.is_null() {
         return -1;
     }
 
-    if unsafe { (*icmp6h).type_ } != type_ || unsafe { (*icmp6h).code } != code {
+    let icmp6h_ref = unsafe { &*icmp6h };
+
+    if icmp6h_ref.type_ != type_ || icmp6h_ref.code != code {
         return -1;
     }
 
-    unsafe { (*icmp6h).type_ = type_ };
-    unsafe { (*icmp6h).code = code };
+    unsafe {
+        (*icmp6h).type_ = type_;
+        (*icmp6h).code = code;
+    }
 
     ip6_icmp_error(skb, type_, code, offset, mtu)
 }
