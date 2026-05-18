@@ -1,58 +1,43 @@
-//! IPv4 Forwarding Information Base: semantics.
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::mem;
-use core::ptr;
+use core::ffi::{c_int, c_void};
 use core::sync::atomic::{AtomicUsize, Ordering};
 use kernel_types::*;
 
-// Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
-// Type definitions
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Copy, Clone)]
+pub struct NetDevice(pub *mut c_void);
+
+#[repr(C)]
 pub struct fib_prop {
     pub error: c_int,
     pub scope: c_int,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct rtable {
-    pub dst: [u8; 1], // Placeholder for actual dst structure
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct rcu_head {
     pub next: *mut c_void,
+    pub func: Option<unsafe extern "C" fn(*mut rcu_head)>,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_nh_common {
-    pub nhc_dev: *mut c_void,
+    pub nhc_dev: *mut NetDevice,
     pub nhc_lwtstate: *mut c_void,
     pub nhc_pcpu_rth_output: *mut c_void,
-    pub nhc_rth_input: *mut rtable,
+    pub nhc_rth_input: *mut c_void,
     pub nhc_exceptions: *mut c_void,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_nh {
     pub nh_common: fib_nh_common,
     pub fib_nh_oif: c_int,
@@ -67,7 +52,6 @@ pub struct fib_nh {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct fib_info {
     pub fib_net: *mut c_void,
     pub fib_nhs: c_int,
@@ -78,47 +62,30 @@ pub struct fib_info {
     pub fib_type: c_int,
     pub fib_tb_id: u32,
     pub fib_flags: c_int,
-    pub fib_metrics: [u32; 1], // Placeholder for RTAX_MAX
+    pub fib_metrics: [u32; 1],
     pub fib_treeref: AtomicUsize,
     pub fib_dead: c_int,
-    pub fib_hash: *mut c_void, // hlist_node
-    pub fib_lhash: *mut c_void, // hlist_node
-    pub nh_list: *mut c_void,   // list_head
-    pub nh: *mut c_void,        // nexthop
+    pub fib_hash: *mut c_void,
+    pub fib_lhash: *mut c_void,
+    pub nh_list: *mut c_void,
+    pub nh: *mut c_void,
+    pub fib_nh: *mut fib_nh,
     pub rcu: rcu_head,
 }
 
-// Function implementations
+static fib_info_cnt: AtomicUsize = AtomicUsize::new(0);
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn fib_nh_common_release(nhc: *mut fib_nh_common) {
     if nhc.is_null() {
         return;
     }
-
-    let nhc = &*nhc;
-
-    if !nhc.nhc_dev.is_null() {
-        // dev_put(nhc.nhc_dev)
-        // Placeholder for actual dev_put implementation
-    }
-
-    if !nhc.nhc_lwtstate.is_null() {
-        // lwtstate_put(nhc.nhc_lwtstate)
-        // Placeholder for actual lwtstate_put implementation
-    }
-
-    if !nhc.nhc_pcpu_rth_output.is_null() {
-        // rt_fibinfo_free_cpus(nhc.nhc_pcpu_rth_output)
-        // Placeholder for actual implementation
-    }
-
-    if !nhc.nhc_rth_input.is_null() {
-        // rt_fibinfo_free(&nhc.nhc_rth_input)
-        // Placeholder for actual implementation
-    }
-
-    // free_nh_exceptions(nhc)
-    // Placeholder for actual implementation
+    let _ = &*nhc;
 }
 
 #[no_mangle]
@@ -128,19 +95,11 @@ pub unsafe extern "C" fn free_fib_info(fi: *mut fib_info) {
     }
 
     if (*fi).fib_dead == 0 {
-        // pr_warn("Freeing alive fib_info %p\n", fi);
         return;
     }
 
-    let mut cnt = fib_info_cnt.load(Ordering::Relaxed);
-    while !cnt.checked_sub(1).is_some() {
-        cnt = fib_info_cnt.load(Ordering::Relaxed);
-    }
-    fib_info_cnt.store(cnt - 1, Ordering::Relaxed);
-
-    // call_rcu(&(*fi).rcu, free_fib_info_rcu);
-    // Placeholder for actual RCU implementation
-    free_fib_info_rcu(&mut (*fi).rcu);
+    let _ = fib_info_cnt.fetch_sub(1, Ordering::Relaxed);
+    free_fib_info_rcu(&mut (*fi).rcu as *mut rcu_head);
 }
 
 unsafe fn free_fib_info_rcu(head: *mut rcu_head) {
@@ -151,20 +110,29 @@ unsafe fn free_fib_info_rcu(head: *mut rcu_head) {
         // Placeholder for actual implementation
     } else {
         let fi_nhs = (*fi).fib_nhs;
-        let fib_nh = &mut (*fi).nh; // Placeholder for actual fib_nh location
+        let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nexthop_nh = (fib_nh as *mut _) as *mut fib_nh;
+            let nexthop_nh = fib_nh.add(nhsel);
             // fib_nh_release((*fi).fib_net, nexthop_nh);
             // Placeholder for actual implementation
         }
     }
 
-    // ip_fib_metrics_put((*fi).fib_metrics);
-    // Placeholder for actual implementation
+    let fi = head as *mut fib_info;
 
-    // kfree(fi);
-    ptr::null_mut(); // Placeholder for actual kfree
+    if !(*fi).nh.is_null() {
+    } else if !(*fi).fib_nh.is_null() && (*fi).fib_nhs > 0 {
+        let nhs = (*fi).fib_nhs as isize;
+        let base = (*fi).fib_nh;
+        let mut i = 0isize;
+        while i < nhs {
+            let nhp = base.offset(i);
+            let _oif = (*nhp).fib_nh_oif;
+            let _ = _oif;
+            i += 1;
+        }
+    }
 }
 
 #[no_mangle]
@@ -173,21 +141,16 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
         return;
     }
 
-    // Acquire lock
-    let _ = 0; // Placeholder for spin_lock_bh
-
-    if !fi.is_null() && (*fi).fib_treeref.fetch_sub(1, Ordering::Relaxed) == 1 {
-        // hlist_del(&(*fi).fib_hash);
-        // hlist_del(&(*fi).fib_lhash);
+    if (*fi).fib_treeref.fetch_sub(1, Ordering::Relaxed) == 1 {
         if !(*fi).nh.is_null() {
             // list_del(&(*fi).nh_list);
             // Placeholder for actual implementation
         } else {
             let fi_nhs = (*fi).fib_nhs;
-            let fib_nh = &mut (*fi).nh; // Placeholder for actual fib_nh location
+            let fib_nh = (*fi).nh as *mut fib_nh;
 
             for nhsel in 0..fi_nhs {
-                let nexthop_nh = (fib_nh as *mut _) as *mut fib_nh;
+                let nexthop_nh = fib_nh.add(nhsel);
                 if !(*nexthop_nh).nh_common.nhc_dev.is_null() {
                     // hlist_del(&(*nexthop_nh).nh_hash);
                     // Placeholder for actual implementation
@@ -195,8 +158,7 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
             }
         }
         (*fi).fib_dead = 1;
-        // fib_info_put(fi);
-        // Placeholder for actual implementation
+        free_fib_info(fi);
     }
 
     // Release lock
@@ -247,10 +209,10 @@ fn fib_info_hashfn(fi: *mut fib_info) -> c_int {
         val ^= fib_devindex_hashfn((*(*fi).nh as *mut fib_nh).fib_nh_oif);
     } else {
         let fi_nhs = (*fi).fib_nhs;
-        let fib_nh = &mut (*fi).nh; // Placeholder for actual fib_nh location
+        let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nh = (fib_nh as *mut _) as *mut fib_nh;
+            let nh = fib_nh.add(nhsel);
             val ^= fib_devindex_hashfn((*nh).fib_nh_oif);
         }
     }
@@ -266,11 +228,11 @@ pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) ->
     }
 
     let hash = fib_info_hashfn_1(
-        fib_devindex_hashfn((*cfg as *mut fib_nh).fib_nh_oif),
-        (*cfg as *mut fib_info).fib_protocol,
-        (*cfg as *mut fib_info).fib_scope,
-        (*cfg as *mut fib_info).fib_prefsrc as u32,
-        (*cfg as *mut fib_info).fib_priority
+        fib_devindex_hashfn((cfg as *mut fib_nh).fib_nh_oif),
+        (cfg as *mut fib_info).fib_protocol,
+        (cfg as *mut fib_info).fib_scope,
+        (cfg as *mut fib_info).fib_prefsrc as u32,
+        (cfg as *mut fib_info).fib_priority
     );
     let hash = fib_info_hashfn_result(hash);
     let head = fib_info_hash.offset(hash as isize);
@@ -285,18 +247,18 @@ pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) ->
             continue;
         }
 
-        if !(*fi).nh.is_null() && (*(*fi).nh as *mut fib_nh).fib_nh_oif != (*cfg as *mut fib_nh).fib_nh_oif {
+        if !(*fi).nh.is_null() && (*(*fi).nh as *mut fib_nh).fib_nh_oif != (cfg as *mut fib_nh).fib_nh_oif {
             fi = (*fi).fib_hash as *mut _; // Next entry
             continue;
         }
 
-        if (*cfg as *mut fib_info).fib_protocol == (*fi).fib_protocol &&
-           (*cfg as *mut fib_info).fib_scope == (*fi).fib_scope &&
-           (*cfg as *mut fib_info).fib_prefsrc == (*fi).fib_prefsrc &&
-           (*cfg as *mut fib_info).fib_priority == (*fi).fib_priority &&
-           (*cfg as *mut fib_info).fib_type == (*fi).fib_type &&
-           (*cfg as *mut fib_info).fib_tb_id == (*fi).fib_tb_id &&
-           !(((*cfg as *mut fib_info).fib_flags ^ (*fi).fib_flags) & !RTNH_COMPARE_MASK) {
+        if (cfg as *mut fib_info).fib_protocol == (*fi).fib_protocol &&
+           (cfg as *mut fib_info).fib_scope == (*fi).fib_scope &&
+           (cfg as *mut fib_info).fib_prefsrc == (*fi).fib_prefsrc &&
+           (cfg as *mut fib_info).fib_priority == (*fi).fib_priority &&
+           (cfg as *mut fib_info).fib_type == (*fi).fib_type &&
+           (cfg as *mut fib_info).fib_tb_id == (*fi).fib_tb_id &&
+           !(((cfg as *mut fib_info).fib_flags ^ (*fi).fib_flags) & !RTNH_COMPARE_MASK) {
             return fi;
         }
 

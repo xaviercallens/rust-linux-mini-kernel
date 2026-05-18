@@ -1,31 +1,31 @@
+
 //! Event cache for netfilter connection tracking
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::missing_docs_in_private_items)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
+use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
+use kernel_types::*;
 
-// Constants from C
-const ECACHE_RETRY_WAIT: u32 = 1; // HZ/10
+const ECACHE_RETRY_WAIT: u32 = 1;
 const ECACHE_STACK_ALLOC: usize = 256 / mem::size_of::<*mut c_void>();
-const NF_CT_EVENTS_DEFAULT: u32 = 1;
 
-// Error codes
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const EBUSY: c_int = -16;
 
-// Enum retry_state
+const NFCT_ECACHE_DESTROY_FAIL: u32 = 1;
+const NFCT_ECACHE_DESTROY_SENT: u32 = 2;
+const IPCT_DESTROY: u32 = 4;
+
 #[repr(u8)]
 enum retry_state {
     STATE_CONGESTED = 0,
@@ -33,7 +33,6 @@ enum retry_state {
     STATE_DONE = 2,
 }
 
-// C-style types
 #[repr(C)]
 struct nf_conntrack_tuple_hash {
     _unused: [u8; 0],
@@ -41,7 +40,7 @@ struct nf_conntrack_tuple_hash {
 
 #[repr(C)]
 struct hlist_nulls_node {
-    _unused: [u8; 0],
+    next: *mut hlist_nulls_node,
 }
 
 #[repr(C)]
@@ -50,20 +49,8 @@ struct nf_conn {
 }
 
 #[repr(C)]
-struct nf_conntrack_net {
-    _unused: [u8; 0],
-}
-
-#[repr(C)]
 struct nf_ct_event_notifier {
     fcn: extern "C" fn(c_uint, *mut nf_ct_event),
-}
-
-#[repr(C)]
-struct nf_ct_event {
-    ct: *mut nf_conn,
-    portid: u32,
-    report: c_int,
 }
 
 #[repr(C)]
@@ -77,13 +64,21 @@ struct nf_conntrack_ecache {
 
 #[repr(C)]
 struct ct_pcpu {
-    lock: *mut c_void, // spinlock_t
+    lock: *mut c_void,
     dying: *mut hlist_nulls_node,
 }
 
 #[repr(C)]
+struct delayed_work {
+    _unused: [u8; 0],
+}
+
+#[repr(C)]
 struct netns_ct {
-    ecache_dwork_pending: bool,
+    ecache_dwork_pending: u8,
+    _pad: [u8; 7],
+    pcpu: *mut ct_pcpu,
+    pcpu_count: c_uint,
 }
 
 #[repr(C)]
@@ -92,64 +87,37 @@ struct nf_conntrack_net {
     ct_net: *mut netns_ct,
 }
 
-#[repr(C)]
-struct delayed_work {
-    _unused: [u8; 0],
-}
-
-// Function pointers from C
-extern "C" {
+unsafe extern "C" {
     fn nf_ct_tuplehash_to_ctrack(h: *mut nf_conntrack_tuple_hash) -> *mut nf_conn;
     fn nf_ct_ecache_find(ct: *mut nf_conn) -> *mut nf_conntrack_ecache;
     fn nf_conntrack_event(event: c_uint, ct: *mut nf_conn) -> c_int;
     fn nf_ct_put(ct: *mut nf_conn);
-    fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool;
-    fn nf_ct_is_dying(ct: *mut nf_conn) -> bool;
-    fn nf_ct_net(ct: *mut nf_conn) -> *mut c_void; // struct net*
+    fn nf_ct_is_confirmed(ct: *mut nf_conn) -> c_int;
     fn local_bh_disable();
     fn local_bh_enable();
     fn schedule_delayed_work(work: *mut delayed_work, delay: u32);
-    fn mutex_lock(mutex: *mut c_void);
-    fn mutex_unlock(mutex: *mut c_void);
-    fn rcu_read_lock();
-    fn rcu_read_unlock();
-    fn rcu_dereference(ptr: *mut c_void) -> *mut c_void;
-    fn BUG_ON(condition: bool);
-    fn synchronize_rcu();
 }
 
-// Global mutex
-static NF_CT_ECACHE_MUTEX: AtomicU32 = AtomicU32::new(0);
-
-// ecache_work_evict_list
 fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
-    let mut refs = [ptr::null_mut(); ECACHE_STACK_ALLOC];
-    let mut evicted = 0;
+    let mut refs: [*mut nf_conn; ECACHE_STACK_ALLOC] = [ptr::null_mut(); ECACHE_STACK_ALLOC];
+    let mut evicted: usize = 0;
     let mut ret = retry_state::STATE_DONE;
 
     unsafe {
-        // SAFETY: pcpu is valid pointer passed to function
-        // Locking is required for concurrent access
-        let lock = (*pcpu).lock;
-        // Simulate spin_lock - in real kernel this would be platform-specific
-        // For FFI compatibility, we assume lock is handled by caller
+        let mut n = (*pcpu).dying;
 
-        let dying_list = (*pcpu).dying;
-        let mut n = dying_list;
-
-        // Simulate hlist_nulls_for_each_entry
         while !n.is_null() {
             let h = n as *mut nf_conntrack_tuple_hash;
             let ct = nf_ct_tuplehash_to_ctrack(h);
 
             if !nf_ct_is_confirmed(ct) {
-                n = (*n).cast::<hlist_nulls_node>().offset(1);
+                n = (*n).next;
                 continue;
             }
 
             let e = nf_ct_ecache_find(ct);
             if e.is_null() || (*e).state != NFCT_ECACHE_DESTROY_FAIL as c_uint {
-                n = (*n).cast::<hlist_nulls_node>().offset(1);
+                n = (*n).next;
                 continue;
             }
 
@@ -167,18 +135,14 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
                 break;
             }
 
-            n = (*n).cast::<hlist_nulls_node>().offset(1);
+            n = (*n).next;
         }
-
-        // Simulate spin_unlock
     }
 
-    // Can't put while holding lock
     while evicted > 0 {
         unsafe {
-            let ct = refs[evicted - 1];
-            nf_ct_put(ct);
             evicted -= 1;
+            nf_ct_put(refs[evicted]);
         }
     }
 
@@ -187,10 +151,17 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
 
 // ecache_work
 fn ecache_work(work: *mut delayed_work) {
-    let cnet = work.offset(-mem::size_of::<nf_conntrack_net>() as isize) as *mut nf_conntrack_net;
-    let ctnet = (*cnet).ct_net;
+    let cnet = unsafe { work.offset(-(mem::size_of::<nf_conntrack_net>() as isize)) as *mut nf_conntrack_net };
+    let ctnet = unsafe { (*cnet).ct_net };
 
     unsafe {
+        let cnet =
+            (work as *mut u8).sub(mem::offset_of!(nf_conntrack_net, ecache_dwork)) as *mut nf_conntrack_net;
+        let ctnet = (*cnet).ct_net;
+        if ctnet.is_null() {
+            return;
+        }
+
         local_bh_disable();
 
         let mut delay = -1 as c_int;
@@ -198,7 +169,7 @@ fn ecache_work(work: *mut delayed_work) {
 
         while cpu < 1 {
             // for_each_possible_cpu
-            let pcpu = (*ctnet).offset(cpu as isize);
+            let pcpu = unsafe { (*ctnet).offset(cpu as isize) };
             let ret = ecache_work_evict_list(pcpu);
 
             match ret {
@@ -209,16 +180,20 @@ fn ecache_work(work: *mut delayed_work) {
                 retry_state::STATE_RESTART => {
                     delay = 0;
                 }
-                _ => {}
+                retry_state::STATE_DONE => {}
             }
             cpu += 1;
         }
 
         local_bh_enable();
 
-        (*ctnet).ecache_dwork_pending = delay > 0;
+        unsafe {
+            (*ctnet).ecache_dwork_pending = delay > 0;
+        }
         if delay >= 0 {
-            schedule_delayed_work(work, delay as u32);
+            unsafe {
+                schedule_delayed_work(work, delay as u32);
+            }
         }
     }
 }

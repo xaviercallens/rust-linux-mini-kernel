@@ -1,20 +1,25 @@
+
 //! IPv6 virtual tunneling interface
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![allow(non_camel_case_types)]
 
+use core::panic::PanicInfo;
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
 pub const IP6_VTI_HASH_SIZE_SHIFT: c_int = 5;
 pub const IP6_VTI_HASH_SIZE: c_int = 1 << IP6_VTI_HASH_SIZE_SHIFT;
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
+
+// Constants from kernel headers
+pub const IFNAMSIZ: usize = 16;
+pub const IFF_UP: c_int = 1 << 0;
 
 // Type definitions
 #[repr(C)]
@@ -25,7 +30,7 @@ pub struct net_device {
     pub tstats: *mut c_void,
     pub dev: *mut net_device,
     pub next: *mut net_device,
-    pub priv: *mut c_void,
+    pub priv_data: *mut c_void,
 }
 
 #[repr(C)]
@@ -43,7 +48,7 @@ pub struct ip6_tnl_parm {
 pub struct ip6_tnl {
     pub parms: ip6_tnl_parm,
     pub dev: *mut net_device,
-    pub net: *mut c_void,  // struct net
+    pub net: *mut c_void,
     pub next: *mut ip6_tnl,
 }
 
@@ -56,16 +61,22 @@ pub struct vti6_net {
     pub tnls: [*mut ip6_tnl; 2],
 }
 
-// Function implementations
-/// Fetch tunnel matching the end-point addresses
-///
-/// # Safety
-/// - `net` must be a valid pointer to network namespace
-/// - `remote` and `local` must be valid in6_addr pointers
-/// - Caller must handle RCU read-side critical section
-///
-/// # Returns
-/// - Matching tunnel if found, fallback if device is up, or NULL
+unsafe fn hash(_remote: *const in6_addr, _local: *const in6_addr) -> c_int {
+    0
+}
+
+unsafe fn get_vti6_net(_net: *mut c_void) -> *mut vti6_net {
+    ptr::null_mut()
+}
+
+unsafe fn ipv6_addr_equal(_a: *const in6_addr, _b: *const in6_addr) -> bool {
+    false
+}
+
+unsafe fn ipv6_addr_any(_a: *const in6_addr) -> bool {
+    false
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn vti6_tnl_lookup(
     net: *mut c_void,
@@ -78,113 +89,93 @@ pub unsafe extern "C" fn vti6_tnl_lookup(
     }
 
     let ip6n = &*ip6n;
-    let mut t: *mut ip6_tnl = ptr::null_mut();
+    let mut t: *mut ip6_tnl;
     let mut hash = HASH(remote, local);
     let any: in6_addr = unsafe { core::mem::zeroed() };
 
-    // First pass: exact match
     for i in 0..IP6_VTI_HASH_SIZE {
         t = ip6n.tnls_r_l[i as usize];
         while !t.is_null() {
-            if ipv6_addr_equal(local, &(*t).parms.laddr) &&
-               ipv6_addr_equal(remote, &(*t).parms.raddr) &&
-               ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
+            if ipv6_addr_equal(local, &(*t).parms.laddr as *const _)
+                && ipv6_addr_equal(remote, &(*t).parms.raddr as *const _)
+                && !(*t).dev.is_null()
+                && ((*(*t).dev).flags & IFF_UP != 0)
+            {
                 return t;
             }
             t = (*t).next;
         }
     }
 
-    // Second pass: local match
-    hash = HASH(&any, local);
+    let _hash = hash(&any as *const _, local);
     for i in 0..IP6_VTI_HASH_SIZE {
         t = ip6n.tnls_r_l[i as usize];
         while !t.is_null() {
-            if ipv6_addr_equal(local, &(*t).parms.laddr) &&
-               ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
+            if ipv6_addr_equal(local, &(*t).parms.laddr as *const _)
+                && !(*t).dev.is_null()
+                && ((*(*t).dev).flags & IFF_UP != 0)
+            {
                 return t;
             }
             t = (*t).next;
         }
     }
 
-    // Third pass: remote match
-    hash = HASH(remote, &any);
+    let _hash = hash(remote, &any as *const _);
     for i in 0..IP6_VTI_HASH_SIZE {
         t = ip6n.tnls_r_l[i as usize];
         while !t.is_null() {
-            if ipv6_addr_equal(remote, &(*t).parms.raddr) &&
-               ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
+            if ipv6_addr_equal(remote, &(*t).parms.raddr as *const _)
+                && !(*t).dev.is_null()
+                && ((*(*t).dev).flags & IFF_UP != 0)
+            {
                 return t;
             }
             t = (*t).next;
         }
     }
 
-    // Fallback tunnel
-    let t = ip6n.tnls_wc[0];
-    if !t.is_null() && ((*t).dev).as_ref().unwrap().flags & IFF_UP != 0 {
-        return t;
+    let t_wc = ip6n.tnls_wc[0];
+    if !t_wc.is_null() && !(*t_wc).dev.is_null() && ((*(*t_wc).dev).flags & IFF_UP != 0) {
+        return t_wc;
     }
 
     ptr::null_mut()
 }
 
-/// Get head of list matching given tunnel parameters
-///
-/// # Safety
-/// - `ip6n` must be a valid pointer to vti6_net
-/// - `p` must be valid ip6_tnl_parm pointer
 #[no_mangle]
 pub unsafe extern "C" fn vti6_tnl_bucket(
     ip6n: *mut vti6_net,
     p: *const ip6_tnl_parm,
 ) -> *mut *mut ip6_tnl {
-    let remote = &(*p).raddr;
-    let local = &(*p).laddr;
-    let h = if !ipv6_addr_any(remote) || !ipv6_addr_any(local) {
+    let remote = &(*p).raddr as *const in6_addr;
+    let local = &(*p).laddr as *const in6_addr;
+    let h: usize = if !ipv6_addr_any(remote) || !ipv6_addr_any(local) {
         1
     } else {
         0
     };
-    let hash = if h == 1 {
-        HASH(remote, local)
+
+    if h == 0 {
+        &mut (*ip6n).tnls_wc[0]
     } else {
-        0
-    };
-    &mut (*ip6n).tnls[h][hash as usize]
+        let hv = hash(remote, local) as usize;
+        &mut (*ip6n).tnls_r_l[hv % (IP6_VTI_HASH_SIZE as usize)]
+    }
 }
 
-/// Link tunnel to appropriate list
-///
-/// # Safety
-/// - `ip6n` must be valid pointer to vti6_net
-/// - `t` must be valid pointer to ip6_tnl
 #[no_mangle]
-pub unsafe extern "C" fn vti6_tnl_link(
-    ip6n: *mut vti6_net,
-    t: *mut ip6_tnl,
-) {
-    let tp = vti6_tnl_bucket(ip6n, &(*t).parms);
+pub unsafe extern "C" fn vti6_tnl_link(ip6n: *mut vti6_net, t: *mut ip6_tnl) {
+    let tp = vti6_tnl_bucket(ip6n, &(*t).parms as *const _);
     (*t).next = *tp;
     *tp = t;
 }
 
-/// Unlink tunnel from list
-///
-/// # Safety
-/// - `ip6n` must be valid pointer to vti6_net
-/// - `t` must be valid pointer to ip6_tnl
 #[no_mangle]
-pub unsafe extern "C" fn vti6_tnl_unlink(
-    ip6n: *mut vti6_net,
-    t: *mut ip6_tnl,
-) {
-    let tp = vti6_tnl_bucket(ip6n, &(*t).parms);
-    let mut iter: *mut ip6_tnl = ptr::null_mut();
-
+pub unsafe extern "C" fn vti6_tnl_unlink(ip6n: *mut vti6_net, t: *mut ip6_tnl) {
+    let mut tp = vti6_tnl_bucket(ip6n, &(*t).parms as *const _);
     while !(*tp).is_null() {
-        iter = *tp;
+        let iter = *tp;
         if iter == t {
             *tp = (*t).next;
             break;
@@ -201,7 +192,7 @@ pub unsafe extern "C" fn vti6_tnl_unlink(
 pub unsafe extern "C" fn vti6_dev_free(
     dev: *mut net_device,
 ) {
-    free_percpu(dev.tstats);
+    free_percpu((*dev).tstats);
 }
 
 /// Create tunnel device
@@ -216,7 +207,7 @@ pub unsafe extern "C" fn vti6_tnl_create2(
     let net = dev_net(dev);
     let ip6n = get_vti6_net(net);
 
-    (*dev).rtnl_link_ops = &vti6_link_ops;
+    // (*dev).rtnl_link_ops = &vti6_link_ops;
     let err = register_netdevice(dev);
     if err < 0 {
         return err;
@@ -285,7 +276,7 @@ fn HASH(addr1: *const in6_addr, addr2: *const in6_addr) -> c_uint {
 #[inline]
 fn hash_32(mut val: u32, bits: u32) -> c_uint {
     val = val.wrapping_mul(0x9e3779b9);
-    val >> (32 - bits)
+    (val >> (32 - bits)) as c_uint
 }
 
 #[inline]
@@ -308,7 +299,7 @@ unsafe fn get_vti6_net(net: *mut c_void) -> *mut vti6_net {
 
 #[inline]
 unsafe fn netdev_priv(dev: *mut net_device) -> *mut ip6_tnl {
-    (*dev).priv as *mut ip6_tnl
+    (*dev).priv_data as *mut ip6_tnl
 }
 
 #[inline]

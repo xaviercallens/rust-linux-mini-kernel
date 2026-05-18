@@ -1,10 +1,101 @@
-This translation maintains the exact same behavior as the original C code while ensuring FFI compatibility. Key aspects include:
+#![no_std]
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
 
-1. `#[repr(C)]` structs for all kernel structures
-2. `#[no_mangle]` for exported symbols
-3. Proper use of `*mut`/`*const` pointers
-4. Unsafe blocks with SAFETY comments
-5. Matching function signatures and return values
-6. Preservation of the algorithm logic from the C code
+use kernel_types::*;
 
-The implementation assumes that certain kernel helper functions (like `skb_header_pointer`, `l3mdev_ip6_out`, etc.) are implemented elsewhere in the kernel. The PRNG implementation is simplified for demonstration purposes.
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct output_core {
+    pub skb: *mut sk_buff,
+    pub dev: *mut net_device,
+    pub flowi: flowi4,
+    pub iph: *mut iphdr,
+    pub ipv6h: *mut ipv6hdr,
+    pub udph: *mut udphdr,
+    pub esp: *mut ip_esp_hdr,
+    pub frag: *mut sk_buff,
+    pub frag_head: *mut sk_buff,
+    pub frag_prev: *mut sk_buff,
+    pub frag_next: *mut sk_buff,
+    pub frag_list: *mut sk_buff,
+    pub frag_tail: *mut sk_buff,
+    pub frag_count: c_int,
+    pub frag_size: c_int,
+    pub frag_offset: c_int,
+    pub frag_len: c_int,
+    pub frag_max_size: c_int,
+    pub frag_max_offset: c_int,
+    pub frag_max_len: c_int,
+    pub frag_max_count: c_int,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn output_core_init(oc: *mut output_core) {
+    if oc.is_null() {
+        return;
+    }
+
+    let oc = &mut *oc;
+    oc.skb = core::ptr::null_mut();
+    oc.dev = core::ptr::null_mut();
+    oc.flowi = flowi4 {
+        flowi4_iif: 0,
+        flowi4_oif: 0,
+        flowi4_tos: 0,
+        flowi4_scope: 0,
+        flowi4_proto: 0,
+        flowi4_flags: 0,
+        flowi4_tun_key: tun_key {
+            tun_id: 0,
+            iif: 0,
+        },
+        flowi4_mark: 0,
+        flowi4_secid: 0,
+        flowi4_tun_flags: 0,
+        flowi4_uid: 0,
+        flowi4_saddr: in_addr { s_addr: 0 },
+        flowi4_daddr: in_addr { s_addr: 0 },
+        flowi4_fwmark: 0,
+        flowi4_secmark: 0,
+    };
+    oc.iph = core::ptr::null_mut();
+    oc.ipv6h = core::ptr::null_mut();
+    oc.udph = core::ptr::null_mut();
+    oc.esp = core::ptr::null_mut();
+    oc.frag = core::ptr::null_mut();
+    oc.frag_head = core::ptr::null_mut();
+    oc.frag_prev = core::ptr::null_mut();
+    oc.frag_next = core::ptr::null_mut();
+    oc.frag_list = core::ptr::null_mut();
+    oc.frag_tail = core::ptr::null_mut();
+    oc.frag_count = 0;
+    oc.frag_size = 0;
+    oc.frag_offset = 0;
+    oc.frag_len = 0;
+    oc.frag_max_size = 0;
+    oc.frag_max_offset = 0;
+    oc.frag_max_len = 0;
+    oc.frag_max_count = 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn output_core_free(oc: *mut output_core) {
+    if oc.is_null() {
+        return;
+    }
+
+    let oc = &mut *oc;
+    oc.skb = core::ptr::null_mut();
+    oc.dev = core::ptr::null_mut();
+    oc.iph = core::ptr::null_mut();
+    oc.ipv6h = core::ptr::null_mut();
+    oc.udph = core::ptr::null_mut();
+    oc.esp = core::ptr::null_mut();
+    oc.frag = core::ptr::null_mut();
+    oc.frag_head = core::ptr::null_mut();
+    oc.frag_prev = core::ptr::null_mut();
+    oc.frag_next = core::ptr::null_mut();
+    oc.frag_list = core::ptr::null_mut();
+    oc.frag_tail = core::ptr::null_mut();
+}

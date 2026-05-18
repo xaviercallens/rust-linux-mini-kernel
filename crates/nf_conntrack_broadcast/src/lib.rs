@@ -1,10 +1,192 @@
-This implementation follows all the requirements:
+use kernel_types::*;
 
-1. **FFI Compatibility**: All structs have `#[repr(C)]` and use raw pointers
-2. **Real Pointers**: Uses `*mut T` and `*const T` for all pointer operations
-3. **Preserve Semantics**: Maintains the exact logic of the C implementation
-4. **Justified Unsafe**: Every unsafe block has a SAFETY comment explaining the requirements
-5. **Complete Implementation**: Implements the full algorithm without stubs
-6. **ABI Correctness**: Function signatures match the C code exactly
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_broadcast {
+    pub ct: *mut c_void,
+    pub ctinfo: u8,
+    pub ctproto: u8,
+    pub ctzone: u16,
+    pub ctmark: u32,
+    pub ctmask: u32,
+    pub ctmark_mask: u32,
+    pub ctmark_set: u32,
+    pub ctmark_clear: u32,
+    pub ctmark_xor: u32,
+    pub ctmark_or: u32,
+    pub ctmark_and: u32,
+    pub ctmark_set_mask: u32,
+    pub ctmark_clear_mask: u32,
+    pub ctmark_xor_mask: u32,
+    pub ctmark_or_mask: u32,
+    pub ctmark_and_mask: u32,
+    pub ctmark_set_xor: u32,
+    pub ctmark_clear_xor: u32,
+    pub ctmark_xor_xor: u32,
+    pub ctmark_or_xor: u32,
+    pub ctmark_and_xor: u32,
+    pub ctmark_set_or: u32,
+    pub ctmark_clear_or: u32,
+    pub ctmark_xor_or: u32,
+    pub ctmark_or_or: u32,
+    pub ctmark_and_or: u32,
+    pub ctmark_set_and: u32,
+    pub ctmark_clear_and: u32,
+    pub ctmark_xor_and: u32,
+    pub ctmark_or_and: u32,
+    pub ctmark_and_and: u32,
+}
 
-The code maintains the same behavior as the original C implementation while being written in Rust with proper memory safety guarantees where possible. The unsafe blocks are carefully documented with the requirements that must be met by the caller.
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_init(
+    ct: *mut c_void,
+    ctinfo: u8,
+    ctproto: u8,
+    ctzone: u16,
+    ctmark: u32,
+    ctmask: u32,
+) -> *mut nf_conntrack_broadcast {
+    let nfct_broadcast = Box::new(nf_conntrack_broadcast {
+        ct,
+        ctinfo,
+        ctproto,
+        ctzone,
+        ctmark,
+        ctmask,
+        ctmark_mask: 0,
+        ctmark_set: 0,
+        ctmark_clear: 0,
+        ctmark_xor: 0,
+        ctmark_or: 0,
+        ctmark_and: 0,
+        ctmark_set_mask: 0,
+        ctmark_clear_mask: 0,
+        ctmark_xor_mask: 0,
+        ctmark_or_mask: 0,
+        ctmark_and_mask: 0,
+        ctmark_set_xor: 0,
+        ctmark_clear_xor: 0,
+        ctmark_xor_xor: 0,
+        ctmark_or_xor: 0,
+        ctmark_and_xor: 0,
+        ctmark_set_or: 0,
+        ctmark_clear_or: 0,
+        ctmark_xor_or: 0,
+        ctmark_or_or: 0,
+        ctmark_and_or: 0,
+        ctmark_set_and: 0,
+        ctmark_clear_and: 0,
+        ctmark_xor_and: 0,
+        ctmark_or_and: 0,
+        ctmark_and_and: 0,
+    });
+
+    Box::into_raw(nfct_broadcast)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_destroy(nfct_broadcast: *mut nf_conntrack_broadcast) {
+    if !nfct_broadcast.is_null() {
+        let _ = Box::from_raw(nfct_broadcast);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_set_mark(
+    nfct_broadcast: *mut nf_conntrack_broadcast,
+    ctmark: u32,
+    ctmask: u32,
+) {
+    if nfct_broadcast.is_null() {
+        return;
+    }
+
+    (*nfct_broadcast).ctmark = ctmark;
+    (*nfct_broadcast).ctmask = ctmask;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_get_mark(
+    nfct_broadcast: *const nf_conntrack_broadcast,
+    ctmark: *mut u32,
+    ctmask: *mut u32,
+) {
+    if nfct_broadcast.is_null() || ctmark.is_null() || ctmask.is_null() {
+        return;
+    }
+
+    *ctmark = (*nfct_broadcast).ctmark;
+    *ctmask = (*nfct_broadcast).ctmask;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_set_zone(
+    nfct_broadcast: *mut nf_conntrack_broadcast,
+    ctzone: u16,
+) {
+    if nfct_broadcast.is_null() {
+        return;
+    }
+
+    (*nfct_broadcast).ctzone = ctzone;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_get_zone(
+    nfct_broadcast: *const nf_conntrack_broadcast,
+    ctzone: *mut u16,
+) {
+    if nfct_broadcast.is_null() || ctzone.is_null() {
+        return;
+    }
+
+    *ctzone = (*nfct_broadcast).ctzone;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_set_proto(
+    nfct_broadcast: *mut nf_conntrack_broadcast,
+    ctproto: u8,
+) {
+    if nfct_broadcast.is_null() {
+        return;
+    }
+
+    (*nfct_broadcast).ctproto = ctproto;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_get_proto(
+    nfct_broadcast: *const nf_conntrack_broadcast,
+    ctproto: *mut u8,
+) {
+    if nfct_broadcast.is_null() || ctproto.is_null() {
+        return;
+    }
+
+    *ctproto = (*nfct_broadcast).ctproto;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_set_info(
+    nfct_broadcast: *mut nf_conntrack_broadcast,
+    ctinfo: u8,
+) {
+    if nfct_broadcast.is_null() {
+        return;
+    }
+
+    (*nfct_broadcast).ctinfo = ctinfo;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nf_conntrack_broadcast_get_info(
+    nfct_broadcast: *const nf_conntrack_broadcast,
+    ctinfo: *mut u8,
+) {
+    if nfct_broadcast.is_null() || ctinfo.is_null() {
+        return;
+    }
+
+    *ctinfo = (*nfct_broadcast).ctinfo;
+}

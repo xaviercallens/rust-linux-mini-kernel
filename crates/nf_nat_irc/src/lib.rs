@@ -1,35 +1,19 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-//!
-//! This module implements an FFI-compatible Rust translation of the Linux kernel's
-//! IRC NAT helper functionality. It maintains ABI compatibility with the original C
-//! implementation for NAT handling in DCC (Direct Client-to-Client) IRC connections.
-//!
-//! The implementation includes:
-//! - FFI-safe struct representations with #[repr(C)]
-//! - Direct pointer manipulation matching C behavior
-//! - Kernel API function bindings as extern declarations
-//! - Unsafe operations with explicit safety justifications
-//!
-//! This module can be linked directly into the Linux kernel as a replacement for
-//! the original C implementation.
 
+// SPDX-License-Identifier: GPL-2.0-or-later
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::CStr;
 use core::ptr;
 use kernel_types::*;
 
-// Kernel error codes
-pub const EINVAL: c_int = -22;
-pub const ENOSYS: c_int = -38;
+pub const EBUSY: c_int = 16;
 
-// C-compatible struct definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_nat_helper {
-    name: *const c_char,
+pub struct nf_ct_tcp {
+    pub port: __be16,
 }
 
 #[repr(C)]
@@ -58,22 +42,68 @@ pub struct nf_conntrack_address {
 #[derive(Copy, Clone)]
 pub union nf_conntrack_address_union {
     ip: __be32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_ct_proto {
     tcp: nf_ct_tcp,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_tcp {
-    port: __be16,
+pub struct nf_ct_proto {
+    pub tcp: nf_ct_tcp,
 }
 
-// Extern declarations for kernel API functions
-extern "C" {
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_conntrack_address_union {
+    pub ip: __be32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_address {
+    pub u3: nf_conntrack_address_union,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_dst {
+    pub u3: nf_conntrack_address,
+    pub u: nf_conntrack_man_proto,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple {
+    pub dst: nf_conntrack_tuple_dst,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_hash {
+    pub tuple: nf_conntrack_tuple,
+}
+
+#[repr(C)]
+pub struct nf_conn {
+    pub tuplehash: [nf_conntrack_tuple_hash; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_expect {
+    pub master: *mut nf_conn,
+    pub saved_proto: nf_ct_proto,
+    pub dir: c_int,
+    pub expectfn: *const c_void,
+    pub tuple: nf_conntrack_tuple,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_nat_helper {
+    pub name: *const c_char,
+}
+
+unsafe extern "C" {
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_int) -> c_int;
     fn nf_nat_mangle_tcp_packet(
         skb: *mut sk_buff,
@@ -90,35 +120,37 @@ extern "C" {
     fn nf_nat_helper_register(helper: *mut nf_conntrack_nat_helper);
     fn nf_nat_helper_unregister(helper: *mut nf_conntrack_nat_helper);
     fn synchronize_rcu();
+    fn pr_info(fmt: *const c_char, ...);
 }
 
-// Global statics
 static NAT_HELPER_NAME: &[u8] = b"irc\0";
 static mut NAT_HELPER_IRC: nf_conntrack_nat_helper = nf_conntrack_nat_helper {
     name: NAT_HELPER_NAME.as_ptr() as *const c_char,
 };
+static mut NF_NAT_IRC_HOOK: *const c_void = ptr::null();
 
-// Module initialization
+static mut NF_NAT_IRC_HOOK: *const c_void = ptr::null();
+
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_irc_init() -> c_int {
-    // SAFETY: This is the module initialization function, which should only run once.
-    // The RCU_INIT_POINTER macro is implemented as a direct assignment in this context.
     let hook = help as *const c_void;
-    ptr::write_volatile(&mut nf_nat_irc_hook as *mut *const c_void, hook);
+    ptr::write_volatile(&mut NF_NAT_IRC_HOOK as *mut *const c_void, hook);
 
     nf_nat_helper_register(&mut NAT_HELPER_IRC);
     0
 }
 
-// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_irc_fini() {
     nf_nat_helper_unregister(&mut NAT_HELPER_IRC);
-    ptr::write_volatile(&mut nf_nat_irc_hook as *mut *const c_void, ptr::null());
+    ptr::write_volatile(&mut NF_NAT_IRC_HOOK as *mut *const c_void, ptr::null());
     synchronize_rcu();
 }
 
-// Helper function for port allocation and packet mangling
+static LOG_ALL_PORTS_IN_USE: &[u8] = b"all ports in use\0";
+static LOG_CANNOT_MANGLE: &[u8] = b"cannot mangle packet\0";
+static FMT_IP_PORT: &[u8] = b"%u %u\0";
+
 #[no_mangle]
 pub unsafe extern "C" fn help(
     skb: *mut sk_buff,
@@ -128,17 +160,19 @@ pub unsafe extern "C" fn help(
     matchlen: c_uint,
     exp: *mut nf_conntrack_expect,
 ) -> c_uint {
-    let mut buffer = [0u8; 20]; // "4294967296 65635" + null
-    let mut newaddr = (*(*exp).master).tuplehash[0].tuple.dst.u.ip;
-    let mut port = ntohs((*exp).saved_proto.tcp.port);
+    let mut buffer = [0u8; 32];
 
-    // Set up expectation
+    let master = (*exp).master;
+    let newaddr = (*master).tuplehash[0].tuple.dst.u3.u3.ip;
+    let mut port: u16 = ntohs((*exp).saved_proto.tcp.port);
+
     (*exp).saved_proto.tcp.port = htons(port);
-    (*exp).dir = 1; // IP_CT_DIR_REPLY
+    (*exp).dir = 1;
     (*exp).expectfn = ptr::null();
 
     // Try to find an available port
-    for current_port in port..=65535 {
+    let mut current_port = port;
+    while current_port <= 65535 {
         (*exp).tuple.dst.u.tcp.port = htons(current_port);
 
         match nf_ct_expect_related(exp, 0) {
@@ -146,57 +180,59 @@ pub unsafe extern "C" fn help(
                 port = current_port;
                 break;
             },
-            -EBUSY => continue,
+            -EBUSY => {
+                current_port += 1;
+                continue;
+            },
             _ => {
                 port = 0;
                 break;
             }
+            current = current.wrapping_add(1);
+            continue;
+        } else {
+            break;
         }
     }
 
-    if port == 0 {
-        nf_ct_helper_log(skb, (*exp).master, b"all ports in use\0".as_ptr() as *const c_char);
-        return 1; // NF_DROP
+    if !found {
+        nf_ct_helper_log(skb, master, LOG_ALL_PORTS_IN_USE.as_ptr() as *const c_char);
+        return 1;
     }
 
-    // Format new address and port
     let new_ip = ntohl(newaddr);
-    let new_port = port;
-    let buffer_len = snprintf(
+    let new_port = port as u32;
+
+    let n = snprintf(
         buffer.as_mut_ptr() as *mut c_char,
         buffer.len(),
-        b"%u %u\0",
+        FMT_IP_PORT.as_ptr() as *const c_char,
         new_ip,
         new_port,
-    ) as usize;
+    );
 
-    // Modify the packet
+    if n < 0 {
+        nf_ct_unexpect_related(exp);
+        return 1;
+    }
+
+    let datalen = n as c_size_t;
     if nf_nat_mangle_tcp_packet(
         skb,
-        (*exp).master,
+        master,
         ctinfo,
         protoff,
         matchoff,
         matchlen,
         buffer.as_ptr() as *const c_char,
-        buffer_len,
-    ) != 0
+        datalen,
+    ) == 0
     {
-        nf_ct_helper_log(skb, (*exp).master, b"cannot mangle packet\0".as_ptr() as *const c_char);
+        nf_ct_helper_log(skb, master, LOG_CANNOT_MANGLE.as_ptr() as *const c_char);
         nf_ct_unexpect_related(exp);
-        return 1; // NF_DROP
+        return 1;
     }
 
-    0 // NF_ACCEPT
-}
-
-// Module parameter handling
-#[no_mangle]
-pub unsafe extern "C" fn warn_set(
-    _val: *const c_char,
-    _kp: *const c_void,
-) -> c_int {
-    pr_info(b"kernel >= 2.6.10 only uses 'ports' for conntrack modules\n\0".as_ptr() as *const c_char);
     0
 }
 
@@ -230,7 +266,7 @@ pub unsafe extern "C" fn snprintf(
 
     // SAFETY: This is a simplified implementation for demonstration purposes
     // In a real kernel module, this would use the actual snprintf implementation
-    let formatted = format!("{} {} ", arg1, arg2);
+    let formatted = format!("{} {}", arg1, arg2);
     let bytes = formatted.as_bytes_with_nul();
 
     if !buf.is_null() && size > 0 {
@@ -267,6 +303,6 @@ mod tests {
     fn test_port_allocation() {
         // This would require actual kernel environment to test
         // For demonstration purposes, we just verify the function signature
-        assert_eq!(size_of_val(&NAT_HELPER_IRC), 8);
+        assert_eq!(core::mem::size_of_val(&NAT_HELPER_IRC), 8);
     }
 }

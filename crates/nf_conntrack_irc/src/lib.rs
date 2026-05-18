@@ -1,36 +1,36 @@
+
 //! IRC (DCC) connection tracking helper for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
 
 use core::ffi::{c_int, c_uint, c_ulong, c_void};
 use core::ptr::{self, NonNull};
+use kernel_types::*;
 
-// Constants from C
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
+// Constants
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const NF_ACCEPT: c_int = 0;
 pub const NF_DROP: c_int = 1;
 pub const NF_CT_EXPECT_MAX_CNT: c_uint = 100;
+pub const IP_CT_DIR_REPLY: c_int = 1;
+pub const IP_CT_ESTABLISHED: c_int = 2;
+pub const IP_CT_ESTABLISHED_REPLY: c_int = 3;
+pub const NF_CT_EXPECT_CLASS_DEFAULT: c_int = 0;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct in_addr {
-    pub s_addr: u32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct iphdr {
-    pub saddr: in_addr,
-    pub daddr: in_addr,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -42,41 +42,16 @@ pub struct tcphdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sk_buff {
-    pub len: c_int,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_addr,
-    pub dst: nf_conntrack_addr,
+    pub src: nf_inet_addr,
+    pub dst: nf_inet_addr,
     pub src_l3num: u8,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union nf_conntrack_addr {
-    pub u3: nf_conntrack_addr_u3,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_addr_u3 {
-    pub ip: u32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_hash {
     pub tuple: nf_conntrack_tuple,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conntrack_tuple_hash; 2],
-    pub status: u32,
 }
 
 #[repr(C)]
@@ -92,47 +67,68 @@ pub struct nf_conntrack_expect_policy {
     pub timeout: c_uint,
 }
 
-// Function pointer type
-type nf_nat_irc_hook_t = unsafe extern "C" fn(
-    skb: *const sk_buff,
-    ctinfo: c_int,
-    protoff: c_uint,
-    matchoff: c_uint,
-    matchlen: c_uint,
-    exp: *mut nf_conntrack_expect,
-) -> c_int;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_helper {
+    _priv: [u8; 0],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct Spinlock {
+    _private: u32,
+}
+
+type nf_nat_irc_hook_t = Option<
+    unsafe extern "C" fn(
+        skb: *const sk_buff,
+        ctinfo: c_int,
+        protoff: c_uint,
+        matchoff: c_uint,
+        matchlen: c_uint,
+        exp: *mut nf_conntrack_expect,
+    ) -> c_int,
+>;
 
 // Global variables
-static mut ports: [u16; 8] = [0; 8];
-static mut ports_c: c_uint = 0;
-static mut max_dcc_channels: c_uint = 8;
-static mut dcc_timeout: c_uint = 300;
-static mut irc_buffer: *mut c_void = ptr::null_mut();
-static mut irc_buffer_lock: Spinlock = Spinlock { _private: 0 };
-static mut nf_nat_irc_hook: nf_nat_irc_hook_t = parse_dcc_helper;
+static mut PORTS: [u16; 8] = [0; 8];
+static mut PORTS_C: c_uint = 0;
+static mut MAX_DCC_CHANNELS: c_uint = 8;
+static mut DCC_TIMEOUT: c_uint = 300;
+static mut IRC_BUFFER: *mut c_void = ptr::null_mut();
+static mut IRC_BUFFER_LOCK: Spinlock = Spinlock { _private: 0 };
+static mut NF_NAT_IRC_HOOK: Option<nf_nat_irc_hook_t> = None;
 
-// DCC protocol strings
-const DCC_PROTOS: [&[u8; 5]; 5] = [
-    b"SEND ", b"CHAT ", b"MOVE ", b"TSEND ", b"SCHAT ",
-];
+unsafe extern "C" {
+    static mut nf_nat_irc_hook: nf_nat_irc_hook_t;
+}
 
-// Helper function prototypes
-extern "C" {
+const DCC_PROTOS: [&[u8; 6]; 5] = [b"SEND \0", b"CHAT \0", b"MOVE \0", b"TSEND\0", b"SCHAT\0"];
+
+static mut irc: [nf_conntrack_helper; 8] = [nf_conntrack_helper { _priv: [] }; 8];
+static irc_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
+    max_expected: 1,
+    timeout: 300,
+};
+
+unsafe extern "C" {
     fn nf_conntrack_helpers_register(helper: *mut nf_conntrack_helper, count: c_uint) -> c_int;
     fn nf_conntrack_helpers_unregister(helper: *mut nf_conntrack_helper, count: c_uint);
+
     fn nf_ct_expect_alloc(ct: *const nf_conn) -> *mut nf_conntrack_expect;
     fn nf_ct_expect_init(
         exp: *mut nf_conntrack_expect,
         class: c_int,
         l3num: u8,
-        laddr: *const nf_conntrack_addr,
+        laddr: *const nf_inet_addr,
         lport: *const u16,
         protonum: u8,
-        faddr: *const nf_conntrack_addr,
+        faddr: *const nf_inet_addr,
         fport: *const u16,
     );
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, timeout: c_int) -> c_int;
     fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
+
     fn nf_ct_helper_init(
         helper: *mut nf_conntrack_helper,
         l3num: u8,
@@ -152,6 +148,7 @@ extern "C" {
         me: *const c_void,
         module: *const c_void,
     );
+
     fn ip_hdr(skb: *const sk_buff) -> *const iphdr;
     fn skb_header_pointer(
         skb: *const sk_buff,
@@ -159,51 +156,58 @@ extern "C" {
         size: c_int,
         buffer: *mut c_void,
     ) -> *mut c_void;
+
     fn pr_debug(fmt: *const u8, ...);
     fn net_warn_ratelimited(fmt: *const u8, ...);
     fn nf_ct_helper_log(skb: *const sk_buff, ct: *const nf_conn, fmt: *const u8, ...);
+
+    fn malloc(size: usize) -> *mut c_void;
+    fn free(ptr: *mut c_void);
 }
 
-// Spinlock type (simplified for FFI compatibility)
-#[repr(C)]
-struct Spinlock {
-    _private: u32,
+unsafe extern "C" fn help(
+    _skb: *const sk_buff,
+    _protoff: c_uint,
+    _ct: *mut nf_conn,
+    _ctinfo: c_int,
+) -> c_int {
+    NF_ACCEPT
 }
 
-// Module init/exit
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_irc_init() -> c_int {
-    if max_dcc_channels < 1 {
+    if MAX_DCC_CHANNELS < 1 {
         unsafe { pr_debug(b"max_dcc_channels must not be zero\n\0".as_ptr() as *const u8); }
         return EINVAL;
     }
 
-    if max_dcc_channels > NF_CT_EXPECT_MAX_CNT {
+    if MAX_DCC_CHANNELS > NF_CT_EXPECT_MAX_CNT {
         unsafe { pr_debug(b"max_dcc_channels must not be more than %u\n\0".as_ptr() as *const u8); }
         return EINVAL;
     }
 
     unsafe {
-        irc_buffer = libc::malloc(65536);
-        if irc_buffer.is_null() {
+        IRC_BUFFER = libc::malloc(65536);
+        if IRC_BUFFER.is_null() {
             return ENOMEM;
         }
 
         // Default to standard IRC port if none specified
-        if ports_c == 0 {
-            ports[0] = 6667;
-            ports_c = 1;
+        if PORTS_C == 0 {
+            PORTS[0] = 6667;
+            PORTS_C = 1;
         }
 
+        let mut irc_helpers: [nf_conntrack_helper; 8] = [Default::default(); 8];
         let mut i: c_int = 0;
-        while i < ports_c as c_int {
+        while i < PORTS_C as c_int {
             nf_ct_helper_init(
-                &mut irc[i],
+                &mut irc_helpers[i as usize],
                 AF_INET,
                 IPPROTO_TCP,
                 HELPER_NAME.as_ptr(),
                 IRC_PORT,
-                ports[i as usize],
+                PORTS[i as usize],
                 i,
                 &irc_exp_policy,
                 0,
@@ -214,9 +218,9 @@ pub extern "C" fn nf_conntrack_irc_init() -> c_int {
             i += 1;
         }
 
-        let ret = nf_conntrack_helpers_register(&mut irc[0], ports_c);
+        let ret = nf_conntrack_helpers_register(&mut irc_helpers[0], PORTS_C);
         if ret != 0 {
-            libc::free(irc_buffer);
+            libc::free(IRC_BUFFER);
             return ret;
         }
 
@@ -224,11 +228,12 @@ pub extern "C" fn nf_conntrack_irc_init() -> c_int {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_irc_fini() {
     unsafe {
-        nf_conntrack_helpers_unregister(&mut irc[0], ports_c);
-        libc::free(irc_buffer);
+        let mut irc_helpers: [nf_conntrack_helper; 8] = [Default::default(); 8];
+        nf_conntrack_helpers_unregister(&mut irc_helpers[0], PORTS_C);
+        libc::free(IRC_BUFFER);
     }
 }
 
@@ -250,6 +255,11 @@ pub unsafe extern "C" fn help(
     }
 
     let skb_len = (*skb).len;
+    let mut _tcph: tcphdr = tcphdr {
+        source: 0,
+        dest: 0,
+        doff: 0,
+    };
     let th: *mut tcphdr = skb_header_pointer(skb, protoff as c_int, core::mem::size_of::<tcphdr>() as c_int, &mut _tcph as *mut _ as *mut c_void) as *mut tcphdr;
     if th.is_null() {
         return NF_ACCEPT;
@@ -261,16 +271,16 @@ pub unsafe extern "C" fn help(
     }
 
     // Acquire spinlock
-    spin_lock_bh(&mut irc_buffer_lock);
+    spin_lock_bh(&mut IRC_BUFFER_LOCK);
 
     let ib_ptr = skb_header_pointer(
         skb,
         dataoff as c_int,
         skb_len as c_int - dataoff as c_int,
-        irc_buffer,
+        IRC_BUFFER,
     ) as *mut u8;
     if ib_ptr.is_null() {
-        spin_unlock_bh(&mut irc_buffer_lock);
+        spin_unlock_bh(&mut IRC_BUFFER_LOCK);
         return NF_ACCEPT;
     }
 
@@ -318,11 +328,11 @@ pub unsafe extern "C" fn help(
             unsafe { pr_debug(b"DCC bound ip/port: %pI4:%u\n\0".as_ptr() as *const u8, &dcc_ip, &dcc_port); }
 
             let tuple = &(*ct).tuplehash[dir as usize].tuple;
-            if tuple.src.u3.ip != dcc_ip && tuple.dst.u3.ip != dcc_ip {
+            if tuple.src.ip != dcc_ip && tuple.dst.ip != dcc_ip {
                 unsafe {
                     net_warn_ratelimited(
                         b"Forged DCC command from %pI4: %pI4:%u\n\0".as_ptr() as *const u8,
-                        &tuple.src.u3.ip,
+                        &tuple.src.ip,
                         &dcc_ip,
                         &dcc_port,
                     );
@@ -344,24 +354,28 @@ pub unsafe extern "C" fn help(
                 NF_CT_EXPECT_CLASS_DEFAULT,
                 tuple.src.l3num,
                 ptr::null(),
-                &tuple.dst.u3 as *const _ as *const nf_conntrack_addr_u3,
+                &tuple.dst.ip as *const _ as *const nf_inet_addr,
                 IPPROTO_TCP,
                 ptr::null(),
                 &port as *const _ as *const u16,
             );
 
-            let nf_nat_irc = nf_nat_irc_hook;
-            if !nf_nat_irc.is_null() && (*ct).status & IPS_NAT_MASK != 0 {
-                let nat_ret = nf_nat_irc(
-                    skb,
-                    ctinfo,
-                    protoff,
-                    (addr_beg_p as usize - ib_ptr as usize) as c_uint,
-                    (addr_end_p as usize - addr_beg_p as usize) as c_uint,
-                    exp,
-                );
-                if nat_ret != 0 {
-                    ret = nat_ret;
+            if let Some(nf_nat_irc) = NF_NAT_IRC_HOOK {
+                if (*ct).status & IPS_NAT_MASK != 0 {
+                    let nat_ret = nf_nat_irc(
+                        skb,
+                        ctinfo,
+                        protoff,
+                        (addr_beg_p as usize - ib_ptr as usize) as c_uint,
+                        (addr_end_p as usize - addr_beg_p as usize) as c_uint,
+                        exp,
+                    );
+                    if nat_ret != 0 {
+                        ret = nat_ret;
+                    }
+                } else if nf_ct_expect_related(exp, 0) != 0 {
+                    nf_ct_helper_log(skb, ct, b"cannot add expectation\0".as_ptr() as *const u8);
+                    ret = NF_DROP;
                 }
             } else if nf_ct_expect_related(exp, 0) != 0 {
                 nf_ct_helper_log(skb, ct, b"cannot add expectation\0".as_ptr() as *const u8);
@@ -373,7 +387,7 @@ pub unsafe extern "C" fn help(
         }
     }
 
-    spin_unlock_bh(&mut irc_buffer_lock);
+    spin_unlock_bh(&mut IRC_BUFFER_LOCK);
     ret
 }
 
@@ -469,9 +483,6 @@ const IPS_NAT_MASK: u32 = 0x0000000F;
 
 // Module exports
 #[no_mangle]
-pub static nf_nat_irc_hook: nf_nat_irc_hook_t = parse_dcc_helper;
-
-#[no_mangle]
 pub extern "C" fn parse_dcc_helper(
     skb: *const sk_buff,
     ctinfo: c_int,
@@ -502,7 +513,7 @@ mod tests {
         let mut port: u16 = 0;
         let mut ad_beg: *mut u8 = ptr::null_mut();
         let mut ad_end: *mut u8 = ptr::null_mut();
-        
+
         unsafe {
             let result = super::parse_dcc(
                 data.as_ptr() as *mut u8,
@@ -512,7 +523,7 @@ mod tests {
                 &mut ad_beg,
                 &mut ad_end,
             );
-            
+
             assert_eq!(result, 0);
             assert_eq!(ip, 0xC0A80101u32.to_be());
             assert_eq!(port, 1234);

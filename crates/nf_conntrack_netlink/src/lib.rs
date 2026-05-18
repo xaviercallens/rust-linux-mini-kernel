@@ -1,3 +1,4 @@
+
 //! Connection tracking via netlink socket. Allows for user space
 //! protocol helpers and general trouble making from userspace.
 //!
@@ -5,23 +6,52 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)] // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
-use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use core::ffi::c_int;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
-pub const ENOMEM: c_int = -12;
-pub const EINVAL: c_int = -22;
-pub const EMSGSIZE: c_int = -90;
+pub type size_t = usize;
+pub type c_size_t = usize;
+pub type socklen_t = u32;
 
-// Type definitions
+pub const ENOMEM: c_int = 12;
+pub const EINVAL: c_int = 22;
+pub const EMSGSIZE: c_int = 90;
+
+pub const CTA_TUPLE_PROTO: c_int = 1;
+pub const CTA_PROTO_NUM: c_int = 1;
+pub const CTA_IP_V4_SRC: c_int = 1;
+pub const CTA_IP_V4_DST: c_int = 2;
+pub const CTA_IP_V6_SRC: c_int = 3;
+pub const CTA_IP_V6_DST: c_int = 4;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nlattr {
-    pub nla_len: c_uint,
-    pub nla_type: c_uint,
+    pub nla_len: u16,
+    pub nla_type: u16,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_inet_addr {
+    pub all: [u32; 4],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_dst {
+    pub protonum: u8,
+    pub u3: nf_inet_addr,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_src {
+    pub u3: nf_inet_addr,
 }
 
 #[repr(C)]
@@ -34,29 +64,9 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    protonum: u8,
-    u3: nf_inet_addr,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src {
-    u3: nf_inet_addr,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conntrack_l4proto {
-    pub tuple_to_nlattr: Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    status: u32,
-    mark: u32,
-    _private: [u8; 0],
+    pub tuple_to_nlattr:
+        Option<extern "C" fn(skb: *mut sk_buff, tuple: *const nf_conntrack_tuple) -> c_int>,
 }
 
 #[repr(C)]
@@ -68,25 +78,30 @@ pub struct nf_conn_acct {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn_counter {
-    packets: [u64; 2],
-    bytes: [u64; 2],
+    pub packets: [u64; 2],
+    pub bytes: [u64; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_acct {
+    pub counter: *mut nf_conn_counter,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn_tstamp {
-    start: u64,
-    stop: u64,
+    pub start: u64,
+    pub stop: u64,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn_labels {
-    bits: [u64; 16],
+    pub bits: [u64; 16],
 }
 
-// Function prototypes for external C functions
-extern "C" {
+unsafe extern "C" {
     fn nla_nest_start(skb: *mut sk_buff, attrtype: c_int) -> *mut nlattr;
     fn nla_nest_end(skb: *mut sk_buff, nest: *mut nlattr);
     fn nla_put_u8(skb: *mut sk_buff, attrtype: c_int, val: u8) -> c_int;
@@ -108,77 +123,67 @@ extern "C" {
     fn security_release_secctx(secctx: *mut u8, len: size_t);
 }
 
-// Function implementations
-/// Dump protocol part of connection tuple to netlink message
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `tuple` must be a valid pointer to nf_conntrack_tuple
-/// - `l4proto` must be a valid pointer to nf_conntrack_l4proto
-///
-/// # Returns
-/// 0 on success, -EMSGSIZE if message too large
-#[no_mangle]
+#[panic_handler]
+fn panic(_info: &PanicInfo<'_>) -> ! {
+    loop {
+        core::hint::spin_loop();
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_eh_personality() {}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ctnetlink_dump_tuples_proto(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
     l4proto: *const nf_conntrack_l4proto,
 ) -> c_int {
-    let mut ret: c_int = 0;
     let nest_parms = nla_nest_start(skb, CTA_TUPLE_PROTO);
     if nest_parms.is_null() {
         return -EMSGSIZE;
     }
 
     if nla_put_u8(skb, CTA_PROTO_NUM, (*tuple).dst.protonum) != 0 {
+        nla_nest_end(skb, nest_parms);
         return -EMSGSIZE;
     }
 
     if let Some(proto_to_nlattr) = (*l4proto).tuple_to_nlattr {
-        ret = proto_to_nlattr(skb, tuple);
+        let ret = proto_to_nlattr(skb, tuple);
+        if ret != 0 {
+            nla_nest_end(skb, nest_parms);
+            return ret;
+        }
     }
 
     nla_nest_end(skb, nest_parms);
-    ret
+    0
 }
 
-/// Dump IPv4 addresses to netlink message
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `tuple` must be a valid pointer to nf_conntrack_tuple
-///
-/// # Returns
-/// 0 on success, -EMSGSIZE if message too large
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv4_tuple_to_nlattr(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    if nla_put_in_addr(skb, CTA_IP_V4_SRC, (*tuple).src.u3.ip) != 0
-        || nla_put_in_addr(skb, CTA_IP_V4_DST, (*tuple).dst.u3.ip) != 0
-    {
+    if nla_put_in_addr(skb, CTA_IP_V4_SRC, (*tuple).src.u3.ip) != 0 {
+        return -EMSGSIZE;
+    }
+    if nla_put_in_addr(skb, CTA_IP_V4_DST, (*tuple).dst.u3.ip) != 0 {
         return -EMSGSIZE;
     }
     0
 }
 
-/// Dump IPv6 addresses to netlink message
-///
-/// # Safety
-/// - `skb` must be a valid pointer to sk_buff
-/// - `tuple` must be a valid pointer to nf_conntrack_tuple
-///
-/// # Returns
-/// 0 on success, -EMSGSIZE if message too large
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_tuple_to_nlattr(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    if nla_put_in6_addr(skb, CTA_IP_V6_SRC, &(*tuple).src.u3.in6.in6_u.u6_addr8) != 0
-        || nla_put_in6_addr(skb, CTA_IP_V6_DST, &(*tuple).dst.u3.in6.in6_u.u6_addr8) != 0
-    {
+    if nla_put_in6_addr(skb, CTA_IP_V6_SRC, &(*tuple).src.u3.in6.in6_u.u6_addr8) != 0 {
+        return -EMSGSIZE;
+    }
+    if nla_put_in6_addr(skb, CTA_IP_V6_DST, &(*tuple).dst.u3.in6.in6_u.u6_addr8) != 0 {
         return -EMSGSIZE;
     }
     0
@@ -197,20 +202,20 @@ pub unsafe extern "C" fn ctnetlink_dump_tuples_ip(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    let mut ret: c_int = 0;
     let nest_parms = nla_nest_start(skb, CTA_TUPLE_IP);
     if nest_parms.is_null() {
         return -EMSGSIZE;
     }
 
-    match (*tuple).src_l3num {
-        NFPROTO_IPV4 => {
-            ret = ipv4_tuple_to_nlattr(skb, tuple);
-        }
-        NFPROTO_IPV6 => {
-            ret = ipv6_tuple_to_nlattr(skb, tuple);
-        }
-        _ => {}
+    let ret = match (*tuple).src_l3num {
+        NFPROTO_IPV4 => ipv4_tuple_to_nlattr(skb, tuple),
+        NFPROTO_IPV6 => ipv6_tuple_to_nlattr(skb, tuple),
+        _ => 0,
+    };
+
+    if ret != 0 {
+        nla_nest_end(skb, nest_parms);
+        return ret;
     }
 
     nla_nest_end(skb, nest_parms);
@@ -230,9 +235,8 @@ pub unsafe extern "C" fn ctnetlink_dump_tuples(
     skb: *mut sk_buff,
     tuple: *const nf_conntrack_tuple,
 ) -> c_int {
-    let mut ret: c_int = 0;
     rcu_read_lock();
-    ret = ctnetlink_dump_tuples_ip(skb, tuple);
+    let mut ret = ctnetlink_dump_tuples_ip(skb, tuple);
 
     if ret >= 0 {
         let l4proto = nf_ct_l4proto_find((*tuple).dst.protonum);
@@ -307,8 +311,6 @@ pub unsafe extern "C" fn ctnetlink_dump_timeout(
     }
     0
 }
-
-// Additional functions would be implemented similarly following the same pattern...
 
 // Constants
 pub const CTA_TUPLE_PROTO: c_int = 1;

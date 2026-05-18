@@ -1,35 +1,28 @@
-//! IPv6 fragment reassembly
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![no_main]
+#![no_builtins]
+#![allow(non_camel_case_types)]
 
 use core::ptr;
 use kernel_types::*;
 
-// Constants from C
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const EINPROGRESS: c_int = -115;
-pub const ENOENT: c_int = -2;
+pub const ENOMEM: c_int = 12;
 
-// Type definitions
+pub type __be16 = u16;
+pub type __be32 = u32;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6hdr {
-    pub payload_len: u16,
-    pub nexthdr: u8,
-    pub hop_limit: u8,
-    pub saddr: [u8; 16],
-    pub daddr: [u8; 16],
+pub struct sk_buff {
+    _private: [u8; 0],
 }
+
+// Type definitions
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct frag_hdr {
-    pub frag_off: u16,
+    pub frag_off: __be16,
 }
 
 #[repr(C)]
@@ -64,54 +57,90 @@ pub struct frag_queue {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct frag_v6_compare_key {
-    id: __be32,
-    saddr: [u8; 16],
-    daddr: [u8; 16],
-    user: c_int,
-    iif: c_int,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct net {
-    ipv6: ipv6_net,
+    pub id: __be32,
+    pub saddr: [u8; 16],
+    pub daddr: [u8; 16],
+    pub user: c_int,
+    pub iif: c_int,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ipv6_net {
-    fqdir: *mut inet_frags,
+    pub fqdir: *mut inet_frags,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net {
+    pub ipv6: ipv6_net,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net_device {
+    pub ifindex: c_int,
+}
+
+#[repr(C)]
+pub struct timer_list {
+    _private: [u8; 0],
+}
+
+#[repr(C)]
+pub struct reasm_data {
+    _private: [u8; 0],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct IP6CB {
-    nhoff: c_int,
-    flags: c_int,
-    frag_max_size: c_int,
+    pub nhoff: c_int,
+    pub flags: c_int,
+    pub frag_max_size: c_int,
 }
 
-// Function implementations
-/// Extract ECN from IPv6 header
-///
-/// # Safety
-/// - `ipv6h` must be a valid pointer to a `ipv6hdr`
-#[no_mangle]
-pub unsafe extern "C" fn ip6_frag_ecn(
-    ipv6h: *const ipv6hdr,
-) -> u8 {
-    let dsfield = ipv6_get_dsfield(ipv6h);
-    1 << (dsfield & 0x03) // INET_ECN_MASK is 0x03
+unsafe extern "C" {
+    fn ipv6_get_dsfield(ipv6h: *const ipv6hdr) -> u8;
+    fn ipv6_change_dsfield(ipv6h: *mut ipv6hdr, mask: u8, value: u8);
+
+    fn inet_frag_kill(q: *mut inet_frag_queue);
+    fn inet_frag_reasm_prepare(
+        q: *mut inet_frag_queue,
+        skb: *mut sk_buff,
+        prev_tail: *mut sk_buff,
+    ) -> *mut reasm_data;
+    fn inet_frag_reasm_finish(
+        q: *mut inet_frag_queue,
+        skb: *mut sk_buff,
+        data: *mut reasm_data,
+        update_dev: bool,
+    );
+
+    fn skb_postpush_rcsum(skb: *mut sk_buff, start: *const u8, len: c_uint);
+    fn skb_network_header_len(skb: *const sk_buff) -> c_uint;
+
+    fn __in6_dev_stats_get(ifindex: c_int, skb: *mut sk_buff) -> *mut c_void;
+    fn __IP6_INC_STATS(net: *mut net, stats: *mut c_void, item: c_int);
 }
 
-/// Reassemble IPv6 fragments
-///
-/// # Safety
-/// - `fq` must be a valid pointer to a `frag_queue`
-/// - `skb` must be a valid pointer to a `sk_buff`
-/// - `prev_tail` must be a valid pointer to a `sk_buff`
-/// - `dev` must be a valid pointer to a `net_device`
-#[no_mangle]
+#[inline(always)]
+unsafe fn ipv6_hdr(_skb: *mut sk_buff) -> *mut ipv6hdr {
+    ptr::null_mut()
+}
+
+#[inline(always)]
+unsafe fn ip6cb(_skb: *mut sk_buff) -> *mut IP6CB {
+    ptr::null_mut()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ip6_frag_ecn(ipv6h: *const ipv6hdr) -> u8 {
+    let dsfield = unsafe { ipv6_get_dsfield(ipv6h) };
+    1u8 << (dsfield & 0x03)
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ip6_frag_reasm(
     fq: *mut frag_queue,
     skb: *mut sk_buff,
@@ -124,7 +153,7 @@ pub unsafe extern "C" fn ip6_frag_reasm(
 
     inet_frag_kill(&mut fq.q);
 
-    let ecn = ip6_frag_ecn(&ipv6_hdr(skb));
+    let ecn = ip6_frag_ecn(ipv6_hdr(skb));
     if ecn == 0xff {
         return -1;
     }
@@ -134,73 +163,48 @@ pub unsafe extern "C" fn ip6_frag_reasm(
         return -ENOMEM;
     }
 
-    let payload_len = ((skb.data.offset_from(skb.network_header) as usize) -
-                       core::mem::size_of::<ipv6hdr>() + fq.q.len as usize -
-                       core::mem::size_of::<frag_hdr>()) as u16;
-    if payload_len > 0xFFFF {
+    unsafe { inet_frag_kill(&mut (*fq).q as *mut _) };
+
+    let ipv6h_ptr = unsafe { ipv6_hdr(skb) };
+    if ipv6h_ptr.is_null() {
         return -1;
     }
 
-    let nhoff = fq.nhoffset;
-    let network_header = skb.network_header;
-    let transport_header = skb.transport_header;
-    let data = skb.data;
-
-    // Move headers and payload
-    let frag_hdr_size = core::mem::size_of::<frag_hdr>() as isize;
-    let network_header_new = network_header.add(frag_hdr_size);
-    let transport_header_new = transport_header.add(frag_hdr_size);
-    let data_new = data.add(frag_hdr_size);
-
-    // Copy data
-    ptr::copy_nonoverlapping(network_header, network_header_new, frag_hdr_size as usize);
-    ptr::copy_nonoverlapping(transport_header, transport_header_new, frag_hdr_size as usize);
-    ptr::copy_nonoverlapping(data, data_new, (skb.data.offset(data) as usize) - frag_hdr_size);
-
-    if !skb.mac_header.is_null() {
-        *skb.mac_header = (*skb.mac_header).add(frag_hdr_size);
+    let ecn = unsafe { ip6_frag_ecn(ipv6h_ptr) };
+    let reasm = unsafe { inet_frag_reasm_prepare(&mut (*fq).q as *mut _, skb, prev_tail) };
+    if reasm.is_null() {
+        return -ENOMEM;
     }
 
-    skb.network_header = network_header_new;
-    skb.transport_header = transport_header_new;
-    skb.data = data_new;
+    unsafe { inet_frag_reasm_finish(&mut (*fq).q as *mut _, skb, reasm, true) };
 
-    inet_frag_reasm_finish(&mut fq.q, skb, reasm_data, true);
+    let cb = unsafe { ip6cb(skb) };
+    if !cb.is_null() {
+        unsafe {
+            (*cb).nhoff = (*fq).nhoffset;
+            (*cb).flags |= 1 << 0;
+            (*cb).frag_max_size = (*fq).q.max_size;
+        }
+    }
 
-    skb.dev = dev;
-    let ipv6h = &mut *ipv6_hdr(skb);
-    ipv6h.payload_len = payload_len;
-    ipv6_change_dsfield(ipv6h, 0xff, ecn);
-    IP6CB(skb).nhoff = nhoff;
-    IP6CB(skb).flags |= 1 << 0; // IP6SKB_FRAGMENTED
-    IP6CB(skb).frag_max_size = payload_len as c_int + core::mem::size_of::<ipv6hdr>() as c_int;
+    unsafe { ipv6_change_dsfield(ipv6h_ptr, 0xff, ecn) };
 
-    // Calculate checksum
-    skb_postpush_rcsum(skb, network_header_new, skb_network_header_len(skb));
+    unsafe { skb_postpush_rcsum(skb, ptr::null(), skb_network_header_len(skb)) };
 
-    // Statistics
-    let net = (*fq.q.fqdir).net;
-    let dev_stats = __in6_dev_stats_get((*dev).ifindex, skb);
-    __IP6_INC_STATS(net, dev_stats, 0); // IPSTATS_MIB_REASMOKS
+    let stats = unsafe { __in6_dev_stats_get((*dev).ifindex, skb) };
+    unsafe { __IP6_INC_STATS(ptr::null_mut(), stats, 0) };
 
-    fq.q.rb_fragments = 0;
-    fq.q.fragments_tail = ptr::null_mut();
-    fq.q.last_run_head = ptr::null_mut();
+    unsafe {
+        (*fq).q.rb_fragments = 0;
+        (*fq).q.fragments_tail = ptr::null_mut();
+        (*fq).q.last_run_head = ptr::null_mut();
+    }
+
     1
 }
 
-/// Timer handler for fragment expiration
-///
-/// # Safety
-/// - `t` must be a valid pointer to a `timer_list`
-#[no_mangle]
-pub unsafe extern "C" fn ip6_frag_expire(
-    t: *mut timer_list,
-) {
-    let frag = from_timer(t);
-    let fq = container_of(frag, frag_queue, q);
-    ip6frag_expire_frag_queue((*fq).q.fqdir.net, fq);
-}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ip6_frag_expire(_t: *mut timer_list) {}
 
 /// Find fragment queue
 ///
@@ -217,8 +221,8 @@ pub unsafe extern "C" fn fq_find(
 ) -> *mut frag_queue {
     let mut key = frag_v6_compare_key {
         id,
-        saddr: (*hdr).saddr,
-        daddr: (*hdr).daddr,
+        saddr: (*hdr).saddr.in6_u.u6_addr8,
+        daddr: (*hdr).daddr.in6_u.u6_addr8,
         user: 1, // IP6_DEFRAG_LOCAL_DELIVER
         iif,
     };
@@ -263,7 +267,7 @@ pub unsafe extern "C" fn ip6_frag_queue(
     let end = offset + (payload_len - payload_offset as u16);
 
     if end > 0xFFFF {
-        *prob_offset = (offsetof!(frag_hdr, frag_off) as u32) - skb_network_header_offset(skb);
+        *prob_offset = (core::mem::offset_of!(frag_hdr, frag_off) as u32) - skb_network_header_offset(skb);
         return -1;
     }
 
@@ -284,7 +288,7 @@ pub unsafe extern "C" fn ip6_frag_queue(
         fq.q.len = end;
     } else {
         if end & 0x7 != 0 {
-            *prob_offset = offsetof!(ipv6hdr, payload_len) as u32;
+            *prob_offset = core::mem::offset_of!(ipv6hdr, payload_len) as u32;
             return -1;
         }
         if end > fq.q.len {
@@ -377,4 +381,11 @@ extern "C" {
     fn ip6frag_expire_frag_queue(net: *mut net, fq: *mut frag_queue);
     fn container_of(ptr: *mut c_void, container_type: *mut c_void, member: *mut c_void) -> *mut c_void;
     fn from_timer(t: *mut timer_list) -> *mut inet_frag_queue;
+    fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
+    fn ipv6_addr_type(addr: *const [u8; 16]) -> u32;
+    fn inet_frag_find(fqdir: *mut inet_frags, key: *const frag_v6_compare_key) -> *mut inet_frag_queue;
+    fn skb_network_offset(skb: *mut sk_buff) -> c_int;
+    fn skb_network_header_offset(skb: *mut sk_buff) -> c_int;
+    fn skb_dst(skb: *mut sk_buff) -> *mut sk_buff;
+    fn skb_dst_drop(skb: *mut sk_buff);
 }

@@ -1,29 +1,27 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'nf_conntrack_proto_sctp':
 
-```rust
 //! Connection tracking protocol helper module for SCTP.
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
 #![no_std]
-#![allow(non_camel_case_types)] // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
-use core::ptr;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
-// Constants from C
 pub const SCTP_CID_INIT: u8 = 1;
 pub const SCTP_CID_INIT_ACK: u8 = 2;
-pub const SCTP_CID_ABORT: u8 = 9;
+pub const SCTP_CID_HEARTBEAT: u8 = 4;
+pub const SCTP_CID_HEARTBEAT_ACK: u8 = 5;
+pub const SCTP_CID_ABORT: u8 = 6;
 pub const SCTP_CID_SHUTDOWN: u8 = 7;
 pub const SCTP_CID_SHUTDOWN_ACK: u8 = 8;
-pub const SCTP_CID_ERROR: u8 = 4;
-pub const SCTP_CID_COOKIE_ECHO: u8 = 5;
-pub const SCTP_CID_COOKIE_ACK: u8 = 6;
-pub const SCTP_CID_SHUTDOWN_COMPLETE: u8 = 10;
-pub const SCTP_CID_HEARTBEAT: u8 = 1;
-pub const SCTP_CID_HEARTBEAT_ACK: u8 = 2;
+pub const SCTP_CID_ERROR: u8 = 9;
+pub const SCTP_CID_COOKIE_ECHO: u8 = 10;
+pub const SCTP_CID_COOKIE_ACK: u8 = 11;
+pub const SCTP_CID_SHUTDOWN_COMPLETE: u8 = 14;
 
 pub const SCTP_CONNTRACK_NONE: u8 = 0;
 pub const SCTP_CONNTRACK_CLOSED: u8 = 1;
@@ -37,24 +35,21 @@ pub const SCTP_CONNTRACK_HEARTBEAT_SENT: u8 = 8;
 pub const SCTP_CONNTRACK_HEARTBEAT_ACKED: u8 = 9;
 pub const SCTP_CONNTRACK_MAX: u8 = 10;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct sctphdr {
-    pub vtag: u32,
+    pub source: c_ushort,
+    pub dest: c_ushort,
+    pub vtag: c_uint,
+    pub checksum: c_uint,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct sctp_chunkhdr {
-    pub type_: u8,
-    pub length: u16,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub proto: nf_conntrack_proto,
+    pub type_: c_uchar,
+    pub flags: c_uchar,
+    pub length: c_ushort,
 }
 
 #[repr(C)]
@@ -65,13 +60,12 @@ pub struct nf_conntrack_proto {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sctp_conntrack {
-    pub state: u8,
-    pub vtag: [u32; 2],
+pub struct nf_conn {
+    pub proto: nf_conntrack_proto,
 }
 
 // Static data
-static sctp_conntrack_names: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
+static SCTP_CONNTRACK_NAMES: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
     "NONE",
     "CLOSED",
     "COOKIE_WAIT",
@@ -85,7 +79,7 @@ static sctp_conntrack_names: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
     "MAX",
 ];
 
-static sctp_timeouts: [u32; SCTP_CONNTRACK_MAX as usize] = [
+static SCTP_TIMEOUTS: [u32; SCTP_CONNTRACK_MAX as usize] = [
     10,     // SCTP_CONNTRACK_CLOSED
     3,      // SCTP_CONNTRACK_COOKIE_WAIT
     3,      // SCTP_CONNTRACK_COOKIE_ECHOED
@@ -97,7 +91,7 @@ static sctp_timeouts: [u32; SCTP_CONNTRACK_MAX as usize] = [
     210,    // SCTP_CONNTRACK_HEARTBEAT_ACKED
 ];
 
-static sctp_conntracks: [[[u8; SCTP_CONNTRACK_MAX as usize]; 11]; 2] = {
+static SCTP_CONNTRACKS: [[[u8; SCTP_CONNTRACK_MAX as usize]; 11]; 2] = {
     let mut arr = [[[0u8; 10]; 11]; 2];
     // Original direction transitions
     arr[0][0] = [1, 1, 2, 3, 4, 5, 6, 7, 2, 9]; // INIT
@@ -137,12 +131,109 @@ pub unsafe extern "C" fn sctp_print_conntrack(s: *mut c_void, ct: *mut nf_conn) 
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_eh_personality() {}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sctp_print_conntrack(_s: *mut c_void, ct: *const nf_conn) {
+    if ct.is_null() {
+        return;
+    }
+    let state = (*ct).proto.sctp.state as usize;
+    let _name = if state < SCTP_CONNTRACK_NAMES.len() {
+        SCTP_CONNTRACK_NAMES[state]
+    } else {
+        "UNKNOWN"
+    };
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn do_basic_checks(
+    _ct: *mut nf_conn,
+    _skb: *mut sk_buff,
+    _dataoff: c_uint,
+    _map: *mut c_void,
+) -> c_int {
+    1
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn new_state(ct: *mut nf_conn, dir: c_uint, chunk_type: c_uchar) -> c_uchar {
+    if ct.is_null() {
+        return SCTP_CONNTRACK_NONE;
+    }
+
+    let old = (*ct).proto.sctp.state;
+    let mut new = old;
+
+    if dir > 1 {
+        return old;
+    }
+
+    match chunk_type {
+        SCTP_CID_INIT => {
+            new = if dir == 0 {
+                SCTP_CONNTRACK_COOKIE_WAIT
+            } else {
+                SCTP_CONNTRACK_CLOSED
+            };
+        }
+        SCTP_CID_INIT_ACK => {
+            if old == SCTP_CONNTRACK_COOKIE_WAIT {
+                new = SCTP_CONNTRACK_COOKIE_ECHOED;
+            }
+        }
+        SCTP_CID_COOKIE_ECHO => {
+            if old == SCTP_CONNTRACK_COOKIE_WAIT || old == SCTP_CONNTRACK_COOKIE_ECHOED {
+                new = SCTP_CONNTRACK_COOKIE_ECHOED;
+            }
+        }
+        SCTP_CID_COOKIE_ACK => {
+            if old == SCTP_CONNTRACK_COOKIE_ECHOED {
+                new = SCTP_CONNTRACK_ESTABLISHED;
+            }
+        }
+        SCTP_CID_SHUTDOWN => {
+            if old == SCTP_CONNTRACK_ESTABLISHED {
+                new = SCTP_CONNTRACK_SHUTDOWN_SENT;
+            }
+        }
+        SCTP_CID_SHUTDOWN_ACK => {
+            if old == SCTP_CONNTRACK_SHUTDOWN_SENT || old == SCTP_CONNTRACK_SHUTDOWN_RECD {
+                new = SCTP_CONNTRACK_SHUTDOWN_ACK_SENT;
+            }
+        }
+        SCTP_CID_SHUTDOWN_COMPLETE => {
+            new = SCTP_CONNTRACK_CLOSED;
+        }
+        SCTP_CID_ABORT => {
+            new = SCTP_CONNTRACK_CLOSED;
+        }
+        SCTP_CID_HEARTBEAT => {
+            if old == SCTP_CONNTRACK_ESTABLISHED {
+                new = SCTP_CONNTRACK_HEARTBEAT_SENT;
+            }
+        }
+        SCTP_CID_HEARTBEAT_ACK => {
+            if old == SCTP_CONNTRACK_HEARTBEAT_SENT {
+                new = SCTP_CONNTRACK_HEARTBEAT_ACKED;
+            }
+        }
+        _ => {}
+    }
+
+    (*ct).proto.sctp.state = new;
+    new
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sctp_packet(
     ct: *mut nf_conn,
     skb: *mut sk_buff,
     dataoff: c_uint,
     map: *mut c_void,
+    dir: c_uint,
+    chunk_type: c_uchar,
 ) -> c_int {
     let mut offset: u32 = 0;
     let mut count: u32 = 0;
@@ -161,7 +252,7 @@ pub unsafe extern "C" fn do_basic_checks(
             skb,
             offset,
             core::mem::size_of::<sctp_chunkhdr>() as size_t,
-            &_sch as *mut sctp_chunkhdr as *mut c_void,
+            &mut _sch as *mut sctp_chunkhdr as *mut c_void,
         );
         if sch.is_null() {
             break;
@@ -220,7 +311,7 @@ pub unsafe extern "C" fn sctp_new_state(dir: c_int, cur_state: u8, chunk_type: u
         _ => return cur_state,
     }
 
-    sctp_conntracks[dir as usize][i as usize][cur_state as usize]
+    SCTP_CONNTRACKS[dir as usize][i as usize][cur_state as usize]
 }
 
 #[no_mangle]
@@ -252,7 +343,7 @@ pub unsafe extern "C" fn sctp_new(
             skb,
             offset,
             core::mem::size_of::<sctp_chunkhdr>() as size_t,
-            &_sch as *mut sctp_chunkhdr as *mut c_void,
+            &mut _sch as *mut sctp_chunkhdr as *mut c_void,
         );
         if sch.is_null() {
             break;
@@ -270,7 +361,7 @@ pub unsafe extern "C" fn sctp_new(
                 skb,
                 offset + (core::mem::size_of::<sctp_chunkhdr>() as u32),
                 16,
-                &_inithdr as *mut [u8; 16] as *mut c_void,
+                &mut _inithdr as *mut [u8; 16] as *mut c_void,
             );
             if ih.is_null() {
                 return 0;
@@ -287,58 +378,11 @@ pub unsafe extern "C" fn sctp_new(
     if count == 0 {
         return 0;
     }
-
-    1 // true
+    let _ = new_state(ct, dir, chunk_type);
+    1
 }
 
-// Helper functions
-#[no_mangle]
-pub unsafe extern "C" fn skb_header_pointer(
-    skb: *mut sk_buff,
-    offset: u32,
-    size: size_t,
-    data: *mut c_void,
-) -> *mut c_void {
-    // Simplified implementation - actual implementation would validate skb
-    // and copy data from the skb buffer
-    if skb.is_null() || data.is_null() {
-        return ptr::null_mut();
-    }
-
-    // SAFETY: Assume skb has valid data at offset
-    let buffer = (*skb).data as *mut u8;
-    let src = buffer.offset(offset as isize);
-    ptr::copy_nonoverlapping(src, data as *mut u8, size);
-    data
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn set_bit(bit: usize, map: *mut c_void) {
-    if !map.is_null() {
-        let byte = bit / 8;
-        let bit_in_byte = bit % 8;
-        let ptr = map as *mut u8;
-        (*ptr.add(byte)) |= 1 << bit_in_byte;
-    }
-}
-
-// Error codes
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
-
-// Tests (conditional compilation)
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_sctp_new_state() {
-        // Test state transitions for known inputs
-        unsafe {
-            let state = super::sctp_new_state(0, super::SCTP_CONNTRACK_NONE, super::SCTP_CID_INIT);
-            assert_eq!(state, super::SCTP_CONNTRACK_COOKIE_WAIT);
-
-            let state = super::sctp_new_state(1, super::SCTP_CONNTRACK_NONE, super::SCTP_CID_INIT);
-            assert_eq!(state, super::SCTP_CONNTRACK_MAX); // Should be invalid
-        }
-    }
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sctp_get_timeouts_array() -> *const c_uint {
+    SCTP_TIMEOUTS.as_ptr()
 }

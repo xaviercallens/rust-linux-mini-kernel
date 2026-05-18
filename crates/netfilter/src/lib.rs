@@ -1,36 +1,35 @@
-//! IPv6 specific functions of netfilter core
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
-use kernel_types::*;
+use core::ffi::{c_int, c_void};
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
-// Constants from C
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = 22;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ipv6_ops {
-    pub route_me_harder: extern "C" fn(net: *mut c_void, sk_partial: *mut c_void, skb: *mut c_void) -> c_int,
-    pub route: extern "C" fn(net: *mut c_void, dst: *mut *mut c_void, fl: *mut c_void, strict: bool) -> c_int,
-    pub fragment: extern "C" fn(net: *mut c_void, sk: *mut c_void, skb: *mut c_void, data: *mut nf_bridge_frag_data, output: extern "C" fn(net: *mut c_void, sk: *mut c_void, data: *mut nf_bridge_frag_data, skb: *mut c_void) -> c_int) -> c_int,
-    pub reroute: extern "C" fn(skb: *mut c_void, entry: *const nf_queue_entry) -> c_int,
-    pub route_input: extern "C" fn(skb: *mut c_void) -> c_int,
-    pub br_fragment: extern "C" fn(net: *mut c_void, sk: *mut c_void, skb: *mut c_void, data: *mut nf_bridge_frag_data, output: extern "C" fn(net: *mut c_void, sk: *mut c_void, data: *mut nf_bridge_frag_data, skb: *mut c_void) -> c_int) -> c_int,
+pub struct flowi6 {
+    pub flowi6_oif: u32,
+    pub flowi6_mark: u32,
+    pub flowi6_uid: u32,
+    pub daddr: [u8; 16],
+    pub saddr: [u8; 16],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_queue_entry {
-    pub state: nf_queue_entry_state,
+pub struct ip6_rt_info {
+    pub daddr: [u8; 16],
+    pub saddr: [u8; 16],
+    pub mark: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_bridge_frag_data {
+    pub _priv: u8,
 }
 
 #[repr(C)]
@@ -43,11 +42,53 @@ pub struct nf_queue_entry_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_bridge_frag_data {
-    // Placeholder for actual fields
+pub struct nf_queue_entry {
+    pub state: nf_queue_entry_state,
 }
 
-// Function implementations
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_ipv6_ops {
+    pub route_me_harder:
+        unsafe extern "C" fn(net: *mut c_void, sk_partial: *mut c_void, skb: *mut c_void) -> c_int,
+    pub route: unsafe extern "C" fn(
+        net: *mut c_void,
+        dst: *mut *mut c_void,
+        fl: *mut c_void,
+        strict: c_int,
+    ) -> c_int,
+    pub fragment: extern "C" fn(
+        net: *mut c_void,
+        sk: *mut c_void,
+        skb: *mut c_void,
+        data: *mut nf_bridge_frag_data,
+        output: extern "C" fn(
+            net: *mut c_void,
+            sk: *mut c_void,
+            data: *mut nf_bridge_frag_data,
+            skb: *mut c_void,
+        ) -> c_int,
+    ) -> c_int,
+    pub reroute: unsafe extern "C" fn(skb: *mut c_void, entry: *const nf_queue_entry) -> c_int,
+    pub route_input: extern "C" fn(skb: *mut c_void) -> c_int,
+    pub br_fragment: extern "C" fn(
+        net: *mut c_void,
+        sk: *mut c_void,
+        skb: *mut c_void,
+        data: *mut nf_bridge_frag_data,
+        output: extern "C" fn(
+            net: *mut c_void,
+            sk: *mut c_void,
+            data: *mut nf_bridge_frag_data,
+            skb: *mut c_void,
+        ) -> c_int,
+    ) -> c_int,
+}
+
+unsafe extern "C" {
+    fn nf_queue_entry_reroute(entry: *const nf_queue_entry) -> *const ip6_rt_info;
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ip6_route_me_harder(
     net: *mut c_void,
@@ -60,15 +101,10 @@ pub unsafe extern "C" fn ip6_route_me_harder(
 
     let iph = ipv6_hdr(skb);
     let sk = sk_to_full_sk(sk_partial);
-    let flkeys = ptr::null_mut();
-    let mut hh_len: u32 = 0;
-    let mut dst: *mut c_void = ptr::null_mut();
-    let strict = (ipv6_addr_type(&(*iph).daddr) & (1 << 19 | 1 << 31)) != 0;
-
     let mut fl6 = flowi6 {
         flowi6_oif: if !sk.is_null() && (*sk).sk_bound_dev_if != 0 {
             (*sk).sk_bound_dev_if
-        } else if strict {
+        } else if (ipv6_addr_type(&(*iph).daddr) & (1 << 19 | 1 << 31)) != 0 {
             (*(*skb).dev).ifindex
         } else {
             0
@@ -79,7 +115,10 @@ pub unsafe extern "C" fn ip6_route_me_harder(
         saddr: (*iph).saddr,
     };
 
-    fib6_rules_early_flow_dissect(net, skb, &mut fl6, flkeys);
+    let mut dst: *mut c_void = ptr::null_mut();
+    let strict = (ipv6_addr_type(&(*iph).daddr) & (1 << 19 | 1 << 31)) != 0;
+
+    fib6_rules_early_flow_dissect(net, skb, &mut fl6, ptr::null_mut());
 
     dst = ip6_route_output(net, sk, &mut fl6);
     let err = (*dst).error;
@@ -95,7 +134,7 @@ pub unsafe extern "C" fn ip6_route_me_harder(
     skb_dst_set(skb, dst);
 
     // XFRM handling
-    if !(IP6CB(skb).flags & 1 << 0) != 0 {
+    if (IP6CB(skb).flags & 1 << 0) == 0 {
         let fl = flowi6_to_flowi(&fl6);
         if xfrm_decode_session(skb, fl, 10) == 0 {
             skb_dst_set(skb, ptr::null_mut());
@@ -107,7 +146,7 @@ pub unsafe extern "C" fn ip6_route_me_harder(
         }
     }
 
-    hh_len = (*(*skb).dst).dev.hard_header_len;
+    let hh_len = (*(*skb).dst).dev.hard_header_len;
     if skb_headroom(skb) < hh_len {
         if pskb_expand_head(skb, HH_DATA_ALIGN(hh_len - skb_headroom(skb)), 0, 1) != 0 {
             return -ENOMEM;
@@ -118,23 +157,20 @@ pub unsafe extern "C" fn ip6_route_me_harder(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ip6_reroute(
-    skb: *mut c_void,
-    entry: *const nf_queue_entry,
-) -> c_int {
+pub unsafe extern "C" fn nf_ip6_reroute(skb: *mut c_void, entry: *const nf_queue_entry) -> c_int {
     if skb.is_null() || entry.is_null() {
         return -EINVAL;
     }
 
     let rt_info = nf_queue_entry_reroute(entry);
-    if (*entry).state.hook == 3 { // NF_INET_LOCAL_OUT
-        let iph = ipv6_hdr(skb);
-        if !ipv6_addr_equal(&(*iph).daddr, &(*rt_info).daddr) ||
-           !ipv6_addr_equal(&(*iph).saddr, &(*rt_info).saddr) ||
-           (*skb).mark != (*rt_info).mark {
-            return ip6_route_me_harder((*entry).state.net, (*entry).state.sk, skb);
-        }
+    if rt_info.is_null() {
+        return 0;
     }
+
+    if (*entry).state.hook == 3 {
+        return ip6_route_me_harder((*entry).state.net, (*entry).state.sk, skb);
+    }
+
     0
 }
 
@@ -143,7 +179,7 @@ pub unsafe extern "C" fn __nf_ip6_route(
     net: *mut c_void,
     dst: *mut *mut c_void,
     fl: *mut c_void,
-    strict: bool,
+    strict: c_int,
 ) -> c_int {
     if net.is_null() || dst.is_null() || fl.is_null() {
         return -EINVAL;
@@ -188,7 +224,7 @@ pub unsafe extern "C" fn __nf_ip6_route(
     };
 
     let sk = if strict { &mut fake_sk } else { ptr::null_mut() };
-    let result = ip6_route_output(net, sk, &mut fl.u.ip6);
+    let result = ip6_route_output(net, sk, &mut (*fl).u.ip6);
     let err = (*result).error;
 
     if err != 0 {
@@ -348,8 +384,29 @@ pub unsafe extern "C" fn ipv6_netfilter_init() -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_netfilter_fini() {
-    RCU_INIT_POINTER(nf_ipv6_ops, ptr::null_mut());
+pub static nf_ipv6_ops_instance: nf_ipv6_ops = nf_ipv6_ops {
+    route_me_harder: ip6_route_me_harder,
+    route: __nf_ip6_route,
+    fragment: nf_ip6_fragment_stub,
+    reroute: nf_ip6_reroute,
+    route_input: nf_ip6_route_input_stub,
+    br_fragment: nf_ip6_br_fragment_stub,
+};
+
+#[no_mangle]
+pub extern "C" fn nf_ip6_fragment_stub(
+    _net: *mut c_void,
+    _sk: *mut c_void,
+    _skb: *mut c_void,
+    _data: *mut nf_bridge_frag_data,
+    _output: extern "C" fn(
+        net: *mut c_void,
+        sk: *mut c_void,
+        data: *mut nf_bridge_frag_data,
+        skb: *mut c_void,
+    ) -> c_int,
+) -> c_int {
+    0
 }
 
 // Helper functions (extern declarations)

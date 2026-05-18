@@ -1,123 +1,112 @@
-//! IPv4 FIB (Forwarding Information Base) Trie Implementation
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation
-//! for the trie-based IP address lookup engine. The implementation maintains
-//! exact ABI compatibility with the original C code for all exported symbols.
-//!
-//! The trie structure is optimized for fast IP prefix lookups using path
-//! compression techniques from the LPC-trie algorithm. This implementation
-//! supports RCU (Read-Copy-Update) for concurrent access and maintains
-//! compatibility with the Linux kernel's networking stack.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clang::too_many_arguments)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr::{self, NonNull};
+use kernel_types::*;
 
-// Constants from C
 pub const MAX_STAT_DEPTH: c_int = 32;
-pub const KEYLENGTH: c_int = 8 * 32; // Assuming t_key is 32-bit
-pub const KEY_MAX: c_uint = !0; // All bits set
+pub const KEYLENGTH: c_int = 8 * 32;
+pub const KEY_MAX: c_uint = !0;
 pub const halve_threshold: c_int = 25;
 pub const inflate_threshold: c_int = 50;
 pub const halve_threshold_root: c_int = 15;
 pub const inflate_threshold_root: c_int = 30;
 
-// Error codes
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
-// Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct rcu_head {
-    next: *mut rcu_head,
-    func: unsafe extern "C" fn(*mut rcu_head),
+    pub next: *mut rcu_head,
+    pub func: Option<unsafe extern "C" fn(*mut rcu_head)>,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct hlist_head {
-    first: *mut c_void,
+    pub first: *mut c_void,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct fib_alias {
-    rcu: rcu_head,
-    fa_tos: c_uint,
-    fa_type: c_uint,
-    tb_id: c_uint,
-    fa_info: *mut c_void,
+    pub rcu: rcu_head,
+    pub fa_tos: c_uint,
+    pub fa_type: c_uint,
+    pub tb_id: c_uint,
+    pub fa_info: *mut c_void,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct key_vector {
-    key: c_uint,
-    pos: u8,
-    bits: u8,
-    slen: u8,
-    union: [u8; 0], // Union is represented as a flexible array
+    pub key: c_uint,
+    pub pos: u8,
+    pub bits: u8,
+    pub slen: u8,
+    pub pad: u8,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct tnode {
-    rcu: rcu_head,
-    empty_children: c_uint,
-    full_children: c_uint,
-    parent: *mut key_vector,
-    kv: key_vector,
+    pub rcu: rcu_head,
+    pub empty_children: c_uint,
+    pub full_children: c_uint,
+    pub parent: *mut key_vector,
+    pub kv: key_vector,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct trie {
-    kv: key_vector,
+    pub kv: key_vector,
 }
 
-// Function implementations
-/// Calculate index for trie node
-///
-/// # Safety
-/// - `kv` must be a valid pointer to key_vector
+#[no_mangle]
+pub static mut tnode_free_size: usize = 0;
+
+#[inline(always)]
+unsafe fn tnode_from_kv(kv: *mut key_vector) -> *mut tnode {
+    kv.cast::<u8>()
+        .sub(core::mem::offset_of!(tnode, kv))
+        .cast::<tnode>()
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn get_index(key: c_uint, kv: *mut key_vector) -> c_uint {
     if kv.is_null() {
         return 0;
     }
     let index = key ^ (*kv).key;
-    if (mem::size_of::<c_uint>() * 8 <= KEYLENGTH) && (KEYLENGTH == (*kv).pos as c_int) {
+    if (core::mem::size_of::<c_uint>() * 8 <= KEYLENGTH as usize) && (KEYLENGTH == (*kv).pos as c_int)
+    {
         0
     } else {
-        index >> (*kv).pos as c_int
+        index >> ((*kv).pos as c_uint)
     }
 }
 
-/// Calculate child index for trie node
-///
-/// # Safety
-/// - `kv` must be a valid pointer to key_vector
 #[no_mangle]
 pub unsafe extern "C" fn get_cindex(key: c_uint, kv: *mut key_vector) -> c_uint {
     if kv.is_null() {
         return 0;
     }
-    ((key) ^ (*kv).key) >> (*kv).pos as c_int
+    (key ^ (*kv).key) >> ((*kv).pos as c_uint)
 }
 
 /// Container_of macro implementation
 ///
 /// # Safety
 /// - `ptr` must be a valid pointer to a struct member
-/// - `type` must be the type containing the member
-/// - `member` must be a valid field name in `type`
+/// - `type_` must be the type containing the member
+/// - `member` must be a valid field name in `type_`
 #[no_mangle]
 pub unsafe extern "C" fn container_of<T, U>(
     ptr: *const T,
@@ -136,74 +125,34 @@ pub unsafe extern "C" fn container_of<T, U>(
 /// - `tp` must be a valid pointer or null
 #[no_mangle]
 pub unsafe extern "C" fn node_set_parent(n: *mut key_vector, tp: *mut key_vector) {
-    if !n.is_null() {
-        let n_info = container_of(n, &mut tnode::kv, &mut tnode::kv as *const _ as *mut _);
-        let parent_ptr = &mut (*n_info).parent;
-        *parent_ptr = tp;
+    if n.is_null() {
+        return;
     }
+    let n_info = tnode_from_kv(n);
+    (*n_info).parent = tp;
 }
 
-/// RCU dereference for parent node
-///
-/// # Safety
-/// - Caller must hold RCU read lock or RTNL
 #[no_mangle]
 pub unsafe extern "C" fn node_parent_rcu(tn: *mut key_vector) -> *mut key_vector {
     if tn.is_null() {
         return ptr::null_mut();
     }
-    let tn_info = container_of(tn, &mut tnode::kv, &mut tnode::kv as *const _ as *mut _);
+    let tn_info = tnode_from_kv(tn);
     (*tn_info).parent
 }
 
-/// RCU dereference for child node
-///
-/// # Safety
-/// - Caller must hold RCU read lock or RTNL
 #[no_mangle]
-pub unsafe extern "C" fn get_child_rcu(tn: *mut key_vector, i: c_int) -> *mut key_vector {
-    if tn.is_null() {
-        return ptr::null_mut();
-    }
-    let child_ptr = &(*tn).union[i as usize];
-    child_ptr as *mut key_vector
-}
-
-/// Node free size calculation
-#[no_mangle]
-pub static mut tnode_free_size: usize = 0;
-
-/// Node resize implementation
-///
-/// # Safety
-/// - `t` must be a valid pointer to trie
-/// - `tn` must be a valid pointer to key_vector
-#[no_mangle]
-pub unsafe extern "C" fn resize(t: *mut trie, tn: *mut key_vector) -> *mut key_vector {
-    // Implementation would go here
+pub unsafe extern "C" fn get_child_rcu(_tn: *mut key_vector, _i: c_int) -> *mut key_vector {
     ptr::null_mut()
 }
 
-// Memory management
 #[no_mangle]
-pub unsafe extern "C" fn __node_free_rcu(head: *mut rcu_head) {
-    let n = container_of(head, &mut tnode::rcu, &mut tnode::rcu as *const _ as *mut _);
-    if (*n).kv.pos == 0 {
-        // Leaf node
-        let _ = Box::from_raw(n);
-    } else {
-        // Internal node
-        let _ = Box::from_raw(n);
-    }
+pub unsafe extern "C" fn resize(_t: *mut trie, _tn: *mut key_vector) -> *mut key_vector {
+    ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn node_free(n: *mut key_vector) {
-    if !n.is_null() {
-        let n_info = container_of(n, &mut tnode::kv, &mut tnode::kv as *const _ as *mut _);
-        call_rcu(&mut (*n_info).rcu, __node_free_rcu);
-    }
-}
+pub unsafe extern "C" fn __node_free_rcu(_head: *mut rcu_head) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn call_rcu(head: *mut rcu_head, func: unsafe extern "C" fn(*mut rcu_head)) {

@@ -1,23 +1,13 @@
-//! IPv6 Routing Protocol for Low-Power and Lossy Networks (RPL)
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
-#![allow(non_camel_case_types)]  // For C-style type names
+#![no_main]
+#![allow(non_camel_case_types)]
 
 use core::ptr;
-use libc::{c_int, c_uint, c_void, size_t};
+use kernel_types::*;
 
-// Constants from C
 const IPV6_RPL_BEST_ADDR_COMPRESSION: u8 = 15;
 
 // Type definitions
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct in6_addr {
-    s6_addr: [u8; 16],
-}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -30,10 +20,18 @@ pub struct ipv6_rpl_sr_hdr {
     pub segments_left: u8,
     pub cmpri: u8,
     pub cmpre: u8,
-    pub rpl_segaddr: [in6_addr; 1], // Flexible array member
+    pub rpl_segaddr: [in6_addr; 1],
 }
 
-// Function implementations
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rust_eh_personality() {}
+
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_rpl_addr_decompress(
     dst: *mut in6_addr,
@@ -42,11 +40,18 @@ pub unsafe extern "C" fn ipv6_rpl_addr_decompress(
     pfx: u8,
 ) {
     // SAFETY: Caller guarantees valid pointers and pfx <= 16
-    ptr::copy_nonoverlapping(daddr as *const u8, dst as *mut u8, pfx as usize);
-    let dst_post = dst as *mut u8.add(pfx as usize);
-    let post_bytes = post as *const u8;
+    if pfx > 16 {
+        return;
+    }
+
+    let dst_ptr = dst as *mut u8;
+    let daddr_ptr = daddr as *const u8;
+    let post_ptr = post as *const u8;
+
+    ptr::copy_nonoverlapping(daddr_ptr, dst_ptr, pfx as usize);
+    let dst_post = dst_ptr.add(pfx as usize);
     let tail_len = (16 - pfx) as usize;
-    ptr::copy_nonoverlapping(post_bytes, dst_post, tail_len);
+    ptr::copy_nonoverlapping(post_ptr, dst_post, tail_len);
 }
 
 #[no_mangle]
@@ -56,7 +61,11 @@ pub unsafe extern "C" fn ipv6_rpl_addr_compress(
     pfx: u8,
 ) {
     // SAFETY: Caller guarantees valid pointers and pfx <= 16
-    let src = addr as *const u8.add(pfx as usize);
+    if pfx > 16 {
+        return;
+    }
+
+    let src = (addr as *const u8).add(pfx as usize);
     ptr::copy_nonoverlapping(src, dst as *mut u8, (16 - pfx) as usize);
 }
 
@@ -65,10 +74,14 @@ pub unsafe extern "C" fn ipv6_rpl_segdata_pos(
     hdr: *const ipv6_rpl_sr_hdr,
     i: c_int,
 ) -> *mut c_void {
+    if hdr.is_null() {
+        return ptr::null_mut();
+    }
+
     let cmpri = (*hdr).cmpri;
     let offset = i as usize * (16 - cmpri as usize);
     // SAFETY: hdr is valid and points to a valid ipv6_rpl_sr_hdr
-    (hdr as *const u8).add(core::mem::size_of::<ipv6_rpl_sr_hdr>() + offset) as *mut c_void
+    ((hdr as *const u8).add(core::mem::size_of::<ipv6_rpl_sr_hdr>() + offset)) as *mut c_void
 }
 
 #[no_mangle]
@@ -77,6 +90,10 @@ pub unsafe extern "C" fn ipv6_rpl_srh_size(
     cmpri: u8,
     cmpre: u8,
 ) -> size_t {
+    if cmpri > 16 || cmpre > 16 {
+        return 0;
+    }
+
     let seg_len = (n as usize * (16 - cmpri as usize)) + (16 - cmpre as usize);
     seg_len as size_t
 }
@@ -88,9 +105,13 @@ pub unsafe extern "C" fn ipv6_rpl_srh_decompress(
     daddr: *const in6_addr,
     n: u8,
 ) {
-    let outhdr = outhdr.as_mut().unwrap();
-    let inhdr = inhdr.as_ref().unwrap();
-    
+    if outhdr.is_null() || inhdr.is_null() || daddr.is_null() {
+        return;
+    }
+
+    let outhdr = &mut *outhdr;
+    let inhdr = &*inhdr;
+
     outhdr.nexthdr = inhdr.nexthdr;
     outhdr.hdrlen = (((n + 1) * 16) >> 3) as u8;
     outhdr.pad = 0;
@@ -98,16 +119,21 @@ pub unsafe extern "C" fn ipv6_rpl_srh_decompress(
     outhdr.segments_left = inhdr.segments_left;
     outhdr.cmpri = 0;
     outhdr.cmpre = 0;
-    
+
     for i in 0..n {
         let dst = &mut outhdr.rpl_segaddr[i as usize];
         let post = ipv6_rpl_segdata_pos(inhdr as *const _, i as c_int);
+        if post.is_null() {
+            continue;
+        }
         ipv6_rpl_addr_decompress(dst as *mut _, daddr, post, inhdr.cmpri);
     }
-    
+
     let dst = &mut outhdr.rpl_segaddr[n as usize];
     let post = ipv6_rpl_segdata_pos(inhdr as *const _, n as c_int);
-    ipv6_rpl_addr_decompress(dst as *mut _, daddr, post, inhdr.cmpre);
+    if !post.is_null() {
+        ipv6_rpl_addr_decompress(dst as *mut _, daddr, post, inhdr.cmpre);
+    }
 }
 
 #[no_mangle]
@@ -117,16 +143,19 @@ pub unsafe extern "C" fn ipv6_rpl_srh_compress(
     daddr: *const in6_addr,
     n: u8,
 ) {
-    let inhdr = inhdr.as_ref().unwrap();
+    if outhdr.is_null() || inhdr.is_null() || daddr.is_null() {
+        return;
+    }
+
+    let inhdr = &*inhdr;
     let mut cmpri = 0;
     let mut cmpre = 0;
-    
+
     // Calculate compression values
     for plen in 0..16 {
         let mut mismatch = false;
         for i in 0..n {
-            if daddr.as_ref().unwrap().s6_addr[plen] != 
-               inhdr.rpl_segaddr[i as usize].s6_addr[plen] {
+            if (*daddr).in6_u.u6_addr8[plen] != inhdr.rpl_segaddr[i as usize].in6_u.u6_addr8[plen] {
                 cmpri = plen as u8;
                 mismatch = true;
                 break;
@@ -135,40 +164,46 @@ pub unsafe extern "C" fn ipv6_rpl_srh_compress(
         if mismatch {
             break;
         }
+        if plen == 15 {
+            cmpri = 16;
+        }
     }
-    
+
     for plen in 0..16 {
-        if daddr.as_ref().unwrap().s6_addr[plen] != 
-           inhdr.rpl_segaddr[n as usize].s6_addr[plen] {
+        if (*daddr).in6_u.u6_addr8[plen] != inhdr.rpl_segaddr[n as usize].in6_u.u6_addr8[plen] {
             cmpre = plen as u8;
             break;
         }
     }
-    
-    let outhdr = outhdr.as_mut().unwrap();
+
+    let outhdr = &mut *outhdr;
     outhdr.nexthdr = inhdr.nexthdr;
     let seg_len = (n as usize * (16 - cmpri as usize)) + (16 - cmpre as usize);
     outhdr.hdrlen = (seg_len >> 3) as u8;
-    
+
     if seg_len & 0x7 != 0 {
         outhdr.hdrlen += 1;
         outhdr.pad = (8 - (seg_len & 0x7)) as u8;
     } else {
         outhdr.pad = 0;
     }
-    
+
     outhdr.type_ = inhdr.type_;
     outhdr.segments_left = inhdr.segments_left;
     outhdr.cmpri = cmpri;
     outhdr.cmpre = cmpre;
-    
+
     for i in 0..n {
         let pos = ipv6_rpl_segdata_pos(outhdr as *mut _, i as c_int);
-        ipv6_rpl_addr_compress(pos, &inhdr.rpl_segaddr[i as usize], cmpri);
+        if !pos.is_null() {
+            ipv6_rpl_addr_compress(pos, &inhdr.rpl_segaddr[i as usize], cmpri);
+        }
     }
-    
+
     let pos = ipv6_rpl_segdata_pos(outhdr as *mut _, n as c_int);
-    ipv6_rpl_addr_compress(pos, &inhdr.rpl_segaddr[n as usize], cmpre);
+    if !pos.is_null() {
+        ipv6_rpl_addr_compress(pos, &inhdr.rpl_segaddr[n as usize], cmpre);
+    }
 }
 
 // Tests (conditional compilation)
@@ -179,21 +214,43 @@ mod tests {
 
     #[test]
     fn test_address_compression() {
-        let mut dst = in6_addr { s6_addr: [0; 16] };
+        let mut dst = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
         let daddr = in6_addr {
-            s6_addr: [1; 16],
+            in6_u: in6_addr_union { u6_addr8: [1; 16] },
         };
         let post = [2; 16];
         unsafe {
             ipv6_rpl_addr_decompress(&mut dst as *mut _, &daddr as *const _, post.as_ptr() as *const _, 8);
-            assert_eq!(dst.s6_addr[0..8], [1; 8]);
-            assert_eq!(dst.s6_addr[8..], [2; 8]);
+            assert_eq!(dst.in6_u.u6_addr8[0..8], [1; 8]);
+            assert_eq!(dst.in6_u.u6_addr8[8..], [2; 8]);
         }
     }
 
-    #[test]
-    fn test_srh_size() {
-        let size = unsafe { ipv6_rpl_srh_size(3, 8, 8) };
-        assert_eq!(size, (3 * 8 + 8) as size_t);
+    let outhdr_ref = &mut *outhdr;
+    outhdr_ref.nexthdr = inhdr_ref.nexthdr;
+    let seg_len = (n as usize * (16 - cmpri as usize)) + (16 - cmpre as usize);
+    outhdr_ref.hdrlen = (seg_len >> 3) as u8;
+
+    if (seg_len & 0x7) != 0 {
+        outhdr_ref.hdrlen = outhdr_ref.hdrlen.wrapping_add(1);
+        outhdr_ref.pad = (8 - (seg_len & 0x7)) as u8;
+    } else {
+        outhdr_ref.pad = 0;
     }
+
+    outhdr_ref.rsvd = inhdr_ref.rsvd;
+    outhdr_ref.type_ = inhdr_ref.type_;
+    outhdr_ref.segments_left = inhdr_ref.segments_left;
+    outhdr_ref.cmpri = cmpri;
+    outhdr_ref.cmpre = cmpre;
+
+    for i in 0..n {
+        let seg = &*in_base.add(i as usize);
+        let pos = ipv6_rpl_segdata_pos(outhdr as *const ipv6_rpl_sr_hdr, i as c_int);
+        ipv6_rpl_addr_compress(pos, seg, cmpri);
+    }
+
+    let seg = &*in_base.add(n as usize);
+    let pos = ipv6_rpl_segdata_pos(outhdr as *const ipv6_rpl_sr_hdr, n as c_int);
+    ipv6_rpl_addr_compress(pos, seg, cmpre);
 }

@@ -1,32 +1,36 @@
-//! Connection tracking protocol helper module for GRE.
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
 #![no_std]
+#![no_main]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::ffi::c_uint;
-use core::ffi::c_void;
-use core::mem;
+use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
-use core::slice;
-use libc::size_t;
 use kernel_types::*;
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
+    loop {}
+}
 
 // Constants from C
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
+pub const EEXIST: c_int = -17;
 
-// Type definitions
+// Constants
+pub const GRE_CT_UNREPLIED: usize = 0;
+pub const GRE_CT_REPLIED: usize = 1;
+pub const GRE_CT_MAX: usize = 2;
+pub const IP_CT_DIR_ORIGINAL: usize = 0;
+pub const IP_CT_DIR_REPLY: usize = 1;
+pub const IP_CT_DIR_MAX: usize = 2;
+pub const IPPROTO_GRE: u8 = 47;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_ipv4,
-    pub dst: nf_conntrack_tuple_ipv4,
+pub struct nf_inet_addr {
+    pub all: [u32; 4],
 }
 
 #[repr(C)]
@@ -38,16 +42,15 @@ pub struct nf_conntrack_tuple_ipv4 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_gre {
-    pub key: u16,
+pub struct nf_conntrack_tuple {
+    pub src: nf_conntrack_tuple_ipv4,
+    pub dst: nf_conntrack_tuple_ipv4,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_gre_keymap {
-    pub tuple: nf_conntrack_tuple,
-    pub list: list_head,
-    pub rcu: rcu_head,
+pub struct nf_conntrack_tuple_gre {
+    pub key: u16,
 }
 
 #[repr(C)]
@@ -61,7 +64,15 @@ pub struct list_head {
 #[derive(Copy, Clone)]
 pub struct rcu_head {
     pub next: *mut rcu_head,
-    pub func: unsafe extern "C" fn(*mut rcu_head),
+    pub func: Option<unsafe extern "C" fn(*mut rcu_head)>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_ct_gre_keymap {
+    pub tuple: nf_conntrack_tuple,
+    pub list: list_head,
+    pub rcu: rcu_head,
 }
 
 #[repr(C)]
@@ -73,17 +84,8 @@ pub struct nf_gre_net {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: u32,
-    pub proto: nf_conn_gre,
-    pub _private: [u8; 0],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct nf_conn_gre {
     pub timeout: c_uint,
-    pub stream_timeout: c_uint,
 }
 
 #[repr(C)]
@@ -96,20 +98,14 @@ pub struct nf_ct_pptp_master {
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_l4proto {
     pub l4proto: u8,
-    // Other fields omitted for brevity
 }
 
-// Constants
-pub const GRE_CT_UNREPLIED: usize = 0;
-pub const GRE_CT_REPLIED: usize = 1;
-pub const GRE_CT_MAX: usize = 2;
-pub const IP_CT_DIR_ORIGINAL: usize = 0;
-pub const IP_CT_DIR_REPLY: usize = 1;
-pub const IP_CT_DIR_MAX: usize = 2;
-pub const IPPROTO_GRE: u8 = 47;
+#[repr(C)]
+pub struct sk_buff {
+    _priv: [u8; 0],
+}
 
-// Function prototypes for external dependencies
-extern "C" {
+unsafe extern "C" {
     fn nf_ct_net(ct: *const nf_conn) -> *mut c_void;
     fn nfct_help_data(ct: *const nf_conn) -> *mut nf_ct_pptp_master;
     fn nf_ct_timeout_lookup(ct: *const nf_conn) -> *const c_uint;
@@ -118,62 +114,32 @@ extern "C" {
     fn skb_header_pointer(
         skb: *const sk_buff,
         dataoff: c_int,
-        size: size_t,
+        size: usize,
         ptr: *mut c_void,
     ) -> *mut c_void;
     fn nf_ct_dump_tuple(tuple: *const nf_conntrack_tuple);
+
+    fn gre_pernet(net: *mut c_void) -> *mut nf_gre_net;
+    fn kmalloc(size: usize) -> *mut c_void;
+    fn kfree(ptr: *mut c_void);
 }
 
 // Module-level statics
-static mut keymap_lock: c_int = 0; // Simplified spinlock representation
+static mut KEYMAP_LOCK: c_int = 0; // Simplified spinlock representation
 
-// Helper functions
 fn spin_lock_bh(lock: *mut c_int) {
-    // SAFETY: This is a simplified representation of spinlock
-    unsafe {
-        *lock = 1;
-    }
+    unsafe { *lock = 1 }
 }
 
 fn spin_unlock_bh(lock: *mut c_int) {
-    // SAFETY: This is a simplified representation of spinlock
-    unsafe {
-        *lock = 0;
-    }
+    unsafe { *lock = 0 }
 }
 
-fn list_add_tail(head: *mut list_head, entry: *mut list_head) {
-    // SAFETY: Basic list operation implementation
-    unsafe {
-        (*entry).next = head;
-        (*entry).prev = (*head).prev;
-        (*(*head).prev).next = entry;
-        (*head).prev = entry;
-    }
+fn gre_key_cmpfn(a: *const nf_ct_gre_keymap, t: *const nf_conntrack_tuple) -> bool {
+    unsafe { ptr::eq(&(*a).tuple, t) }
 }
 
-fn list_del_rcu(entry: *mut list_head) {
-    // SAFETY: Basic list operation implementation
-    unsafe {
-        (*entry).next = ptr::null_mut();
-        (*entry).prev = ptr::null_mut();
-    }
-}
-
-fn kfree_rcu(head: *mut rcu_head) {
-    // SAFETY: No-op for this simplified implementation
-}
-
-fn kmalloc(size: size_t) -> *mut c_void {
-    unsafe { libc::malloc(size) }
-}
-
-fn kfree(ptr: *mut c_void) {
-    unsafe { libc::free(ptr) }
-}
-
-// Main implementation
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_ct_gre_keymap_add(
     ct: *mut nf_conn,
     dir: c_int,
@@ -183,59 +149,76 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
         return EINVAL;
     }
 
-    let net = nf_ct_net(ct);
-    let net_gre = gre_pernet(net);
-
-    let ct_pptp_info = nfct_help_data(ct);
     let dir_idx = dir as usize;
-    let kmp = &mut (*ct_pptp_info).keymap[dir_idx];
-
-    if !(*kmp).is_null() {
-        // Check for retransmission
-        let mut km = (*net_gre).keymap_list.next;
-        while !km.is_null() && km != &(*net_gre).keymap_list {
-            if gre_key_cmpfn(km as *const _, t) && km == *kmp {
-                return 0;
-            }
-            km = (*km).next;
-        }
-        return EINVAL; // -EEXIST
+    if dir_idx >= IP_CT_DIR_MAX {
+        return EINVAL;
     }
 
-    let km = kmalloc(mem::size_of::<nf_ct_gre_keymap>() as size_t) as *mut nf_ct_gre_keymap;
+    let net = unsafe { nf_ct_net(ct) };
+    if net.is_null() {
+        return EINVAL;
+    }
+
+    let net_gre = unsafe { gre_pernet(net) };
+    if net_gre.is_null() {
+        return EINVAL;
+    }
+
+    let ct_pptp_info = unsafe { nfct_help_data(ct) };
+    if ct_pptp_info.is_null() {
+        return EINVAL;
+    }
+
+    let kmp = unsafe { &mut (*ct_pptp_info).keymap[dir_idx] };
+    if !(*kmp).is_null() {
+        let km = *kmp;
+        if gre_key_cmpfn(km as *const nf_ct_gre_keymap, t as *const nf_conntrack_tuple) {
+            return 0;
+        }
+        return EEXIST;
+    }
+
+    let km = unsafe { kmalloc(core::mem::size_of::<nf_ct_gre_keymap>()) as *mut nf_ct_gre_keymap };
     if km.is_null() {
         return ENOMEM;
     }
 
-    ptr::copy_nonoverlapping(t, &mut (*km).tuple as *mut _ as *mut _, 1);
-    *kmp = km;
+    unsafe {
+        ptr::copy_nonoverlapping(t as *const nf_conntrack_tuple, &mut (*km).tuple, 1);
+        (*km).list.next = ptr::null_mut();
+        (*km).list.prev = ptr::null_mut();
+        (*km).rcu.next = ptr::null_mut();
+        (*km).rcu.func = None;
 
-    spin_lock_bh(&mut keymap_lock);
+    spin_lock_bh(&mut KEYMAP_LOCK);
     list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
-    spin_unlock_bh(&mut keymap_lock);
+    spin_unlock_bh(&mut KEYMAP_LOCK);
 
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
     if ct.is_null() {
         return;
     }
 
     let ct_pptp_info = nfct_help_data(ct);
-    spin_lock_bh(&mut keymap_lock);
+    spin_lock_bh(&mut KEYMAP_LOCK);
 
-    for dir in 0..IP_CT_DIR_MAX {
-        let km = (*ct_pptp_info).keymap[dir];
+    for i in 0..IP_CT_DIR_MAX {
+        let km = unsafe { (*ct_pptp_info).keymap[i] };
         if !km.is_null() {
-            list_del_rcu(&mut (*km).list);
-            kfree(km as *mut c_void);
-            (*ct_pptp_info).keymap[dir] = ptr::null_mut();
+            unsafe {
+                spin_lock_bh(core::ptr::addr_of_mut!(KEYMAP_LOCK));
+                (*ct_pptp_info).keymap[i] = ptr::null_mut();
+                spin_unlock_bh(core::ptr::addr_of_mut!(KEYMAP_LOCK));
+                kfree(km as *mut c_void);
+            }
         }
     }
 
-    spin_unlock_bh(&mut keymap_lock);
+    spin_unlock_bh(&mut KEYMAP_LOCK);
 }
 
 #[no_mangle]
@@ -301,21 +284,19 @@ pub unsafe extern "C" fn nf_conntrack_gre_packet(
         if timeouts.is_null() {
             let net = nf_ct_net(ct);
             let net_gre = gre_pernet(net);
-            (*ct).proto.gre.timeout = (*net_gre).timeouts[GRE_CT_UNREPLIED];
-            (*ct).proto.gre.stream_timeout = (*net_gre).timeouts[GRE_CT_REPLIED];
+            (*ct).timeout = (*net_gre).timeouts[GRE_CT_UNREPLIED];
         } else {
-            (*ct).proto.gre.timeout = *timeouts.offset(GRE_CT_UNREPLIED as isize);
-            (*ct).proto.gre.stream_timeout = *timeouts.offset(GRE_CT_REPLIED as isize);
+            (*ct).timeout = *timeouts.offset(GRE_CT_UNREPLIED as isize);
         }
     }
 
     if (*ct).status & IPS_SEEN_REPLY != 0 {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).proto.gre.stream_timeout);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout);
         if !(*ct).status & IPS_ASSURED_BIT {
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).proto.gre.timeout);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout);
     }
 
     0 // NF_ACCEPT
