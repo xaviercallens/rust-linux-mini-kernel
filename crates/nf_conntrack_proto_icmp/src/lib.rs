@@ -130,7 +130,6 @@ pub static INV_MAP: [u8; 256] = {
 }
 
 static INVMAP: [u8; 256] = build_invmap();
-static VALID_NEW: [bool; 256] = [true; 256];
 
 #[no_mangle]
 pub unsafe extern "C" fn icmp_pkt_to_tuple(
@@ -267,7 +266,6 @@ pub const IPPROTO_ICMP: c_int = 1;
 pub const IP_CT_DIR_REPLY: c_int = 1;
 pub const IP_CT_IS_REPLY: c_int = 1;
 pub const IP_CT_RELATED: c_int = 2;
-pub const NFPROTO_IPV4: c_int = 2;
 pub const NF_INET_PRE_ROUTING: c_int = 0;
 
 // Static data

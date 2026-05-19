@@ -17,6 +17,7 @@ use kernel_types::*;
 const NMBD_PORT: u16 = 137;
 const IPPROTO_UDP: u8 = 17;
 const NFPROTO_IPV4: u8 = 2;
+const HELPER_NAME: &[u8] = b"netbios-ns\0";
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -67,26 +68,6 @@ struct nf_conntrack_helper {
 // Module parameters
 static mut TIMEOUT: u32 = 3;
 
-// Helper struct
-static mut HELPER: nf_conntrack_helper = nf_conntrack_helper {
-    name: b"netbios-ns\0".as_ptr() as *const u8,
-    tuple: nfct_tuple {
-        src: nfct_tuple_src {
-            l3num: NFPROTO_IPV4,
-            u: nfct_tuple_src_u {
-                udp: nfct_tuple_src_udp {
-                    port: u16::to_be(NMBD_PORT),
-                },
-            },
-        },
-        dst: nfct_tuple_dst {
-            protonum: IPPROTO_UDP,
-        },
-    },
-    me: ptr::null_mut(),
-    help: netbios_ns_help,
-    expect_policy: ptr::null_mut(),
-};
 
 // Expect policy
 static mut EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
