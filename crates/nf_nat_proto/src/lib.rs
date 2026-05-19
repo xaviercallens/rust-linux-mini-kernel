@@ -8,8 +8,8 @@
 //! The code handles UDP, TCP, ICMP, and other protocols by modifying packet headers
 //! and recalculating checksums during NAT operations.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -560,4 +560,9 @@ mod tests {
         assert_eq!(core::mem::size_of::<udphdr>(), 8);
         assert_eq!(core::mem::size_of::<tcphdr>(), 20);
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

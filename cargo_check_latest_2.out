@@ -1,0 +1,2274 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/examples/micro_kernel_demo/Cargo.toml
+workspace: /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/Cargo.toml
+warning: unused variable: `unified`
+  --> examples/micro_kernel_demo/src/main.rs:62:9
+   |
+62 |     let unified = nf_inet_addr {
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_unified`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary `unsafe` block
+   --> examples/micro_kernel_demo/src/main.rs:109:5
+    |
+109 |     unsafe {
+    |     ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary `unsafe` block
+   --> examples/micro_kernel_demo/src/main.rs:130:5
+    |
+130 |     unsafe {
+    |     ^^^^^^ unnecessary `unsafe` block
+
+warning: unused variable: `protocol`
+   --> examples/micro_kernel_demo/src/main.rs:190:5
+    |
+190 |     protocol: c_int,
+    |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_protocol`
+
+warning: unused variable: `flags`
+   --> examples/micro_kernel_demo/src/main.rs:223:5
+    |
+223 |     flags: c_int,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_flags`
+
+warning: unused variable: `dest_addr`
+   --> examples/micro_kernel_demo/src/main.rs:224:5
+    |
+224 |     dest_addr: *const sockaddr,
+    |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_dest_addr`
+
+warning: unused variable: `addrlen`
+   --> examples/micro_kernel_demo/src/main.rs:225:5
+    |
+225 |     addrlen: socklen_t,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_addrlen`
+
+warning: unused variable: `flags`
+   --> examples/micro_kernel_demo/src/main.rs:242:5
+    |
+242 |     flags: c_int,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_flags`
+
+warning: unused variable: `src_addr`
+   --> examples/micro_kernel_demo/src/main.rs:243:5
+    |
+243 |     src_addr: *mut sockaddr,
+    |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_src_addr`
+
+warning: unused variable: `addrlen`
+   --> examples/micro_kernel_demo/src/main.rs:244:5
+    |
+244 |     addrlen: *mut socklen_t,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_addrlen`
+
+warning: unused variable: `priv_data`
+   --> examples/micro_kernel_demo/src/main.rs:271:5
+    |
+271 |     priv_data: *mut c_void,
+    |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_priv_data`
+
+warning: type `nf_hook_state` is more private than the item `nf_hook_filter`
+   --> examples/micro_kernel_demo/src/main.rs:270:1
+    |
+270 | / pub unsafe extern "C" fn nf_hook_filter(
+271 | |     priv_data: *mut c_void,
+272 | |     skb: *mut sk_buff,
+273 | |     state: *const nf_hook_state,
+274 | | ) -> c_uint {
+    | |___________^ function `nf_hook_filter` is reachable at visibility `pub`
+    |
+note: but type `nf_hook_state` is only usable at visibility `pub(crate)`
+   --> examples/micro_kernel_demo/src/main.rs:293:1
+    |
+293 | struct nf_hook_state {
+    | ^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: constant `NF_STOLEN` is never used
+   --> examples/micro_kernel_demo/src/main.rs:287:7
+    |
+287 | const NF_STOLEN: c_int = 2;
+    |       ^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `NF_QUEUE` is never used
+   --> examples/micro_kernel_demo/src/main.rs:288:7
+    |
+288 | const NF_QUEUE: c_int = 3;
+    |       ^^^^^^^^
+
+warning: constant `NF_REPEAT` is never used
+   --> examples/micro_kernel_demo/src/main.rs:289:7
+    |
+289 | const NF_REPEAT: c_int = 4;
+    |       ^^^^^^^^^
+
+warning: `micro_kernel_demo` (bin "micro_kernel") generated 15 warnings (run `cargo fix --bin "micro_kernel" -p micro_kernel_demo` to apply 9 suggestions)
+    Checking icmp v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/icmp)
+    Checking udp_offload v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/udp_offload)
+    Checking nf_conntrack_proto_udp v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/nf_conntrack_proto_udp)
+    Checking xfrm6_input v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/xfrm6_input)
+    Checking exthdrs_offload v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/exthdrs_offload)
+    Checking esp4 v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/esp4)
+    Checking mcast_snoop v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/mcast_snoop)
+    Checking gre_offload v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/gre_offload)
+    Checking ndisc v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/ndisc)
+warning: unused variable: `flags`
+   --> crates/fib6_rules/src/lib.rs:109:5
+    |
+109 |     flags: u32,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_flags`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `fib6_rules` (lib) generated 1 warning (run `cargo fix --lib -p fib6_rules` to apply 1 suggestion)
+    Checking nf_conntrack_proto_icmpv6 v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/nf_conntrack_proto_icmpv6)
+error[E0428]: the name `ntohs` is defined multiple times
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:308:1
+    |
+109 | unsafe fn ntohs(v: u16) -> u16 {
+    | ------------------------------ previous definition of the value `ntohs` here
+...
+308 | fn ntohs(x: u16) -> u16 {
+    | ^^^^^^^^^^^^^^^^^^^^^^^ `ntohs` redefined here
+    |
+    = note: `ntohs` must be defined only once in the value namespace of this module
+
+warning: unused import: `kernel_types::*`
+ --> crates/exthdrs_offload/src/lib.rs:5:5
+  |
+5 | use kernel_types::*;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `kernel_types::*`
+ --> crates/exthdrs_offload/src/lib.rs:7:5
+  |
+7 | use kernel_types::*;
+  |     ^^^^^^^^^^^^^^^
+
+error[E0428]: the name `skb_inner_mac_header` is defined multiple times
+   --> crates/gre_offload/src/lib.rs:383:1
+    |
+ 64 |     fn skb_inner_mac_header(skb: *const sk_buff) -> usize;
+    |     ------------------------------------------------------ previous definition of the value `skb_inner_mac_header` here
+...
+383 | unsafe fn skb_inner_mac_header(skb: *mut sk_buff) -> usize {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `skb_inner_mac_header` redefined here
+    |
+    = note: `skb_inner_mac_header` must be defined only once in the value namespace of this module
+
+error[E0425]: cannot find type `net` in this scope
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:151:31
+    |
+151 |        (*(*state).net as *mut net).ct.sysctl_checksum &&
+    |                               ^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `ptr` in this scope
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:172:36
+    |
+172 |     let mut timeouts: *mut c_int = ptr::null_mut();
+    |                                    ^^^ use of unresolved module or unlinked crate `ptr`
+    |
+    = help: if you wanted to use a crate named `ptr`, use `cargo add ptr` to add it to your `Cargo.toml`
+help: a builtin type with a similar name exists
+    |
+172 -     let mut timeouts: *mut c_int = ptr::null_mut();
+172 +     let mut timeouts: *mut c_int = str::null_mut();
+    |
+help: consider importing this module
+    |
+ 12 + use core::ptr;
+    |
+
+error[E0425]: cannot find type `net` in this scope
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:240:31
+    |
+240 |        (*(*state).net as *mut net).ct.sysctl_checksum &&
+    |                               ^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `ptr` in this scope
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:261:36
+    |
+261 |     let mut timeouts: *mut c_int = ptr::null_mut();
+    |                                    ^^^ use of unresolved module or unlinked crate `ptr`
+    |
+    = help: if you wanted to use a crate named `ptr`, use `cargo add ptr` to add it to your `Cargo.toml`
+help: a builtin type with a similar name exists
+    |
+261 -     let mut timeouts: *mut c_int = ptr::null_mut();
+261 +     let mut timeouts: *mut c_int = str::null_mut();
+    |
+help: consider importing this module
+    |
+ 12 + use core::ptr;
+    |
+
+error[E0425]: cannot find value `udp_timeouts` in this scope
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:303:9
+    |
+ 72 | static UDP_TIMEOUTS: [c_int; UDP_CT_MAX as usize] = [30, 120]; // *HZ
+    | -------------------------------------------------------------- similarly named static `UDP_TIMEOUTS` defined here
+...
+303 |         udp_timeouts[UDP_CT_UNREPLIED]
+    |         ^^^^^^^^^^^^
+    |
+help: a static with a similar name exists
+    |
+303 -         udp_timeouts[UDP_CT_UNREPLIED]
+303 +         UDP_TIMEOUTS[UDP_CT_UNREPLIED]
+    |
+
+warning: unexpected `cfg` condition value: `udplite`
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:354:7
+    |
+354 | #[cfg(feature = "udplite")]
+    |       ^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `udplite` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+error[E0609]: no field `udp` on type `*mut c_void`
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:184:21
+    |
+184 |         (*ct).proto.udp.stream_ts = 2 * HZ() + jiffies();
+    |                     ^^^ unknown field
+    |
+help: `(*ct).proto` is a raw pointer; try dereferencing it
+    |
+184 |         (*(*ct).proto).udp.stream_ts = 2 * HZ() + jiffies();
+    |         ++           +
+
+error[E0609]: no field `udp` on type `*mut c_void`
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:188:58
+    |
+188 |         let extra = if time_after(jiffies(), (*ct).proto.udp.stream_ts) {
+    |                                                          ^^^ unknown field
+    |
+help: `(*ct).proto` is a raw pointer; try dereferencing it
+    |
+188 |         let extra = if time_after(jiffies(), (*(*ct).proto).udp.stream_ts) {
+    |                                              ++           +
+
+error[E0609]: no field `status` on type `*mut kernel_types::nf_conn`
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:196:16
+    |
+196 |         if (ct.status & IPS_NAT_CLASH) != 0 {
+    |                ^^^^^^ unknown field
+    |
+help: `ct` is a raw pointer; try dereferencing it
+    |
+196 |         if ((*ct).status & IPS_NAT_CLASH) != 0 {
+    |             ++  +
+
+error[E0609]: no field `status` on type `*mut kernel_types::nf_conn`
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:275:16
+    |
+275 |         if (ct.status & IPS_NAT_CLASH) != 0 {
+    |                ^^^^^^ unknown field
+    |
+help: `ct` is a raw pointer; try dereferencing it
+    |
+275 |         if ((*ct).status & IPS_NAT_CLASH) != 0 {
+    |             ++  +
+
+error[E0428]: the name `nf_ct_icmpv6_timeout` is defined multiple times
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:193:1
+    |
+ 99 | static nf_ct_icmpv6_timeout: c_ulong = 30 * HZ;
+    | ----------------------------------------------- previous definition of the value `nf_ct_icmpv6_timeout` here
+...
+193 | pub static nf_ct_icmpv6_timeout: c_ulong = 30 * HZ;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `nf_ct_icmpv6_timeout` redefined here
+    |
+    = note: `nf_ct_icmpv6_timeout` must be defined only once in the value namespace of this module
+
+warning: `exthdrs_offload` (lib) generated 2 warnings (run `cargo fix --lib -p exthdrs_offload` to apply 2 suggestions)
+    Checking nf_conntrack_ftp v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/nf_conntrack_ftp)
+error[E0428]: the name `crypto_aead_ivsize` is defined multiple times
+   --> crates/esp4/src/lib.rs:423:5
+    |
+203 |     fn crypto_aead_ivsize(aead: *mut crypto_aead) -> u32;
+    |     ----------------------------------------------------- previous definition of the value `crypto_aead_ivsize` here
+...
+423 |     fn crypto_aead_ivsize(aead: *mut crypto_aead) -> c_int;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crypto_aead_ivsize` redefined here
+    |
+    = note: `crypto_aead_ivsize` must be defined only once in the value namespace of this module
+
+error[E0428]: the name `crypto_aead_alignmask` is defined multiple times
+   --> crates/esp4/src/lib.rs:424:5
+    |
+204 |     fn crypto_aead_alignmask(aead: *mut crypto_aead) -> u32;
+    |     -------------------------------------------------------- previous definition of the value `crypto_aead_alignmask` here
+...
+424 |     fn crypto_aead_alignmask(aead: *mut crypto_aead) -> c_int;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crypto_aead_alignmask` redefined here
+    |
+    = note: `crypto_aead_alignmask` must be defined only once in the value namespace of this module
+
+error[E0428]: the name `crypto_tfm_ctx_alignment` is defined multiple times
+   --> crates/esp4/src/lib.rs:425:5
+    |
+205 |     fn crypto_tfm_ctx_alignment() -> u32;
+    |     ------------------------------------- previous definition of the value `crypto_tfm_ctx_alignment` here
+...
+425 |     fn crypto_tfm_ctx_alignment() -> c_int;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crypto_tfm_ctx_alignment` redefined here
+    |
+    = note: `crypto_tfm_ctx_alignment` must be defined only once in the value namespace of this module
+
+error[E0428]: the name `crypto_aead_reqsize` is defined multiple times
+   --> crates/esp4/src/lib.rs:426:5
+    |
+206 |     fn crypto_aead_reqsize(aead: *mut crypto_aead) -> u32;
+    |     ------------------------------------------------------ previous definition of the value `crypto_aead_reqsize` here
+...
+426 |     fn crypto_aead_reqsize(aead: *mut crypto_aead) -> c_int;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `crypto_aead_reqsize` redefined here
+    |
+    = note: `crypto_aead_reqsize` must be defined only once in the value namespace of this module
+
+error[E0428]: the name `aead_request_set_tfm` is defined multiple times
+   --> crates/esp4/src/lib.rs:427:5
+    |
+207 |     fn aead_request_set_tfm(req: *mut aead_request, tfm: *mut crypto_aead);
+    |     ----------------------------------------------------------------------- previous definition of the value `aead_request_set_tfm` here
+...
+427 |     fn aead_request_set_tfm(req: *mut aead_request, aead: *mut crypto_aead);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `aead_request_set_tfm` redefined here
+    |
+    = note: `aead_request_set_tfm` must be defined only once in the value namespace of this module
+
+error[E0252]: the name `ptr` is defined multiple times
+  --> crates/esp4/src/lib.rs:11:5
+   |
+ 9 | use core::{mem, ptr};
+   |                 --- previous import of the module `ptr` here
+10 | use kernel_types::*;
+11 | use core::ptr;
+   |     ^^^^^^^^^ `ptr` reimported here
+   |
+   = note: `ptr` must be defined only once in the type namespace of this module
+
+error[E0252]: the name `mem` is defined multiple times
+  --> crates/esp4/src/lib.rs:12:5
+   |
+ 9 | use core::{mem, ptr};
+   |            --- previous import of the module `mem` here
+...
+12 | use core::mem;
+   |     ^^^^^^^^^ `mem` reimported here
+   |
+   = note: `mem` must be defined only once in the type namespace of this module
+
+error[E0252]: the name `c_void` is defined multiple times
+  --> crates/esp4/src/lib.rs:13:17
+   |
+ 8 | use core::ffi::{c_int, c_void};
+   |                        ------ previous import of the type `c_void` here
+...
+13 | use core::ffi::{c_void, c_int, c_uint, c_ulong};
+   |                 ^^^^^^--
+   |                 |
+   |                 `c_void` reimported here
+   |                 help: remove unnecessary import
+   |
+   = note: `c_void` must be defined only once in the type namespace of this module
+
+error[E0133]: dereference of raw pointer is unsafe and requires unsafe function or block
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:314:5
+    |
+314 |     (*ct).status & (1 << bit) != 0
+    |     ^^^^^ dereference of raw pointer
+    |
+    = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+
+error[E0252]: the name `c_int` is defined multiple times
+  --> crates/esp4/src/lib.rs:13:25
+   |
+ 8 | use core::ffi::{c_int, c_void};
+   |                 ----- previous import of the type `c_int` here
+...
+13 | use core::ffi::{c_void, c_int, c_uint, c_ulong};
+   |                         ^^^^^--
+   |                         |
+   |                         `c_int` reimported here
+   |                         help: remove unnecessary import
+   |
+   = note: `c_int` must be defined only once in the type namespace of this module
+
+error[E0133]: dereference of raw pointer is unsafe and requires unsafe function or block
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:319:15
+    |
+319 |     let old = (*ct).status;
+    |               ^^^^^ dereference of raw pointer
+    |
+    = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+
+error[E0133]: dereference of raw pointer is unsafe and requires unsafe function or block
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:320:5
+    |
+320 |     (*ct).status |= 1 << bit;
+    |     ^^^^^ dereference of raw pointer
+    |
+    = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+
+warning: unused variable: `ct`
+   --> crates/nf_conntrack_proto_udp/src/lib.rs:341:23
+    |
+341 | fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {
+    |                       ^^ help: if this is intentional, prefix it with an underscore: `_ct`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+error[E0428]: the name `xfrm_state` is defined multiple times
+   --> crates/esp4/src/lib.rs:153:1
+    |
+109 | pub struct xfrm_state {
+    | --------------------- previous definition of the type `xfrm_state` here
+...
+153 | pub struct xfrm_state {
+    | ^^^^^^^^^^^^^^^^^^^^^ `xfrm_state` redefined here
+    |
+    = note: `xfrm_state` must be defined only once in the type namespace of this module
+
+Some errors have detailed explanations: E0133, E0425, E0428, E0433, E0609.
+For more information about an error, try `rustc --explain E0133`.
+warning: unexpected `cfg` condition value: `espintcp`
+   --> crates/esp4/src/lib.rs:343:7
+    |
+343 | #[cfg(feature = "espintcp")]
+    |       ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `espintcp` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `espintcp`
+   --> crates/esp4/src/lib.rs:355:7
+    |
+355 | #[cfg(feature = "espintcp")]
+    |       ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `espintcp` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unused import: `core::ptr`
+  --> crates/esp4/src/lib.rs:11:5
+   |
+11 | use core::ptr;
+   |     ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `core::mem`
+  --> crates/esp4/src/lib.rs:12:5
+   |
+12 | use core::mem;
+   |     ^^^^^^^^^
+
+warning: unused imports: `c_int`, `c_uint`, `c_ulong`, and `c_void`
+  --> crates/esp4/src/lib.rs:13:17
+   |
+13 | use core::ffi::{c_void, c_int, c_uint, c_ulong};
+   |                 ^^^^^^  ^^^^^  ^^^^^^  ^^^^^^^
+
+warning: `nf_conntrack_proto_udp` (lib) generated 2 warnings
+error: could not compile `nf_conntrack_proto_udp` (lib) due to 13 previous errors; 2 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+error[E0425]: cannot find value `segs` in this scope
+   --> crates/gre_offload/src/lib.rs:154:5
+    |
+154 |     segs = unsafe { skb_mac_gso_segment(skb, features) };
+    |     ^^^^
+    |
+help: you might have meant to introduce a new binding
+    |
+154 |     let segs = unsafe { skb_mac_gso_segment(skb, features) };
+    |     +++
+
+error[E0425]: cannot find value `segs` in this scope
+   --> crates/gre_offload/src/lib.rs:155:8
+    |
+155 |     if segs.is_null() || (segs as *const c_void).is_null() {
+    |        ^^^^ not found in this scope
+
+error[E0425]: cannot find value `segs` in this scope
+   --> crates/gre_offload/src/lib.rs:155:27
+    |
+155 |     if segs.is_null() || (segs as *const c_void).is_null() {
+    |                           ^^^^ not found in this scope
+
+error[E0425]: cannot find value `segs` in this scope
+   --> crates/gre_offload/src/lib.rs:165:16
+    |
+165 |         return segs;
+    |                ^^^^ not found in this scope
+
+error[E0425]: cannot find value `segs` in this scope
+   --> crates/gre_offload/src/lib.rs:171:27
+    |
+171 |     let mut current_skb = segs;
+    |                           ^^^^ not found in this scope
+
+error[E0425]: cannot find value `offload_csum` in this scope
+   --> crates/gre_offload/src/lib.rs:212:49
+    |
+212 |         if (*current_skb).encapsulation != 0 || offload_csum == 0 {
+    |                                                 ^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `segs` in this scope
+   --> crates/gre_offload/src/lib.rs:227:5
+    |
+227 |     segs
+    |     ^^^^ not found in this scope
+
+warning: unused import: `kernel_types::*`
+ --> crates/gre_offload/src/lib.rs:8:5
+  |
+8 | use kernel_types::*;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0517]: attribute should be applied to a struct, enum, or union
+   --> crates/gre_offload/src/lib.rs:422:8
+    |
+422 |   #[repr(C)]
+    |          ^
+423 | / static gre_offload: packet_offload = packet_offload {
+424 | |     callbacks: packet_offload_callbacks {
+425 | |         gso_segment: gre_gso_segment,
+426 | |         gro_receive: gre_gro_receive,
+427 | |         gro_complete: gre_gro_complete,
+428 | |     },
+429 | | };
+    | |__- not a struct, enum, or union
+
+warning: unused import: `kernel_types::*`
+  --> crates/xfrm6_input/src/lib.rs:21:5
+   |
+21 | use kernel_types::*;
+   |     ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0119]: conflicting implementations of trait `Copy` for type `xfrm_state`
+   --> crates/esp4/src/lib.rs:152:10
+    |
+108 | #[derive(Copy, Clone)]
+    |          ---- first implementation here
+...
+152 | #[derive(Copy, Clone)]
+    |          ^^^^ conflicting implementation for `xfrm_state`
+
+error[E0119]: conflicting implementations of trait `Clone` for type `xfrm_state`
+   --> crates/esp4/src/lib.rs:152:16
+    |
+108 | #[derive(Copy, Clone)]
+    |                ----- first implementation here
+...
+152 | #[derive(Copy, Clone)]
+    |                ^^^^^ conflicting implementation for `xfrm_state`
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:151:9
+    |
+151 |         skb_mac_gso_segment(skb, features)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `()`, found `*mut sk_buff`
+    |
+    = note: expected unit type `()`
+             found raw pointer `*mut sk_buff`
+help: consider using a semicolon here
+    |
+151 |         skb_mac_gso_segment(skb, features);
+    |                                           +
+help: you might have meant to return this value
+    |
+151 |         return skb_mac_gso_segment(skb, features);
+    |         ++++++                                   +
+
+error[E0609]: no field `protocol` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:159:24
+    |
+159 |                 (*skb).protocol,
+    |                        ^^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `mac_header` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:161:24
+    |
+161 |                 (*skb).mac_header,
+    |                        ^^^^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `mac_len` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:162:24
+    |
+162 |                 (*skb).mac_len,
+    |                        ^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `ip_summed` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:168:30
+    |
+168 |     let gso_partial = (*skb).ip_summed & (SKB_GSO_PARTIAL as c_int) != 0;
+    |                              ^^^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `mac_len` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:182:41
+    |
+182 |         (*current_skb).mac_len = (*skb).mac_len;
+    |                                         ^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `protocol` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:183:42
+    |
+183 |         (*current_skb).protocol = (*skb).protocol;
+    |                                          ^^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0423]: expected function, found macro `__skb_push`
+   --> crates/gre_offload/src/lib.rs:185:18
+    |
+ 83 |     fn __skb_pull(skb: *mut sk_buff, len: usize) -> *mut c_void;
+    |     ------------------------------------------------------------ similarly named function `__skb_pull` defined here
+...
+185 |         unsafe { __skb_push(current_skb, outer_hlen) };
+    |                  ^^^^^^^^^^ not a function
+    |
+help: use `!` to invoke the macro
+    |
+185 |         unsafe { __skb_push!(current_skb, outer_hlen) };
+    |                            +
+help: a function with a similar name exists
+    |
+185 -         unsafe { __skb_push(current_skb, outer_hlen) };
+185 +         unsafe { __skb_pull(current_skb, outer_hlen) };
+    |
+
+error[E0609]: no field `mac_len` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:187:61
+    |
+187 |         unsafe { skb_set_network_header(current_skb, (*skb).mac_len) };
+    |                                                             ^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0423]: expected function, found macro `skb_gro_header_slow`
+   --> crates/gre_offload/src/lib.rs:246:29
+    |
+ 97 |     fn skb_gro_header_fast(skb: *mut sk_buff, offset: usize) -> *mut c_void;
+    |     ------------------------------------------------------------------------ similarly named function `skb_gro_header_fast` defined here
+...
+246 |         let greh = unsafe { skb_gro_header_slow(skb, hlen, off) } as *mut gre_base_hdr;
+    |                             ^^^^^^^^^^^^^^^^^^^ not a function
+    |
+help: use `!` to invoke the macro
+    |
+246 |         let greh = unsafe { skb_gro_header_slow!(skb, hlen, off) } as *mut gre_base_hdr;
+    |                                                +
+help: a function with a similar name exists
+    |
+246 -         let greh = unsafe { skb_gro_header_slow(skb, hlen, off) } as *mut gre_base_hdr;
+246 +         let greh = unsafe { skb_gro_header_fast(skb, hlen, off) } as *mut gre_base_hdr;
+    |
+
+error[E0423]: expected function, found macro `skb_gro_header_slow`
+   --> crates/gre_offload/src/lib.rs:280:29
+    |
+ 97 |     fn skb_gro_header_fast(skb: *mut sk_buff, offset: usize) -> *mut c_void;
+    |     ------------------------------------------------------------------------ similarly named function `skb_gro_header_fast` defined here
+...
+280 |         let greh = unsafe { skb_gro_header_slow(skb, hlen, off) } as *mut gre_base_hdr;
+    |                             ^^^^^^^^^^^^^^^^^^^ not a function
+    |
+help: use `!` to invoke the macro
+    |
+280 |         let greh = unsafe { skb_gro_header_slow!(skb, hlen, off) } as *mut gre_base_hdr;
+    |                                                +
+help: a function with a similar name exists
+    |
+280 -         let greh = unsafe { skb_gro_header_slow(skb, hlen, off) } as *mut gre_base_hdr;
+280 +         let greh = unsafe { skb_gro_header_fast(skb, hlen, off) } as *mut gre_base_hdr;
+    |
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:293:65
+    |
+293 |         unsafe { skb_gro_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo) };
+    |                  ----------------------------                   ^^^^^^^^^^^^^^^^^^^ expected safe fn, found unsafe fn
+    |                  |
+    |                  arguments to this function are incorrect
+    |
+    = note: expected fn pointer `extern "C" fn(_) -> _`
+                  found fn item `unsafe extern "C" fn(_) -> _ {null_compute_pseudo}`
+    = note: unsafe functions cannot be coerced into safe function pointers
+note: function defined here
+   --> crates/gre_offload/src/lib.rs:103:8
+    |
+103 |     fn skb_gro_checksum_try_convert(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+106 |         compute_pseudo: extern "C" fn(*mut sk_buff) -> u32,
+    |         --------------
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:299:48
+    |
+299 |         let greh2 = (p as *mut sk_buff).offset(off) as *mut gre_base_hdr;
+    |                                         ------ ^^^ expected `isize`, found `usize`
+    |                                         |
+    |                                         arguments to this method are incorrect
+    |
+note: method defined here
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs:352:25
+    |
+352 |     pub const unsafe fn offset(self, count: isize) -> *mut T
+    |                         ^^^^^^
+help: you can convert a `usize` to an `isize` and panic if the converted value doesn't fit
+    |
+299 |         let greh2 = (p as *mut sk_buff).offset(off.try_into().unwrap()) as *mut gre_base_hdr;
+    |                                                   ++++++++++++++++++++
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:305:46
+    |
+305 |                 (greh as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>()) as *mut u32;
+    |                                       ------ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `isize`, found `usize`
+    |                                       |
+    |                                       arguments to this method are incorrect
+    |
+note: method defined here
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs:352:25
+    |
+352 |     pub const unsafe fn offset(self, count: isize) -> *mut T
+    |                         ^^^^^^
+help: you can convert a `usize` to an `isize` and panic if the converted value doesn't fit
+    |
+305 |                 (greh as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>().try_into().unwrap()) as *mut u32;
+    |                                                                                  ++++++++++++++++++++
+
+error[E0308]: mismatched types
+   --> crates/esp4/src/lib.rs:274:38
+    |
+274 |     let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
+    |                                      ^^^^^^^^^^^^^^^^ expected `usize`, found `u32`
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:307:47
+    |
+307 |                 (greh2 as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>()) as *mut u32;
+    |                                        ------ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `isize`, found `usize`
+    |                                        |
+    |                                        arguments to this method are incorrect
+    |
+note: method defined here
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs:352:25
+    |
+352 |     pub const unsafe fn offset(self, count: isize) -> *mut T
+    |                         ^^^^^^
+help: you can convert a `usize` to an `isize` and panic if the converted value doesn't fit
+    |
+307 |                 (greh2 as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>().try_into().unwrap()) as *mut u32;
+    |                                                                                   ++++++++++++++++++++
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:317:42
+    |
+317 |     unsafe { skb_gro_postpull_rcsum(skb, greh, grehlen) };
+    |              ----------------------      ^^^^ expected `*mut c_void`, found `*mut gre_base_hdr`
+    |              |
+    |              arguments to this function are incorrect
+    |
+    = note: expected raw pointer `*mut c_void`
+               found raw pointer `*mut gre_base_hdr`
+note: function defined here
+   --> crates/gre_offload/src/lib.rs:100:8
+    |
+100 |     fn skb_gro_postpull_rcsum(skb: *mut sk_buff, data: *mut c_void, len: usize);
+    |        ^^^^^^^^^^^^^^^^^^^^^^                    ----
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:319:36
+    |
+319 |     pp = unsafe { call_gro_receive((*ptype).callbacks.gro_receive, head, skb) };
+    |                   ---------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected fn pointer, found `Option<extern "C" fn(..., ...) -> ...>`
+    |                   |
+    |                   arguments to this function are incorrect
+    |
+    = note: expected fn pointer `extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff`
+                     found enum `Option<extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff>`
+note: function defined here
+   --> crates/gre_offload/src/lib.rs:111:8
+    |
+111 |     fn call_gro_receive(
+    |        ^^^^^^^^^^^^^^^^
+112 |         gro_receive: extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff,
+    |         -----------
+help: consider using `Option::expect` to unwrap the `Option<extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff>` value, panicking if the value is an `Option::None`
+    |
+319 |     pp = unsafe { call_gro_receive((*ptype).callbacks.gro_receive.expect("REASON"), head, skb) };
+    |                                                                  +++++++++++++++++
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:103:17
+    |
+103 |     skb: *const sk_buff,
+    |                 ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `INVMAP` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:138:20
+    |
+138 |       if type_off >= INVMAP.len() || INVMAP[type_off] == 0 {
+    |                      ^^^^^^
+...
+231 | / static invmap: [u8; 8] = [
+232 | |     ICMPV6_ECHO_REPLY + 1,
+233 | |     ICMPV6_ECHO_REQUEST + 1,
+234 | |     0, 0, 0, 0, 0, 0,
+235 | | ];
+    | |__- similarly named static `invmap` defined here
+    |
+help: a static with a similar name exists
+    |
+138 -     if type_off >= INVMAP.len() || INVMAP[type_off] == 0 {
+138 +     if type_off >= invmap.len() || INVMAP[type_off] == 0 {
+    |
+
+error[E0425]: cannot find value `INVMAP` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:138:36
+    |
+138 |       if type_off >= INVMAP.len() || INVMAP[type_off] == 0 {
+    |                                      ^^^^^^
+...
+231 | / static invmap: [u8; 8] = [
+232 | |     ICMPV6_ECHO_REPLY + 1,
+233 | |     ICMPV6_ECHO_REQUEST + 1,
+234 | |     0, 0, 0, 0, 0, 0,
+235 | | ];
+    | |__- similarly named static `invmap` defined here
+    |
+help: a static with a similar name exists
+    |
+138 -     if type_off >= INVMAP.len() || INVMAP[type_off] == 0 {
+138 +     if type_off >= INVMAP.len() || invmap[type_off] == 0 {
+    |
+
+error[E0425]: cannot find value `INVMAP` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:144:37
+    |
+144 |           (*tuple).dst.u.icmp.type_ = INVMAP[type_off] - 1;
+    |                                       ^^^^^^
+...
+231 | / static invmap: [u8; 8] = [
+232 | |     ICMPV6_ECHO_REPLY + 1,
+233 | |     ICMPV6_ECHO_REQUEST + 1,
+234 | |     0, 0, 0, 0, 0, 0,
+235 | | ];
+    | |__- similarly named static `invmap` defined here
+    |
+help: a static with a similar name exists
+    |
+144 -         (*tuple).dst.u.icmp.type_ = INVMAP[type_off] - 1;
+144 +         (*tuple).dst.u.icmp.type_ = invmap[type_off] - 1;
+    |
+
+error[E0425]: cannot find type `nf_conn` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:158:14
+    |
+158 |     ct: *mut nf_conn,
+    |              ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:159:15
+    |
+159 |     skb: *mut sk_buff,
+    |               ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `VALID_NEW` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:176:19
+    |
+176 |         if off >= VALID_NEW.len() || VALID_NEW[off] == 0 {
+    |                   ^^^^^^^^^
+    |
+help: a local variable with a similar name exists
+    |
+176 -         if off >= VALID_NEW.len() || VALID_NEW[off] == 0 {
+176 +         if off >= valid_new.len() || VALID_NEW[off] == 0 {
+    |
+
+error[E0425]: cannot find value `VALID_NEW` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:176:38
+    |
+176 |         if off >= VALID_NEW.len() || VALID_NEW[off] == 0 {
+    |                                      ^^^^^^^^^
+    |
+help: a local variable with a similar name exists
+    |
+176 -         if off >= VALID_NEW.len() || VALID_NEW[off] == 0 {
+176 +         if off >= VALID_NEW.len() || valid_new[off] == 0 {
+    |
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:196:17
+    |
+196 |     skb: *const sk_buff,
+    |                 ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `nf_conn` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:210:41
+    |
+210 | unsafe fn nf_ct_timeout_lookup(ct: *mut nf_conn) -> *mut c_ulong {
+    |                                         ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `nf_conn` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:214:39
+    |
+214 | unsafe fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {
+    |                                       ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `nf_conn` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:219:14
+    |
+219 |     ct: *mut nf_conn,
+    |              ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:221:15
+    |
+221 |     skb: *mut sk_buff,
+    |               ^^^^^^^ not found in this scope
+
+error[E0609]: no field `encapsulation` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:334:12
+    |
+334 |     (*skb).encapsulation = 1;
+    |            ^^^^^^^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `ip_summed` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:335:12
+    |
+335 |     (*skb).ip_summed = 0;
+    |            ^^^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0277]: cannot add `u32` to `usize`
+   --> crates/esp4/src/lib.rs:274:36
+    |
+274 |     let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
+    |                                    ^ no implementation for `usize + u32`
+    |
+    = help: the trait `Add<u32>` is not implemented for `usize`
+help: the following other types implement trait `Add<Rhs>`
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/arith.rs:99:9
+    |
+ 99 |         impl const Add for $t {
+    |         ^^^^^^^^^^^^^^^^^^^^^ `usize` implements `Add`
+...
+114 | add_impl! { usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128 f16 f32 f64 f128 }
+    | ---------------------------------------------------------------------------------- in this macro invocation
+    |
+   ::: /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/internal_macros.rs:22:9
+    |
+ 22 |         impl const $imp<$u> for &$t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&usize` implements `Add<usize>`
+...
+ 33 |         impl const $imp<&$u> for $t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `usize` implements `Add<&usize>`
+...
+ 44 |         impl const $imp<&$u> for &$t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&usize` implements `Add`
+    = note: this error originates in the macro `add_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+   --> crates/esp4/src/lib.rs:274:57
+    |
+274 |     let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
+    |                                                         ^^^^^^^^^^^^^^^^^ expected `usize`, found `u32`
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:242:7
+    |
+242 | #[cfg(feature = "nf_ct_netlink")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `nf_conntrack_timeout`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:294:7
+    |
+294 | #[cfg(feature = "nf_conntrack_timeout")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_conntrack_timeout` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_conntrack_timeout`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:315:7
+    |
+315 | #[cfg(feature = "nf_conntrack_timeout")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_conntrack_timeout` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:347:7
+    |
+347 | #[cfg(feature = "nf_ct_netlink")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:352:7
+    |
+352 | #[cfg(feature = "nf_ct_netlink")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:361:7
+    |
+361 | #[cfg(feature = "nf_ct_netlink")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+error[E0277]: no implementation for `usize & u32`
+   --> crates/esp4/src/lib.rs:274:55
+    |
+274 |     let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
+    |                                                       ^ no implementation for `usize & u32`
+    |
+    = help: the trait `BitAnd<u32>` is not implemented for `usize`
+help: the following other types implement trait `BitAnd<Rhs>`
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/bit.rs:174:9
+    |
+174 |         impl const BitAnd for $t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^ `usize` implements `BitAnd`
+...
+187 | bitand_impl! { bool usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128 }
+    | ------------------------------------------------------------------------- in this macro invocation
+    |
+   ::: /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/internal_macros.rs:22:9
+    |
+ 22 |         impl const $imp<$u> for &$t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&usize` implements `BitAnd<usize>`
+...
+ 33 |         impl const $imp<&$u> for $t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `usize` implements `BitAnd<&usize>`
+...
+ 44 |         impl const $imp<&$u> for &$t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&usize` implements `BitAnd`
+    = note: this error originates in the macro `bitand_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `nf_conntrack_timeout`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:364:7
+    |
+364 | #[cfg(feature = "nf_conntrack_timeout")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_conntrack_timeout` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+  --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:72:11
+   |
+72 |     #[cfg(feature = "nf_ct_netlink")]
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+  --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:74:11
+   |
+74 |     #[cfg(feature = "nf_ct_netlink")]
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+  --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:76:11
+   |
+76 |     #[cfg(feature = "nf_ct_netlink")]
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+  --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:78:11
+   |
+78 |     #[cfg(feature = "nf_ct_netlink")]
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_conntrack_timeout`
+  --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:80:11
+   |
+80 |     #[cfg(feature = "nf_conntrack_timeout")]
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `nf_conntrack_timeout` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+error[E0423]: expected value, found macro `offset`
+  --> crates/icmp/src/lib.rs:61:38
+   |
+54 |     _offset: c_int,
+   |     ------- `_offset` defined here
+...
+61 |     let icmp6 = (skb as *mut u8).add(offset as usize) as *mut Icmp6Hdr;
+   |                                      ^^^^^^ not a value
+   |
+help: the leading underscore in `_offset` marks it as unused, consider renaming it to `offset`
+   |
+54 -     _offset: c_int,
+54 +     offset: c_int,
+   |
+
+warning: unused import: `core::mem`
+ --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:7:5
+  |
+7 | use core::mem;
+  |     ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0425]: cannot find value `type_` in this scope
+  --> crates/icmp/src/lib.rs:64:8
+   |
+64 |     if type_ == ICMPV6_PKT_TOOBIG {
+   |        ^^^^^
+   |
+help: a local variable with a similar name exists
+   |
+64 -     if type_ == ICMPV6_PKT_TOOBIG {
+64 +     if _type == ICMPV6_PKT_TOOBIG {
+   |
+
+error[E0425]: cannot find value `info` in this scope
+  --> crates/icmp/src/lib.rs:68:13
+   |
+55 |     _info: u32,
+   |     ----- `_info` defined here
+...
+68 |             info,
+   |             ^^^^
+   |
+help: the leading underscore in `_info` marks it as unused, consider renaming it to `info`
+   |
+55 -     _info: u32,
+55 +     info: u32,
+   |
+
+error[E0425]: cannot find value `type_` in this scope
+  --> crates/icmp/src/lib.rs:73:15
+   |
+73 |     } else if type_ == NDISC_REDIRECT {
+   |               ^^^^^
+   |
+help: a local variable with a similar name exists
+   |
+73 -     } else if type_ == NDISC_REDIRECT {
+73 +     } else if _type == NDISC_REDIRECT {
+   |
+
+error[E0425]: cannot find value `type_` in this scope
+  --> crates/icmp/src/lib.rs:83:9
+   |
+83 |     if (type_ & ICMPV6_INFOMSG_MASK) == 0 {
+   |         ^^^^^
+   |
+help: a local variable with a similar name exists
+   |
+83 -     if (type_ & ICMPV6_INFOMSG_MASK) == 0 {
+83 +     if (_type & ICMPV6_INFOMSG_MASK) == 0 {
+   |
+
+error[E0423]: expected value, found macro `offset`
+  --> crates/icmp/src/lib.rs:87:17
+   |
+54 |     _offset: c_int,
+   |     ------- `_offset` defined here
+...
+87 |                 offset,
+   |                 ^^^^^^ not a value
+   |
+help: the leading underscore in `_offset` marks it as unused, consider renaming it to `offset`
+   |
+54 -     _offset: c_int,
+54 +     offset: c_int,
+   |
+
+error[E0425]: cannot find type `net` in this scope
+   --> crates/icmp/src/lib.rs:173:43
+    |
+173 | unsafe fn sock_net(sk: *mut sock) -> *mut net {
+    |                                           ^^^ not found in this scope
+
+error[E0425]: cannot find type `net_device` in this scope
+   --> crates/icmp/src/lib.rs:183:29
+    |
+183 | unsafe fn dev_net(dev: *mut net_device) -> *mut net {
+    |                             ^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `net` in this scope
+   --> crates/icmp/src/lib.rs:183:49
+    |
+183 | unsafe fn dev_net(dev: *mut net_device) -> *mut net {
+    |                                                 ^^^ not found in this scope
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:276:11
+    |
+276 |     #[cfg(feature = "nf_ct_netlink")]
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:278:11
+    |
+278 |     #[cfg(feature = "nf_ct_netlink")]
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:280:11
+    |
+280 |     #[cfg(feature = "nf_ct_netlink")]
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `xfrm6_input` (lib) generated 1 warning (run `cargo fix --lib -p xfrm6_input` to apply 1 suggestion)
+warning: unexpected `cfg` condition value: `nf_ct_netlink`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:282:11
+    |
+282 |     #[cfg(feature = "nf_ct_netlink")]
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_ct_netlink` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `nf_conntrack_timeout`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:284:11
+    |
+284 |     #[cfg(feature = "nf_conntrack_timeout")]
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `nf_conntrack_timeout` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+error[E0599]: no method named `gro_complete` found for struct `packet_offload_callbacks` in the current scope
+   --> crates/gre_offload/src/lib.rs:352:18
+    |
+ 52 |   pub struct packet_offload_callbacks {
+    |   ----------------------------------- method `gro_complete` not found for this struct
+...
+350 | /             (*ptype)
+351 | |                 .callbacks
+352 | |                 .gro_complete(skb, nhoff + grehlen as c_int)
+    | |                 -^^^^^^^^^^^^------------------------------- help: remove the arguments
+    | |                 ||
+    | |_________________|field, not a method
+    |
+
+error[E0573]: expected type, found local variable `net`
+   --> crates/icmp/src/lib.rs:193:34
+    |
+193 | unsafe fn sock_net_uid(net: *mut net, sk: *mut sock) -> u32 {
+    |                                  ^^^ not a type
+
+error[E0609]: no field `data` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:385:12
+    |
+385 |     (*skb).data as usize + (*skb).mac_len as usize
+    |            ^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `mac_len` on type `sk_buff`
+   --> crates/gre_offload/src/lib.rs:385:35
+    |
+385 |     (*skb).data as usize + (*skb).mac_len as usize
+    |                                   ^^^^^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:425:22
+    |
+425 |         gso_segment: gre_gso_segment,
+    |                      ^^^^^^^^^^^^^^^ expected `Option<extern "C" fn(..., u32) -> ...>`, found fn item
+    |
+    = note: expected enum `Option<extern "C" fn(*mut sk_buff, u32) -> *mut sk_buff>`
+            found fn item `unsafe extern "C" fn(*mut sk_buff, u32) -> *mut sk_buff {gre_gso_segment}`
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:426:22
+    |
+426 |         gro_receive: gre_gro_receive,
+    |                      ^^^^^^^^^^^^^^^ expected `Option<extern "C" fn(..., ...) -> ...>`, found fn item
+    |
+    = note: expected enum `Option<extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff>`
+            found fn item `unsafe extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff {gre_gro_receive}`
+
+error[E0308]: mismatched types
+   --> crates/gre_offload/src/lib.rs:427:23
+    |
+427 |         gro_complete: gre_gro_complete,
+    |                       ^^^^^^^^^^^^^^^^ expected `Option<extern "C" fn(..., i32) -> i32>`, found fn item
+    |
+    = note: expected enum `Option<extern "C" fn(*mut sk_buff, i32) -> i32>`
+            found fn item `unsafe extern "C" fn(*mut sk_buff, i32) -> i32 {gre_gro_complete}`
+
+error[E0573]: expected type, found local variable `net`
+   --> crates/icmp/src/lib.rs:216:39
+    |
+216 | unsafe fn icmpv6_mask_allow(net: *mut net, type_: u8) -> bool {
+    |                                       ^^^ not a type
+
+error[E0425]: cannot find type `inet_peer` in this scope
+   --> crates/icmp/src/lib.rs:266:91
+    |
+266 | unsafe fn inet_getpeer_v6(peers: *mut c_void, addr: *mut in6_addr, create: c_int) -> *mut inet_peer {
+    |                                                                                           ^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `inet_peer` in this scope
+   --> crates/icmp/src/lib.rs:276:44
+    |
+276 | unsafe fn inet_peer_xrlim_allow(peer: *mut inet_peer, tmo: c_int) -> bool {
+    |                                            ^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `inet_peer` in this scope
+   --> crates/icmp/src/lib.rs:286:35
+    |
+286 | unsafe fn inet_putpeer(peer: *mut inet_peer) {
+    |                                   ^^^^^^^^^ not found in this scope
+
+error[E0573]: expected type, found local variable `net`
+   --> crates/icmp/src/lib.rs:295:38
+    |
+295 | unsafe fn ip6_route_output(net: *mut net, sk: *mut sock, fl6: *mut flowi6) -> *mut c_void {
+    |                                      ^^^ not a type
+
+warning: value assigned to `err` is never read
+   --> crates/gre_offload/src/lib.rs:364:19
+    |
+364 |     let mut err = 0;
+    |                   ^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `skb`
+   --> crates/gre_offload/src/lib.rs:395:36
+    |
+395 | unsafe fn skb_set_inner_mac_header(skb: *mut sk_buff, offset: c_int) {
+    |                                    ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `offset`
+   --> crates/gre_offload/src/lib.rs:395:55
+    |
+395 | unsafe fn skb_set_inner_mac_header(skb: *mut sk_buff, offset: c_int) {
+    |                                                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_offset`
+
+warning: unused variable: `skb`
+   --> crates/gre_offload/src/lib.rs:432:46
+    |
+432 | pub unsafe extern "C" fn null_compute_pseudo(skb: *mut sk_buff) -> u32 {
+    |                                              ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+
+error[E0308]: mismatched types
+   --> crates/esp4/src/lib.rs:291:35
+    |
+291 |     let req = (iv as *mut u8).add(offset) as *mut aead_request;
+    |                               --- ^^^^^^ expected `usize`, found `u32`
+    |                               |
+    |                               arguments to this method are incorrect
+    |
+note: method defined here
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ptr/mut_ptr.rs:927:25
+    |
+927 |     pub const unsafe fn add(self, count: usize) -> Self
+    |                         ^^^
+help: you can convert a `u32` to a `usize` and panic if the converted value doesn't fit
+    |
+291 |     let req = (iv as *mut u8).add(offset.try_into().unwrap()) as *mut aead_request;
+    |                                         ++++++++++++++++++++
+
+Some errors have detailed explanations: E0308, E0423, E0425, E0428, E0517, E0599, E0609.
+For more information about an error, try `rustc --explain E0308`.
+error[E0609]: no field `ifindex` on type `*mut c_void`
+  --> crates/icmp/src/lib.rs:69:24
+   |
+69 |             (*skb).dev.ifindex,
+   |                        ^^^^^^^ unknown field
+   |
+help: `(*skb).dev` is a raw pointer; try dereferencing it
+   |
+69 |             (*(*skb).dev).ifindex,
+   |             ++          +
+
+error[E0061]: this function takes 3 arguments but 6 arguments were supplied
+   --> crates/icmp/src/lib.rs:65:9
+    |
+ 65 |         ip6_update_pmtu(
+    |         ^^^^^^^^^^^^^^^
+...
+ 69 |             (*skb).dev.ifindex,
+    |             ------------------ unexpected argument #4
+ 70 |             0,
+    |             - unexpected argument #5 of type `{integer}`
+ 71 |             sock_net_uid(net, core::ptr::null_mut()),
+    |             ---------------------------------------- unexpected argument #6 of type `u32`
+    |
+note: function defined here
+   --> crates/icmp/src/lib.rs:203:11
+    |
+203 | unsafe fn ip6_update_pmtu(
+    |           ^^^^^^^^^^^^^^^
+help: remove the extra arguments
+    |
+ 68 -             info,
+ 69 -             (*skb).dev.ifindex,
+ 70 -             0,
+ 71 -             sock_net_uid(net, core::ptr::null_mut()),
+ 68 +             info,
+    |
+
+warning: `gre_offload` (lib) generated 5 warnings
+error: could not compile `gre_offload` (lib) due to 34 previous errors; 5 warnings emitted
+error[E0609]: no field `ifindex` on type `*mut c_void`
+  --> crates/icmp/src/lib.rs:77:24
+   |
+77 |             (*skb).dev.ifindex,
+   |                        ^^^^^^^ unknown field
+   |
+help: `(*skb).dev` is a raw pointer; try dereferencing it
+   |
+77 |             (*(*skb).dev).ifindex,
+   |             ++          +
+
+error[E0428]: the name `ntohs` is defined multiple times
+  --> crates/mcast_snoop/src/lib.rs:78:1
+   |
+44 |     fn ntohs(netshort: __be16) -> __u16;
+   |     ------------------------------------ previous definition of the value `ntohs` here
+...
+78 | fn ntohs(v: u16) -> u16 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^ `ntohs` redefined here
+   |
+   = note: `ntohs` must be defined only once in the value namespace of this module
+
+error[E0425]: cannot find function `ip6_redirect` in this scope
+  --> crates/icmp/src/lib.rs:74:9
+   |
+74 |         ip6_redirect(
+   |         ^^^^^^^^^^^^ not found in this scope
+
+error[E0428]: the name `skb_transport_header` is defined multiple times
+   --> crates/mcast_snoop/src/lib.rs:174:1
+    |
+ 26 |     fn skb_transport_header(skb: *const sk_buff) -> *mut u8;
+    |     -------------------------------------------------------- previous definition of the value `skb_transport_header` here
+...
+174 | fn skb_transport_header(skb: *mut sk_buff) -> *const c_void {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `skb_transport_header` redefined here
+    |
+    = note: `skb_transport_header` must be defined only once in the value namespace of this module
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:55:46
+   |
+55 |     pub gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
+   |                                              ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:55:78
+   |
+55 |     pub gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
+   |                                                                              ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:56:65
+   |
+56 |     pub gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
+   |                                                                 ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:56:82
+   |
+56 |     pub gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
+   |                                                                                  ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:57:47
+   |
+57 |     pub gro_complete: extern "C" fn(skb: *mut sk_buff, nhoff: c_int) -> c_int,
+   |                                               ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:71:54
+   |
+71 | pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> *mut sk_buff {
+   |                                                      ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:71:86
+   |
+71 | pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> *mut sk_buff {
+   |                                                                                      ^^^^^^^ not found in this scope
+
+error[E0433]: cannot find module or crate `mem` in this scope
+  --> crates/udp_offload/src/lib.rs:83:23
+   |
+83 |     let frag_hdr_sz = mem::size_of::<frag_hdr>() as isize;
+   |                       ^^^ use of unresolved module or unlinked crate `mem`
+   |
+   = help: if you wanted to use a crate named `mem`, use `cargo add mem` to add it to your `Cargo.toml`
+help: consider importing this module
+   |
+ 6 + use core::mem;
+   |
+
+error[E0425]: cannot find type `sk_buff` in this scope
+  --> crates/udp_offload/src/lib.rs:97:15
+   |
+97 |     skb: *mut sk_buff,
+   |               ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:126:72
+    |
+126 | pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
+    |                                                                        ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:126:89
+    |
+126 | pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
+    |                                                                                         ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:167:54
+    |
+167 | pub unsafe extern "C" fn udp6_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
+    |                                                      ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `udphdr` in this scope
+   --> crates/udp_offload/src/lib.rs:173:50
+    |
+173 |     let uh = (skb.offset(nhoff as isize) as *mut udphdr);
+    |                                                  ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:228:29
+    |
+228 |     fn skb_shinfo(skb: *mut sk_buff) -> *mut skb_shared_info;
+    |                             ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:229:41
+    |
+229 |     fn skb_gro_network_header(skb: *mut sk_buff) -> *mut ipv6hdr;
+    |                                         ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `ipv6hdr` in this scope
+   --> crates/udp_offload/src/lib.rs:229:58
+    |
+229 |     fn skb_gro_network_header(skb: *mut sk_buff) -> *mut ipv6hdr;
+    |                                                          ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:231:28
+    |
+231 |     fn inet6_iif(skb: *mut sk_buff) -> c_int;
+    |                            ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:245:33
+    |
+245 |     fn udp_gro_udphdr(skb: *mut sk_buff) -> *mut udphdr;
+    |                                 ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `udphdr` in this scope
+   --> crates/udp_offload/src/lib.rs:245:50
+    |
+245 |     fn udp_gro_udphdr(skb: *mut sk_buff) -> *mut udphdr;
+    |                                                  ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:247:19
+    |
+247 |         skb: *mut sk_buff,
+    |                   ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:253:19
+    |
+253 |         skb: *mut sk_buff,
+    |                   ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:261:19
+    |
+261 |         skb: *mut sk_buff,
+    |                   ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `udphdr` in this scope
+   --> crates/udp_offload/src/lib.rs:262:18
+    |
+262 |         uh: *mut udphdr,
+    |                  ^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `ping_err` in this scope
+  --> crates/icmp/src/lib.rs:85:13
+   |
+85 |             ping_err(
+   |             ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:264:15
+    |
+264 |     ) -> *mut sk_buff;
+    |               ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:268:19
+    |
+268 |         skb: *mut sk_buff,
+    |                   ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:275:30
+    |
+275 |     fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut NapiGroCb;
+    |                              ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sk_buff` in this scope
+   --> crates/udp_offload/src/lib.rs:276:27
+    |
+276 |     fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
+    |                           ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `ipv6hdr` in this scope
+   --> crates/udp_offload/src/lib.rs:276:44
+    |
+276 |     fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
+    |                                            ^^^^^^^ not found in this scope
+
+warning: unused variable: `extra`
+   --> crates/esp4/src/lib.rs:329:9
+    |
+329 |     let extra = esp_tmp_extra(tmp);
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_extra`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> crates/esp4/src/lib.rs:466:10
+    |
+466 | fn ALIGN(mut val: usize, align: usize) -> usize {
+    |          ----^^^
+    |          |
+    |          help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0425]: cannot find type `nf_conntrack_expect` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:113:15
+    |
+113 |     exp: *mut nf_conntrack_expect,
+    |               ^^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:408:1
+    |
+408 | pub struct nf_conntrack_helper {
+    | ------------------------------ similarly named struct `nf_conntrack_helper` defined here
+    |
+help: a struct with a similar name exists
+    |
+113 -     exp: *mut nf_conntrack_expect,
+113 +     exp: *mut nf_conntrack_helper,
+    |
+
+error[E0425]: cannot find type `nf_conntrack_expect` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:126:16
+    |
+126 |     _exp: *mut nf_conntrack_expect,
+    |                ^^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:408:1
+    |
+408 | pub struct nf_conntrack_helper {
+    | ------------------------------ similarly named struct `nf_conntrack_helper` defined here
+    |
+help: a struct with a similar name exists
+    |
+126 -     _exp: *mut nf_conntrack_expect,
+126 +     _exp: *mut nf_conntrack_helper,
+    |
+
+error[E0425]: cannot find value `PATTERN_PORT` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:253:18
+    |
+253 |         pattern: PATTERN_PORT.as_ptr(),
+    |                  ^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `PATTERN_EPRT` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:261:18
+    |
+261 |         pattern: PATTERN_EPRT.as_ptr(),
+    |                  ^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `ports` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:272:27
+    |
+101 | static PORTS: [__be16; 8] = [0; 8];
+    | ----------------------------------- similarly named static `PORTS` defined here
+...
+272 |     let _ = ptr::addr_of!(ports);
+    |                           ^^^^^
+    |
+help: a static with a similar name exists
+    |
+272 -     let _ = ptr::addr_of!(ports);
+272 +     let _ = ptr::addr_of!(PORTS);
+    |
+
+error[E0425]: cannot find value `ports_c` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:273:27
+    |
+102 | static PORTS_C: c_uint = 0;
+    | --------------------------- similarly named static `PORTS_C` defined here
+...
+273 |     let _ = ptr::addr_of!(ports_c);
+    |                           ^^^^^^^
+    |
+help: a static with a similar name exists
+    |
+273 -     let _ = ptr::addr_of!(ports_c);
+273 +     let _ = ptr::addr_of!(PORTS_C);
+    |
+
+warning: unused import: `kernel_types::*`
+ --> crates/udp_offload/src/lib.rs:8:5
+  |
+8 | use kernel_types::*;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `c_char`, `c_int`, `c_long`, `c_short`, `c_uchar`, `c_uint`, `c_ulong`, `c_ushort`, and `c_void`
+  --> crates/udp_offload/src/lib.rs:12:9
+   |
+12 |         c_char, c_int, c_long, c_short, c_uchar, c_uint, c_ulong, c_ushort, c_void,
+   |         ^^^^^^  ^^^^^  ^^^^^^  ^^^^^^^  ^^^^^^^  ^^^^^^  ^^^^^^^  ^^^^^^^^  ^^^^^^
+
+warning: unused import: `kernel_types::*`
+  --> crates/udp_offload/src/lib.rs:18:5
+   |
+18 | use kernel_types::*;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unnecessary parentheses around assigned value
+   --> crates/udp_offload/src/lib.rs:173:14
+    |
+173 |     let uh = (skb.offset(nhoff as isize) as *mut udphdr);
+    |              ^                                         ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+173 -     let uh = (skb.offset(nhoff as isize) as *mut udphdr);
+173 +     let uh = skb.offset(nhoff as isize) as *mut udphdr;
+    |
+
+error[E0308]: mismatched types
+   --> crates/icmp/src/lib.rs:117:25
+    |
+117 |     let ptr = (ipv6_hdr(skb) as *mut u8).add(1) as isize - (*skb).data as isize;
+    |                -------- ^^^ types differ in mutability
+    |                |
+    |                arguments to this function are incorrect
+    |
+    = note: expected raw pointer `*mut kernel_types::sk_buff`
+               found raw pointer `*const kernel_types::sk_buff`
+note: function defined here
+   --> crates/icmp/src/lib.rs:226:11
+    |
+226 | unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+    |           ^^^^^^^^ -----------------
+
+error[E0308]: mismatched types
+   --> crates/icmp/src/lib.rs:118:28
+    |
+118 |     let len = (*skb).len - ptr as i32;
+    |                            ^^^^^^^^^^ expected `u32`, found `i32`
+
+error[E0277]: cannot subtract `i32` from `u32`
+   --> crates/icmp/src/lib.rs:118:26
+    |
+118 |     let len = (*skb).len - ptr as i32;
+    |                          ^ no implementation for `u32 - i32`
+    |
+    = help: the trait `Sub<i32>` is not implemented for `u32`
+help: the following other types implement trait `Sub<Rhs>`
+   --> /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/internal_macros.rs:22:9
+    |
+ 22 |         impl const $imp<$u> for &$t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&u32` implements `Sub<u32>`
+...
+ 33 |         impl const $imp<&$u> for $t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `u32` implements `Sub<&u32>`
+...
+ 44 |         impl const $imp<&$u> for &$t {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `&u32` implements `Sub`
+    |
+   ::: /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/arith.rs:212:9
+    |
+212 |         impl const Sub for $t {
+    |         ^^^^^^^^^^^^^^^^^^^^^ `u32` implements `Sub`
+...
+227 | sub_impl! { usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128 f16 f32 f64 f128 }
+    | ---------------------------------------------------------------------------------- in this macro invocation
+    = note: this error originates in the macro `forward_ref_binop` which comes from the expansion of the macro `sub_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0308]: mismatched types
+   --> crates/icmp/src/lib.rs:124:34
+    |
+124 |     let mut nexthdr = (*ipv6_hdr(skb)).nexthdr;
+    |                         -------- ^^^ types differ in mutability
+    |                         |
+    |                         arguments to this function are incorrect
+    |
+    = note: expected raw pointer `*mut kernel_types::sk_buff`
+               found raw pointer `*const kernel_types::sk_buff`
+note: function defined here
+   --> crates/icmp/src/lib.rs:226:11
+    |
+226 | unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+    |           ^^^^^^^^ -----------------
+
+error[E0425]: cannot find value `loose` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:274:27
+    |
+104 | static LOOSE: bool = false;
+    | --------------------------- similarly named static `LOOSE` defined here
+...
+274 |     let _ = ptr::addr_of!(loose);
+    |                           ^^^^^
+    |
+help: a static with a similar name exists
+    |
+274 -     let _ = ptr::addr_of!(loose);
+274 +     let _ = ptr::addr_of!(LOOSE);
+    |
+
+error[E0425]: cannot find value `nf_ftp_lock` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:276:27
+    |
+ 99 | static mut NF_FTP_LOCK: spinlock_t = spinlock_t { _private: [0; 0] };
+    | ----------------------------------------------- similarly named static `NF_FTP_LOCK` defined here
+...
+276 |     let _ = ptr::addr_of!(nf_ftp_lock);
+    |                           ^^^^^^^^^^^
+    |
+help: a static with a similar name exists
+    |
+276 -     let _ = ptr::addr_of!(nf_ftp_lock);
+276 +     let _ = ptr::addr_of!(NF_FTP_LOCK);
+    |
+
+error[E0425]: cannot find value `nf_nat_ftp_hook` in this scope
+   --> crates/nf_conntrack_ftp/src/lib.rs:277:27
+    |
+116 | static mut NF_NAT_FTP_HOOK: nf_nat_ftp_hook_type = ptr::null_mut();
+    | ------------------------------------------------------------------- similarly named static `NF_NAT_FTP_HOOK` defined here
+...
+277 |     let _ = ptr::addr_of!(nf_nat_ftp_hook);
+    |                           ^^^^^^^^^^^^^^^
+    |
+help: a static with a similar name exists
+    |
+277 -     let _ = ptr::addr_of!(nf_nat_ftp_hook);
+277 +     let _ = ptr::addr_of!(NF_NAT_FTP_HOOK);
+    |
+
+Some errors have detailed explanations: E0119, E0252, E0277, E0308, E0428.
+For more information about an error, try `rustc --explain E0119`.
+error[E0308]: mismatched types
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:183:39
+    |
+183 |         unsafe { *icmpv6_get_timeouts((*state).net) }
+    |                   ------------------- ^^^^^^^^^^^^ types differ in mutability
+    |                   |
+    |                   arguments to this function are incorrect
+    |
+    = note: expected raw pointer `*mut c_void`
+               found raw pointer `*const c_void`
+note: function defined here
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:151:26
+    |
+151 | pub unsafe extern "C" fn icmpv6_get_timeouts(net: *mut c_void) -> *mut c_ulong {
+    |                          ^^^^^^^^^^^^^^^^^^^ ----------------
+
+error[E0308]: mismatched types
+   --> crates/icmp/src/lib.rs:128:31
+    |
+128 |     offset = ipv6_skip_exthdr(skb, offset, &mut nexthdr, &mut frag_off);
+    |              ---------------- ^^^ types differ in mutability
+    |              |
+    |              arguments to this function are incorrect
+    |
+    = note: expected raw pointer `*mut kernel_types::sk_buff`
+               found raw pointer `*const kernel_types::sk_buff`
+note: function defined here
+   --> crates/icmp/src/lib.rs:236:11
+    |
+236 | unsafe fn ipv6_skip_exthdr(
+    |           ^^^^^^^^^^^^^^^^
+237 |     skb: *mut sk_buff,
+    |     -----------------
+
+warning: unused variable: `net`
+   --> crates/nf_conntrack_proto_icmpv6/src/lib.rs:226:28
+    |
+226 | unsafe fn nf_icmpv6_pernet(net: *const c_void) -> *mut nf_icmp_net {
+    |                            ^^^ help: if this is intentional, prefix it with an underscore: `_net`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+error[E0308]: arguments to this function are incorrect
+   --> crates/icmp/src/lib.rs:134:18
+    |
+134 |         let tp = skb_header_pointer(
+    |                  ^^^^^^^^^^^^^^^^^^
+    |
+note: types differ in mutability
+   --> crates/icmp/src/lib.rs:135:13
+    |
+135 |             skb,
+    |             ^^^
+    = note: expected raw pointer `*mut kernel_types::sk_buff`
+               found raw pointer `*const kernel_types::sk_buff`
+note: expected `*mut c_void`, found `*mut u8`
+   --> crates/icmp/src/lib.rs:138:13
+    |
+138 |             core::ptr::null_mut::<u8>(),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: expected raw pointer `*mut c_void`
+               found raw pointer `*mut u8`
+note: function defined here
+   --> crates/icmp/src/lib.rs:251:11
+    |
+251 | unsafe fn skb_header_pointer(
+    |           ^^^^^^^^^^^^^^^^^^
+252 |     skb: *mut sk_buff,
+    |     -----------------
+...
+255 |     data: *mut c_void,
+    |     -----------------
+
+error[E0317]: `if` may be missing an `else` clause
+   --> crates/icmp/src/lib.rs:208:5
+    |
+207 |   ) -> c_int {
+    |        ----- expected `c_int` because of this return type
+208 | /     if skb.is_null() {
+209 | |         return EINVAL;
+210 | |     }
+    | |_____^ expected `i32`, found `()`
+    |
+    = note: `if` expressions without `else` evaluate to `()`
+    = help: consider adding an `else` block that evaluates to the expected type
+
+Some errors have detailed explanations: E0308, E0425, E0428.
+warning: `esp4` (lib) generated 7 warnings
+error: could not compile `esp4` (lib) due to 17 previous errors; 7 warnings emitted
+warning: unused variable: `type_`
+   --> crates/icmp/src/lib.rs:105:38
+    |
+105 | fn icmpv6_xrlim_allow(sk: *mut sock, type_: u8, fl6: *mut flowi6) -> bool {
+    |                                      ^^^^^ help: if this is intentional, prefix it with an underscore: `_type_`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `type_`
+   --> crates/icmp/src/lib.rs:166:45
+    |
+166 | pub unsafe extern "C" fn icmpv6_err_convert(type_: u8, code: u8, error: c_int) -> c_int {
+    |                                             ^^^^^ help: if this is intentional, prefix it with an underscore: `_type_`
+
+warning: unused variable: `code`
+   --> crates/icmp/src/lib.rs:166:56
+    |
+166 | pub unsafe extern "C" fn icmpv6_err_convert(type_: u8, code: u8, error: c_int) -> c_int {
+    |                                                        ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: unused variable: `error`
+   --> crates/icmp/src/lib.rs:166:66
+    |
+166 | pub unsafe extern "C" fn icmpv6_err_convert(type_: u8, code: u8, error: c_int) -> c_int {
+    |                                                                  ^^^^^ help: if this is intentional, prefix it with an underscore: `_error`
+
+warning: unused variable: `offset`
+   --> crates/icmp/src/lib.rs:238:5
+    |
+238 |     offset: isize,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_offset`
+
+warning: unused variable: `offset`
+   --> crates/icmp/src/lib.rs:253:5
+    |
+253 |     offset: isize,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_offset`
+
+warning: unused variable: `len`
+   --> crates/icmp/src/lib.rs:254:5
+    |
+254 |     len: isize,
+    |     ^^^ help: if this is intentional, prefix it with an underscore: `_len`
+
+warning: `nf_conntrack_proto_icmpv6` (lib) generated 19 warnings
+error: could not compile `nf_conntrack_proto_icmpv6` (lib) due to 15 previous errors; 19 warnings emitted
+Some errors have detailed explanations: E0061, E0277, E0308, E0317, E0423, E0425, E0573, E0609.
+For more information about an error, try `rustc --explain E0061`.
+warning: `icmp` (lib) generated 7 warnings
+error: could not compile `icmp` (lib) due to 27 previous errors; 7 warnings emitted
+error[E0308]: mismatched types
+   --> crates/udp_offload/src/lib.rs:139:76
+    |
+139 |     if skb_gro_checksum_validate_zero_check(skb, IPPROTO_UDP, (*uh).check, ip6_gro_compute_pseudo)
+    |        ------------------------------------                                ^^^^^^^^^^^^^^^^^^^^^^ expected safe fn, found unsafe fn
+    |        |
+    |        arguments to this function are incorrect
+    |
+    = note: expected fn pointer `extern "C" fn(...) -> _`
+                  found fn item `unsafe extern "C" fn(...) -> _ {ip6_gro_compute_pseudo}`
+    = note: unsafe functions cannot be coerced into safe function pointers
+note: function defined here
+   --> crates/udp_offload/src/lib.rs:246:8
+    |
+246 |     fn skb_gro_checksum_validate_zero_check(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+250 |         compute_pseudo: extern "C" fn(...) -> u32,
+    |         --------------
+
+error[E0308]: mismatched types
+   --> crates/udp_offload/src/lib.rs:147:65
+    |
+147 |         unsafe { skb_gro_checksum_try_convert(skb, IPPROTO_UDP, ip6_gro_compute_pseudo) };
+    |                  ----------------------------                   ^^^^^^^^^^^^^^^^^^^^^^ expected safe fn, found unsafe fn
+    |                  |
+    |                  arguments to this function are incorrect
+    |
+    = note: expected fn pointer `extern "C" fn(...) -> _`
+                  found fn item `unsafe extern "C" fn(...) -> _ {ip6_gro_compute_pseudo}`
+    = note: unsafe functions cannot be coerced into safe function pointers
+note: function defined here
+   --> crates/udp_offload/src/lib.rs:252:8
+    |
+252 |     fn skb_gro_checksum_try_convert(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+255 |         compute_pseudo: extern "C" fn(...) -> u32,
+    |         --------------
+
+error[E0277]: `*const u8` cannot be shared between threads safely
+   --> crates/nf_conntrack_ftp/src/lib.rs:131:16
+    |
+131 | static SEARCH: [ftp_search; 2] = [
+    |                ^^^^^^^^^^^^^^^ `*const u8` cannot be shared between threads safely
+    |
+    = help: within `[ftp_search; 2]`, the trait `Sync` is not implemented for `*const u8`
+note: required because it appears within the type `ftp_search`
+   --> crates/nf_conntrack_ftp/src/lib.rs:89:12
+    |
+ 89 | pub struct ftp_search {
+    |            ^^^^^^^^^^
+    = note: required because it appears within the type `[ftp_search; 2]`
+    = note: shared static variables must have a type that implements `Sync`
+
+error[E0308]: mismatched types
+   --> crates/udp_offload/src/lib.rs:153:31
+    |
+153 |     if static_branch_unlikely(&udpv6_encap_needed_key) != 0 {
+    |        ---------------------- ^^^^^^^^^^^^^^^^^^^^^^^ types differ in mutability
+    |        |
+    |        arguments to this function are incorrect
+    |
+    = note: expected raw pointer `*mut c_void`
+                 found reference `&c_void`
+note: function defined here
+   --> crates/udp_offload/src/lib.rs:244:8
+    |
+244 |     fn static_branch_unlikely(key: *mut c_void) -> c_int;
+    |        ^^^^^^^^^^^^^^^^^^^^^^ ---
+
+error[E0277]: `*const u8` cannot be shared between threads safely
+   --> crates/nf_conntrack_ftp/src/lib.rs:251:16
+    |
+251 | static search: [ftp_search; 2] = [
+    |                ^^^^^^^^^^^^^^^ `*const u8` cannot be shared between threads safely
+    |
+    = help: within `[ftp_search; 2]`, the trait `Sync` is not implemented for `*const u8`
+note: required because it appears within the type `ftp_search`
+   --> crates/nf_conntrack_ftp/src/lib.rs:89:12
+    |
+ 89 | pub struct ftp_search {
+    |            ^^^^^^^^^^
+    = note: required because it appears within the type `[ftp_search; 2]`
+    = note: shared static variables must have a type that implements `Sync`
+
+error[E0560]: struct `spinlock_t` has no field named `_private`
+  --> crates/nf_conntrack_ftp/src/lib.rs:99:51
+   |
+99 | static mut NF_FTP_LOCK: spinlock_t = spinlock_t { _private: [0; 0] };
+   |                                                   ^^^^^^^^ `spinlock_t` does not have this field
+   |
+   = note: available fields are: `_priv`
+
+error[E0308]: mismatched types
+   --> crates/udp_offload/src/lib.rs:213:34
+    |
+213 |     udp_gro_complete(skb, nhoff, udp6_lib_lookup_skb)
+    |     ----------------             ^^^^^^^^^^^^^^^^^^^ expected safe fn, found unsafe fn
+    |     |
+    |     arguments to this function are incorrect
+    |
+    = note: expected fn pointer `extern "C" fn(...) -> _`
+                  found fn item `unsafe extern "C" fn(...) -> _ {udp6_lib_lookup_skb}`
+    = note: unsafe functions cannot be coerced into safe function pointers
+note: function defined here
+   --> crates/udp_offload/src/lib.rs:267:8
+    |
+267 |     fn udp_gro_complete(
+    |        ^^^^^^^^^^^^^^^^
+...
+270 |         lookup: extern "C" fn(...) -> *mut c_void,
+    |         ------
+
+error[E0560]: struct `nf_ct_ftp_type` has no field named `_private`
+   --> crates/nf_conntrack_ftp/src/lib.rs:137:35
+    |
+137 |         ftptype: nf_ct_ftp_type { _private: [0; 0] },
+    |                                   ^^^^^^^^ `nf_ct_ftp_type` does not have this field
+    |
+    = note: available fields are: `_priv`
+
+error[E0605]: non-primitive cast: `i32` as `c_void`
+   --> crates/udp_offload/src/lib.rs:288:28
+    |
+288 | static udp_table: c_void = 0 as _;
+    |                            ^^^^^^ an `as` expression can only be used to convert between primitive types or to coerce to a specific trait object
+
+error[E0605]: non-primitive cast: `i32` as `c_void`
+   --> crates/udp_offload/src/lib.rs:289:41
+    |
+289 | static udpv6_encap_needed_key: c_void = 0 as _;
+    |                                         ^^^^^^ an `as` expression can only be used to convert between primitive types or to coerce to a specific trait object
+
+error[E0308]: mismatched types
+   --> crates/nf_conntrack_ftp/src/lib.rs:138:17
+    |
+138 |         getnum: try_rfc959,
+    |                 ^^^^^^^^^^ expected `Option<...>`, found fn item
+    |
+    = note: expected enum `Option<unsafe extern "C" fn(*const u8, usize, *mut nf_conntrack_man, u8, *mut u32) -> i32>`
+            found fn item `unsafe extern "C" fn(*const u8, usize, *mut nf_conntrack_man, u8, *mut u32) -> i32 {try_rfc959}`
+help: try wrapping the expression in `core::prelude::v1::Some`
+    |
+138 |         getnum: core::prelude::v1::Some(try_rfc959),
+    |                 ++++++++++++++++++++++++          +
+
+error[E0560]: struct `nf_ct_ftp_type` has no field named `_private`
+   --> crates/nf_conntrack_ftp/src/lib.rs:145:35
+    |
+145 |         ftptype: nf_ct_ftp_type { _private: [0; 0] },
+    |                                   ^^^^^^^^ `nf_ct_ftp_type` does not have this field
+    |
+    = note: available fields are: `_priv`
+
+Some errors have detailed explanations: E0308, E0425, E0433, E0605.
+error[E0308]: mismatched types
+   --> crates/nf_conntrack_ftp/src/lib.rs:146:17
+    |
+146 |         getnum: try_eprt,
+    |                 ^^^^^^^^ expected `Option<...>`, found fn item
+    |
+    = note: expected enum `Option<unsafe extern "C" fn(*const u8, usize, *mut nf_conntrack_man, u8, *mut u32) -> i32>`
+            found fn item `unsafe extern "C" fn(*const u8, usize, *mut nf_conntrack_man, u8, *mut u32) -> i32 {try_eprt}`
+help: try wrapping the expression in `core::prelude::v1::Some`
+    |
+146 |         getnum: core::prelude::v1::Some(try_eprt),
+    |                 ++++++++++++++++++++++++        +
+
+warning: `udp_offload` (lib) generated 4 warnings
+error: could not compile `udp_offload` (lib) due to 34 previous errors; 4 warnings emitted
+Some errors have detailed explanations: E0277, E0308, E0425, E0560.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `nf_conntrack_ftp` (lib) due to 16 previous errors
+For more information about this error, try `rustc --explain E0428`.
+error: could not compile `mcast_snoop` (lib) due to 2 previous errors

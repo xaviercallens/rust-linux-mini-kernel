@@ -261,6 +261,18 @@ pub struct flowi {
     pub u: *mut core::ffi::c_void, // Auto-generated mock field
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct flowi6 {
+    pub oif: core::ffi::c_int,
+    pub iif: core::ffi::c_int,
+    pub flowi6_mark: __u32,
+    pub flowi6_tos: __u8,
+    pub saddr: in6_addr,
+    pub daddr: in6_addr,
+    pub fl6_iifname: [core::ffi::c_char; 16],
+}
+
 /// Destination entry (routing cache)
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -619,15 +631,7 @@ macro_rules! skbuff {
     ($($arg:tt)*) => { 0 }
 }
 #[macro_export]
-macro_rules! c_char {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
 macro_rules! offset {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! flowi6 {
     ($($arg:tt)*) => { 0 }
 }
 #[macro_export]
