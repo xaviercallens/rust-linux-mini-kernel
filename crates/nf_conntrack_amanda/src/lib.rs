@@ -1,3 +1,31 @@
+// Amanda connection tracking module for Linux kernel
+//
+// This is an FFI-compatible Rust translation of the Linux kernel C implementation.
+// ABI compatibility is maintained for all exported symbols.
+
+#![cfg_attr(not(test), no_std)]
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+
+use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::panic::PanicInfo;
+use core::ptr;
+use core::sync::atomic::{AtomicPtr, Ordering};
+use kernel_types::*;
+
+pub const IPPROTO_UDP: u8 = 17;
+pub const AF_INET: u8 = 2;
+pub const AF_INET6: u8 = 10;
+pub const IP_CT_DIR_ORIGINAL: u8 = 0;
+pub const NF_ACCEPT: c_int = 0;
+pub const NF_DROP: c_int = 1;
+pub const NF_CT_EXPECT_CLASS_DEFAULT: u8 = 0;
+pub const EINVAL: c_int = -22;
+pub const ENOMEM: c_int = -12;
+
+pub type size_t = usize;
+
 // Replace raw pointers with proper Rust types
 pub static mut __UDP_DISCONNECT: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
 pub static mut ICMPV6_ERR_CONVERT: *mut nf_conntrack_amanda_hook = core::ptr::null_mut();
@@ -29,34 +57,6 @@ pub struct nf_conntrack_amanda_ops {
 pub struct nf_conntrack_amanda_hook {
     // Fields and methods
 }
-
-//! Amanda connection tracking module for Linux kernel
-//!
-//! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
-//! ABI compatibility is maintained for all exported symbols.
-
-#![cfg_attr(not(test), no_std)]
-#![allow(non_camel_case_types)]
-#![allow(dead_code)]
-#![allow(clippy::all)]
-
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::panic::PanicInfo;
-use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
-use kernel_types::*;
-
-pub const IPPROTO_UDP: u8 = 17;
-pub const AF_INET: u8 = 2;
-pub const AF_INET6: u8 = 10;
-pub const IP_CT_DIR_ORIGINAL: u8 = 0;
-pub const NF_ACCEPT: c_int = 0;
-pub const NF_DROP: c_int = 1;
-pub const NF_CT_EXPECT_CLASS_DEFAULT: u8 = 0;
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-
-pub type size_t = usize;
 pub type socklen_t = u32;
 
 #[repr(C)]
@@ -98,7 +98,7 @@ pub struct nf_conntrack_expect {
 
 #[repr(C)]
 pub struct ts_config {
-    pub _data: [u8; 1], // Opaque textsearch config
+    pub _data: [u8; 1], // Opaque textSEARCH config
 }
 
 #[repr(C)]
@@ -185,14 +185,14 @@ unsafe extern "C" {
     fn nf_conntrack_helpers_register(helpers: *mut nf_conntrack_helper, nhelpers: c_int) -> c_int;
     fn nf_conntrack_helpers_unregister(helpers: *mut nf_conntrack_helper, nhelpers: c_int);
 
-    fn textsearch_prepare(
+    fn textSEARCH_prepare(
         algo: *const c_char,
         pattern: *const c_char,
         len: size_t,
         gfp: c_int,
         flags: c_int,
     ) -> *mut ts_config;
-    fn textsearch_destroy(ts: *mut ts_config);
+    fn textSEARCH_destroy(ts: *mut ts_config);
 
     fn nf_ct_helper_log(skb: *mut c_void, ct: *mut nf_conn, msg: *const c_char);
 }
@@ -205,10 +205,11 @@ fn ctinfo2dir(ctinfo: c_int) -> u8 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn amanda_help(
     skb: *mut c_void,
-    _protoff: c_uint,
+    protoff: c_uint,
     ct: *mut nf_conn,
     ctinfo: c_int,
 ) -> c_int {
+    let dataoff = protoff;
     let mut ret = NF_ACCEPT;
 
     // Only look at packets from the Amanda server
@@ -223,24 +224,24 @@ pub unsafe extern "C" fn amanda_help(
         return NF_DROP;
     }
 
-    let start = skb_find_text(skb, dataoff, (*(skb as *mut sk_buff)).len, search[0].ts);
+    let start = skb_find_text(skb, dataoff, (*(skb as *mut sk_buff)).len, SEARCH[0].ts);
     if start == c_uint::MAX {
         return NF_ACCEPT;
     }
-    let mut start = start + dataoff + search[0].len;
+    let mut start = start + dataoff + SEARCH[0].len;
 
-    let stop = skb_find_text(skb, start, (*(skb as *mut sk_buff)).len, search[1].ts);
+    let stop = skb_find_text(skb, start, (*(skb as *mut sk_buff)).len, SEARCH[1].ts);
     if stop == c_uint::MAX {
         return NF_ACCEPT;
     }
     let stop = stop + start;
 
     for i in 2..=5 {
-        let off = skb_find_text(skb, start, stop, search[i].ts);
+        let off = skb_find_text(skb, start, stop, SEARCH[i].ts);
         if off == c_uint::MAX {
             continue;
         }
-        let mut off = off + start + search[i].len;
+        let mut off = off + start + SEARCH[i].len;
 
         let mut pbuf: [u8; 6] = [0; 6];
         let len = (stop - off).min(pbuf.len() - 1) as usize;
