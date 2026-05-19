@@ -188,7 +188,7 @@ pub unsafe extern "C" fn gre_parse_header(
         if val.is_null() {
             return EINVAL;
         }
-        (*tpi).proto = proto;
+        (*tpi).proto = _proto;
         if (*val as u8 & 0xF0) != 0x40 {
             hdr_len += 4;
         }
@@ -242,44 +242,55 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn gre_err(skb: *mut c_void, info: u32) -> c_int {
-    let iph = skb as *const u8;
-    let ver = (*iph.add((*iph as *const u16 as *const u16) << 2) + 1).read_volatile() & 0x7f;
-    if ver as usize >= GREPROTO_MAX {
+    if skb.is_null() {
         return EINVAL;
     }
 
-    let base = unsafe { (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr };
-    let gre_flags = unsafe { (*base).flags };
+    // Get IP header size to find GRE header
+    let iph = skb as *const u8;
+    let ihl = (*iph & 0x0F) as usize * 4;
+    let nhs_usize = ihl;
+
+    // Allocate tunnel info on stack
+    let mut tpi_val = tnl_ptk_info {
+        flags: 0,
+        proto: 0,
+        key: 0,
+        seq: 0,
+        hdr_len: 0,
+    };
+    let tpi = &mut tpi_val as *mut tnl_ptk_info;
+    let mut csum_err_val = false;
+    let csum_err = &mut csum_err_val as *mut bool;
+
+    let base = (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr;
+    let gre_flags = (*base).flags;
 
     if (gre_flags & (GRE_VERSION | GRE_ROUTING)) != 0 {
         return EINVAL;
     }
 
-    unsafe {
-        (*tpi).flags = gre_flags_to_tnl_flags(gre_flags);
-        (*tpi).hdr_len = gre_calc_hlen((*tpi).flags);
-    }
+    (*tpi).flags = gre_flags_to_tnl_flags(gre_flags);
+    (*tpi).hdr_len = gre_calc_hlen((*tpi).flags);
 
-    let hdr_len = unsafe { (*tpi).hdr_len as usize };
-    if unsafe { !pskb_may_pull(skb, (nhs_usize + hdr_len) as size_t) } {
+    let hdr_len = (*tpi).hdr_len as usize;
+    if !pskb_may_pull(skb, (nhs_usize + hdr_len) as size_t) {
         return EINVAL;
     }
 
-    let greh = unsafe { (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr };
+    let greh = (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr;
 
-    unsafe {
-        (*tpi).proto = (*greh).protocol;
-        (*tpi).key = 0;
-        (*tpi).seq = 0;
-        *csum_err = false;
-    }
+    (*tpi).proto = (*greh).protocol;
+    (*tpi).key = 0;
+    (*tpi).seq = 0;
+    *csum_err = false;
 
     if (gre_flags & GRE_CSUM) != 0 {
-        let ok = unsafe { skb_checksum_simple_validate(skb) };
+        let ok = skb_checksum_simple_validate(skb);
         if !ok {
-            let r = unsafe { skb_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo) };
+            let r = skb_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo);
             if r != 0 {
-                unsafe { *csum_err = true };
+                *csum_err = true;
             }
         }
     }
