@@ -267,7 +267,6 @@ pub unsafe extern "C" fn ipip6_tunnel_del_prl(t: *mut ip_tunnel, a: *mut ip_tunn
 }
 
 // Constants
-const IP6_SIT_HASH_SIZE: usize = 16;
 const IFNAMSIZ: usize = 16;
 const SIT_ISATAP: u16 = 0x0001; // Example value - actual value depends on kernel headers
 const INADDR_ANY: u32 = 0; // 0.0.0.0

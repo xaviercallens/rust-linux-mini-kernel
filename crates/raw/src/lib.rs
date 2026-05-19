@@ -1,5 +1,13 @@
 use kernel_types::*;
 
+// IPv6 helper function declarations
+extern "C" {
+    fn ipv6_addr_is_multicast(addr: *const in6_addr) -> bool;
+    fn ipv6_chk_mcast_addr(dev: *mut net_device, addr: *const in6_addr) -> bool;
+    fn ipv6_addr_valid(addr: *const in6_addr) -> bool;
+    fn ipv6_chk_addr(dev: *mut net_device, addr: *const in6_addr) -> bool;
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct raw_v6_lookup_args {
