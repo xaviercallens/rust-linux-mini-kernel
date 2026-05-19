@@ -116,6 +116,12 @@ pub unsafe extern "C" fn inet6_create(
     protocol: c_int,
     _kern: c_int,
 ) -> c_int {
+    let mut err: c_int = 0;
+    let mut sk: *mut sock = ptr::null_mut();
+    let answer_prot: *mut proto = ptr::null_mut();
+    let net: *mut net = ptr::null_mut();
+    let kern: c_int = 0;
+
     if sock.is_null() {
         return EINVAL;
     }

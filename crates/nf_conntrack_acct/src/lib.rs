@@ -80,7 +80,7 @@ pub unsafe extern "C" fn nf_conntrack_acct_fini() {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {
         core::hint::spin_loop();
     }

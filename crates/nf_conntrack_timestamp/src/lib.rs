@@ -8,8 +8,6 @@
 use core::ffi::{c_char, c_int, c_void};
 use kernel_types::*;
 
-const NF_CT_EXT_TSTAMP: u32 = 0;
-
 // Kernel constants from headers
 const NF_CT_EXT_TSTAMP: u32 = 0; // Actual value defined in kernel headers
 
@@ -45,7 +43,7 @@ extern "C" {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
 }
 
