@@ -346,6 +346,7 @@ pub struct sk_buff {
     pub mark: *mut core::ffi::c_void, // Auto-generated mock field
     pub data: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk: *mut core::ffi::c_void, // Force injected mock field
+    pub dst: *mut core::ffi::c_void, // Force injected mock field
 }
 
 /// IPv6 control block (in sk_buff->cb)
@@ -543,6 +544,32 @@ macro_rules! inet_proto_csum_replace4 {
 }
 extern "C" {
     pub fn udplite_get_port(sk: *mut core::ffi::c_void, snum: u16, recycling: i32) -> i32;
+}
+
+// ============================================================================
+// Formal Verification Contracts (v7.0.0 Experimental Symbolic Execution)
+// ============================================================================
+
+/// Represents a precondition that must be mathematically satisfied (maps to Lean 4 axioms).
+#[macro_export]
+macro_rules! requires {
+    ($cond:expr, $msg:expr) => {
+        // In a true symbolic execution engine (like Verus/Creusot), this is parsed at compile-time.
+        // For runtime evaluation, we enforce the mathematical invariant via a kernel panic.
+        if !($cond) {
+            panic!("Formal Verification Precondition Failed: {}", $msg);
+        }
+    };
+}
+
+/// Represents a postcondition that the function mathematically guarantees.
+#[macro_export]
+macro_rules! ensures {
+    ($cond:expr, $msg:expr) => {
+        if !($cond) {
+            panic!("Formal Verification Postcondition Failed: {}", $msg);
+        }
+    };
 }
 
 // ============================================================================

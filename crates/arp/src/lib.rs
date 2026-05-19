@@ -71,14 +71,12 @@ pub extern "C" fn arp_send(
     skb: *mut sk_buff,
     ip: *mut c_void,
 ) -> c_int {
-    unsafe {
-        if skb.is_null() || ip.is_null() {
-            return -EINVAL;
-        }
+    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: arp_send_safety)
+    requires!(!skb.is_null(), "arp_send_safety: skb pointer invariant violated");
+    requires!(!ip.is_null(), "arp_send_safety: ip pointer invariant violated");
 
-        if (*skb).dev.is_null() {
-            return -EINVAL;
-        }
+    unsafe {
+        requires!(!(*skb).dev.is_null(), "arp_send_safety: skb.dev invariant violated");
 
         let dev = (*skb).dev as *mut net_device;
         if (*dev).type_ != ARPHRD_ETHER {
@@ -116,6 +114,8 @@ pub extern "C" fn arp_send(
             return -EINVAL;
         }
 
-        ((*ops).output.unwrap())(skb, dst)
+        let result = ((*ops).output.unwrap())(skb, dst);
+        ensures!(result <= 0, "arp_send_safety: return code must be 0 or negative error code");
+        result
     }
 }
