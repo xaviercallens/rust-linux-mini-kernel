@@ -145,6 +145,27 @@ pub struct sockaddr {
     pub sa_data: [c_char; 14],
 }
 
+/// I/O vector for scatter-gather operations
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct iovec {
+    pub iov_base: *mut c_void,
+    pub iov_len: size_t,
+}
+
+/// Socket message header
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct msghdr {
+    pub msg_name: *mut c_void,
+    pub msg_namelen: socklen_t,
+    pub msg_iov: *mut iovec,
+    pub msg_iovlen: size_t,
+    pub msg_control: *mut c_void,
+    pub msg_controllen: size_t,
+    pub msg_flags: c_int,
+}
+
 /// Base socket structure
 #[repr(C)]
 #[derive(Copy, Clone)]
