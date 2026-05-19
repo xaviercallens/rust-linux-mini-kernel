@@ -494,3 +494,20 @@ macro_rules! inet_proto_csum_replace4 {
 extern "C" {
     pub fn udplite_get_port(sk: *mut core::ffi::c_void, snum: u16, recycling: i32) -> i32;
 }
+
+// ============================================================================
+// Netfilter Hook State
+// ============================================================================
+
+/// Netfilter hook state - contains context for hook execution
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_hook_state {
+    pub hook: u8,
+    pub pf: u8,
+    pub in_dev: *mut c_void,  // net_device
+    pub out_dev: *mut c_void, // net_device
+    pub sk: *mut c_void,      // sock
+    pub net: *mut c_void,
+    pub okfn: Option<extern "C" fn(*mut c_void, *mut c_void, *mut nf_hook_state) -> c_int>,
+}
