@@ -87,6 +87,26 @@ pub struct ip6gre_net {
 // Static variables
 pub static mut IP6GRE_NET_ID: c_int = 0;
 
+// External kernel functions
+extern "C" {
+    fn dev_net(dev: *mut net_device) -> *mut net;
+    fn net_generic(net: *mut net, id: c_int) -> *mut c_void;
+    fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool;
+}
+
+// Helper functions
+fn htons(x: u16) -> u16 {
+    x.to_be()
+}
+
+fn HASH_ADDR(_addr: *const in6_addr) -> usize {
+    0 // Placeholder hash
+}
+
+fn HASH_KEY(_key: u32) -> usize {
+    0 // Placeholder hash
+}
+
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn ip6gre_tunnel_lookup(
@@ -104,7 +124,7 @@ pub unsafe extern "C" fn ip6gre_tunnel_lookup(
     let link = (*dev).ifindex;
     let h0 = HASH_ADDR(remote);
     let h1 = HASH_KEY(key);
-    let ign = net_generic(net, IP6GRE_NET_ID);
+    let ign = net_generic(net, IP6GRE_NET_ID) as *mut ip6gre_net;
     let dev_type = if gre_proto == htons(ETH_P_TEB) as u16 ||
                    gre_proto == htons(ETH_P_ERSPAN) as u16 ||
                    gre_proto == htons(ETH_P_ERSPAN2) as u16 {
