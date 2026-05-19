@@ -511,3 +511,44 @@ pub struct nf_hook_state {
     pub net: *mut c_void,
     pub okfn: Option<extern "C" fn(*mut c_void, *mut c_void, *mut nf_hook_state) -> c_int>,
 }
+
+// ============================================================================
+// Common Type Aliases (CamelCase variants for C-style structs)
+// ============================================================================
+
+/// Socket buffer type alias (CamelCase variant)
+pub type SkBuff = sk_buff;
+
+/// Socket type alias (CamelCase variant)
+pub type Sock = sock;
+
+/// TCP socket type alias (CamelCase variant)
+pub type TCP_SOCK = tcp_sock;
+
+/// UDP socket type alias (CamelCase variant)
+pub type UDP_SOCK = udp_sock;
+
+/// Network device features type
+pub type NetdevFeaturesT = u64;
+
+/// List head for linked lists
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ListHead {
+    pub next: *mut ListHead,
+    pub prev: *mut ListHead,
+}
+
+/// IPv6 option header
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct Ipv6OptHdr {
+    pub nexthdr: u8,
+    pub hdrlen: u8,
+}
+
+/// Network namespace type alias
+pub type NF_CONN = nf_conn;
+
+/// Network address union type alias (CamelCase variant)
+pub type NF_INET_ADDR = nf_inet_addr;
