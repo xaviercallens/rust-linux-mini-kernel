@@ -1,5 +1,3 @@
-Here's the fixed Rust code for the Linux kernel FFI module 'ip6mr':
-
 //! IPv6 multicast routing support for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
