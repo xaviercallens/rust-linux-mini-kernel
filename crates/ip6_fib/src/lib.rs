@@ -138,9 +138,6 @@ pub struct fib6_cleaner {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fib6_link_table(_net: *mut net, _tb: *mut fib6_table) {}
-
-#[no_mangle]
 pub unsafe extern "C" fn fib6_tables_init(net: *mut net) {
     if !net.is_null() {
         fib6_link_table(net, (*net).ipv6.fib6_main_tbl);
@@ -183,6 +180,7 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
     let mut head: *mut hlist_head;
     let h: usize;
 
+    let mut id = id;
     if id == 0 {
         id = 0x100; // RT6_TABLE_MAIN
     }
@@ -217,10 +215,9 @@ pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
 /// - `with_fib6_nh` must be a valid boolean
 #[no_mangle]
 pub unsafe extern "C" fn fib6_info_alloc(gfp_flags: c_int, with_fib6_nh: bool) -> *mut fib6_info {
-    let sz: size_t;
     let f6i: *mut fib6_info;
 
-    sz = core::mem::size_of::<fib6_info>() as size_t;
+    let mut sz = core::mem::size_of::<fib6_info>() as size_t;
     if with_fib6_nh {
         sz += core::mem::size_of::<fib6_nh>() as size_t;
     }
@@ -295,7 +292,6 @@ pub unsafe extern "C" fn fib6_link_table(net: *mut net, tb: *mut fib6_table) {
 }
 
 // Constants
-pub const FIB6_TABLE_HASHSZ: usize = 256;
 pub const FWS_S: u32 = 0;
 pub const FWS_L: u32 = 1;
 
