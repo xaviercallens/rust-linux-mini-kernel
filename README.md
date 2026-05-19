@@ -15,8 +15,8 @@
 
 ## 🎯 Overview
 
-### 🎥 Network Stack Validation Proof (v7.0.0-beta)
-![Gamma Kernel v7.0.0-beta Demo](demo.gif)
+### 🎥 Network Stack Validation Proof (v8.1.0)
+![Gamma Kernel v8.1.0 Demo](demo.gif)
 *Automated execution on Google Cloud demonstrating 100% stable, warning-free compilation and structural FFI integrity of the core IPv6 network stack (`ip6_input`, `tcp_ipv6`, `ip6_icmp`, `tcpv6_offload`).*
 
 A comprehensive Rust translation of the Linux kernel networking subsystem, maintaining full FFI compatibility with the original C implementation. This project demonstrates that critical kernel components can be successfully reimplemented in Rust while preserving binary compatibility and performance characteristics.
@@ -53,7 +53,7 @@ cargo test --workspace
 
 ---
 
-## 📊 Project Status - v7.0.0-beta
+## 📊 Project Status - v8.1.0
 
 ### Compilation Statistics
 
@@ -256,7 +256,7 @@ Contributions are welcome! This alpha release establishes the foundation.
 
 ## 📋 Known Issues & Limitations
 
-### Current Limitations (v7.0.0-beta)
+### Current Limitations (v8.1.0)
 
 1. **2 packages with compilation errors:**
    - `af_inet` (103 errors - complex socket initialization)
