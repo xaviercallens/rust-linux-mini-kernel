@@ -29,6 +29,12 @@ steps:
         
         # Validate Boot on GCP Hardware (x86_64 QEMU)
         timeout 2 qemu-system-x86_64 -kernel build/mvk-kernel.elf -display none -serial stdio || echo "Kernel boot sequence validated (Requires external bootloader)"
+        
+        # Conduct Intensive Benchmarks on Real GCP Hardware (N2 VM / C2 simulation)
+        apt-get install -y python3-pandas python3-seaborn python3-matplotlib
+        python3 gcp_stress_benchmark.py
+        python3 gcp_coverage_perf_benchmark.py
+        python3 gcp_benchmark.py
 
 images:
   - 'gcr.io/$PROJECT_ID/rust-linux-mini-kernel:v8.4.0-beta'
