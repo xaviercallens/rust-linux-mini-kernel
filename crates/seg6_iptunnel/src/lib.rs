@@ -14,6 +14,7 @@ use kernel_types::*;
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ETH_P_IP: c_int = 0x0800;
+pub const ETH_P_IPV6: c_int = 0x86DD;
 pub const IPPROTO_IPV6: c_int = 41;
 pub const IPPROTO_IPIP: c_int = 4;
 pub const IPPROTO_ETHERNET: c_int = 143;
@@ -149,7 +150,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
     let isrh = (hdr as *mut u8).add(mem::size_of::<ipv6hdr>()) as *mut ipv6_sr_hdr;
     ptr::copy_nonoverlapping(osrh, isrh, hdrlen);
 
-    (*isrh).nexthdr = proto as u8;
+    (*isrh).nexthdr = _proto as u8;
 
     let daddr = &mut (*hdr).daddr;
     let saddr = &mut (*hdr).saddr;

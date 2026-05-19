@@ -204,19 +204,6 @@ pub unsafe extern "C" fn ip6_datagram_release_cb(
     ip6_datagram_dst_update(sk, 0);
 }
 
-// Helper functions
-#[inline]
-unsafe fn ipv6_addr_v4mapped(a: *const in6_addr) -> bool {
-    // Implementation of IPv6 address v4-mapped check
-    false
-}
-
-#[inline]
-unsafe fn ipv6_addr_is_multicast(a: *const in6_addr) -> bool {
-    // Implementation of multicast check
-    false
-}
-
 #[inline]
 unsafe fn security_sk_classify_flow(sk: *mut sock, fl: *mut flowi6) {
     // Placeholder for security classification
