@@ -191,9 +191,10 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
         (*km).rcu.next = ptr::null_mut();
         (*km).rcu.func = None;
 
-    spin_lock_bh(&mut KEYMAP_LOCK);
-    list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
-    spin_unlock_bh(&mut KEYMAP_LOCK);
+        spin_lock_bh(&mut KEYMAP_LOCK);
+        list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
+        spin_unlock_bh(&mut KEYMAP_LOCK);
+    }
 
     0
 }
