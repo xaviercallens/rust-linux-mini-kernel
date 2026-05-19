@@ -59,6 +59,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "capability"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "cgroup"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "cipso_ipv4"
 version = "0.4.0"
 dependencies = [
@@ -67,7 +83,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "compaction"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "cpuset"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -116,6 +148,22 @@ dependencies = [
 
 [[package]]
 name = "esp6_offload"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "exec"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "exit"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -203,6 +251,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fork"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "fou"
 version = "0.4.0"
 dependencies = [
@@ -268,6 +324,14 @@ dependencies = [
 
 [[package]]
 name = "inet_connection_sock"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "init_mm"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -387,11 +451,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "kasan"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "kernel_types"
 version = "0.1.0"
 dependencies = [
  "builtin",
  "builtin_macros",
+]
+
+[[package]]
+name = "kthread"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
 ]
 
 [[package]]
@@ -417,6 +497,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "memblock"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "mempool"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "micro_kernel_demo"
 version = "0.1.0"
 dependencies = [
@@ -424,7 +520,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "migrate"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "mip6"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "mlock"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "mmap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "mprotect"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "mremap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "munmap"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -800,6 +944,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oom_kill"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "output_core"
 version = "0.4.0"
 dependencies = [
@@ -808,7 +960,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "page_alloc"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "page_io"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "page_owner"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "page_table"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "percpu"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "ping"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ptrace"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -832,6 +1032,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rmap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "route"
 version = "0.4.0"
 dependencies = [
@@ -841,6 +1049,38 @@ dependencies = [
 
 [[package]]
 name = "rpl"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sched_core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sched_fair"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sched_idle"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sched_wait"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -880,7 +1120,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "sit"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "slab"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "slub"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "swap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "swapfile"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -897,6 +1177,14 @@ dependencies = [
 
 [[package]]
 name = "sysctl_net_ipv6"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "taskstats"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -945,6 +1233,38 @@ dependencies = [
 
 [[package]]
 name = "udplite"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "util"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vmalloc"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vmscan"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "workqueue"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
