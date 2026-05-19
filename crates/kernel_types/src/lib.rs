@@ -680,6 +680,9 @@ pub type UDP_SOCK = udp_sock;
 /// Network device features type
 pub type NetdevFeaturesT = u64;
 
+/// List head for linked lists (lowercase alias for C compatibility)
+pub type list_head = ListHead;
+
 /// List head for linked lists
 #[repr(C)]
 #[derive(Copy, Clone)]
