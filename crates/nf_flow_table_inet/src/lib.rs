@@ -6,6 +6,10 @@ use kernel_types::*;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::ffi::c_void;
 
+// Error constants
+pub const ENOSPC: c_int = -28;
+pub const ENOENT: c_int = -2;
+
 /// Flow table entry for IPv4/IPv6
 #[repr(C)]
 #[derive(Copy, Clone)]

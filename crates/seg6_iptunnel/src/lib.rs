@@ -9,11 +9,6 @@ use core::ptr;
 use core::slice;
 use kernel_types::*;
 
-mod kernel_types {
-    pub type size_t = usize;
-    pub type c_size_t = usize;
-    pub type socklen_t = u32;
-}
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
