@@ -159,9 +159,16 @@ fn print_prompt() {
     print_at(row, 0, prompt, color);
 }
 
+fn outb(port: u16, val: u8) {
+    unsafe {
+        asm!("out dx, al", in("dx") port, in("al") val, options(nomem, nostack, preserves_flags));
+    }
+}
+
 fn print_at(row: usize, col: usize, text: &str, color: ColorCode) {
     let offset = (row * VGA_WIDTH + col) * 2;
     for (i, byte) in text.bytes().enumerate() {
+        outb(0x3F8, byte);
         if col + i >= VGA_WIDTH {
             break;
         }
@@ -170,6 +177,7 @@ fn print_at(row: usize, col: usize, text: &str, color: ColorCode) {
             *VGA_BUFFER.offset(offset as isize + i as isize * 2 + 1) = color.value;
         }
     }
+    outb(0x3F8, b'\n');
 }
 
 // Panic handler
