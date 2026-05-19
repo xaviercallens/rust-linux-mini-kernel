@@ -15,6 +15,8 @@
 
 ## 🎯 Overview
 
+![Gamma Kernel v7.0.0-beta Demo](demo.gif)
+
 A comprehensive Rust translation of the Linux kernel networking subsystem, maintaining full FFI compatibility with the original C implementation. This project demonstrates that critical kernel components can be successfully reimplemented in Rust while preserving binary compatibility and performance characteristics.
 
 **Key Features:**
