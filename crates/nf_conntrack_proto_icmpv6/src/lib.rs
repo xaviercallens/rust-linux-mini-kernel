@@ -6,11 +6,52 @@
 use core::ffi::{c_void, c_int, c_uint, c_ulong};
 use core::mem;
 use core::ptr;
+use kernel_types::{sk_buff, nf_conn};
 
 pub const IPPROTO_ICMPV6: c_int = 58;
 pub const NF_ACCEPT: c_int = 1;
 pub const NFPROTO_IPV6: c_int = 10;
 pub const HZ: c_ulong = 100;
+
+// ICMPv6 type inversion map for reply tracking
+static INVMAP: [u8; 256] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    129, 130, 0, 0, 0, 0, 0, 0, 0, 137, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+// ICMPv6 types that can start new connections
+static VALID_NEW: [u8; 256] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -96,8 +137,6 @@ pub static mut ICMPV6_ERR_CONVERT: *mut c_void = ptr::null_mut();
 pub static mut INET6_SOCKRAW_OPS: *mut c_void = ptr::null_mut();
 pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut c_void = ptr::null_mut();
 
-static nf_ct_icmpv6_timeout: c_ulong = 30 * HZ;
-
 #[no_mangle]
 pub unsafe extern "C" fn icmpv6_pkt_to_tuple(
     skb: *const sk_buff,
@@ -160,10 +199,7 @@ pub unsafe extern "C" fn nf_conntrack_icmpv6_packet(
     ctinfo: c_int,
     state: *const nf_hook_state,
 ) -> c_int {
-    let timeout = nf_ct_timeout_lookup(ct);
-    let valid_new = [1, 0, 0, 0, 1, 0];
-
-    if (*state).pf != NFPROTO_IPV6 {
+    if (*state).pf != NFPROTO_IPV6 as u8 as c_int {
         return -NF_ACCEPT;
     }
 
@@ -180,7 +216,7 @@ pub unsafe extern "C" fn nf_conntrack_icmpv6_packet(
 
     let timeout_ptr = unsafe { nf_ct_timeout_lookup(ct) };
     let timeout = if timeout_ptr.is_null() {
-        unsafe { *icmpv6_get_timeouts((*state).net) }
+        unsafe { *icmpv6_get_timeouts((*state).net as *mut _) }
     } else {
         unsafe { *timeout_ptr }
     };
@@ -198,7 +234,7 @@ unsafe fn skb_header_pointer(
     size: c_int,
     buffer: *mut c_void,
 ) -> *mut c_void {
-    if (*skb).len < dataoff as c_int + size {
+    if (*skb).len < (dataoff as c_int + size) as c_uint {
         return ptr::null_mut();
     }
 
