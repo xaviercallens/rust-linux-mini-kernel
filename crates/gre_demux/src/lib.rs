@@ -284,6 +284,9 @@ pub unsafe extern "C" fn gre_err(skb: *mut c_void, info: u32) -> c_int {
         }
     }
 
+    0
+}
+
 // Module metadata
 #[cfg(feature = "kernel_module")]
 mod module {
