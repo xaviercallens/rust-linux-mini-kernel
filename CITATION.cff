@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Rust Linux Mini Kernel"
+abstract: "FFI-compatible Rust translation of the Linux kernel networking stack with formal verification support"
+authors:
+  - family-names: "Callens"
+    given-names: "Xavier"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/xaviercallens/rust-linux-mini-kernel"
+url: "https://github.com/xaviercallens/rust-linux-mini-kernel"
+license: MIT
+version: "7.0.0-alpha"
+date-released: 2025-01-19
+keywords:
+  - rust
+  - linux-kernel
+  - networking
+  - ffi
+  - formal-verification
+  - operating-systems
