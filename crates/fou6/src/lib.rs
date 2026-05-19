@@ -241,7 +241,8 @@ fn gue6_err(
             1 => {
                 skb_set_transport_header(skb, -(mem::size_of::<icmp6hdr>() as isize));
 
-                match (*(&(*guehdr as *const guehdr as *const iphdr)).version) {
+                let iph = &*(guehdr as *const guehdr as *const iphdr);
+                match (*iph).version {
                     4 => {
                         let ret = gue6_err_proto_handler(
                             IPPROTO_IPIP as c_int,
@@ -323,9 +324,17 @@ static mut gue_ip6tun_ops: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
 extern "C" {
     fn fou_encap_hlen(e: *const ip_tunnel_encap) -> c_int;
     fn gue_encap_hlen(e: *const ip_tunnel_encap) -> c_int;
-    fn inet6_protos: [*const inet6_protocol; 256];
-    fn icmp6hdr: [u8; 0];
+    static inet6_protos: [*const inet6_protocol; 256];
     fn skb_set_transport_header(skb: *mut sk_buff, offset: isize);
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct icmp6hdr {
+    pub icmp6_type: u8,
+    pub icmp6_code: u8,
+    pub icmp6_cksum: u16,
+    pub icmp6_dataun: [u8; 4],
 }
 
 // Module functions
