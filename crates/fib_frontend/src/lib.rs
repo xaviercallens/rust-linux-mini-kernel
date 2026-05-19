@@ -81,7 +81,7 @@ unsafe extern "C" {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
 }
 

@@ -105,7 +105,7 @@ unsafe extern "C" fn nf_ct_generic_timeout() -> c_uint {
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_generic_init_net(net: *mut c_void) {
     let gn = nf_generic_pernet(net);
-    (*gn).timeout = NF_CT_GENERIC_TIMEOUT();
+    (*gn).timeout = NF_CT_GENERIC_TIMEOUT;
 }
 
 #[no_mangle]
