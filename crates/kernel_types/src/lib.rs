@@ -68,6 +68,7 @@ pub union nf_inet_addr {
     pub ip6: [__be32; 4],
     pub in_addr: in_addr,
     pub in6: in6_addr,
+    pub s_addr: __be32,
 }
 
 // ============================================================================
@@ -318,6 +319,7 @@ pub struct inet6_dev {
 #[derive(Copy, Clone)]
 pub struct net {
     pub loopback_dev: *mut net_device,
+    pub ct: *mut c_void,
     _padding: [u8; 0],
 }
 
@@ -377,6 +379,11 @@ pub struct sk_buff {
     pub data: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk: *mut core::ffi::c_void, // Force injected mock field
     pub dst: *mut core::ffi::c_void, // Force injected mock field
+    pub head: *mut __u8,
+    pub network_header: __u16,
+    pub transport_header: __u16,
+    pub transport_offset: c_int,
+    pub network_header_len: c_uint,
 }
 
 /// IPv6 control block (in sk_buff->cb)
@@ -463,6 +470,7 @@ pub struct nf_conntrack_tuple_src {
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_dst {
     pub u: nf_conntrack_tuple_u,
+    pub protonum: __u8,
 }
 
 /// Netfilter connection tracking tuple union
@@ -687,5 +695,6 @@ pub type NF_INET_ADDR = nf_inet_addr;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net_device {
+    pub ifindex: c_int,
     _private: [u8; 0],
 }

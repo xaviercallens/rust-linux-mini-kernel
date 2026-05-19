@@ -87,8 +87,14 @@ unsafe fn rt6_get_cookie(_rt: *const rt6_info) -> u32 {
 #[inline(always)]
 unsafe fn skb_ipv6_hdr(_skb: *const sk_buff) -> ipv6hdr {
     ipv6hdr {
-        saddr: in6_addr { s6_addr32: [0; 4] },
-        daddr: in6_addr { s6_addr32: [0; 4] },
+        saddr: in6_addr {
+            in6_u: in6_addr_union { u6_addr32: [0; 4] },
+            s6_addr: core::ptr::null_mut()
+        },
+        daddr: in6_addr {
+            in6_u: in6_addr_union { u6_addr32: [0; 4] },
+            s6_addr: core::ptr::null_mut()
+        },
     }
 }
 
@@ -105,15 +111,6 @@ unsafe extern "C" {
         sport: c_ushort,
     ) -> u32;
     fn secure_tcpv6_ts_off(net: *const c_void, daddr: [u32; 4], saddr: [u32; 4]) -> u32;
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn tcp_inet6_sk(sk: *const sock) -> *mut ipv6_pinfo {
-    if sk.is_null() {
-        return core::ptr::null_mut();
-    }
-    let offset = core::mem::size_of::<sock>() - core::mem::size_of::<ipv6_pinfo>();
-    (sk as *const u8).add(offset) as *mut ipv6_pinfo
 }
 
 #[no_mangle]
@@ -148,7 +145,7 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_ts_off(net: *const c_void, skb: *const sk_buff) -> u32 {
-    let ipv6_hdr = (*skb).ipv6_hdr;
+    let ipv6_hdr = skb_ipv6_hdr(skb);
     secure_tcpv6_ts_off(net, ipv6_hdr.daddr.in6_u.u6_addr32, ipv6_hdr.saddr.in6_u.u6_addr32)
 }
 
