@@ -36,7 +36,7 @@ type early_demux_fn = extern "C" fn(*mut sk_buff);
 
 fn ip6_rcv_finish_core(_net: *mut net, _sk: *mut sock, skb: *mut sk_buff) {
     let edemux: Option<early_demux_fn> = unsafe {
-        let idev = __in6_dev_get((*skb).dev);
+        let idev = __in6_dev_get((*skb).dev as *mut net_device);
         if idev.is_null() {
             None
         } else {
