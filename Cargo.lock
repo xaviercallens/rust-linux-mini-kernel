@@ -19,7 +19,135 @@ dependencies = [
 ]
 
 [[package]]
+name = "anon_inodes"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "anycast"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_apic"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_boot_compressed"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_boot_header"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_cpu"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_entry"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_fault"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_ioremap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_irq"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_pgtable"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_process"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_setup"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_signal"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_syscall"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_tlb"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "arch_traps"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -35,7 +163,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "binfmt_elf"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "bitmap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "block_dev"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "bpf_tcp_ca"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "buffer"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -75,7 +235,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "char_dev"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "cipso_ipv4"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "cmdline"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -107,6 +283,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc32"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ctype"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "datagram"
 version = "0.4.0"
 dependencies = [
@@ -116,6 +308,142 @@ dependencies = [
 
 [[package]]
 name = "devinet"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "devtmpfs"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_base_bus"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_base_class"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_base_core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_base_driver"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_base_platform"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_block_core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_block_genhd"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_block_partition"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_char_mem"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_char_random"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_pci_access"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_pci_core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_pci_probe"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_tty_console"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_tty_core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "driver_tty_vt"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -155,6 +483,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eventfd"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "exec"
 version = "0.4.0"
 dependencies = [
@@ -163,7 +499,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "exec_domain"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "exit"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ext4_balloc"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ext4_extents"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ext4_file"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ext4_inode"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ext4_super"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -251,6 +635,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fifo"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "fork"
 version = "0.4.0"
 dependencies = [
@@ -299,6 +691,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "idr"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "igmp"
 version = "0.4.0"
 dependencies = [
@@ -331,7 +731,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "init_calibrate"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "init_do_mounts"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "init_initramfs"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "init_main"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "init_mm"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "init_version"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -435,6 +875,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "ipc_mqueue"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ipc_msg"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ipc_sem"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "ipc_shm"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "ipcomp6"
 version = "0.4.0"
 dependencies = [
@@ -444,6 +916,30 @@ dependencies = [
 
 [[package]]
 name = "ipv6_sockglue"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "irq_chip"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "irq_handle"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "irq_manage"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -467,6 +963,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "kfifo"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "klist"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "kobject"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "kref"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "kthread"
 version = "0.4.0"
 dependencies = [
@@ -479,6 +1007,14 @@ name = "libc"
 version = "0.2.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
+
+[[package]]
+name = "locks"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
 
 [[package]]
 name = "mcast"
@@ -545,6 +1081,14 @@ dependencies = [
 
 [[package]]
 name = "mmap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "module_core"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -944,6 +1488,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "notifier"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "oom_kill"
 version = "0.4.0"
 dependencies = [
@@ -992,6 +1544,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "panic"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "params"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "percpu"
 version = "0.4.0"
 dependencies = [
@@ -1008,6 +1576,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "pipe"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "printk"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "proc_base"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "proc_generic"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "ptrace"
 version = "0.4.0"
 dependencies = [
@@ -1016,7 +1616,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "radix_tree"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "raw"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "rbtree"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -1088,6 +1704,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "security_commoncap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "security_keyring"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "security_keys"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "seg6"
 version = "0.4.0"
 dependencies = [
@@ -1120,7 +1760,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "seq_file"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "signal"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "signalfd"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -1152,6 +1808,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "softirq"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "string"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "swap"
 version = "0.4.0"
 dependencies = [
@@ -1176,7 +1848,263 @@ dependencies = [
 ]
 
 [[package]]
+name = "sys_access"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_brk"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_chdir"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_close"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_dup"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_exec"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_exit"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_fcntl"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_fork"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_fs"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_getpid"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_getuid"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_ioctl"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_ipc"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_kill"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_memory"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_mmap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_munmap"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_open"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_pipe"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_process"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_read"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_signal"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_socket"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_stat"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_time"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_umask"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_wait"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sys_write"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "syscall_table"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "sysctl_net_ipv6"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sysfs_dir"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "sysfs_file"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -1201,6 +2129,78 @@ dependencies = [
 
 [[package]]
 name = "tcpv6_offload"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_alarmtimer"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_clocksource"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_hrtimer"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_ntp"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_posix_timers"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_tick"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_timekeeping"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "time_timer"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "timerfd"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
@@ -1248,6 +2248,62 @@ dependencies = [
 ]
 
 [[package]]
+name = "vfs_dcache"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vfs_file"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vfs_inode"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vfs_namei"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vfs_open"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vfs_read_write"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vfs_super"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "vmalloc"
 version = "0.4.0"
 dependencies = [
@@ -1257,6 +2313,14 @@ dependencies = [
 
 [[package]]
 name = "vmscan"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
+name = "vsprintf"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
