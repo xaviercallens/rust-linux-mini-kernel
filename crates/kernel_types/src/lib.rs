@@ -338,11 +338,21 @@ pub struct rt6_info {
     pub rt6i_dst: *mut core::ffi::c_void, // Force injected mock field
 }
 
+/// IPv6 configuration
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ipv6_devconf {
+    pub disable_ipv6: c_int,
+    _padding: [u8; 0],
+}
+
 /// IPv6 interface device info
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct inet6_dev {
     pub dev: *mut net_device,
+    pub early_demux: Option<extern "C" fn(*mut sk_buff)>,
+    pub cnf: ipv6_devconf,
     _padding: [u8; 0],
 }
 
@@ -401,6 +411,7 @@ pub struct sk_buff {
     pub csum: __u32,
     pub priority: __u32,
     pub protocol: __be16,
+    pub flags: __u32,
     pub cb: [__u8; 48],
     pub ip_summed: __u8,      // Checksum status
     pub csum_level: __u8,     // Checksum level

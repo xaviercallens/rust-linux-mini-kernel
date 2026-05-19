@@ -5111,3 +5111,41 @@ Summary:
   ❌ Failing: 3/5
 
 
+========================================
+📊 Compilation Check - 2026-05-19 15:09:21
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 104 errors
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 2/5 (40.0%)
+  ❌ Failing: 3/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 15:14:22
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 104 errors
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 2/5 (40.0%)
+  ❌ Failing: 3/5
+
+
