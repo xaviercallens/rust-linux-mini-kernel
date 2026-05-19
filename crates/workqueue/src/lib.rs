@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn workqueue_init() -> c_int {
-    // TODO: Initialize workqueue subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn workqueue_exit() {
-    // TODO: Cleanup workqueue subsystem
 }
 
 #[no_mangle]

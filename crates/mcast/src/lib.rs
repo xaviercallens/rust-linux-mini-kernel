@@ -349,8 +349,6 @@ pub unsafe extern "C" fn ipv6_dev_mc_dec(_dev: *mut net_device, _addr: *const in
     // Placeholder implementation - actual logic depends on device driver
 }
 
-
-
 // Tests
 #[cfg(test)]
 mod tests {

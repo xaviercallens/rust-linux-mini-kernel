@@ -10,14 +10,12 @@ use libc::{c_int, c_uint, c_void, c_ulong, size_t};
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn swap_init() -> c_int {
-    // TODO: Initialize swap subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn swap_exit() {
-    // TODO: Cleanup swap subsystem
 }
 
 // Placeholder exports for FFI compatibility

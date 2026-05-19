@@ -215,9 +215,7 @@ pub unsafe extern "C" fn inet6_create(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn af_inet6_init() -> c_int {
-    0
-}
+pub unsafe extern "C" fn af_inet6_init() -> c_int { 0 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn af_inet6_exit() {

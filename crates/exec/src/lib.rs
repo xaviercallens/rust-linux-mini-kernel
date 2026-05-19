@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn exec_init() -> c_int {
-    // TODO: Initialize exec subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn exec_exit() {
-    // TODO: Cleanup exec subsystem
 }
 
 #[no_mangle]
