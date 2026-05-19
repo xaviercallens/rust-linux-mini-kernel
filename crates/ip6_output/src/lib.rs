@@ -11,23 +11,12 @@
 #![allow(clippy::too_many_arguments)]
 
 use core::ffi::{c_int, c_void};
+use core::mem;
 use core::panic::PanicInfo;
 use core::ptr;
 use kernel_types::*;
 
-// Fallback opaque kernel types in case kernel_types doesn't expose them directly.
-#[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
-#[repr(C)]
-pub struct inet6_dev {
-    _priv: [u8; 0],
-}
-#[repr(C)]
-pub struct net_device {
-    _priv: [u8; 0],
-}
+// Most types come from kernel_types, but define any that are missing locally
 
 pub type netdev_features_t = usize;
 
@@ -165,6 +154,10 @@ fn ip6_dst_idev(_dst: *mut dst_entry) -> *mut inet6_dev {
     ptr::null_mut()
 }
 
+extern "C" fn ip6_finish_output(_net: *mut net, _sk: *mut sock, _skb: *mut sk_buff) -> c_int {
+    0
+}
+
 fn ip6_dst_hoplimit(_dst: *mut dst_entry) -> c_int {
     64
 }
@@ -194,9 +187,6 @@ fn ipv6_push_nfrag_opts(
     _first_hop: *mut *mut in6_addr,
     _saddr: *mut *mut in6_addr,
 ) {
-}
-
-fn ipv6_push_nfrag_opts(skb: *mut sk_buff, opt: *mut c_void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_addr) {
     // Placeholder implementation
 }
 
@@ -240,7 +230,7 @@ pub unsafe extern "C" fn ip6_output(
 
     let dev = (*skb).dev;
     let indev = (*skb).dev;
-    let idev = ip6_dst_idev((*skb).dst);
+    let idev = ip6_dst_idev((*skb).dst as *mut dst_entry);
 
     (*skb).protocol = 0x86DD; // ETH_P_IPV6
     (*skb).dev = dev;
@@ -257,8 +247,8 @@ pub unsafe extern "C" fn ip6_output(
         net,
         sk,
         skb,
-        indev,
-        dev,
+        indev as *mut net_device,
+        dev as *mut net_device,
         ip6_finish_output,
         !((*skb).flags & 0x01 != 0), // IP6SKB_REROUTED
     )
@@ -276,12 +266,13 @@ pub unsafe extern "C" fn ip6_xmit(
 ) -> c_int {
     let net = sock_net(sk);
     let np = inet6_sk(sk);
-    let dst = (*skb).dst;
-    let dev = (*dst).dev;
-    let head_room = mem::size_of::<ipv6hdr>() + LL_RESERVED_SPACE(dev);
+    let dst = (*skb).dst as *mut dst_entry;
+    let dev = (*dst).dev as *mut net_device;
+    let head_room = mem::size_of::<ipv6hdr>() + LL_RESERVED_SPACE(dev) as usize;
     let mut hdr: *mut ipv6hdr = ptr::null_mut();
     let mut proto: u8 = 0;
-    let mut first_hop: *mut in6_addr = &((*fl6).daddr);
+    let fl6_typed = fl6 as *mut flowi6;
+    let mut first_hop: *mut in6_addr = &mut ((*fl6_typed).daddr);
     let mut hlimit: c_int = -1;
     let mut mtu: c_int = 0;
 

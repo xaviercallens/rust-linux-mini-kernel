@@ -1,4 +1,3 @@
-```rust
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
@@ -155,4 +154,3 @@ pub unsafe extern "C" fn fib6_notifier_exit(net: *mut c_void) {
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
-```
