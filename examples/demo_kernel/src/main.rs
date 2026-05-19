@@ -2,6 +2,28 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+use core::arch::global_asm;
+
+global_asm!(r#"
+.section .multiboot
+.align 4
+.long 0x1BADB002
+.long 0x00
+.long -(0x1BADB002)
+"#);
+
+#[no_mangle]
+pub unsafe extern "C" fn memset(dest: *mut u8, c: i32, n: usize) -> *mut u8 {
+    let mut i = 0;
+    while i < n {
+        *dest.add(i) = c as u8;
+        i += 1;
+    }
+    dest
+}
+
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {}
 
 // VGA text buffer constants
 const VGA_BUFFER: *mut u8 = 0xb8000 as *mut u8;
