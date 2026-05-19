@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use core::ptr;
 use kernel_types::*;
 
