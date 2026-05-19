@@ -7,6 +7,8 @@ use core::ptr;
 use kernel_types::*;
 
 pub const ENOMEM: c_int = 12;
+pub const ENOENT: c_int = 2;
+pub const EINPROGRESS: c_int = 115;
 
 pub type __be16 = u16;
 pub type __be32 = u32;
@@ -100,34 +102,6 @@ pub struct IP6CB {
     pub frag_max_size: c_int,
 }
 
-unsafe extern "C" {
-    fn ipv6_get_dsfield(ipv6h: *const ipv6hdr) -> u8;
-    fn ipv6_change_dsfield(ipv6h: *mut ipv6hdr, mask: u8, value: u8);
-
-    fn inet_frag_kill(q: *mut inet_frag_queue);
-    fn inet_frag_reasm_prepare(
-        q: *mut inet_frag_queue,
-        skb: *mut sk_buff,
-        prev_tail: *mut sk_buff,
-    ) -> *mut reasm_data;
-    fn inet_frag_reasm_finish(
-        q: *mut inet_frag_queue,
-        skb: *mut sk_buff,
-        data: *mut reasm_data,
-        update_dev: bool,
-    );
-
-    fn skb_postpush_rcsum(skb: *mut sk_buff, start: *const u8, len: c_uint);
-    fn skb_network_header_len(skb: *const sk_buff) -> c_uint;
-
-    fn __in6_dev_stats_get(ifindex: c_int, skb: *mut sk_buff) -> *mut c_void;
-    fn __IP6_INC_STATS(net: *mut net, stats: *mut c_void, item: c_int);
-}
-
-#[inline(always)]
-unsafe fn ipv6_hdr(_skb: *mut sk_buff) -> *mut ipv6hdr {
-    ptr::null_mut()
-}
 
 #[inline(always)]
 unsafe fn ip6cb(_skb: *mut sk_buff) -> *mut IP6CB {
