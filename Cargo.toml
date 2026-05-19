@@ -196,5 +196,5 @@ panic = "abort"
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = false
 panic = "abort"
