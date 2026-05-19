@@ -515,6 +515,149 @@ fn main() {
 }
 RUSTEOF
 
+# Benchmark 6: IPv6 Flowlabel
+cat > benchmarks/c/ip6_flowlabel.c << 'CEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+
+uint32_t ip6_flowlabel(uint32_t src_ip, uint32_t dst_ip) {
+    uint32_t hash = src_ip ^ dst_ip;
+    hash = (hash ^ (hash >> 16)) * 0x85ebca6b;
+    hash = (hash ^ (hash >> 13)) * 0xc2b2ae35;
+    return (hash ^ (hash >> 16)) & 0xFFFFF; // 20-bit flow label
+}
+
+int main(int argc, char **argv) {
+    int iterations = atoi(argv[1]);
+    struct timespec start, end;
+    
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        ip6_flowlabel(0xC0A80001, 0x0A000001);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("%.9f\n", elapsed);
+    return 0;
+}
+CEOF
+
+cat > benchmarks/rust/ip6_flowlabel.rs << 'RUSTEOF'
+use std::env;
+use std::time::Instant;
+
+fn ip6_flowlabel(src_ip: u32, dst_ip: u32) -> u32 {
+    let mut hash = src_ip ^ dst_ip;
+    hash = (hash ^ (hash >> 16)).wrapping_mul(0x85ebca6b);
+    hash = (hash ^ (hash >> 13)).wrapping_mul(0xc2b2ae35);
+    (hash ^ (hash >> 16)) & 0xFFFFF
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let iterations: usize = args[1].parse().unwrap();
+
+    let start = Instant::now();
+    for _ in 0..iterations {
+        ip6_flowlabel(0xC0A80001, 0x0A000001);
+    }
+    let elapsed = start.elapsed();
+    println!("{:.9}", elapsed.as_secs_f64());
+}
+RUSTEOF
+
+# Benchmark 7: Anycast Routing Resolution
+cat > benchmarks/c/anycast_resolve.c << 'CEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+struct anycast_node {
+    int metric;
+    struct anycast_node *next;
+};
+
+int resolve_anycast(struct anycast_node *head) {
+    int best_metric = 999999;
+    struct anycast_node *curr = head;
+    while (curr) {
+        if (curr->metric < best_metric) {
+            best_metric = curr->metric;
+        }
+        curr = curr->next;
+    }
+    return best_metric;
+}
+
+int main(int argc, char **argv) {
+    int iterations = atoi(argv[1]);
+    struct timespec start, end;
+    
+    struct anycast_node *head = malloc(sizeof(struct anycast_node));
+    head->metric = 100;
+    head->next = malloc(sizeof(struct anycast_node));
+    head->next->metric = 50;
+    head->next->next = malloc(sizeof(struct anycast_node));
+    head->next->next->metric = 75;
+    head->next->next->next = NULL;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        resolve_anycast(head);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("%.9f\n", elapsed);
+    return 0;
+}
+CEOF
+
+cat > benchmarks/rust/anycast_resolve.rs << 'RUSTEOF'
+use std::env;
+use std::time::Instant;
+
+#[repr(C)]
+struct AnycastNode {
+    metric: i32,
+    next: *mut AnycastNode,
+}
+
+fn resolve_anycast(mut head: *mut AnycastNode) -> i32 {
+    let mut best_metric = 999999;
+    unsafe {
+        while !head.is_null() {
+            if (*head).metric < best_metric {
+                best_metric = (*head).metric;
+            }
+            head = (*head).next;
+        }
+    }
+    best_metric
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let iterations: usize = args[1].parse().unwrap();
+
+    unsafe {
+        let node3 = Box::into_raw(Box::new(AnycastNode { metric: 75, next: std::ptr::null_mut() }));
+        let node2 = Box::into_raw(Box::new(AnycastNode { metric: 50, next: node3 }));
+        let head = Box::into_raw(Box::new(AnycastNode { metric: 100, next: node2 }));
+
+        let start = Instant::now();
+        for _ in 0..iterations {
+            resolve_anycast(head);
+        }
+        let elapsed = start.elapsed();
+        println!("{:.9}", elapsed.as_secs_f64());
+    }
+}
+RUSTEOF
+
 echo "Building benchmark programs..."
 echo ""
 
@@ -524,6 +667,8 @@ gcc -O3 -o benchmarks/c/arp_process benchmarks/c/arp_process.c
 gcc -O3 -o benchmarks/c/route_lookup benchmarks/c/route_lookup.c
 gcc -O3 -o benchmarks/c/udp_csum benchmarks/c/udp_csum.c
 gcc -O3 -o benchmarks/c/gre_encap benchmarks/c/gre_encap.c
+gcc -O3 -o benchmarks/c/ip6_flowlabel benchmarks/c/ip6_flowlabel.c
+gcc -O3 -o benchmarks/c/anycast_resolve benchmarks/c/anycast_resolve.c
 
 # Compile Rust benchmarks
 rustc -C opt-level=3 -o benchmarks/rust/skbuff_alloc benchmarks/rust/skbuff_alloc.rs
@@ -531,6 +676,8 @@ rustc -C opt-level=3 -o benchmarks/rust/arp_process benchmarks/rust/arp_process.
 rustc -C opt-level=3 -o benchmarks/rust/route_lookup benchmarks/rust/route_lookup.rs
 rustc -C opt-level=3 -o benchmarks/rust/udp_csum benchmarks/rust/udp_csum.rs
 rustc -C opt-level=3 -o benchmarks/rust/gre_encap benchmarks/rust/gre_encap.rs
+rustc -C opt-level=3 -o benchmarks/rust/ip6_flowlabel benchmarks/rust/ip6_flowlabel.rs
+rustc -C opt-level=3 -o benchmarks/rust/anycast_resolve benchmarks/rust/anycast_resolve.rs
 
 echo "✅ Benchmark programs compiled"
 echo ""
@@ -597,6 +744,14 @@ run_benchmark "UDP Checksum" \
 run_benchmark "GRE Encapsulation" \
     "benchmarks/c/gre_encap" \
     "benchmarks/rust/gre_encap"
+
+run_benchmark "IPv6 Flowlabel" \
+    "benchmarks/c/ip6_flowlabel" \
+    "benchmarks/rust/ip6_flowlabel"
+
+run_benchmark "Anycast Resolution" \
+    "benchmarks/c/anycast_resolve" \
+    "benchmarks/rust/anycast_resolve"
 
 # Finalize results
 BENCHMARK_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
