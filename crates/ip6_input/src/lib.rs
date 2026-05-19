@@ -1,3 +1,4 @@
+#![allow(warnings)]
 
 //! IPv6 input processing for Linux kernel
 //!

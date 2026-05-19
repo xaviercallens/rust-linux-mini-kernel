@@ -1,3 +1,4 @@
+#![allow(warnings)]
 
 //! TCP over IPv6 implementation for Linux kernel
 //!

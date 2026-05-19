@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use kernel_types::*;
 use core::ffi::{c_int, c_void};
 use core::ptr;

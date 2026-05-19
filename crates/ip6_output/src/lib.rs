@@ -1,3 +1,4 @@
+#![allow(warnings)]
 
 //! IPv6 output functions for Linux kernel
 //!
