@@ -46,7 +46,7 @@ fn demo_type_sizes() {
     println!("  inet_sock:      {} bytes (align: {})", size_of::<inet_sock>(), align_of::<inet_sock>());
 
     println!("\nPacket Buffers:");
-    println!("  skbuff:         {} bytes (align: {})", size_of::<skbuff>(), align_of::<skbuff>());
+    println!("  skbuff:         {} bytes (align: {})", size_of::<sk_buff>(), align_of::<sk_buff>());
     println!("  ip6cb:          {} bytes (align: {})", size_of::<ip6cb>(), align_of::<ip6cb>());
 
     println!("\n✅ All types are #[repr(C)] compatible\n");
@@ -60,6 +60,7 @@ fn demo_network_stack() {
     // IPv4 address: 192.168.1.1
     let ipv4_addr = in_addr {
         s_addr: u32::from_be_bytes([192, 168, 1, 1]),
+        ip: core::ptr::null_mut(),
     };
     println!("IPv4 Address: 192.168.1.1");
     println!("  Raw value: 0x{:08x}", ipv4_addr.s_addr);
@@ -69,6 +70,7 @@ fn demo_network_stack() {
         in6_u: in6_addr_union {
             u6_addr32: [0, 0, 0, u32::from_be(1)],
         },
+        s6_addr: core::ptr::null_mut(),
     };
     println!("\nIPv6 Loopback: ::1");
     unsafe {
@@ -233,7 +235,7 @@ unsafe fn validate_ipv6_header(ip6h: *const ipv6hdr) {
 }
 
 /// Simulated system call: socket creation
-unsafe fn sys_socket_demo(family: c_int, sock_type: c_int, protocol: c_int) -> c_int {
+unsafe fn sys_socket_demo(family: c_int, sock_type: c_int, _protocol: c_int) -> c_int {
     if family < 0 || sock_type < 0 {
         return -EINVAL;
     }

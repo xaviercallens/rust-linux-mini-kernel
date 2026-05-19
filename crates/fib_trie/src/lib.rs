@@ -157,7 +157,7 @@ pub unsafe extern "C" fn __node_free_rcu(_head: *mut rcu_head) {}
 #[no_mangle]
 pub unsafe extern "C" fn call_rcu(head: *mut rcu_head, func: unsafe extern "C" fn(*mut rcu_head)) {
     if !head.is_null() {
-        (*head).func = func;
+        (*head).func = Some(func);
         // Implementation would enqueue the RCU callback
     }
 }
@@ -190,6 +190,13 @@ pub unsafe extern "C" fn call_fib_entry_notifiers(
 }
 
 // Tests
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,7 +208,7 @@ mod tests {
             pos: 4,
             bits: 8,
             slen: 0,
-            union: [0; 0],
+            pad: 0,
         };
         let index = unsafe { get_index(0x87654321, &mut kv) };
         assert_eq!(index, 0x87654321 ^ 0x12345678 >> 4);
@@ -214,7 +221,7 @@ mod tests {
             pos: 4,
             bits: 8,
             slen: 0,
-            union: [0; 0],
+            pad: 0,
         };
         let index = unsafe { get_cindex(0x87654321, &mut kv) };
         assert_eq!(index, 0x87654321 ^ 0x12345678 >> 4);
