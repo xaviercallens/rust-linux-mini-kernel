@@ -242,9 +242,7 @@ pub unsafe extern "C" fn find_pattern(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn find_nl_seq(_seq: __u32, _info: *const nf_ct_ftp_master, _dir: c_int) -> c_int {
-    0
-}
+pub unsafe extern "C" fn find_nl_seq(_seq: __u32, _info: *const nf_ct_ftp_master, _dir: c_int) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn update_nl_seq(_seq: __u32, _info: *mut nf_ct_ftp_master, _dir: c_int) {}

@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn kthread_init() -> c_int {
-    // TODO: Initialize kthread subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn kthread_exit() {
-    // TODO: Cleanup kthread subsystem
 }
 
 #[no_mangle]

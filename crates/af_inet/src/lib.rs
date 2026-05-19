@@ -242,24 +242,16 @@ pub unsafe extern "C" fn container_of<T>(_ptr: *mut c_void, _type: T, _member: *
 pub unsafe extern "C" fn request_module(_fmt: *const c_char) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn ns_capable(_ns: *mut c_void, _cap: c_int) -> bool {
-    false
-}
+pub unsafe extern "C" fn ns_capable(_ns: *mut c_void, _cap: c_int) -> bool { false }
 
 #[no_mangle]
-pub unsafe extern "C" fn sock_flag(_sk: *const sock_extended, _flag: c_int) -> bool {
-    false
-}
+pub unsafe extern "C" fn sock_flag(_sk: *const sock_extended, _flag: c_int) -> bool { false }
 
 #[no_mangle]
-pub unsafe extern "C" fn atomic_read(_v: *const atomic_t) -> c_int {
-    0
-}
+pub unsafe extern "C" fn atomic_read(_v: *const atomic_t) -> c_int { 0 }
 
 #[no_mangle]
-pub unsafe extern "C" fn refcount_read(_r: *const refcount_t) -> c_int {
-    0
-}
+pub unsafe extern "C" fn refcount_read(_r: *const refcount_t) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn htons(x: u16) -> u16 {
