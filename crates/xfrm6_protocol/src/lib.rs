@@ -305,16 +305,6 @@ pub unsafe extern "C" fn xfrm6_protocol_fini() {
 
 // Dummy implementations for required kernel functions
 #[no_mangle]
-pub unsafe extern "C" fn icmpv6_send(skb: *mut sk_buff, _type: c_int, code: c_int, info: c_int) {
-    // Dummy implementation
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn kfree_skb(skb: *mut sk_buff) {
-    // Dummy implementation
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn pr_err(fmt: *const c_char) {
     // Dummy implementation
 }

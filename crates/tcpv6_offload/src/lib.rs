@@ -185,16 +185,6 @@ unsafe fn skb_len(_skb: *mut sk_buff) -> u32 {
 }
 
 #[inline]
-unsafe extern "C" fn tcp_gro_receive(_head: *mut c_void, _skb: *mut sk_buff) -> *mut sk_buff {
-    ptr::null_mut()
-}
-
-#[inline]
-unsafe extern "C" fn tcp_gro_complete(_skb: *mut sk_buff) -> c_int {
-    0
-}
-
-#[inline]
 unsafe extern "C" fn tcp_gso_segment(_skb: *mut sk_buff, _features: netdev_features_t) -> *mut sk_buff {
     ptr::null_mut()
 }
