@@ -129,8 +129,6 @@ pub unsafe extern "C" fn nf_ct_unlink_expect_report(
 
     unsafe { nf_ct_expect_event_report(IPEXP_DESTROY, exp, portid, report) };
     unsafe { nf_ct_expect_put(exp) };
-
-    unsafe { NF_CT_STAT_INC(n, NF_CT_STAT_EXPECT_DELETE) };
 }
 
 #[unsafe(no_mangle)]
@@ -143,18 +141,18 @@ pub unsafe extern "C" fn nf_ct_remove_expect(exp: *mut nf_conntrack_expect) -> c
     0
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn __nf_ct_expect_find(
     n: *mut net,
     zone: *const nf_conntrack_zone,
     tuple: *const nf_conntrack_tuple,
 ) -> *mut nf_conntrack_expect {
-    let cnet = net_generic(net, NF_CONNTRACK_NET_ID);
+    let cnet = net_generic(n, NF_CONNTRACK_NET_ID);
     if (*cnet).expect_count == 0 {
         return ptr::null_mut();
     }
 
-    let h = nf_ct_expect_dst_hash(net, tuple);
+    let h = nf_ct_expect_dst_hash(n, tuple);
     let head = &(*NF_CT_EXPECT_HASH.offset(h as isize));
 
     let mut cur = unsafe { (*head).first };
