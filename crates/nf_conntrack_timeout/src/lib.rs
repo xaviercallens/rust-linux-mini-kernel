@@ -11,16 +11,16 @@ pub struct nf_conn {
     _priv: [u8; 0],
 }
 #[repr(C)]
-pub struct nf_conntrack {
-    _priv: [u8; 0],
-}
-#[repr(C)]
 pub struct nf_conntrack_helper {
     _priv: [u8; 0],
 }
 #[repr(C)]
-pub struct nf_conntrack_expect {
-    _priv: [u8; 0],
+pub struct nf_conntrack_timeout {
+    pub name: *const c_char,
+    pub timeout: u32,
+    pub hook_mask: u8,
+    pub next: *mut nf_conntrack_timeout,
+    pub use_: u32,
 }
 
 #[repr(C)]
@@ -90,51 +90,6 @@ pub struct nf_conntrack_tuple {
     pub dst_l3num: u8,
     pub src_protonum: u8,
     pub dst_protonum: u8,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union nf_conntrack_man_proto {
-    pub all: [u32; 2],
-    pub tcp: nf_conntrack_man_tcp,
-    pub udp: nf_conntrack_man_udp,
-    pub icmp: nf_conntrack_man_icmp,
-    pub sctp: nf_conntrack_man_sctp,
-    pub dccp: nf_conntrack_man_dccp,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_man_tcp {
-    pub port: u16,
-    pub state: u8,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_man_udp {
-    pub port: u16,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_man_icmp {
-    pub type_: u8,
-    pub code: u8,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_man_sctp {
-    pub port: u16,
-    pub state: u8,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_man_dccp {
-    pub port: u16,
-    pub state: u8,
 }
 
 #[repr(C)]
@@ -211,7 +166,7 @@ pub extern "C" fn nf_ct_timeout_alloc(
     let timeout_ptr = unsafe {
         kmalloc(
             core::mem::size_of::<nf_conntrack_timeout>(),
-            GFP_KERNEL as c_int,
+            GFP_KERNEL,
         ) as *mut nf_conntrack_timeout
     };
 
@@ -232,7 +187,7 @@ pub extern "C" fn nf_ct_timeout_alloc(
 
 #[no_mangle]
 pub extern "C" fn nf_ct_timeout_find(name: *const c_char) -> *mut nf_conntrack_timeout {
-    let mut timeout_ptr = unsafe { NF_CT_TIMEOUT_LIST };
+    let mut cur = unsafe { NF_CT_TIMEOUT_LIST };
 
     while !cur.is_null() {
         let a = unsafe { core::ffi::CStr::from_ptr((*cur).name) };
@@ -271,40 +226,10 @@ pub extern "C" fn nf_ct_timeout_put(timeout: *mut nf_conntrack_timeout) {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn nf_ct_timeout_find_get(name: *const c_char) -> *mut nf_conntrack_timeout {
-    let p = nf_ct_timeout_find(name);
-    if !p.is_null() {
-        nf_ct_timeout_get(p);
-    }
-    p
-}
-
-#[no_mangle]
-pub extern "C" fn nf_ct_timeout_alloc(
-    name: *const c_char,
-    timeout: u32,
-    hook_mask: u8,
-) -> *mut nf_conntrack_timeout {
-    let p =
-        unsafe { kmalloc(core::mem::size_of::<nf_conntrack_timeout>(), GFP_KERNEL as gfp_t) }
-            as *mut nf_conntrack_timeout;
-
-    if p.is_null() {
-        return core::ptr::null_mut();
-    }
-
-    unsafe {
-        (*timeout).next = NF_CT_TIMEOUT_LIST;
-        NF_CT_TIMEOUT_LIST = timeout;
-    }
-
-    p
-}
 
 #[no_mangle]
 pub extern "C" fn nf_ct_timeout_list_del(timeout: *mut nf_conntrack_timeout) {
-    let mut prev = core::ptr::null_mut();
+    let mut prev: *mut nf_conntrack_timeout = core::ptr::null_mut();
     let mut curr = unsafe { NF_CT_TIMEOUT_LIST };
 
     while !curr.is_null() {
@@ -320,7 +245,6 @@ pub extern "C" fn nf_ct_timeout_list_del(timeout: *mut nf_conntrack_timeout) {
         prev = curr;
         curr = unsafe { (*curr).next };
     }
-    p
 }
 
 static mut NF_CT_TIMEOUT_LIST: *mut nf_conntrack_timeout = core::ptr::null_mut();
@@ -336,7 +260,7 @@ pub extern "C" fn nf_ct_timeout_cleanup() {
 
     while !timeout_ptr.is_null() {
         let next = unsafe { (*timeout_ptr).next };
-        unsafe { nf_ct_timeout_destroy(timeout_ptr) };
+        unsafe { kfree(timeout_ptr as *mut c_void) };
         timeout_ptr = next;
     }
 

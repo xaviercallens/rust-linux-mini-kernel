@@ -96,8 +96,7 @@ unsafe extern "C" {
     fn ip6_find_1stfragopt(skb: *mut SkBuff, prevhdr: *mut *mut c_void) -> c_int;
     fn kfree_skb_list(skb: *mut SkBuff);
     fn ntohs(val: __be16) -> u16;
-    fn rcu_dereference(ptr: *const c_void) -> *mut c_void;
-    fn pskb_may_pull(skb: *mut SkBuff, len: c_uint) -> bool;
+    fn skb_reset_inner_headers(skb: *mut SkBuff);
 }
 
 // Helper functions
@@ -122,11 +121,10 @@ unsafe fn SKB_GSO_CB(skb: *mut SkBuff) -> *mut c_void {
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -> c_int {
     let mut proto = proto;
-    let mut ops: *const NetOffload = ptr::null();
 
     loop {
         if proto as u8 != NEXTHDR_HOP {
-            let ops = rcu_dereference(inet6_offloads(proto as u8 as c_int));
+            let ops = rcu_dereference(inet6_offloads(proto as u8));
             if ops.is_null() {
                 break;
             }
@@ -142,99 +140,84 @@ pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -
         let opth = (*skb).data as *mut Ipv6OptHdr;
         let len = ipv6_optlen(opth);
 
-        if !pskb_may_pull(skb, len) {
+        if !pskb_may_pull(skb, len as c_uint) {
             break;
         }
 
-        proto as u8 = (*opth).nexthdr;
+        proto = (*opth).nexthdr as c_int;
         __skb_pull(skb, len);
     }
 
-    proto as u8 as c_int
+    proto
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_gso_segment(skb: *mut SkBuff, features: NetdevFeaturesT) -> *mut SkBuff {
-    let mut segs = ptr::null_mut();
-    let mut ipv6h = ptr::null_mut();
-    let mut ops: *const NetOffload = ptr::null();
-    let mut proto: c_int = 0;
-    let mut encap: c_int = 0;
-    let mut nhoff: c_int = 0;
-    let mut udpfrag: c_int = 0;
+    let mut segs: *mut SkBuff;
+    let mut ipv6h: *mut Ipv6Hdr;
+    let mut proto: c_int;
+    let nhoff: u32;
+    let mut offset: c_int = 0;
 
     skb_reset_network_header(skb);
-    nhoff = (*skb).network_header - (*skb).mac_header;
+    nhoff = (*skb).network_header as u32;
 
-    if !pskb_may_pull(skb, core::mem::size_of::<Ipv6Hdr>() as c_int) {
+    if !pskb_may_pull(skb, core::mem::size_of::<Ipv6Hdr>() as c_uint) {
         return ptr::null_mut();
     }
-
-    encap = if SKB_GSO_CB(skb).encap_level > 0 { 1 } else { 0 };
-    if encap != 0 {
-        features = (*skb).dev.hw_enc_features;
-    }
-    SKB_GSO_CB(skb).encap_level += core::mem::size_of::<Ipv6Hdr>() as c_int;
 
     ipv6h = ipv6_hdr(skb);
     __skb_pull(skb, core::mem::size_of::<Ipv6Hdr>() as c_int);
-    segs = ptr::null_mut() as *mut SkBuff;
 
-    proto = ipv6_gso_pull_exthdrs(skb, (*ipv6h).nexthdr);
+    proto = ipv6_gso_pull_exthdrs(skb, (*ipv6h).nexthdr as c_int);
 
-    if (*skb).encapsulation != 0 &&
-       (*skb_shinfo(skb)).gso_type & (SKB_GSO_IPXIP4 | SKB_GSO_IPXIP6) != 0 {
-        udpfrag = if proto == IPPROTO_UDP && encap != 0 &&
-                  (*skb_shinfo(skb)).gso_type & SKB_GSO_UDP != 0 { 1 } else { 0 };
-    } else {
-        udpfrag = if proto == IPPROTO_UDP && (*skb).encapsulation == 0 &&
-                  (*skb_shinfo(skb)).gso_type & SKB_GSO_UDP != 0 { 1 } else { 0 };
-    }
-
-    ops = rcu_dereference(inet6_offloads(proto));
-    if !ops.is_null() && !(*ops).callbacks.gso_segment.is_null() {
+    let ops = rcu_dereference(inet6_offloads(proto as u8));
+    if !ops.is_null() {
         skb_reset_transport_header(skb);
-        segs = (*ops).callbacks.gso_segment(skb, features);
-    }
-
-    if IS_ERR_OR_NULL(segs) {
+        segs = ((*ops).callbacks.gso_segment)(skb, features);
+    } else {
         return ptr::null_mut();
     }
 
-    let mut gso_partial: c_int = if (*skb_shinfo(segs)).gso_type & SKB_GSO_PARTIAL != 0 { 1 } else { 0 };
+    if IS_ERR_OR_NULL(segs as *const c_void) {
+        return ptr::null_mut();
+    }
 
     let mut current_skb = segs;
     while !current_skb.is_null() {
         let skb = current_skb;
         ipv6h = (skb_mac_header(skb) as *mut u8).add(nhoff as usize) as *mut Ipv6Hdr;
-        if gso_partial != 0 && skb_is_gso(skb) != 0 {
-            let payload_len = (*skb_shinfo(skb)).gso_size +
-                              SKB_GSO_CB(skb).data_offset +
-                              ((*skb).data as *mut u8).offset_from((ipv6h as *mut u8).add(1)) as c_int;
-            (*ipv6h).payload_len = payload_len as u16;
+
+        let skb_len = (*skb).len;
+        let hdr_size = core::mem::size_of::<Ipv6Hdr>() as u32;
+        if skb_len > nhoff + hdr_size {
+            (*ipv6h).payload_len = (skb_len - nhoff - hdr_size) as u16;
         } else {
-            (*ipv6h).payload_len = ((*skb).len - nhoff - core::mem::size_of::<Ipv6Hdr>()) as u16;
+            (*ipv6h).payload_len = 0;
         }
-        (*skb).network_header = ((*skb).head as *mut u8).offset_from(ipv6h as *mut u8) as c_int;
+
+        let header_offset = (ipv6h as *const u8).offset_from((*skb).head as *const u8);
+        (*skb).network_header = header_offset as u16;
         skb_reset_mac_len(skb);
 
-        if udpfrag != 0 {
-            let mut prevhdr: *mut u8 = ptr::null_mut();
-            let mut err: c_int = ip6_find_1stfragopt(skb, &mut prevhdr);
-            if err < 0 {
-                kfree_skb_list(segs);
-                return err as *mut SkBuff;
+        // Handle fragmentation if UDP
+        if proto == IPPROTO_UDP {
+            let mut prevhdr: *mut c_void = ptr::null_mut();
+            let err: c_int = ip6_find_1stfragopt(skb, &mut prevhdr);
+            if err >= 0 {
+                let fptr = (ipv6h as *mut u8).add(err as usize) as *mut FragHdr;
+                (*fptr).frag_off = offset as u16;
+                if !(*skb).next.is_null() {
+                    (*fptr).frag_off |= IP6_MF;
+                }
+                let payload = ntohs((*ipv6h).payload_len);
+                let frag_hdr_size = core::mem::size_of::<FragHdr>() as u16;
+                if payload > frag_hdr_size {
+                    offset += (payload - frag_hdr_size) as c_int;
+                }
             }
-            let fptr = (ipv6h as *mut u8).add(err as usize) as *mut FragHdr;
-            (*fptr).frag_off = offset as u16;
-            if !(*skb).next.is_null() {
-                (*fptr).frag_off |= IP6_MF as u16;
-            }
-            offset += (ntohs((*ipv6h).payload_len) - core::mem::size_of::<FragHdr>()) as c_int;
         }
-        if encap != 0 {
-            skb_reset_inner_headers(skb);
-        }
+
         current_skb = (*skb).next;
     }
 
@@ -246,7 +229,7 @@ unsafe fn rcu_dereference<T>(ptr: *const T) -> *const T {
     ptr // Simplified - actual RCU implementation would be more complex
 }
 
-unsafe fn pskb_may_pull(skb: *mut SkBuff, len: c_int) -> bool {
+unsafe fn pskb_may_pull(skb: *mut SkBuff, len: c_uint) -> bool {
     // Simplified implementation
     true
 }

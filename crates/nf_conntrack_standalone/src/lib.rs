@@ -11,6 +11,7 @@
 #![allow(clippy::all)]
 
 use core::ffi::{c_char, c_int, c_uint, c_ulong, c_ulonglong, c_void};
+use core::panic::PanicInfo;
 use kernel_types::*;
 
 pub type size_t = usize;
@@ -146,7 +147,7 @@ pub unsafe extern "C" fn print_tuple(
     // SAFETY: Function is called with valid pointers as per contract
     let tuple_ref = &*tuple;
     let l4proto_ref = &*l4proto;
-    let l3num = tuple_ref.src_l3num;
+    let l3num = tuple_ref.src.l3num;
 
     match l3num {
         NFPROTO_IPV4 => {
