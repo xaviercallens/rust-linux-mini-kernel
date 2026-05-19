@@ -284,10 +284,6 @@ unsafe fn refcount_dec(refcnt: &AtomicUsize) {
     refcnt.fetch_sub(1, Ordering::Relaxed);
 }
 
-unsafe fn container_of<T, U>(ptr: *const T, container: U, member: core::ptr::addr_of!()) -> *mut U {
-    (ptr as *const u8).offset(-(member as isize)) as *mut U
-}
-
 // Exports
 #[no_mangle]
 pub static mut NF_CT_HELPER_HASH: *mut hlist_head = ptr::null_mut();
