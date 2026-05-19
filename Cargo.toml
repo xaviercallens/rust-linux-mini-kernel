@@ -3,6 +3,32 @@ resolver = "2"
 members = [
     "crates/*",
     "examples/micro_kernel_demo",
+    # Memory Management modules
+    "crates/page_alloc",
+    "crates/slab",
+    "crates/vmalloc",
+    "crates/page_table",
+    "crates/slub",
+    "crates/mmap",
+    "crates/mprotect",
+    "crates/mremap",
+    "crates/mlock",
+    "crates/munmap",
+    "crates/memblock",
+    "crates/mempool",
+    "crates/percpu",
+    "crates/init_mm",
+    "crates/util",
+    "crates/swap",
+    "crates/swapfile",
+    "crates/page_io",
+    "crates/oom_kill",
+    "crates/kasan",
+    "crates/rmap",
+    "crates/vmscan",
+    "crates/migrate",
+    "crates/compaction",
+    "crates/page_owner",
 ]
 
 [workspace.package]
