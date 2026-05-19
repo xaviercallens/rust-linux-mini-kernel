@@ -9,7 +9,7 @@ echo ""
 
 # Configuration
 ARCH="x86_64"
-TARGET="x86_64-unknown-none"
+TARGET="x86_64-unknown-none"  # Built-in Rust target
 BUILD_DIR="build"
 KERNEL_NAME="mvk-kernel"
 
@@ -56,7 +56,7 @@ done
 
 # Assemble entry point
 echo -e "${YELLOW}Assembling entry point...${NC}"
-as --64 arch/x86_64/boot/entry.s -o $BUILD_DIR/entry.o
+nasm -f elf64 arch/x86_64/boot/entry.asm -o $BUILD_DIR/entry.o
 
 # Extract objects from .rlib archives
 echo -e "${YELLOW}Extracting Rust object files...${NC}"
