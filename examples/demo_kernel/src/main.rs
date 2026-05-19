@@ -5,7 +5,7 @@ use core::panic::PanicInfo;
 use core::arch::global_asm;
 
 global_asm!(r#"
-.section .multiboot
+.section .multiboot, "a"
 .align 4
 .long 0x1BADB002
 .long 0x00
