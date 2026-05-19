@@ -1,0 +1,24 @@
+#![no_std]
+//! /dev filesystem
+//!
+//! This module implements devtmpfs functionality for the Rust Linux Mini Kernel.
+//! Based on Linux kernel fs
+
+use kernel_types::*;
+use libc::{c_int, c_uint, c_void, c_ulong, size_t};
+
+/// Module initialization
+#[no_mangle]
+pub unsafe extern "C" fn devtmpfs_init() -> c_int {
+    // TODO: Initialize devtmpfs subsystem
+    0
+}
+
+/// Module cleanup
+#[no_mangle]
+pub unsafe extern "C" fn devtmpfs_exit() {
+    // TODO: Cleanup devtmpfs subsystem
+}
+
+#[no_mangle]
+pub static DEVTMPFS_INITIALIZED: bool = false;

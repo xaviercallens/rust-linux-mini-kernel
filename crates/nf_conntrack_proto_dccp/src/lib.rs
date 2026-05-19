@@ -77,6 +77,11 @@ pub struct net {
     _priv: [u8; 0],
 }
 
+#[repr(C)]
+pub struct dccp_hdr {
+    _priv: [u8; 0],
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_dccp_packet(
     _ct: *mut nf_conn,
