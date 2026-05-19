@@ -74,7 +74,7 @@ pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_co
         timeout_data: [0; 4],
     }));
 
-    extend_uninit.as_mut_ptr()
+    extend
 }
 
 #[no_mangle]
