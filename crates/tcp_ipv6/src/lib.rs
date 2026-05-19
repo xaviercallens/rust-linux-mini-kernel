@@ -106,12 +106,12 @@ unsafe fn skb_tcp_hdr(_skb: *const sk_buff) -> tcphdr {
 
 unsafe extern "C" {
     fn secure_tcpv6_seq(
-        daddr: [u32; 4],
-        saddr: [u32; 4],
+        daddr: *const u32,
+        saddr: *const u32,
         dport: c_ushort,
         sport: c_ushort,
     ) -> u32;
-    fn secure_tcpv6_ts_off(net: *const c_void, daddr: [u32; 4], saddr: [u32; 4]) -> u32;
+    fn secure_tcpv6_ts_off(net: *const c_void, daddr: *const u32, saddr: *const u32) -> u32;
 }
 
 #[no_mangle]
@@ -137,8 +137,8 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
     let ipv6_hdr = skb_ipv6_hdr(skb);
     let tcp_hdr = skb_tcp_hdr(skb);
     secure_tcpv6_seq(
-        ipv6_hdr.daddr.in6_u.u6_addr32,
-        ipv6_hdr.saddr.in6_u.u6_addr32,
+        ipv6_hdr.daddr.in6_u.u6_addr32.as_ptr(),
+        ipv6_hdr.saddr.in6_u.u6_addr32.as_ptr(),
         tcp_hdr.dest,
         tcp_hdr.source,
     )
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_ts_off(net: *const c_void, skb: *const sk_buff) -> u32 {
     let ipv6_hdr = skb_ipv6_hdr(skb);
-    secure_tcpv6_ts_off(net, ipv6_hdr.daddr.in6_u.u6_addr32, ipv6_hdr.saddr.in6_u.u6_addr32)
+    secure_tcpv6_ts_off(net, ipv6_hdr.daddr.in6_u.u6_addr32.as_ptr(), ipv6_hdr.saddr.in6_u.u6_addr32.as_ptr())
 }
 
 #[no_mangle]
