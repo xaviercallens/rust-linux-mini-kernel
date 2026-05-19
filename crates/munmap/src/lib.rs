@@ -1,0 +1,25 @@
+#![no_std]
+//! Memory unmapping
+//!
+//! This module implements munmap functionality for the Rust Linux Mini Kernel.
+//! Based on Linux kernel mm/munmap.c
+
+use kernel_types::*;
+use libc::{c_int, c_uint, c_void, c_ulong, size_t};
+
+/// Module initialization
+#[no_mangle]
+pub unsafe extern "C" fn munmap_init() -> c_int {
+    // TODO: Initialize munmap subsystem
+    0
+}
+
+/// Module cleanup
+#[no_mangle]
+pub unsafe extern "C" fn munmap_exit() {
+    // TODO: Cleanup munmap subsystem
+}
+
+// Placeholder exports for FFI compatibility
+#[no_mangle]
+pub static MUNMAP_INITIALIZED: bool = false;
