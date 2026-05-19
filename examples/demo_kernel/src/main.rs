@@ -2,6 +2,15 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+use core::arch::global_asm;
+
+global_asm!(r#"
+.section .multiboot
+.align 4
+.long 0x1BADB002
+.long 0x00
+.long -(0x1BADB002)
+"#);
 
 // VGA text buffer constants
 const VGA_BUFFER: *mut u8 = 0xb8000 as *mut u8;
