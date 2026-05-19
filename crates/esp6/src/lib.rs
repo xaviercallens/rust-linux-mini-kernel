@@ -75,19 +75,14 @@ unsafe fn key_eq(a: *const CacheKey, b: *const CacheKey) -> bool {
         && ka.ifindex == kb.ifindex
 }
 
-#[inline]
-unsafe fn kmalloc(size: usize) -> *mut c_void {
-    unsafe { kernel_malloc(size as size_t) }
-}
-
-#[inline]
-unsafe fn kfree(ptr: *mut c_void) {
-    unsafe { kernel_free(ptr) }
+extern "C" {
+    fn kmalloc(size: size_t, flags: c_int) -> *mut c_void;
+    fn kfree(ptr: *mut c_void);
 }
 
 #[no_mangle]
 pub extern "C" fn esp6_cache_manager_new() -> *mut CacheManager {
-    let ptr = unsafe { kmalloc(core::mem::size_of::<CacheManager>()) } as *mut CacheManager;
+    let ptr = unsafe { kmalloc(core::mem::size_of::<CacheManager>(), 0) } as *mut CacheManager;
     if ptr.is_null() {
         return null_mut();
     }
@@ -124,7 +119,7 @@ pub unsafe extern "C" fn esp6_cache_insert(
         return -22;
     }
 
-    let entry_ptr = unsafe { kmalloc(core::mem::size_of::<CacheEntry>()) } as *mut CacheEntry;
+    let entry_ptr = unsafe { kmalloc(core::mem::size_of::<CacheEntry>(), 0) } as *mut CacheEntry;
     if entry_ptr.is_null() {
         unsafe { (*mgr).stats.errors += 1 };
         return -12;
