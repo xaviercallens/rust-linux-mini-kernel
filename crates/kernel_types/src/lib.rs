@@ -602,3 +602,10 @@ pub type NF_CONN = nf_conn;
 
 /// Network address union type alias (CamelCase variant)
 pub type NF_INET_ADDR = nf_inet_addr;
+
+/// Network device (opaque type)
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net_device {
+    _private: [u8; 0],
+}
