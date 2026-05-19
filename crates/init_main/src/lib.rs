@@ -4,7 +4,9 @@
 //! This module implements init_main functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel init
 
-use libc::c_int;
+// Type alias for C compatibility
+#[allow(non_camel_case_types)]
+type c_int = i32;
 
 // External functions from other modules
 extern "C" {

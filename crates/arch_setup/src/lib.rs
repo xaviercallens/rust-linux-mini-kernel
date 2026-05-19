@@ -4,7 +4,9 @@
 //! This module implements arch_setup functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel arch/x86/kernel
 
-use libc::c_int;
+// Type alias for C compatibility
+#[allow(non_camel_case_types)]
+type c_int = i32;
 
 /// Module initialization - basic x86_64 setup
 #[no_mangle]

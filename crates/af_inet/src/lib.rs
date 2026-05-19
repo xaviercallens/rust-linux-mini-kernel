@@ -3,9 +3,9 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_void};
+use core::ffi::{c_int, c_void, c_char};
 use core::ptr;
-use core::ffi::{c_int, c_void};
+use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -19,17 +19,67 @@ pub const ENOBUFS: c_int = -55;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
+pub struct list_head {
+    pub next: *mut list_head,
+    pub prev: *mut list_head,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct socket_ops {
+    pub family: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct proto {
+    pub name: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct inet_protosw {
-    pub list: list_head,
+    pub list: *mut list_head,
     pub protocol: c_int,
     pub ops: *mut socket_ops,
     pub prot: *mut proto,
     pub flags: c_int,
 }
 
+pub type skb_queue_head_t = *mut c_void;
+pub type atomic_t = c_int;
+pub type refcount_t = c_int;
+pub type dst_entry = c_void;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sock {
+pub struct linger {
+    pub l_onoff: c_int,
+    pub l_linger: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct wait_queue_head_t {
+    _unused: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct timer_list {
+    _unused: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct timeval {
+    tv_sec: c_int,
+    tv_usec: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sock_extended {
     pub sk_receive_queue: skb_queue_head_t,
     pub sk_rx_skb_cache: *mut sk_buff,
     pub sk_error_queue: skb_queue_head_t,
@@ -75,16 +125,6 @@ pub struct sock {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_protosw {
-    pub list: list_head,
-    pub protocol: c_int,
-    pub ops: *mut socket_ops,
-    pub prot: *mut proto,
-    pub flags: c_int,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct socket {
     pub state: c_int,
     pub type_field: c_int,
@@ -93,28 +133,136 @@ pub struct socket {
 
 // Common constants used in shown code
 pub const SOCK_STREAM: c_int = 1;
+pub const SOCK_RAW: c_int = 3;
 pub const TCP_CLOSE: c_int = 7;
 pub const SOCK_DEAD: c_int = 1;
 pub const SS_UNCONNECTED: c_int = 1;
 pub const TCPF_CLOSE: c_int = 1 << TCP_CLOSE;
 pub const TCP_LISTEN: c_int = 10;
 pub const TCPF_LISTEN: c_int = 1 << TCP_LISTEN;
+pub const IPPROTO_IP: c_int = 0;
+pub const IPPROTO_RAW: c_int = 255;
+pub const PF_INET: c_int = 2;
+pub const GFP_KERNEL: c_int = 0;
+pub const CAP_NET_RAW: c_int = 1;
+pub const BPF_SOCK_OPS_TCP_LISTEN_CB: c_int = 1;
+pub const TFO_SERVER_WO_SOCKOPT: c_int = 1 << 1;
+pub const TFO_SERVER_ENABLE: c_int = 1;
+pub const INET_PROTOSW_REUSE: c_int = 1;
+pub const INET_PROTOSW_ICSK: c_int = 2;
+pub const SK_CAN_REUSE: c_int = 1;
 
 unsafe extern "C" {
     fn __skb_queue_purge(list: *const skb_queue_head_t);
     fn __kfree_skb(skb: *mut sk_buff);
-    fn sk_mem_reclaim(sk: *mut sock);
-    fn sock_flag(sk: *const sock, flag: c_int) -> bool;
-    fn atomic_read(v: *const atomic_t) -> c_int;
-    fn refcount_read(r: *const refcount_t) -> c_int;
+    fn sk_mem_reclaim(sk: *mut sock_extended);
     fn dst_release(dst: *mut dst_entry);
-    fn sk_refcnt_debug_dec(sk: *mut sock);
-    fn lock_sock(sk: *mut sock);
-    fn release_sock(sk: *mut sock);
+    fn sk_refcnt_debug_dec(sk: *mut sock_extended);
+    fn lock_sock(sk: *mut sock_extended);
+    fn release_sock(sk: *mut sock_extended);
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_sock_extended {
+    pub inet_opt: *mut c_void,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net {
+    pub user_ns: *mut c_void,
+    pub ipv4: net_ipv4,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net_ipv4 {
+    pub sysctl_tcp_fastopen: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_connection_sock {
+    pub icsk_accept_queue: accept_queue,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct accept_queue {
+    pub fastopenq: fastopen_queue,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fastopen_queue {
+    pub max_qlen: c_int,
+}
+
+// Helper function to cast sock to inet_sock
+#[no_mangle]
+pub unsafe extern "C" fn inet_sk(_sk: *mut sock_extended) -> *mut inet_sock_extended {
+    ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn inet_sock_destruct(sk: *mut sock) {
+pub unsafe extern "C" fn sock_net(_sk: *mut sock_extended) -> *mut net {
+    ptr::null_mut()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn inet_csk(_sk: *mut sock_extended) -> *mut inet_connection_sock {
+    ptr::null_mut()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rcu_dereference_protected<T>(p: *mut T, _c: c_int) -> *mut T {
+    p
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rcu_read_lock() {}
+
+#[no_mangle]
+pub unsafe extern "C" fn rcu_read_unlock() {}
+
+#[no_mangle]
+pub unsafe extern "C" fn unlikely(x: c_int) -> bool {
+    x != 0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn container_of<T>(_ptr: *mut c_void, _type: T, _member: *mut c_void) -> *mut T {
+    ptr::null_mut()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn request_module(_fmt: *const c_char) {}
+
+#[no_mangle]
+pub unsafe extern "C" fn ns_capable(_ns: *mut c_void, _cap: c_int) -> bool {
+    false
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sock_flag(_sk: *const sock_extended, _flag: c_int) -> bool {
+    false
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn atomic_read(_v: *const atomic_t) -> c_int {
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn refcount_read(_r: *const refcount_t) -> c_int {
+    0
+}
+
+static mut INETSW: [[list_head; 1]; 16] = [[list_head { next: ptr::null_mut(), prev: ptr::null_mut() }; 1]; 16];
+
+#[no_mangle]
+pub unsafe extern "C" fn inet_sock_destruct(sk: *mut sock_extended) {
     let inet = inet_sk(sk);
 
     // Purge receive queue
@@ -354,23 +502,9 @@ pub unsafe extern "C" fn inet_create(
 
 // Helper functions (would be implemented in C in the kernel)
 #[no_mangle]
-unsafe extern "C" fn __skb_queue_purge(queue: *mut skb_queue_head_t) {}
+pub unsafe extern "C" fn pr_err(_fmt: *const c_char) {}
 #[no_mangle]
-unsafe extern "C" fn __kfree_skb(skb: *mut sk_buff) {}
-#[no_mangle]
-unsafe extern "C" fn sk_mem_reclaim(sk: *mut sock) {}
-#[no_mangle]
-unsafe extern "C" fn pr_err(fmt: *const c_char, ...) {}
-#[no_mangle]
-unsafe extern "C" fn kfree(ptr: *mut c_void) {}
-#[no_mangle]
-unsafe extern "C" fn dst_release(dst: *mut dst_entry) {}
-#[no_mangle]
-unsafe extern "C" fn sk_refcnt_debug_dec(sk: *mut sock) {}
-#[no_mangle]
-unsafe extern "C" fn lock_sock(sk: *mut sock) {}
-#[no_mangle]
-unsafe extern "C" fn release_sock(sk: *mut sock) {}
+pub unsafe extern "C" fn kfree(_ptr: *mut c_void) {}
 #[no_mangle]
 unsafe extern "C" fn inet_csk_listen_start(sk: *mut sock, backlog: c_int) -> c_int { 0 }
 #[no_mangle]
@@ -390,11 +524,6 @@ unsafe extern "C" fn BPF_CGROUP_RUN_PROG_INET_SOCK(sk: *mut sock) -> c_int { 0 }
 
 // Constants and macros
 pub const IPPROTO_MAX: c_int = 256;
-pub const SS_UNCONNECTED: c_int = 0;
-pub const SOCK_STREAM: c_int = 1;
-pub const TCPF_CLOSE: c_int = 1 << 1;
-pub const TCPF_LISTEN: c_int = 1 << 2;
-pub const TCP_LISTEN: c_int = 2;
 pub const INET_PROTOSW_REUSE: c_int = 1;
 pub const INET_PROTOSW_ICSK: c_int = 2;
 pub const SK_CAN_REUSE: c_int = 1;

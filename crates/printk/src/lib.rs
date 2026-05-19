@@ -7,7 +7,9 @@
 //! Phase 1 implementation: Simple serial port output via QEMU
 //! Uses external assembly helpers for x86 port I/O
 
-use libc::c_int;
+// Type alias for C compatibility
+#[allow(non_camel_case_types)]
+type c_int = i32;
 
 // External assembly functions for port I/O (defined in entry.s or separate asm file)
 extern "C" {
