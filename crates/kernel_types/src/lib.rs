@@ -405,12 +405,58 @@ pub struct nf_conntrack_helper {
     pub flags: c_uint,
 }
 
+/// Netfilter connection tracking tuple hash
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_tuplehash {
+    pub tuple: nf_conntrack_tuple,
+}
+
+/// Netfilter connection tracking tuple
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple {
+    pub src: nf_conntrack_tuple_src,
+    pub dst: nf_conntrack_tuple_dst,
+}
+
+/// Netfilter connection tracking tuple source
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_src {
+    pub u: nf_conntrack_tuple_u,
+}
+
+/// Netfilter connection tracking tuple destination
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_dst {
+    pub u: nf_conntrack_tuple_u,
+}
+
+/// Netfilter connection tracking tuple union
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_conntrack_tuple_u {
+    pub icmp: nf_conntrack_tuple_icmp,
+    pub all: u16,
+}
+
+/// Netfilter connection tracking ICMP tuple
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_icmp {
+    pub id: u16,
+    pub type_: u8,
+    pub code: u8,
+}
+
 /// Netfilter connection
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn {
     pub ct_general: *mut c_void,
-    pub tuplehash: [*mut c_void; 2],
+    pub tuplehash: [nf_conn_tuplehash; 2],
     pub timeout: c_ulong,
     pub status: c_ulong,
     pub sk: *mut core::ffi::c_void, // Auto-generated mock field

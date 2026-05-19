@@ -59,8 +59,14 @@ pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_co
                 max_proto: 0,
             },
             nat_ipv6: nf_nat_ipv6 {
-                min_addr: in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } },
-                max_addr: in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } },
+                min_addr: in6_addr {
+                    in6_u: in6_addr_union { u6_addr32: [0; 4] },
+                    s6_addr: core::ptr::null_mut()
+                },
+                max_addr: in6_addr {
+                    in6_u: in6_addr_union { u6_addr32: [0; 4] },
+                    s6_addr: core::ptr::null_mut()
+                },
                 min_proto: 0,
                 max_proto: 0,
             },

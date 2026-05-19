@@ -33,12 +33,6 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_address {
-    pub all: u16,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct hlist_node {
     pub next: *mut hlist_node,
     pub pprev: *mut *mut hlist_node,
@@ -292,17 +286,6 @@ unsafe fn refcount_dec(refcnt: &AtomicUsize) {
 
 unsafe fn container_of<T, U>(ptr: *const T, container: U, member: core::ptr::addr_of!()) -> *mut U {
     (ptr as *const u8).offset(-(member as isize)) as *mut U
-}
-
-unsafe fn strcmp(a: *const u8, b: *const u8) -> c_int {
-    let mut i = 0;
-    while *a.offset(i) != 0 || *b.offset(i) != 0 {
-        if *a.offset(i) != *b.offset(i) {
-            return *a.offset(i) as c_int - *b.offset(i) as c_int;
-        }
-        i += 1;
-    }
-    0
 }
 
 // Exports
