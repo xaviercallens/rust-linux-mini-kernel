@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
@@ -129,4 +129,9 @@ pub unsafe extern "C" fn ip6gre_tunnel_lookup(
     }
 
     ptr::null_mut()
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

@@ -1,0 +1,1619 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/examples/micro_kernel_demo/Cargo.toml
+workspace: /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/Cargo.toml
+    Checking micro_kernel_demo v0.1.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/examples/micro_kernel_demo)
+    Checking exthdrs_core v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/exthdrs_core)
+    Checking ip6_gre v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/ip6_gre)
+    Checking nf_conntrack_proto_tcp v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/nf_conntrack_proto_tcp)
+    Checking fib6_rules v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/fib6_rules)
+    Checking ip6_output v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/ip6_output)
+    Checking cipso_ipv4 v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/cipso_ipv4)
+    Checking nf_conntrack_tftp v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/nf_conntrack_tftp)
+    Checking udplite v0.4.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/udplite)
+error[E0428]: the name `skb_network_header` is defined multiple times
+   --> crates/exthdrs_core/src/lib.rs:348:1
+    |
+ 65 |     fn skb_network_header(skb: *const c_void) -> *const u8;
+    |     ------------------------------------------------------- previous definition of the value `skb_network_header` here
+...
+348 | pub unsafe extern "C" fn skb_network_header(skb: *const c_void) -> *const c_void {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `skb_network_header` redefined here
+    |
+    = note: `skb_network_header` must be defined only once in the value namespace of this module
+
+error[E0428]: the name `skb_tail_pointer` is defined multiple times
+   --> crates/exthdrs_core/src/lib.rs:359:1
+    |
+ 66 |     fn skb_tail_pointer(skb: *const c_void) -> *const u8;
+    |     ----------------------------------------------------- previous definition of the value `skb_tail_pointer` here
+...
+359 | pub unsafe extern "C" fn skb_tail_pointer(skb: *const c_void) -> *const c_void {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `skb_tail_pointer` redefined here
+    |
+    = note: `skb_tail_pointer` must be defined only once in the value namespace of this module
+
+error[E0428]: the name `skb_header_pointer` is defined multiple times
+   --> crates/exthdrs_core/src/lib.rs:364:1
+    |
+ 58 | /     fn skb_header_pointer(
+ 59 | |         skb: *const c_void,
+ 60 | |         offset: c_int,
+ 61 | |         len: c_int,
+ 62 | |         buffer: *mut c_void,
+ 63 | |     ) -> *const c_void;
+    | |_______________________- previous definition of the value `skb_header_pointer` here
+...
+364 | / pub unsafe extern "C" fn skb_header_pointer(
+365 | |     skb: *const c_void,
+366 | |     offset: c_int,
+367 | |     size: c_int,
+...   |
+378 | |     data
+379 | | }
+    | |_^ `skb_header_pointer` redefined here
+    |
+    = note: `skb_header_pointer` must be defined only once in the value namespace of this module
+
+error: expected expression, found `let` statement
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:20:5
+   |
+20 |     let mut icmpv6_err_convert = ICMPV6_ERR_CONVERT.lock().unwrap();
+   |     ^^^
+   |
+   = note: only supported directly in conditions of `if` and `while` expressions
+
+error[E0425]: cannot find value `_frag_off` in this scope
+   --> crates/exthdrs_core/src/lib.rs:124:35
+    |
+124 |                 mem::size_of_val(&_frag_off) as _,
+    |                                   ^^^^^^^^^
+    |
+help: a local variable with a similar name exists
+    |
+124 -                 mem::size_of_val(&_frag_off) as _,
+124 +                 mem::size_of_val(&frag_offp) as _,
+    |
+
+error[E0425]: cannot find value `_frag_off` in this scope
+   --> crates/exthdrs_core/src/lib.rs:125:22
+    |
+125 |                 &mut _frag_off as *mut _ as *mut c_void,
+    |                      ^^^^^^^^^
+    |
+help: a local variable with a similar name exists
+    |
+125 -                 &mut _frag_off as *mut _ as *mut c_void,
+125 +                 &mut frag_offp as *mut _ as *mut c_void,
+    |
+
+error[E0425]: cannot find value `frag_off` in this scope
+   --> crates/exthdrs_core/src/lib.rs:128:16
+    |
+128 |             if frag_off.is_null() {
+    |                ^^^^^^^^
+    |
+help: a local variable with a similar name exists
+    |
+128 |             if frag_offp.is_null() {
+    |                        +
+
+error: expected expression, found `let` statement
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:23:5
+   |
+23 |     let mut inet6_sockraw_ops = INET6_SOCKRAW_OPS.lock().unwrap();
+   |     ^^^
+   |
+   = note: only supported directly in conditions of `if` and `while` expressions
+
+error: expected expression, found `let` statement
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:26:5
+   |
+26 |     let mut ip6_datagram_connect_v6_only = IP6_DATAGRAM_CONNECT_V6_ONLY.lock().unwrap();
+   |     ^^^
+   |
+   = note: only supported directly in conditions of `if` and `while` expressions
+
+warning: unused import: `kernel_types::*`
+ --> crates/exthdrs_core/src/lib.rs:9:5
+  |
+9 | use kernel_types::*;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error: expected expression, found `}`
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:28:1
+   |
+28 | }
+   | ^ expected expression
+
+error[E0753]: expected outer doc comment
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:30:1
+   |
+30 | //! TCP connection tracking module for Netfilter
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: inner doc comments like this (starting with `//!` or `/*!`) can only appear before items
+help: you might have meant to write a regular comment
+   |
+30 - //! TCP connection tracking module for Netfilter
+30 + // TCP connection tracking module for Netfilter
+   |
+
+error[E0753]: expected outer doc comment
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:31:1
+   |
+31 | //!
+   | ^^^
+   |
+   = note: inner doc comments like this (starting with `//!` or `/*!`) can only appear before items
+help: you might have meant to write a regular comment
+   |
+31 - //!
+31 + //
+   |
+
+error[E0753]: expected outer doc comment
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:32:1
+   |
+32 | //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: inner doc comments like this (starting with `//!` or `/*!`) can only appear before items
+help: you might have meant to write a regular comment
+   |
+32 - //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
+32 + // This is an FFI-compatible Rust translation of the Linux kernel C implementation.
+   |
+
+error[E0753]: expected outer doc comment
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:33:1
+   |
+33 | //! ABI compatibility is maintained for all exported symbols.
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+40 | use core::ffi::{c_int, c_uint, c_char, c_void};
+   | ----------------------------------------------- the inner doc comment doesn't annotate this `use` import
+   |
+help: to annotate the `use` import, change the doc comment from inner to outer style
+   |
+33 - //! ABI compatibility is maintained for all exported symbols.
+33 + /// ABI compatibility is maintained for all exported symbols.
+   |
+
+error: an inner attribute is not permitted following an outer doc comment
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:35:1
+   |
+33 | //! ABI compatibility is maintained for all exported symbols.
+   | ------------------------------------------------------------- previous doc comment
+34 |
+35 | #![no_std]
+   | ^^^^^^^^^^ not permitted following an outer doc comment
+...
+40 | use core::ffi::{c_int, c_uint, c_char, c_void};
+   | ----------------------------------------------- the inner attribute doesn't annotate this `use` import
+   |
+   = note: inner attributes, like `#![no_std]`, annotate the item enclosing them, and are usually found at the beginning of source files
+
+error: an inner attribute is not permitted following an outer attribute
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:36:1
+   |
+33 | //! ABI compatibility is maintained for all exported symbols.
+   | ------------------------------------------------------------- previous outer attribute
+...
+36 | #![no_main]
+   | ^^^^^^^^^^^ not permitted following an outer attribute
+...
+40 | use core::ffi::{c_int, c_uint, c_char, c_void};
+   | ----------------------------------------------- the inner attribute doesn't annotate this `use` import
+   |
+   = note: inner attributes, like `#![no_std]`, annotate the item enclosing them, and are usually found at the beginning of source files
+
+error: an inner attribute is not permitted following an outer attribute
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:37:1
+   |
+33 | //! ABI compatibility is maintained for all exported symbols.
+   | ------------------------------------------------------------- previous outer attribute
+...
+37 | #![allow(non_camel_case_types)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not permitted following an outer attribute
+...
+40 | use core::ffi::{c_int, c_uint, c_char, c_void};
+   | ----------------------------------------------- the inner attribute doesn't annotate this `use` import
+   |
+   = note: inner attributes, like `#![no_std]`, annotate the item enclosing them, and are usually found at the beginning of source files
+help: to annotate the `use` import, change the attribute from inner to outer style
+   |
+37 - #![allow(non_camel_case_types)]
+37 + #[allow(non_camel_case_types)]
+   |
+
+error: an inner attribute is not permitted following an outer attribute
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:38:1
+   |
+33 | //! ABI compatibility is maintained for all exported symbols.
+   | ------------------------------------------------------------- previous outer attribute
+...
+38 | #![allow(dead_code)]
+   | ^^^^^^^^^^^^^^^^^^^^ not permitted following an outer attribute
+39 |
+40 | use core::ffi::{c_int, c_uint, c_char, c_void};
+   | ----------------------------------------------- the inner attribute doesn't annotate this `use` import
+   |
+   = note: inner attributes, like `#![no_std]`, annotate the item enclosing them, and are usually found at the beginning of source files
+help: to annotate the `use` import, change the attribute from inner to outer style
+   |
+38 - #![allow(dead_code)]
+38 + #[allow(dead_code)]
+   |
+
+error[E0428]: the name `ipv6_push_nfrag_opts` is defined multiple times
+   --> crates/ip6_output/src/lib.rs:199:1
+    |
+190 | / fn ipv6_push_nfrag_opts(
+191 | |     _skb: *mut sk_buff,
+192 | |     _opt: *mut c_void,
+193 | |     _proto: *mut u8,
+...   |
+196 | | ) {
+197 | | }
+    | |_- previous definition of the value `ipv6_push_nfrag_opts` here
+198 |
+199 |   fn ipv6_push_nfrag_opts(skb: *mut sk_buff, opt: *mut c_void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_addr) {
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `ipv6_push_nfrag_opts` redefined here
+    |
+    = note: `ipv6_push_nfrag_opts` must be defined only once in the value namespace of this module
+
+error[E0573]: expected type, found macro `flowi6`
+   --> crates/fib6_rules/src/lib.rs:108:17
+    |
+108 |     fl6: *const flowi6,
+    |                 ^^^^^^ not a type
+    |
+   ::: crates/kernel_types/src/lib.rs:252:1
+    |
+252 | pub struct flowi {
+    | ---------------- similarly named struct `flowi` defined here
+    |
+help: a struct with a similar name exists
+    |
+108 -     fl6: *const flowi6,
+108 +     fl6: *const flowi,
+    |
+
+error[E0573]: expected type, found macro `flowi6`
+   --> crates/fib6_rules/src/lib.rs:163:17
+    |
+163 |     fl6: *const flowi6,
+    |                 ^^^^^^ not a type
+    |
+   ::: crates/kernel_types/src/lib.rs:252:1
+    |
+252 | pub struct flowi {
+    | ---------------- similarly named struct `flowi` defined here
+    |
+help: a struct with a similar name exists
+    |
+163 -     fl6: *const flowi6,
+163 +     fl6: *const flowi,
+    |
+
+error[E0432]: unresolved import `lazy_static`
+ --> crates/nf_conntrack_proto_tcp/src/lib.rs:3:5
+  |
+3 | use lazy_static::lazy_static;
+  |     ^^^^^^^^^^^ use of unresolved module or unlinked crate `lazy_static`
+  |
+  = help: if you wanted to use a crate named `lazy_static`, use `cargo add lazy_static` to add it to your `Cargo.toml`
+
+warning: unused import: `core::panic::PanicInfo`
+ --> crates/ip6_gre/src/lib.rs:8:5
+  |
+8 | use core::panic::PanicInfo;
+  |     ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `kernel_types::*`
+  --> crates/ip6_gre/src/lib.rs:10:5
+   |
+10 | use kernel_types::*;
+   |     ^^^^^^^^^^^^^^^
+
+error: `#[panic_handler]` function required, but not found
+
+error: this file contains an unclosed delimiter
+   --> crates/nf_conntrack_tftp/src/lib.rs:394:83
+    |
+127 | pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
+    |                                                     - unclosed delimiter
+...
+131 |     if unsafe { PORTS_C } == 0 {
+    |                                - this delimiter might not be properly closed...
+...
+287 | }
+    | - ...as it matches this but it has different indentation
+...
+394 | static mut TFTP: [nf_conntrack_helper; 16] = unsafe { [core::mem::zeroed(); 16] };
+    |                                                                                   ^
+
+error: could not compile `nf_conntrack_tftp` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error[E0609]: no field `version` on type `ipv6hdr`
+   --> crates/exthdrs_core/src/lib.rs:242:36
+    |
+242 |         if ip6.is_null() || (*ip6).version != 6 {
+    |                                    ^^^^^^^ unknown field
+    |
+    = note: available fields are: `priority_version`, `payload_len`, `nexthdr`, `hop_limit`, `saddr`, `daddr`
+
+error[E0530]: let bindings cannot shadow statics
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:20:13
+   |
+20 |     let mut icmpv6_err_convert = ICMPV6_ERR_CONVERT.lock().unwrap();
+   |             ^^^^^^^^^^^^^^^^^^ cannot be named the same as a static
+...
+41 | use kernel_types::*;
+   |     --------------- the static `icmpv6_err_convert` is imported here
+
+warning: static variable `cipso_v4_cache` should have an upper case name
+  --> crates/cipso_ipv4/src/lib.rs:51:12
+   |
+51 | static mut cipso_v4_cache: *mut cipso_v4_map_cache_bkt = ptr::null_mut();
+   |            ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(non_upper_case_globals)]` (part of `#[warn(nonstandard_style)]`) on by default
+help: convert the identifier to upper case
+   |
+51 - static mut cipso_v4_cache: *mut cipso_v4_map_cache_bkt = ptr::null_mut();
+51 + static mut CIPSO_V4_CACHE: *mut cipso_v4_map_cache_bkt = ptr::null_mut();
+   |
+
+warning: unused variable: `unified`
+  --> examples/micro_kernel_demo/src/main.rs:62:9
+   |
+62 |     let unified = nf_inet_addr {
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_unified`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: static variable `cipso_v4_cache_enabled` should have an upper case name
+  --> crates/cipso_ipv4/src/lib.rs:52:12
+   |
+52 | static mut cipso_v4_cache_enabled: c_int = CIPSO_V4_CACHE_ENABLED_DEFAULT;
+   |            ^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: convert the identifier to upper case
+   |
+52 - static mut cipso_v4_cache_enabled: c_int = CIPSO_V4_CACHE_ENABLED_DEFAULT;
+52 + static mut CIPSO_V4_CACHE_ENABLED: c_int = CIPSO_V4_CACHE_ENABLED_DEFAULT;
+   |
+
+warning: static variable `cipso_v4_cache_bucketsize` should have an upper case name
+  --> crates/cipso_ipv4/src/lib.rs:53:12
+   |
+53 | static mut cipso_v4_cache_bucketsize: c_int = CIPSO_V4_CACHE_BUCKETS_SIZE_DEFAULT;
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: convert the identifier to upper case
+   |
+53 - static mut cipso_v4_cache_bucketsize: c_int = CIPSO_V4_CACHE_BUCKETS_SIZE_DEFAULT;
+53 + static mut CIPSO_V4_CACHE_BUCKETSIZE: c_int = CIPSO_V4_CACHE_BUCKETS_SIZE_DEFAULT;
+   |
+
+warning: unnecessary `unsafe` block
+   --> examples/micro_kernel_demo/src/main.rs:109:5
+    |
+109 |     unsafe {
+    |     ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary `unsafe` block
+   --> examples/micro_kernel_demo/src/main.rs:130:5
+    |
+130 |     unsafe {
+    |     ^^^^^^ unnecessary `unsafe` block
+
+warning: unused variable: `protocol`
+   --> examples/micro_kernel_demo/src/main.rs:190:5
+    |
+190 |     protocol: c_int,
+    |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_protocol`
+
+warning: unused variable: `flags`
+   --> examples/micro_kernel_demo/src/main.rs:223:5
+    |
+223 |     flags: c_int,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_flags`
+
+warning: unused variable: `dest_addr`
+   --> examples/micro_kernel_demo/src/main.rs:224:5
+    |
+224 |     dest_addr: *const sockaddr,
+    |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_dest_addr`
+
+warning: unused variable: `addrlen`
+   --> examples/micro_kernel_demo/src/main.rs:225:5
+    |
+225 |     addrlen: socklen_t,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_addrlen`
+
+warning: unused variable: `flags`
+   --> examples/micro_kernel_demo/src/main.rs:242:5
+    |
+242 |     flags: c_int,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_flags`
+
+warning: unused variable: `src_addr`
+   --> examples/micro_kernel_demo/src/main.rs:243:5
+    |
+243 |     src_addr: *mut sockaddr,
+    |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_src_addr`
+
+warning: unused variable: `addrlen`
+   --> examples/micro_kernel_demo/src/main.rs:244:5
+    |
+244 |     addrlen: *mut socklen_t,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_addrlen`
+
+warning: unused variable: `priv_data`
+   --> examples/micro_kernel_demo/src/main.rs:271:5
+    |
+271 |     priv_data: *mut c_void,
+    |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_priv_data`
+
+error[E0425]: cannot find value `ip6_finish_output` in this scope
+   --> crates/ip6_output/src/lib.rs:262:9
+    |
+262 |         ip6_finish_output,
+    |         ^^^^^^^^^^^^^^^^^ not found in this scope
+
+warning: unused variable: `skb`
+   --> crates/exthdrs_core/src/lib.rs:354:45
+    |
+354 | pub unsafe extern "C" fn skb_network_offset(skb: *const c_void) -> c_int {
+    |                                             ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+error[E0433]: cannot find module or crate `mem` in this scope
+   --> crates/ip6_output/src/lib.rs:281:21
+    |
+281 |     let head_room = mem::size_of::<ipv6hdr>() + LL_RESERVED_SPACE(dev);
+    |                     ^^^ use of unresolved module or unlinked crate `mem`
+    |
+    = help: if you wanted to use a crate named `mem`, use `cargo add mem` to add it to your `Cargo.toml`
+help: consider importing this module
+    |
+ 13 + use core::mem;
+    |
+
+warning: unused import: `core::panic::PanicInfo`
+  --> crates/ip6_output/src/lib.rs:14:5
+   |
+14 | use core::panic::PanicInfo;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0425]: cannot find function `dev_net` in this scope
+   --> crates/ip6_gre/src/lib.rs:103:15
+    |
+103 |     let net = dev_net(dev);
+    |               ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function, tuple struct or tuple variant `HASH_ADDR` in this scope
+   --> crates/ip6_gre/src/lib.rs:105:14
+    |
+105 |     let h0 = HASH_ADDR(remote);
+    |              ^^^^^^^^^ not found in this scope
+
+error[E0530]: let bindings cannot shadow statics
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:23:13
+   |
+23 |     let mut inet6_sockraw_ops = INET6_SOCKRAW_OPS.lock().unwrap();
+   |             ^^^^^^^^^^^^^^^^^ cannot be named the same as a static
+...
+41 | use kernel_types::*;
+   |     --------------- the static `inet6_sockraw_ops` is imported here
+
+error[E0425]: cannot find function, tuple struct or tuple variant `HASH_KEY` in this scope
+   --> crates/ip6_gre/src/lib.rs:106:14
+    |
+106 |     let h1 = HASH_KEY(key);
+    |              ^^^^^^^^ not found in this scope
+
+Some errors have detailed explanations: E0425, E0428, E0609.
+For more information about an error, try `rustc --explain E0425`.
+error[E0425]: cannot find function `net_generic` in this scope
+   --> crates/ip6_gre/src/lib.rs:107:15
+    |
+107 |     let ign = net_generic(net, IP6GRE_NET_ID);
+    |               ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `htons` in this scope
+   --> crates/ip6_gre/src/lib.rs:108:36
+    |
+108 |     let dev_type = if gre_proto == htons(ETH_P_TEB) as u16 ||
+    |                                    ^^^^^ not found in this scope
+
+error[E0425]: cannot find function `htons` in this scope
+   --> crates/ip6_gre/src/lib.rs:109:33
+    |
+109 |                    gre_proto == htons(ETH_P_ERSPAN) as u16 ||
+    |                                 ^^^^^ not found in this scope
+
+error[E0425]: cannot find function `htons` in this scope
+   --> crates/ip6_gre/src/lib.rs:110:33
+    |
+110 |                    gre_proto == htons(ETH_P_ERSPAN2) as u16 {
+    |                                 ^^^^^ not found in this scope
+
+error[E0425]: cannot find function `ipv6_addr_equal` in this scope
+   --> crates/ip6_gre/src/lib.rs:119:12
+    |
+119 |         if ipv6_addr_equal(local, &t_ref.parms.laddr)
+    |            ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `ipv6_addr_equal` in this scope
+   --> crates/ip6_gre/src/lib.rs:120:16
+    |
+120 |             && ipv6_addr_equal(remote, &t_ref.parms.raddr)
+    |                ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0530]: let bindings cannot shadow statics
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:26:13
+   |
+26 |     let mut ip6_datagram_connect_v6_only = IP6_DATAGRAM_CONNECT_V6_ONLY.lock().unwrap();
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot be named the same as a static
+...
+41 | use kernel_types::*;
+   |     --------------- the static `ip6_datagram_connect_v6_only` is imported here
+
+For more information about this error, try `rustc --explain E0573`.
+warning: type `nf_hook_state` is more private than the item `nf_hook_filter`
+   --> examples/micro_kernel_demo/src/main.rs:270:1
+    |
+270 | / pub unsafe extern "C" fn nf_hook_filter(
+271 | |     priv_data: *mut c_void,
+272 | |     skb: *mut sk_buff,
+273 | |     state: *const nf_hook_state,
+274 | | ) -> c_uint {
+    | |___________^ function `nf_hook_filter` is reachable at visibility `pub`
+    |
+note: but type `nf_hook_state` is only usable at visibility `pub(crate)`
+   --> examples/micro_kernel_demo/src/main.rs:293:1
+    |
+293 | struct nf_hook_state {
+    | ^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: constant `NF_STOLEN` is never used
+   --> examples/micro_kernel_demo/src/main.rs:287:7
+    |
+287 | const NF_STOLEN: c_int = 2;
+    |       ^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `NF_QUEUE` is never used
+   --> examples/micro_kernel_demo/src/main.rs:288:7
+    |
+288 | const NF_QUEUE: c_int = 3;
+    |       ^^^^^^^^
+
+warning: constant `NF_REPEAT` is never used
+   --> examples/micro_kernel_demo/src/main.rs:289:7
+    |
+289 | const NF_REPEAT: c_int = 4;
+    |       ^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0425`.
+error[E0609]: no field `dst` on type `kernel_types::sk_buff`
+   --> crates/ip6_output/src/lib.rs:243:36
+    |
+243 |     let idev = ip6_dst_idev((*skb).dst);
+    |                                    ^^^ unknown field
+    |
+    = note: available fields are: `next`, `prev`, `tstamp`, `dev`, `len` ... and 11 others
+
+error[E0609]: no field `cnf` on type `inet6_dev`
+   --> crates/ip6_output/src/lib.rs:248:35
+    |
+248 |     if !idev.is_null() && (*idev).cnf.disable_ipv6 != 0 {
+    |                                   ^^^ unknown field
+    |
+    = note: available field is: `_priv`
+
+error[E0609]: no field `flags` on type `kernel_types::sk_buff`
+   --> crates/ip6_output/src/lib.rs:263:18
+    |
+263 |         !((*skb).flags & 0x01 != 0), // IP6SKB_REROUTED
+    |                  ^^^^^ unknown field
+    |
+    = note: available fields are: `next`, `prev`, `tstamp`, `dev`, `len` ... and 11 others
+
+error: could not compile `fib6_rules` (lib) due to 2 previous errors
+warning: `exthdrs_core` (lib) generated 2 warnings
+error: could not compile `exthdrs_core` (lib) due to 7 previous errors; 2 warnings emitted
+error[E0308]: arguments to this function are incorrect
+   --> crates/ip6_output/src/lib.rs:254:5
+    |
+254 |     NF_HOOK_COND(
+    |     ^^^^^^^^^^^^
+    |
+note: expected `*mut net_device`, found `*mut c_void`
+   --> crates/ip6_output/src/lib.rs:260:9
+    |
+260 |         indev,
+    |         ^^^^^
+    = note: expected raw pointer `*mut net_device`
+               found raw pointer `*mut c_void`
+note: expected `*mut net_device`, found `*mut c_void`
+   --> crates/ip6_output/src/lib.rs:261:9
+    |
+261 |         dev,
+    |         ^^^
+    = note: expected raw pointer `*mut net_device`
+               found raw pointer `*mut c_void`
+note: function defined here
+   --> crates/ip6_output/src/lib.rs:150:4
+    |
+150 | fn NF_HOOK_COND(
+    |    ^^^^^^^^^^^^
+...
+156 |     _indev: *mut net_device,
+    |     -----------------------
+157 |     _outdev: *mut net_device,
+    |     ------------------------
+
+error[E0609]: no field `dst` on type `kernel_types::sk_buff`
+   --> crates/ip6_output/src/lib.rs:279:22
+    |
+279 |     let dst = (*skb).dst;
+    |                      ^^^ unknown field
+    |
+    = note: available fields are: `next`, `prev`, `tstamp`, `dev`, `len` ... and 11 others
+
+error[E0609]: no field `daddr` on type `c_void`
+   --> crates/ip6_output/src/lib.rs:284:49
+    |
+284 |     let mut first_hop: *mut in6_addr = &((*fl6).daddr);
+    |                                                 ^^^^^ unknown field
+
+warning: `ip6_gre` (lib) generated 2 warnings
+error: could not compile `ip6_gre` (lib) due to 10 previous errors; 2 warnings emitted
+warning: unused variable: `skb`
+   --> crates/ip6_output/src/lib.rs:199:25
+    |
+199 | fn ipv6_push_nfrag_opts(skb: *mut sk_buff, opt: *mut c_void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_ad...
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `opt`
+   --> crates/ip6_output/src/lib.rs:199:44
+    |
+199 | fn ipv6_push_nfrag_opts(skb: *mut sk_buff, opt: *mut c_void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_ad...
+    |                                            ^^^ help: if this is intentional, prefix it with an underscore: `_opt`
+
+warning: unused variable: `proto`
+   --> crates/ip6_output/src/lib.rs:199:62
+    |
+199 | ...sk_buff, opt: *mut c_void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_addr) {
+    |                               ^^^^^ help: if this is intentional, prefix it with an underscore: `_proto`
+
+warning: unused variable: `first_hop`
+   --> crates/ip6_output/src/lib.rs:199:78
+    |
+199 | ..._void, proto: *mut u8, first_hop: *mut *mut in6_addr, saddr: *mut *mut in6_addr) {
+    |                           ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_first_hop`
+
+warning: unused variable: `saddr`
+   --> crates/ip6_output/src/lib.rs:199:109
+    |
+199 | ...t_hop: *mut *mut in6_addr, saddr: *mut *mut in6_addr) {
+    |                               ^^^^^ help: if this is intentional, prefix it with an underscore: `_saddr`
+
+warning: unused variable: `skb`
+   --> crates/ip6_output/src/lib.rs:203:13
+    |
+203 | fn skb_push(skb: *mut sk_buff, size: c_int) {
+    |             ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+
+warning: unused variable: `size`
+   --> crates/ip6_output/src/lib.rs:203:32
+    |
+203 | fn skb_push(skb: *mut sk_buff, size: c_int) {
+    |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_size`
+
+warning: unused variable: `skb`
+   --> crates/ip6_output/src/lib.rs:207:29
+    |
+207 | fn skb_reset_network_header(skb: *mut sk_buff) {
+    |                             ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+
+warning: unused variable: `dst`
+   --> crates/ip6_output/src/lib.rs:211:12
+    |
+211 | fn dst_mtu(dst: *mut dst_entry) -> c_int {
+    |            ^^^ help: if this is intentional, prefix it with an underscore: `_dst`
+
+warning: unused variable: `sk`
+   --> crates/ip6_output/src/lib.rs:216:21
+    |
+216 | fn ipv6_local_error(sk: *mut sock, errno: c_int, fl6: *mut c_void, mtu: c_int) {
+    |                     ^^ help: if this is intentional, prefix it with an underscore: `_sk`
+
+warning: unused variable: `errno`
+   --> crates/ip6_output/src/lib.rs:216:36
+    |
+216 | fn ipv6_local_error(sk: *mut sock, errno: c_int, fl6: *mut c_void, mtu: c_int) {
+    |                                    ^^^^^ help: if this is intentional, prefix it with an underscore: `_errno`
+
+warning: unused variable: `fl6`
+   --> crates/ip6_output/src/lib.rs:216:50
+    |
+216 | fn ipv6_local_error(sk: *mut sock, errno: c_int, fl6: *mut c_void, mtu: c_int) {
+    |                                                  ^^^ help: if this is intentional, prefix it with an underscore: `_fl6`
+
+warning: unused variable: `mtu`
+   --> crates/ip6_output/src/lib.rs:216:68
+    |
+216 | fn ipv6_local_error(sk: *mut sock, errno: c_int, fl6: *mut c_void, mtu: c_int) {
+    |                                                                    ^^^ help: if this is intentional, prefix it with an underscore: `_mtu`
+
+warning: unused variable: `sk`
+   --> crates/ip6_output/src/lib.rs:220:19
+    |
+220 | fn l3mdev_ip6_out(sk: *mut sock, skb: *mut sk_buff) -> *mut sk_buff {
+    |                   ^^ help: if this is intentional, prefix it with an underscore: `_sk`
+
+warning: unused variable: `skb`
+   --> crates/ip6_output/src/lib.rs:220:34
+    |
+220 | fn l3mdev_ip6_out(sk: *mut sock, skb: *mut sk_buff) -> *mut sk_buff {
+    |                                  ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+
+warning: unused variable: `proto`
+   --> crates/ip6_output/src/lib.rs:225:12
+    |
+225 | fn NF_HOOK(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, o...
+    |            ^^^^^ help: if this is intentional, prefix it with an underscore: `_proto`
+
+warning: unused variable: `hook`
+   --> crates/ip6_output/src/lib.rs:225:23
+    |
+225 | fn NF_HOOK(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, o...
+    |                       ^^^^ help: if this is intentional, prefix it with an underscore: `_hook`
+
+warning: unused variable: `net`
+   --> crates/ip6_output/src/lib.rs:225:33
+    |
+225 | fn NF_HOOK(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, o...
+    |                                 ^^^ help: if this is intentional, prefix it with an underscore: `_net`
+
+warning: unused variable: `sk`
+   --> crates/ip6_output/src/lib.rs:225:48
+    |
+225 | fn NF_HOOK(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, o...
+    |                                                ^^ help: if this is intentional, prefix it with an underscore: `_sk`
+
+warning: unused variable: `skb`
+   --> crates/ip6_output/src/lib.rs:225:63
+    |
+225 | ...et: *mut net, sk: *mut sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *...
+    |                                 ^^^ help: if this is intentional, prefix it with an underscore: `_skb`
+
+warning: unused variable: `indev`
+   --> crates/ip6_output/src/lib.rs:225:82
+    |
+225 | ...t sock, skb: *mut sk_buff, indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buf...
+    |                               ^^^^^ help: if this is intentional, prefix it with an underscore: `_indev`
+
+warning: unused variable: `outdev`
+   --> crates/ip6_output/src/lib.rs:225:106
+    |
+225 | ..., indev: *mut net_device, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int) -> c_int {
+    |                              ^^^^^^ help: if this is intentional, prefix it with an underscore: `_outdev`
+
+warning: unused variable: `okfn`
+   --> crates/ip6_output/src/lib.rs:225:131
+    |
+225 | ...e, outdev: *mut net_device, okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int) -> c_int {
+    |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_okfn`
+
+warning: unused variable: `dev`
+   --> crates/ip6_output/src/lib.rs:294:22
+    |
+294 | fn LL_RESERVED_SPACE(dev: *mut net_device) -> c_int {
+    |                      ^^^ help: if this is intentional, prefix it with an underscore: `_dev`
+
+warning: unused variable: `sk`
+   --> crates/ip6_output/src/lib.rs:299:13
+    |
+299 | fn sock_net(sk: *const sock) -> *mut net {
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_sk`
+
+warning: unused variable: `sk`
+   --> crates/ip6_output/src/lib.rs:304:13
+    |
+304 | fn inet6_sk(sk: *const sock) -> *mut ipv6_pinfo {
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_sk`
+
+Some errors have detailed explanations: E0308, E0425, E0428, E0433, E0609.
+For more information about an error, try `rustc --explain E0308`.
+error[E0425]: cannot find value `__UDP_DISCONNECT` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:17:30
+    |
+ 17 |     let mut udp_disconnect = __UDP_DISCONNECT.lock().unwrap();
+    |                              ^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:581:1
+    |
+581 | pub static mut __udp_disconnect: *mut core::ffi::c_void = core::ptr::null_mut();
+    | ------------------------------------------------------- similarly named static `__udp_disconnect` defined here
+    |
+help: a static with a similar name exists
+    |
+ 17 -     let mut udp_disconnect = __UDP_DISCONNECT.lock().unwrap();
+ 17 +     let mut udp_disconnect = __udp_disconnect.lock().unwrap();
+    |
+
+error[E0425]: cannot find value `ICMPV6_ERR_CONVERT` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:20:34
+    |
+ 20 |     let mut icmpv6_err_convert = ICMPV6_ERR_CONVERT.lock().unwrap();
+    |                                  ^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:582:1
+    |
+582 | pub static mut icmpv6_err_convert: *mut core::ffi::c_void = core::ptr::null_mut();
+    | --------------------------------------------------------- similarly named static `icmpv6_err_convert` defined here
+    |
+help: a static with a similar name exists
+    |
+ 20 -     let mut icmpv6_err_convert = ICMPV6_ERR_CONVERT.lock().unwrap();
+ 20 +     let mut icmpv6_err_convert = icmpv6_err_convert.lock().unwrap();
+    |
+
+error[E0425]: cannot find value `INET6_SOCKRAW_OPS` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:23:33
+    |
+ 23 |     let mut inet6_sockraw_ops = INET6_SOCKRAW_OPS.lock().unwrap();
+    |                                 ^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:583:1
+    |
+583 | pub static mut inet6_sockraw_ops: *mut core::ffi::c_void = core::ptr::null_mut();
+    | -------------------------------------------------------- similarly named static `inet6_sockraw_ops` defined here
+    |
+help: a static with a similar name exists
+    |
+ 23 -     let mut inet6_sockraw_ops = INET6_SOCKRAW_OPS.lock().unwrap();
+ 23 +     let mut inet6_sockraw_ops = inet6_sockraw_ops.lock().unwrap();
+    |
+
+error[E0425]: cannot find value `IP6_DATAGRAM_CONNECT_V6_ONLY` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:26:44
+    |
+ 26 |     let mut ip6_datagram_connect_v6_only = IP6_DATAGRAM_CONNECT_V6_ONLY.lock().unwrap();
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:584:1
+    |
+584 | pub static mut ip6_datagram_connect_v6_only: *mut core::ffi::c_void = core::ptr::null_mut();
+    | ------------------------------------------------------------------- similarly named static `ip6_datagram_connect_v6_only` defined here
+    |
+help: a static with a similar name exists
+    |
+ 26 -     let mut ip6_datagram_connect_v6_only = IP6_DATAGRAM_CONNECT_V6_ONLY.lock().unwrap();
+ 26 +     let mut ip6_datagram_connect_v6_only = ip6_datagram_connect_v6_only.lock().unwrap();
+    |
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:120:72
+    |
+120 |     timeouts[TcpConntrack::TCP_CONNTRACK_SYN_SENT as usize] = 2 * 60 * HZ;
+    |                                                                        ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:121:68
+    |
+121 |     timeouts[TcpConntrack::TCP_CONNTRACK_SYN_RECV as usize] = 60 * HZ;
+    |                                                                    ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:122:80
+    |
+122 |     timeouts[TcpConntrack::TCP_CONNTRACK_ESTABLISHED as usize] = 5 * 24 * 60 * HZ;
+    |                                                                                ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:123:72
+    |
+123 |     timeouts[TcpConntrack::TCP_CONNTRACK_FIN_WAIT as usize] = 2 * 60 * HZ;
+    |                                                                        ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:124:70
+    |
+124 |     timeouts[TcpConntrack::TCP_CONNTRACK_CLOSE_WAIT as usize] = 60 * HZ;
+    |                                                                      ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:125:68
+    |
+125 |     timeouts[TcpConntrack::TCP_CONNTRACK_LAST_ACK as usize] = 30 * HZ;
+    |                                                                    ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:126:73
+    |
+126 |     timeouts[TcpConntrack::TCP_CONNTRACK_TIME_WAIT as usize] = 2 * 60 * HZ;
+    |                                                                         ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:127:65
+    |
+127 |     timeouts[TcpConntrack::TCP_CONNTRACK_CLOSE as usize] = 10 * HZ;
+    |                                                                 ^^ not found in this scope
+
+error[E0425]: cannot find value `HZ` in this scope
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:128:73
+    |
+128 |     timeouts[TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as usize] = 2 * 60 * HZ;
+    |                                                                         ^^ not found in this scope
+
+warning: unexpected `cfg` condition value: `procfs`
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:132:7
+    |
+132 | #[cfg(feature = "procfs")]
+    |       ^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `procfs` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unused import: `std::sync::Mutex`
+ --> crates/nf_conntrack_proto_tcp/src/lib.rs:4:5
+  |
+4 | use std::sync::Mutex;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `c_int`
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:40:17
+   |
+40 | use core::ffi::{c_int, c_uint, c_char, c_void};
+   |                 ^^^^^
+
+warning: variant `TCP_SYN_SET` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:45:5
+   |
+45 |     TCP_SYN_SET = 0,
+   |     ^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpSynSet`
+   |
+   = note: `#[warn(non_camel_case_types)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: variant `TCP_SYNACK_SET` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:46:5
+   |
+46 |     TCP_SYNACK_SET,
+   |     ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpSynackSet`
+
+warning: variant `TCP_FIN_SET` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:47:5
+   |
+47 |     TCP_FIN_SET,
+   |     ^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpFinSet`
+
+warning: variant `TCP_ACK_SET` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:48:5
+   |
+48 |     TCP_ACK_SET,
+   |     ^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpAckSet`
+
+warning: variant `TCP_RST_SET` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:49:5
+   |
+49 |     TCP_RST_SET,
+   |     ^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpRstSet`
+
+warning: variant `TCP_NONE_SET` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:50:5
+   |
+50 |     TCP_NONE_SET,
+   |     ^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpNoneSet`
+
+warning: variant `TCP_CONNTRACK_NONE` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:55:5
+   |
+55 |     TCP_CONNTRACK_NONE = 0,
+   |     ^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackNone`
+
+warning: variant `TCP_CONNTRACK_SYN_SENT` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:56:5
+   |
+56 |     TCP_CONNTRACK_SYN_SENT,
+   |     ^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackSynSent`
+
+warning: variant `TCP_CONNTRACK_SYN_RECV` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:57:5
+   |
+57 |     TCP_CONNTRACK_SYN_RECV,
+   |     ^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackSynRecv`
+
+warning: variant `TCP_CONNTRACK_ESTABLISHED` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:58:5
+   |
+58 |     TCP_CONNTRACK_ESTABLISHED,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackEstablished`
+
+warning: variant `TCP_CONNTRACK_FIN_WAIT` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:59:5
+   |
+59 |     TCP_CONNTRACK_FIN_WAIT,
+   |     ^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackFinWait`
+
+warning: variant `TCP_CONNTRACK_CLOSE_WAIT` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:60:5
+   |
+60 |     TCP_CONNTRACK_CLOSE_WAIT,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackCloseWait`
+
+warning: `ip6_output` (lib) generated 27 warnings
+error: could not compile `ip6_output` (lib) due to 10 previous errors; 27 warnings emitted
+warning: variant `TCP_CONNTRACK_LAST_ACK` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:61:5
+   |
+61 |     TCP_CONNTRACK_LAST_ACK,
+   |     ^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackLastAck`
+
+warning: variant `TCP_CONNTRACK_TIME_WAIT` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:62:5
+   |
+62 |     TCP_CONNTRACK_TIME_WAIT,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackTimeWait`
+
+warning: variant `TCP_CONNTRACK_CLOSE` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:63:5
+   |
+63 |     TCP_CONNTRACK_CLOSE,
+   |     ^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackClose`
+
+warning: variant `TCP_CONNTRACK_SYN_SENT2` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:64:5
+   |
+64 |     TCP_CONNTRACK_SYN_SENT2,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackSynSent2`
+
+warning: variant `TCP_CONNTRACK_MAX` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:65:5
+   |
+65 |     TCP_CONNTRACK_MAX,
+   |     ^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackMax`
+
+warning: variant `TCP_CONNTRACK_IGNORE` should have an upper camel case name
+  --> crates/nf_conntrack_proto_tcp/src/lib.rs:66:5
+   |
+66 |     TCP_CONNTRACK_IGNORE,
+   |     ^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `TcpConntrackIgnore`
+
+warning: `micro_kernel_demo` (bin "micro_kernel") generated 15 warnings (run `cargo fix --bin "micro_kernel" -p micro_kernel_demo` to apply 9 suggestions)
+warning: `cipso_ipv4` (lib) generated 3 warnings (run `cargo fix --lib -p cipso_ipv4` to apply 3 suggestions)
+error[E0277]: `*const i8` cannot be shared between threads safely
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:178:29
+    |
+178 | static TCP_CONNTRACK_NAMES: [*const c_char; 11] = {
+    |                             ^^^^^^^^^^^^^^^^^^^ `*const i8` cannot be shared between threads safely
+    |
+    = help: within `[*const i8; 11]`, the trait `Sync` is not implemented for `*const i8`
+    = note: required because it appears within the type `[*const i8; 11]`
+    = note: shared static variables must have a type that implements `Sync`
+
+error[E0308]: mismatched types
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:191:5
+    |
+191 |     names
+    |     ^^^^^ expected an array with a size of 11, found one with a size of 10
+    |
+    = note: expected array `[*const i8; 11]`
+               found array `[*const i8; 10]`
+
+error[E0507]: cannot move out of a raw pointer
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:158:26
+    |
+158 |     let flags = unsafe { *(tcph as *const tcphdr) };
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^ move occurs because value has type `tcphdr`, which does not implement the `Copy` trait
+    |
+note: if `tcphdr` implemented `Clone`, you could clone the value
+   --> crates/nf_conntrack_proto_tcp/src/lib.rs:71:1
+    |
+ 71 | pub struct tcphdr {
+    | ^^^^^^^^^^^^^^^^^ consider implementing `Clone` for this type
+...
+158 |     let flags = unsafe { *(tcph as *const tcphdr) };
+    |                          ------------------------ you could clone this value
+
+Some errors have detailed explanations: E0277, E0308, E0425, E0432, E0507, E0530, E0753.
+For more information about an error, try `rustc --explain E0277`.
+error[E0425]: cannot find type `proto_ops` in this scope
+  --> crates/udplite/src/lib.rs:44:21
+   |
+44 |     pub proto: *mut proto_ops,
+   |                     ^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `msghdr` in this scope
+  --> crates/udplite/src/lib.rs:56:55
+   |
+56 |     pub sendmsg: unsafe extern "C" fn(*mut sock, *mut msghdr, c_int) -> c_int,
+   |                                                       ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `msghdr` in this scope
+  --> crates/udplite/src/lib.rs:57:55
+   |
+57 |     pub recvmsg: unsafe extern "C" fn(*mut sock, *mut msghdr, c_int, c_int, c_int, c_int) -> c_int,
+   |                                                       ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `page` in this scope
+  --> crates/udplite/src/lib.rs:58:56
+   |
+58 |     pub sendpage: unsafe extern "C" fn(*mut sock, *mut page, c_int, c_size_t, c_int) -> c_int,
+   |                                                        ^^^^ not found in this scope
+
+error[E0425]: cannot find type `netlink_ext_ack` in this scope
+  --> crates/udplite/src/lib.rs:70:60
+   |
+70 |     pub diag_handler: unsafe extern "C" fn(*mut sock, *mut netlink_ext_ack, *mut sk_buff, *mut u8, *mut u8, c_int) -> c_int,
+   |                                                            ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `msghdr` in this scope
+  --> crates/udplite/src/lib.rs:72:57
+   |
+72 |     pub cmsg_send: unsafe extern "C" fn(*mut sock, *mut msghdr, c_int) -> c_int,
+   |                                                         ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `msghdr` in this scope
+  --> crates/udplite/src/lib.rs:73:57
+   |
+73 |     pub cmsg_recv: unsafe extern "C" fn(*mut sock, *mut msghdr, c_int) -> c_int,
+   |                                                         ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `msghdr` in this scope
+  --> crates/udplite/src/lib.rs:78:62
+   |
+78 |     pub sendmsg_locked: unsafe extern "C" fn(*mut sock, *mut msghdr, c_int) -> c_int,
+   |                                                              ^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `page` in this scope
+  --> crates/udplite/src/lib.rs:79:63
+   |
+79 |     pub sendpage_locked: unsafe extern "C" fn(*mut sock, *mut page, c_int, c_size_t, c_int) -> c_int,
+   |                                                               ^^^^ not found in this scope
+
+error[E0425]: cannot find type `icmp6hdr` in this scope
+  --> crates/udplite/src/lib.rs:87:78
+   |
+87 |     pub err_handler: unsafe extern "C" fn(*mut sk_buff, *mut u8, c_int, *mut icmp6hdr, *mut net_device, *mut inet6_skb_parm, *mut so...
+   |                                                                              ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `net_device` in this scope
+  --> crates/udplite/src/lib.rs:87:93
+   |
+87 |     pub err_handler: unsafe extern "C" fn(*mut sk_buff, *mut u8, c_int, *mut icmp6hdr, *mut net_device, *mut inet6_skb_parm, *mut so...
+   |                                                                                             ^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `inet6_skb_parm` in this scope
+  --> crates/udplite/src/lib.rs:87:110
+   |
+87 | ... c_int, *mut icmp6hdr, *mut net_device, *mut inet6_skb_parm, *mut sock_exterr_skb),
+   |                                                 ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `sock_exterr_skb` in this scope
+  --> crates/udplite/src/lib.rs:87:131
+   |
+87 | ..., *mut net_device, *mut inet6_skb_parm, *mut sock_exterr_skb),
+   |                                                 ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_connect` in this scope
+   --> crates/udplite/src/lib.rs:114:14
+    |
+114 |     connect: udplite_connect,
+    |              ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_disconnect` in this scope
+   --> crates/udplite/src/lib.rs:115:17
+    |
+115 |     disconnect: udplite_disconnect,
+    |                 ^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:581:1
+    |
+581 | pub static mut __udp_disconnect: *mut core::ffi::c_void = core::ptr::null_mut();
+    | ------------------------------------------------------- similarly named static `__udp_disconnect` defined here
+    |
+help: a static with a similar name exists
+    |
+115 -     disconnect: udplite_disconnect,
+115 +     disconnect: __udp_disconnect,
+    |
+
+error[E0425]: cannot find value `udplite_accept` in this scope
+   --> crates/udplite/src/lib.rs:116:13
+    |
+116 |     accept: udplite_accept,
+    |             ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_ioctl` in this scope
+   --> crates/udplite/src/lib.rs:117:12
+    |
+117 |     ioctl: udplite_ioctl,
+    |            ^^^^^^^^^^^^^
+...
+241 | pub unsafe extern "C" fn udplite_rcv(skb: *mut sk_buff) -> c_int {
+    | ---------------------------------------------------------------- similarly named function `udplite_rcv` defined here
+    |
+help: a function with a similar name exists
+    |
+117 -     ioctl: udplite_ioctl,
+117 +     ioctl: udplite_rcv,
+    |
+
+error[E0425]: cannot find value `udplite_getname` in this scope
+   --> crates/udplite/src/lib.rs:118:14
+    |
+118 |     getname: udplite_getname,
+    |              ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_compat_setsockopt` in this scope
+   --> crates/udplite/src/lib.rs:121:24
+    |
+121 |     compat_setsockopt: udplite_compat_setsockopt,
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+173 | pub unsafe extern "C" fn udplite_setsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *const c_void, optlen: c_int) -> c_int {
+    | --------------------------------------------------------------------------------------------------------------------------------------- similarly named function `udplite_setsockopt` defined here
+    |
+help: a function with a similar name exists
+    |
+121 -     compat_setsockopt: udplite_compat_setsockopt,
+121 +     compat_setsockopt: udplite_setsockopt,
+    |
+
+error[E0425]: cannot find value `udplite_compat_getsockopt` in this scope
+   --> crates/udplite/src/lib.rs:122:24
+    |
+122 |     compat_getsockopt: udplite_compat_getsockopt,
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+209 | pub unsafe extern "C" fn udplite_getsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut c_int) -> c_int {
+    | ------------------------------------------------------------------------------------------------------------------------------------------ similarly named function `udplite_getsockopt` defined here
+    |
+help: a function with a similar name exists
+    |
+122 -     compat_getsockopt: udplite_compat_getsockopt,
+122 +     compat_getsockopt: udplite_getsockopt,
+    |
+
+error[E0425]: cannot find value `udplite_compat_ioctl` in this scope
+   --> crates/udplite/src/lib.rs:123:19
+    |
+123 |     compat_ioctl: udplite_compat_ioctl,
+    |                   ^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_sendmsg` in this scope
+   --> crates/udplite/src/lib.rs:124:14
+    |
+124 |     sendmsg: udplite_sendmsg,
+    |              ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_recvmsg` in this scope
+   --> crates/udplite/src/lib.rs:125:14
+    |
+125 |     recvmsg: udplite_recvmsg,
+    |              ^^^^^^^^^^^^^^^
+...
+241 | pub unsafe extern "C" fn udplite_rcv(skb: *mut sk_buff) -> c_int {
+    | ---------------------------------------------------------------- similarly named function `udplite_rcv` defined here
+    |
+help: a function with a similar name exists
+    |
+125 -     recvmsg: udplite_recvmsg,
+125 +     recvmsg: udplite_rcv,
+    |
+
+error[E0425]: cannot find value `udplite_sendpage` in this scope
+   --> crates/udplite/src/lib.rs:126:15
+    |
+126 |     sendpage: udplite_sendpage,
+    |               ^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_bind` in this scope
+   --> crates/udplite/src/lib.rs:127:11
+    |
+127 |     bind: udplite_bind,
+    |           ^^^^^^^^^^^^
+...
+265 | pub unsafe extern "C" fn udplite_err(skb: *mut sk_buff, info: *mut u8, err: c_int, icmph: *mut icmp6hdr, dev: *mut net_device, inet6_skb_parm: *mut inet6_skb_parm, sock_exterr_skb: *mut sock_exterr_skb) {
+    | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- similarly named function `udplite_err` defined here
+    |
+help: a function with a similar name exists
+    |
+127 -     bind: udplite_bind,
+127 +     bind: udplite_err,
+    |
+
+error[E0425]: cannot find value `udplite_backlog_rcv` in this scope
+   --> crates/udplite/src/lib.rs:128:18
+    |
+128 |     backlog_rcv: udplite_backlog_rcv,
+    |                  ^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_release_cb` in this scope
+   --> crates/udplite/src/lib.rs:129:17
+    |
+129 |     release_cb: udplite_release_cb,
+    |                 ^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_hash` in this scope
+   --> crates/udplite/src/lib.rs:130:11
+    |
+130 |     hash: udplite_hash,
+    |           ^^^^^^^^^^^^
+...
+265 | pub unsafe extern "C" fn udplite_err(skb: *mut sk_buff, info: *mut u8, err: c_int, icmph: *mut icmp6hdr, dev: *mut net_device, inet6_skb_parm: *mut inet6_skb_parm, sock_exterr_skb: *mut sock_exterr_skb) {
+    | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- similarly named function `udplite_err` defined here
+    |
+help: a function with a similar name exists
+    |
+130 -     hash: udplite_hash,
+130 +     hash: udplite_err,
+    |
+
+error[E0425]: cannot find value `udplite_unhash` in this scope
+   --> crates/udplite/src/lib.rs:131:13
+    |
+131 |     unhash: udplite_unhash,
+    |             ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_get_port` in this scope
+   --> crates/udplite/src/lib.rs:132:15
+    |
+132 |     get_port: udplite_get_port,
+    |               ^^^^^^^^^^^^^^^^
+    |
+   ::: crates/kernel_types/src/lib.rs:595:1
+    |
+595 | pub static mut ping_get_port: *mut core::ffi::c_void = core::ptr::null_mut();
+    | ---------------------------------------------------- similarly named static `ping_get_port` defined here
+    |
+help: a static with a similar name exists
+    |
+132 -     get_port: udplite_get_port,
+132 +     get_port: ping_get_port,
+    |
+
+error[E0425]: cannot find value `udplite_enter_memory_pressure` in this scope
+   --> crates/udplite/src/lib.rs:133:28
+    |
+133 |     enter_memory_pressure: udplite_enter_memory_pressure,
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_sock_rcv_skb` in this scope
+   --> crates/udplite/src/lib.rs:134:19
+    |
+134 |     sock_rcv_skb: udplite_sock_rcv_skb,
+    |                   ^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_mib_lookup` in this scope
+   --> crates/udplite/src/lib.rs:135:17
+    |
+135 |     mib_lookup: udplite_mib_lookup,
+    |                 ^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_mib_addr_lookup` in this scope
+   --> crates/udplite/src/lib.rs:136:22
+    |
+136 |     mib_addr_lookup: udplite_mib_addr_lookup,
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_diag_destroy` in this scope
+   --> crates/udplite/src/lib.rs:137:19
+    |
+137 |     diag_destroy: udplite_diag_destroy,
+    |                   ^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_diag_handler` in this scope
+   --> crates/udplite/src/lib.rs:138:19
+    |
+138 |     diag_handler: udplite_diag_handler,
+    |                   ^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_get_timeo` in this scope
+   --> crates/udplite/src/lib.rs:139:16
+    |
+139 |     get_timeo: udplite_get_timeo,
+    |                ^^^^^^^^^^^^^^^^^ not found in this scope
+
+warning: `nf_conntrack_proto_tcp` (lib) generated 21 warnings
+error: could not compile `nf_conntrack_proto_tcp` (lib) due to 32 previous errors; 21 warnings emitted
+error[E0425]: cannot find value `udplite_cmsg_send` in this scope
+   --> crates/udplite/src/lib.rs:140:16
+    |
+140 |     cmsg_send: udplite_cmsg_send,
+    |                ^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_cmsg_recv` in this scope
+   --> crates/udplite/src/lib.rs:141:16
+    |
+141 |     cmsg_recv: udplite_cmsg_recv,
+    |                ^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_bind_conflict` in this scope
+   --> crates/udplite/src/lib.rs:142:20
+    |
+142 |     bind_conflict: udplite_bind_conflict,
+    |                    ^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_get_rx_skb_len` in this scope
+   --> crates/udplite/src/lib.rs:143:21
+    |
+143 |     get_rx_skb_len: udplite_get_rx_skb_len,
+    |                     ^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_setsockopt_compat` in this scope
+   --> crates/udplite/src/lib.rs:144:24
+    |
+144 |     setsockopt_compat: udplite_setsockopt_compat,
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+173 | pub unsafe extern "C" fn udplite_setsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *const c_void, optlen: c_int) -> c_int {
+    | --------------------------------------------------------------------------------------------------------------------------------------- similarly named function `udplite_setsockopt` defined here
+    |
+help: a function with a similar name exists
+    |
+144 -     setsockopt_compat: udplite_setsockopt_compat,
+144 +     setsockopt_compat: udplite_setsockopt,
+    |
+
+error[E0425]: cannot find value `udplite_getsockopt_compat` in this scope
+   --> crates/udplite/src/lib.rs:145:24
+    |
+145 |     getsockopt_compat: udplite_getsockopt_compat,
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+209 | pub unsafe extern "C" fn udplite_getsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut c_int) -> c_int {
+    | ------------------------------------------------------------------------------------------------------------------------------------------ similarly named function `udplite_getsockopt` defined here
+    |
+help: a function with a similar name exists
+    |
+145 -     getsockopt_compat: udplite_getsockopt_compat,
+145 +     getsockopt_compat: udplite_getsockopt,
+    |
+
+error[E0425]: cannot find value `udplite_sendmsg_locked` in this scope
+   --> crates/udplite/src/lib.rs:146:21
+    |
+146 |     sendmsg_locked: udplite_sendmsg_locked,
+    |                     ^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_sendpage_locked` in this scope
+   --> crates/udplite/src/lib.rs:147:22
+    |
+147 |     sendpage_locked: udplite_sendpage_locked,
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `udplite_setsockopt_locked` in this scope
+   --> crates/udplite/src/lib.rs:148:24
+    |
+148 |     setsockopt_locked: udplite_setsockopt_locked,
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+173 | pub unsafe extern "C" fn udplite_setsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *const c_void, optlen: c_int) -> c_int {
+    | --------------------------------------------------------------------------------------------------------------------------------------- similarly named function `udplite_setsockopt` defined here
+    |
+help: a function with a similar name exists
+    |
+148 -     setsockopt_locked: udplite_setsockopt_locked,
+148 +     setsockopt_locked: udplite_setsockopt,
+    |
+
+error[E0425]: cannot find value `SOL_UDPLITE` in this scope
+   --> crates/udplite/src/lib.rs:174:17
+    |
+174 |     if level != SOL_UDPLITE {
+    |                 ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `SOL_UDPLITE` in this scope
+   --> crates/udplite/src/lib.rs:210:17
+    |
+210 |     if level != SOL_UDPLITE {
+    |                 ^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `icmp6hdr` in this scope
+   --> crates/udplite/src/lib.rs:265:96
+    |
+265 | pub unsafe extern "C" fn udplite_err(skb: *mut sk_buff, info: *mut u8, err: c_int, icmph: *mut icmp6hdr, dev: *mut net_device, inet...
+    |                                                                                                ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find type `net_device` in this scope
+   --> crates/udplite/src/lib.rs:265:116
+    |
+265 | ...8, err: c_int, icmph: *mut icmp6hdr, dev: *mut net_device, inet6_skb_parm: *mut inet6_skb_parm, sock_exterr_skb: *mut sock_exter...
+    |                                                   ^^^^^^^^^^ not found in this scope
+
+error[E0573]: expected type, found local variable `inet6_skb_parm`
+   --> crates/udplite/src/lib.rs:265:149
+    |
+265 | ...mp6hdr, dev: *mut net_device, inet6_skb_parm: *mut inet6_skb_parm, sock_exterr_skb: *mut sock_exterr_skb) {
+    |                                                       ^^^^^^^^^^^^^^ not a type
+
+error[E0573]: expected type, found local variable `sock_exterr_skb`
+   --> crates/udplite/src/lib.rs:265:187
+    |
+265 | ...b_parm: *mut inet6_skb_parm, sock_exterr_skb: *mut sock_exterr_skb) {
+    |                                                       ^^^^^^^^^^^^^^^ not a type
+
+error[E0609]: no field `data` on type `*mut kernel_types::sk_buff`
+   --> crates/udplite/src/lib.rs:242:27
+    |
+242 |     let udph = &mut *(skb.data as *mut udphdr);
+    |                           ^^^^ unknown field
+    |
+help: `skb` is a raw pointer; try dereferencing it
+    |
+242 |     let udph = &mut *((*skb).data as *mut udphdr);
+    |                       ++   +
+
+error[E0425]: cannot find function `ntohs` in this scope
+   --> crates/udplite/src/lib.rs:243:15
+    |
+243 |     let len = ntohs(udph.len) as usize;
+    |               ^^^^^ not found in this scope
+
+error[E0609]: no field `sk` on type `*mut kernel_types::sk_buff`
+   --> crates/udplite/src/lib.rs:250:29
+    |
+250 |     let udp_sk = &mut *(skb.sk as *mut udplite_sock);
+    |                             ^^ unknown field
+    |
+help: `skb` is a raw pointer; try dereferencing it
+    |
+250 |     let udp_sk = &mut *((*skb).sk as *mut udplite_sock);
+    |                         ++   +
+
+error[E0425]: cannot find function `kfree_skb` in this scope
+   --> crates/udplite/src/lib.rs:253:13
+    |
+253 |             kfree_skb(skb);
+    |             ^^^^^^^^^ not found in this scope
+
+error[E0609]: no field `cb` on type `*mut kernel_types::sk_buff`
+   --> crates/udplite/src/lib.rs:256:33
+    |
+256 |         let udp_cb = &mut *(skb.cb as *mut udplite_cb);
+    |                                 ^^ unknown field
+    |
+help: `skb` is a raw pointer; try dereferencing it
+    |
+256 |         let udp_cb = &mut *((*skb).cb as *mut udplite_cb);
+    |                             ++   +
+
+error[E0425]: cannot find function `udp_rcv` in this scope
+   --> crates/udplite/src/lib.rs:260:5
+    |
+260 |     udp_rcv(skb)
+    |     ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `udp_err` in this scope
+   --> crates/udplite/src/lib.rs:266:5
+    |
+266 |     udp_err(skb, info, err, icmph, dev, inet6_skb_parm, sock_exterr_skb);
+    |     ^^^^^^^ not found in this scope
+
+Some errors have detailed explanations: E0425, E0573, E0609.
+error: could not compile `udplite` (lib) due to 60 previous errors

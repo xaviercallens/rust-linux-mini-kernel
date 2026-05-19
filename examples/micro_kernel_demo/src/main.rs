@@ -47,6 +47,7 @@ fn demo_network_stack() {
     // IPv4 address example: 192.168.1.1
     let ipv4_addr = in_addr {
         s_addr: u32::from_be_bytes([192, 168, 1, 1]),
+        ip: core::ptr::null_mut(),
     };
 
     // IPv6 loopback: ::1
@@ -54,6 +55,7 @@ fn demo_network_stack() {
         in6_u: in6_addr_union {
             u6_addr32: [0, 0, 0, u32::from_be(1)],
         },
+        s6_addr: core::ptr::null_mut(),
     };
 
     // Unified address (netfilter)

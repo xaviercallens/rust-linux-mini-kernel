@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -287,3 +287,8 @@ static udpv6_offload: net_offload = net_offload {
 
 static udp_table: c_void = 0 as _;
 static udpv6_encap_needed_key: c_void = 0 as _;
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

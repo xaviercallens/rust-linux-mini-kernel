@@ -206,7 +206,7 @@ Requirements:
                 json.dump(self.stats, f)
 
 if __name__ == "__main__":
-    API_KEY = "AIzaSyDmfPzgOUWZi7aRDDEB__8mic_UBQ1PUSo"
+    API_KEY = os.environ.get("GEMINI_API_KEY", "")
     workspace = "/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel"
     fixer = GeminiCompilationFixer(workspace, API_KEY)
     fixer.run_overnight_batch()

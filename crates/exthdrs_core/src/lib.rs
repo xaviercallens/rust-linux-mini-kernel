@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::all)]
 
@@ -54,21 +54,12 @@ pub struct ipv6hdr {
     pub daddr: [u8; 16],
 }
 
-unsafe extern "C" {
-    fn skb_header_pointer(
-        skb: *const c_void,
-        offset: c_int,
-        len: c_int,
-        buffer: *mut c_void,
-    ) -> *const c_void;
 
-    fn skb_network_header(skb: *const c_void) -> *const u8;
-    fn skb_tail_pointer(skb: *const c_void) -> *const u8;
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_eh_personality() {}
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
@@ -121,15 +112,15 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
             let fhp = skb_header_pointer(
                 skb,
                 start + mem::size_of::<u8>() as c_int * 2,
-                mem::size_of_val(&_frag_off) as _,
-                &mut _frag_off as *mut _ as *mut c_void,
-            ) as *mut u16;
+                mem::size_of_val(&frag) as _,
+                &mut frag as *mut _ as *mut c_void,
+            ) as *mut frag_hdr;
 
-            if frag_off.is_null() {
+            if fhp.is_null() {
                 return -1;
             }
 
-            let fhp = fhp.cast::<frag_hdr>();
+
             *frag_offp = (*fhp).frag_off;
 
             if ((*frag_offp as u32) & 0xFFF8) != 0 {
@@ -239,7 +230,7 @@ pub unsafe extern "C" fn ipv6_find_hdr(
         let ip6 = skb_header_pointer(skb, *offset, mem::size_of_val(&_ip6) as _, &mut _ip6 as *mut _ as *mut c_void)
             as *const ipv6hdr;
 
-        if ip6.is_null() || (*ip6).version != 6 {
+        if ip6.is_null() || ((*ip6).priority_version >> 4) != 6 {
             return EBADMSG;
         }
 

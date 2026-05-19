@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_int, c_void};
@@ -159,6 +159,7 @@ unsafe extern "C" {
     fn ERR_PTR(err: c_int) -> *mut sk_buff;
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

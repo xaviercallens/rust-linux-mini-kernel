@@ -1,0 +1,21 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/examples/micro_kernel_demo/Cargo.toml
+workspace: /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/Cargo.toml
+   Compiling kernel_types v0.1.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/crates/kernel_types)
+   Compiling libc v0.2.186
+   Compiling micro_kernel_demo v0.1.0 (/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/examples/micro_kernel_demo)
+error[E0152]: found duplicate lang item `panic_impl`
+  --> examples/micro_kernel_demo/src/main.rs:18:1
+   |
+18 | / fn panic(_info: &PanicInfo) -> ! {
+19 | |     loop {}
+20 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/lib/libstd-09bec66e14073fe6.dylib, /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/lib/libstd-09bec66e14073fe6.rlib, /Users/xcallens/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/lib/libstd-09bec66e14073fe6.rmeta
+   = note: second definition in the local crate (`micro_kernel`)
+
+For more information about this error, try `rustc --explain E0152`.
+error: could not compile `micro_kernel_demo` (bin "micro_kernel" test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

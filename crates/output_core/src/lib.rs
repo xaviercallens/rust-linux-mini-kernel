@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -98,4 +98,9 @@ pub unsafe extern "C" fn output_core_free(oc: *mut output_core) {
     oc.frag_next = core::ptr::null_mut();
     oc.frag_list = core::ptr::null_mut();
     oc.frag_tail = core::ptr::null_mut();
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

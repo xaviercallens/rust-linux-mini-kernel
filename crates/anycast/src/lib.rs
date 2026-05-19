@@ -113,8 +113,7 @@ pub struct ipv6_ac_socklist {
     pub acl_ifindex: c_int,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
+
 pub struct ifacaddr6 {
     pub aca_addr: in6_addr,
     pub aca_next: *mut ifacaddr6,

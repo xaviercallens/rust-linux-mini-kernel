@@ -4,7 +4,7 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
 use core::panic::PanicInfo;
@@ -347,4 +347,9 @@ mod tests {
         let hash = HASH(&a as *const _, &b as *const_);
         assert!(hash < IP6_VTI_HASH_SIZE as u32);
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

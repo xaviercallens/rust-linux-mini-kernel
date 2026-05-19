@@ -4,8 +4,8 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
@@ -71,6 +71,7 @@ unsafe extern "C" {
     fn ipv6_addr_hash(a: *const in6_addr) -> c_uint;
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

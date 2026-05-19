@@ -7,8 +7,8 @@
 //! uses raw pointers and unsafe operations where necessary to match the kernel's
 //! low-level interface.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::transmutes_expressible_as_ptr_cast)]
@@ -279,3 +279,8 @@ pub static VALID_NEW: [u8; 256] = {
     arr[ICMP_ADDRESS as usize] = 1;
     arr
 };
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

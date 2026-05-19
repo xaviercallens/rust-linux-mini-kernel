@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::too_many_arguments)]
 
@@ -508,4 +508,9 @@ mod tests {
         let result = unsafe { nf_hook_entries_insert_raw(pp, &reg) };
         assert_eq!(result, 0);
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

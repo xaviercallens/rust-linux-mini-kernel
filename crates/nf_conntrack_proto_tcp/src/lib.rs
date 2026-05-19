@@ -32,8 +32,8 @@ pub fn initialize_globals() {
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -235,4 +235,9 @@ mod tests {
         tcph.rst = 1;
         assert_eq!(unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) }, TcpBitSet::TCP_RST_SET as c_uint);
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

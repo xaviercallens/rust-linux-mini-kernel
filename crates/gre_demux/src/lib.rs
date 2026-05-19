@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -77,6 +77,7 @@ unsafe extern "C" {
     fn gre_calc_hlen(flags: u16) -> u16;
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}

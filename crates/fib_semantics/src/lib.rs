@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
@@ -75,6 +75,7 @@ pub struct fib_info {
 
 static fib_info_cnt: AtomicUsize = AtomicUsize::new(0);
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
@@ -103,7 +104,7 @@ pub unsafe extern "C" fn free_fib_info(fi: *mut fib_info) {
 }
 
 unsafe fn free_fib_info_rcu(head: *mut rcu_head) {
-    let fi: *mut fib_info = mem::transmute(head);
+    let fi: *mut fib_info = core::mem::transmute(head);
 
     if !(*fi).nh.is_null() {
         // nexthop_put((*fi).nh);
@@ -113,7 +114,7 @@ unsafe fn free_fib_info_rcu(head: *mut rcu_head) {
         let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nexthop_nh = fib_nh.add(nhsel);
+            let nexthop_nh = fib_nh.add(nhsel as usize);
             // fib_nh_release((*fi).fib_net, nexthop_nh);
             // Placeholder for actual implementation
         }
@@ -150,7 +151,7 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
             let fib_nh = (*fi).nh as *mut fib_nh;
 
             for nhsel in 0..fi_nhs {
-                let nexthop_nh = fib_nh.add(nhsel);
+                let nexthop_nh = fib_nh.add(nhsel as usize);
                 if !(*nexthop_nh).nh_common.nhc_dev.is_null() {
                     // hlist_del(&(*nexthop_nh).nh_hash);
                     // Placeholder for actual implementation
@@ -166,12 +167,11 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
 }
 
 // Static variables
-static mut fib_info_lock: AtomicUsize = AtomicUsize::new(0);
-static mut fib_info_hash: *mut c_void = ptr::null_mut();
-static mut fib_info_laddrhash: *mut c_void = ptr::null_mut();
-static mut fib_info_hash_size: AtomicUsize = AtomicUsize::new(0);
-static mut fib_info_cnt: AtomicUsize = AtomicUsize::new(0);
-static mut fib_info_devhash: [*mut c_void; 256] = [ptr::null_mut(); 256];
+static fib_info_lock: AtomicUsize = AtomicUsize::new(0);
+static mut fib_info_hash: *mut c_void = core::ptr::null_mut();
+static mut fib_info_laddrhash: *mut c_void = core::ptr::null_mut();
+static fib_info_hash_size: AtomicUsize = AtomicUsize::new(0);
+static mut fib_info_devhash: [*mut c_void; 256] = [core::ptr::null_mut(); 256];
 
 // Constants
 const DEVINDEX_HASHBITS: c_int = 8;
@@ -196,7 +196,7 @@ fn fib_info_hashfn_result(val: c_int) -> c_int {
     (val ^ (val >> 7) ^ (val >> 12)) & mask
 }
 
-fn fib_info_hashfn(fi: *mut fib_info) -> c_int {
+unsafe fn fib_info_hashfn(fi: *mut fib_info) -> c_int {
     let init_val = (*fi).fib_nhs;
     let protocol = (*fi).fib_protocol;
     let scope = (*fi).fib_scope;
@@ -206,13 +206,13 @@ fn fib_info_hashfn(fi: *mut fib_info) -> c_int {
     let mut val = fib_info_hashfn_1(init_val, protocol, scope, prefsrc, priority);
 
     if !(*fi).nh.is_null() {
-        val ^= fib_devindex_hashfn((*(*fi).nh as *mut fib_nh).fib_nh_oif);
+        val ^= fib_devindex_hashfn((*((*fi).nh as *mut fib_nh)).fib_nh_oif);
     } else {
         let fi_nhs = (*fi).fib_nhs;
         let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nh = fib_nh.add(nhsel);
+            let nh = fib_nh.add(nhsel as usize);
             val ^= fib_devindex_hashfn((*nh).fib_nh_oif);
         }
     }
@@ -224,53 +224,53 @@ fn fib_info_hashfn(fi: *mut fib_info) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) -> *mut fib_info {
     if net.is_null() || cfg.is_null() {
-        return ptr::null_mut();
+        return core::ptr::null_mut();
     }
 
     let hash = fib_info_hashfn_1(
-        fib_devindex_hashfn((cfg as *mut fib_nh).fib_nh_oif),
-        (cfg as *mut fib_info).fib_protocol,
-        (cfg as *mut fib_info).fib_scope,
-        (cfg as *mut fib_info).fib_prefsrc as u32,
-        (cfg as *mut fib_info).fib_priority
+        fib_devindex_hashfn((*(cfg as *mut fib_nh)).fib_nh_oif),
+        (*(cfg as *mut fib_info)).fib_protocol,
+        (*(cfg as *mut fib_info)).fib_scope,
+        (*(cfg as *mut fib_info)).fib_prefsrc as u32,
+        (*(cfg as *mut fib_info)).fib_priority
     );
     let hash = fib_info_hashfn_result(hash);
     let head = fib_info_hash.offset(hash as isize);
 
-    let mut fi: *mut fib_info = ptr::null_mut();
+    let mut fi: *mut fib_info = core::ptr::null_mut();
     // hlist_for_each_entry(fi, head, fib_hash)
     // Placeholder for actual hlist iteration
 
     while !fi.is_null() {
-        if !net_eq((*fi).fib_net, net) {
+        if net_eq((*fi).fib_net, net) == 0 {
             fi = (*fi).fib_hash as *mut _; // Next entry
             continue;
         }
 
-        if !(*fi).nh.is_null() && (*(*fi).nh as *mut fib_nh).fib_nh_oif != (cfg as *mut fib_nh).fib_nh_oif {
+        if !(*fi).nh.is_null() && (*((*fi).nh as *mut fib_nh)).fib_nh_oif != (*(cfg as *mut fib_nh)).fib_nh_oif {
             fi = (*fi).fib_hash as *mut _; // Next entry
             continue;
         }
 
-        if (cfg as *mut fib_info).fib_protocol == (*fi).fib_protocol &&
-           (cfg as *mut fib_info).fib_scope == (*fi).fib_scope &&
-           (cfg as *mut fib_info).fib_prefsrc == (*fi).fib_prefsrc &&
-           (cfg as *mut fib_info).fib_priority == (*fi).fib_priority &&
-           (cfg as *mut fib_info).fib_type == (*fi).fib_type &&
-           (cfg as *mut fib_info).fib_tb_id == (*fi).fib_tb_id &&
-           !(((cfg as *mut fib_info).fib_flags ^ (*fi).fib_flags) & !RTNH_COMPARE_MASK) {
+        if (*(cfg as *mut fib_info)).fib_protocol == (*fi).fib_protocol &&
+           (*(cfg as *mut fib_info)).fib_scope == (*fi).fib_scope &&
+           (*(cfg as *mut fib_info)).fib_prefsrc == (*fi).fib_prefsrc &&
+           (*(cfg as *mut fib_info)).fib_priority == (*fi).fib_priority &&
+           (*(cfg as *mut fib_info)).fib_type == (*fi).fib_type &&
+           (*(cfg as *mut fib_info)).fib_tb_id == (*fi).fib_tb_id &&
+           !((((*(cfg as *mut fib_info)).fib_flags ^ (*fi).fib_flags) & !RTNH_COMPARE_MASK) != 0) {
             return fi;
         }
 
         fi = (*fi).fib_hash as *mut _; // Next entry
     }
 
-    ptr::null_mut()
+    core::ptr::null_mut()
 }
 
 // Placeholder for net_eq function
 unsafe fn net_eq(a: *mut c_void, b: *mut c_void) -> c_int {
-    a == b
+    if a == b { 1 } else { 0 }
 }
 
 // Placeholder for RTNH_COMPARE_MASK

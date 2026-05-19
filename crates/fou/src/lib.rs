@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_int, c_void};
@@ -173,6 +173,7 @@ pub unsafe extern "C" fn gue_udp_recv(_sk: *mut sock, skb: *mut sk_buff) -> c_in
     1
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}

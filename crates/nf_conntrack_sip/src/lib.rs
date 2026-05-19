@@ -4,7 +4,7 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::too_many_arguments)]
@@ -583,3 +583,8 @@ pub static MODULE_AUTHOR: [u8; 44] = *b"Christian Hentschel <chentschel@arnet.co
 pub static MODULE_DESCRIPTION: [u8; 27] = *b"SIP connection tracking helper\0";
 #[no_mangle]
 pub static MODULE_ALIAS: [u8; 17] = *b"ip_conntrack_sip\0";
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

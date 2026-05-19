@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -341,4 +341,9 @@ pub extern "C" fn nf_ct_timeout_cleanup() {
     }
 
     unsafe { NF_CT_TIMEOUT_LIST = core::ptr::null_mut() };
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

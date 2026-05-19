@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::implicit_return_in_non_void_function)]
@@ -30,6 +30,7 @@ unsafe impl GlobalAlloc for DummyAlloc {
 #[global_allocator]
 static GLOBAL_ALLOCATOR: DummyAlloc = DummyAlloc;
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}

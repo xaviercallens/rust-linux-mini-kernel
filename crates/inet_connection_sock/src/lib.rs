@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
@@ -83,6 +83,7 @@ unsafe extern "C" {
     fn ipv6_only_sock(sk: *const sock) -> c_uchar;
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

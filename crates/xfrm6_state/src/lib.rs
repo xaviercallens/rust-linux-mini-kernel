@@ -3,8 +3,8 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -73,6 +73,7 @@ pub unsafe extern "C" fn xfrm6_state_fini() {
     unsafe { xfrm_state_unregister_afinfo(&raw mut XFRM6_STATE_AFINFO) }
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

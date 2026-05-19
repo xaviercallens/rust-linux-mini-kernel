@@ -4,8 +4,8 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
@@ -16,6 +16,7 @@ use kernel_types::*;
 pub const H323_ERROR_NONE: c_int = 0;
 pub const H323_ERROR_BOUND: c_int = 1;
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

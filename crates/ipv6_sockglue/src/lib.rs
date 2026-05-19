@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
@@ -290,4 +290,8 @@ mod tests {
     fn test_ip6_ra_control() {
         // Basic test - would require actual kernel environment
     }
+}
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

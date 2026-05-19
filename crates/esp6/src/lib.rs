@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use core::ffi::{c_int, c_uchar, c_uint, c_ulong, c_ushort, c_void};
 use core::ptr::null_mut;
@@ -223,4 +223,9 @@ pub unsafe extern "C" fn esp6_cache_get_stats(
         *out_stats = (*mgr).stats;
     }
     0
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

@@ -66,8 +66,8 @@ pub struct xfrm_input_afinfo {
 }
 
 unsafe extern "C" {
-    fn mutex_lock(mutex: *mut mutex);
-    fn mutex_unlock(mutex: *mut mutex);
+    fn mutex_lock(mutex: *mut c_void);
+    fn mutex_unlock(mutex: *mut c_void);
     fn pskb_may_pull(skb: *mut sk_buff, size: c_int) -> c_int;
     fn icmpv6_send(skb: *mut sk_buff, type_: c_int, code: c_int, info: u32);
     fn kfree_skb(skb: *mut sk_buff);
@@ -77,61 +77,7 @@ unsafe extern "C" {
     fn xfrm_input_unregister_afinfo(afinfo: *const xfrm_input_afinfo) -> c_int;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn tunnel6_rcv(_skb: *mut sk_buff) -> c_int {
-    ENOENT
-}
 
-#[no_mangle]
-pub unsafe extern "C" fn tunnel46_rcv(_skb: *mut sk_buff) -> c_int {
-    ENOENT
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn tunnelmpls6_rcv(_skb: *mut sk_buff) -> c_int {
-    ENOENT
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn tunnel6_err(
-    _skb: *mut sk_buff,
-    _opt: *mut inet6_skb_parm,
-    _type: u8,
-    _code: u8,
-    _offset: c_int,
-    _info: u32,
-) -> c_int {
-    0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn tunnel46_err(
-    _skb: *mut sk_buff,
-    _opt: *mut inet6_skb_parm,
-    _type: u8,
-    _code: u8,
-    _offset: c_int,
-    _info: u32,
-) -> c_int {
-    0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn tunnelmpls6_err(
-    _skb: *mut sk_buff,
-    _opt: *mut inet6_skb_parm,
-    _type: u8,
-    _code: u8,
-    _offset: c_int,
-    _info: u32,
-) -> c_int {
-    0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn tunnel6_rcv_cb(_skb: *mut sk_buff, _nexthdr: u8, _err: c_int) -> c_int {
-    0
-}
 
 static tunnel6_protocol: inet6_protocol = inet6_protocol {
     handler: tunnel6_rcv,
@@ -181,22 +127,10 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
         }
     }
 
-    let priority = (*handler).priority;
 
-    mutex_lock(core::ptr::addr_of_mut!(tunnel6_mutex));
-
-    let mut pprev: *mut *mut xfrm6_tunnel = match family {
-        AF_INET6 => core::ptr::addr_of_mut!(tunnel6_handlers),
-        AF_INET => core::ptr::addr_of_mut!(tunnel46_handlers),
-        AF_MPLS => core::ptr::addr_of_mut!(tunnelmpls6_handlers),
-        _ => {
-            mutex_unlock(core::ptr::addr_of_mut!(tunnel6_mutex));
-            return EINVAL;
-        }
-    };
 
     while !(*pprev).is_null() {
-        let current = *pprev;
+        let mut current = *pprev;
         let current_priority = (*current).priority;
         if current_priority > priority {
             break;
@@ -221,6 +155,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_deregister(handler: *mut xfrm6_tunnel, family: c_int) -> c_int {
+    let mut ret = -ENOENT;
     if handler.is_null() {
         return EINVAL;
     }
@@ -309,7 +244,7 @@ pub unsafe extern "C" fn tunnel6_rcv(skb: *mut sk_buff) -> c_int {
 // Implementation of tunnel6_rcv_cb
 #[no_mangle]
 pub unsafe extern "C" fn tunnel6_rcv_cb(skb: *mut sk_buff, proto: u8, err: c_int) -> c_int {
-    let head: *mut xfrm6_tunnel = if proto == IPPROTO_IPV6 {
+    let head: *mut xfrm6_tunnel = if (proto as c_int) == IPPROTO_IPV6 {
         tunnel6_handlers
     } else {
         tunnel46_handlers
@@ -342,7 +277,7 @@ pub unsafe extern "C" fn tunnel46_rcv(skb: *mut sk_buff) -> c_int {
         if ((*handler).handler)(skb) == 0 {
             return 0;
         }
-        pprev = core::ptr::addr_of_mut!((**pprev).next);
+        handler = (*handler).next;
     }
 
     icmpv6_send(skb, ICMPV6_DEST_UNREACH, ICMPV6_PORT_UNREACH, 0);

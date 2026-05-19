@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use core::ffi::c_void;
 use kernel_types::*;
@@ -60,6 +60,7 @@ pub unsafe extern "C" fn sysctl_net_ipv6_unregister(header: *mut ctl_table_heade
     }
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {

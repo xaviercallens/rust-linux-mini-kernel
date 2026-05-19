@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -177,4 +177,9 @@ pub unsafe extern "C" fn fib4_notifier_exit(net: *mut Net) {
         fib_notifier_ops_unregister(ops);
         (*ipv4).notifier_ops = ptr::null_mut();
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

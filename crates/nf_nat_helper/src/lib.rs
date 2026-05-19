@@ -5,8 +5,8 @@
 //! functions from the Linux kernel's nf_nat_helper.c. The implementation
 //! maintains exact ABI compatibility with the original C code.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -61,6 +61,7 @@ unsafe extern "C" {
     fn skb_put(skb: *mut sk_buff, len: usize) -> *mut u8;
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {

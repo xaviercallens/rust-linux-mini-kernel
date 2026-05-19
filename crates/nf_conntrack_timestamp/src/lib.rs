@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
@@ -43,6 +43,7 @@ extern "C" {
     fn pr_err(fmt: *const c_char);
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
 #![allow(dead_code)]
 
 // Re-export core FFI types
@@ -258,6 +259,18 @@ pub struct flowi {
     pub secid: __u32,
     pub flowi_tos: __u8,
     pub u: *mut core::ffi::c_void, // Auto-generated mock field
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct flowi6 {
+    pub oif: core::ffi::c_int,
+    pub iif: core::ffi::c_int,
+    pub flowi6_mark: __u32,
+    pub flowi6_tos: __u8,
+    pub saddr: in6_addr,
+    pub daddr: in6_addr,
+    pub fl6_iifname: [core::ffi::c_char; 16],
 }
 
 /// Destination entry (routing cache)
@@ -618,18 +631,13 @@ macro_rules! skbuff {
     ($($arg:tt)*) => { 0 }
 }
 #[macro_export]
-macro_rules! c_char {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
 macro_rules! offset {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! flowi6 {
     ($($arg:tt)*) => { 0 }
 }
 #[macro_export]
 macro_rules! request_sock {
     ($($arg:tt)*) => { 0 }
+}
+extern "C" {
+    pub fn udplite_get_port(sk: *mut core::ffi::c_void, snum: u16, recycling: i32) -> i32;
 }

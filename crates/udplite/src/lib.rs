@@ -4,6 +4,11 @@
 
 use kernel_types::*;
 
+pub type proto_ops = c_void;
+pub type msghdr = c_void;
+pub type page = c_void;
+pub type netlink_ext_ack = c_void;
+
 /// UDPLite header
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -12,6 +17,13 @@ pub struct udphdr {
     pub dest: __be16,
     pub len: __be16,
     pub check: __be16,
+}
+
+extern "C" {
+    fn udp_rcv(skb: *mut sk_buff) -> c_int;
+    fn udp_err(skb: *mut sk_buff, info: *mut u8, err: c_int, icmph: *mut c_void, dev: *mut c_void, inet6_skb_parm: *mut c_void, sock_exterr_skb: *mut c_void);
+    fn kfree_skb(skb: *mut sk_buff);
+    fn ntohs(val: __be16) -> u16;
 }
 
 /// UDPLite socket
@@ -84,7 +96,7 @@ pub struct udplite_ops {
 #[repr(C)]
 pub struct udplite_protocol {
     pub handler: unsafe extern "C" fn(*mut sk_buff) -> c_int,
-    pub err_handler: unsafe extern "C" fn(*mut sk_buff, *mut u8, c_int, *mut icmp6hdr, *mut net_device, *mut inet6_skb_parm, *mut sock_exterr_skb),
+    pub err_handler: unsafe extern "C" fn(*mut sk_buff, *mut u8, c_int, *mut c_void, *mut c_void, *mut c_void, *mut c_void),
     pub no_policy: c_int,
     pub netns_ok: c_int,
     pub icmp_strict_tag_validation: c_int,
@@ -111,41 +123,41 @@ pub const IPPROTO_UDPLITE: c_int = 136;
 pub static mut udplite_proto_ops: udplite_ops = udplite_ops {
     proto: core::ptr::null_mut(),
     init: udplite_init_sock,
-    connect: udplite_connect,
-    disconnect: udplite_disconnect,
-    accept: udplite_accept,
-    ioctl: udplite_ioctl,
-    getname: udplite_getname,
+    connect: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    disconnect: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    accept: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    ioctl: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    getname: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
     setsockopt: udplite_setsockopt,
     getsockopt: udplite_getsockopt,
-    compat_setsockopt: udplite_compat_setsockopt,
-    compat_getsockopt: udplite_compat_getsockopt,
-    compat_ioctl: udplite_compat_ioctl,
-    sendmsg: udplite_sendmsg,
-    recvmsg: udplite_recvmsg,
-    sendpage: udplite_sendpage,
-    bind: udplite_bind,
-    backlog_rcv: udplite_backlog_rcv,
-    release_cb: udplite_release_cb,
-    hash: udplite_hash,
-    unhash: udplite_unhash,
-    get_port: udplite_get_port,
-    enter_memory_pressure: udplite_enter_memory_pressure,
-    sock_rcv_skb: udplite_sock_rcv_skb,
-    mib_lookup: udplite_mib_lookup,
-    mib_addr_lookup: udplite_mib_addr_lookup,
-    diag_destroy: udplite_diag_destroy,
-    diag_handler: udplite_diag_handler,
-    get_timeo: udplite_get_timeo,
-    cmsg_send: udplite_cmsg_send,
-    cmsg_recv: udplite_cmsg_recv,
-    bind_conflict: udplite_bind_conflict,
-    get_rx_skb_len: udplite_get_rx_skb_len,
-    setsockopt_compat: udplite_setsockopt_compat,
-    getsockopt_compat: udplite_getsockopt_compat,
-    sendmsg_locked: udplite_sendmsg_locked,
-    sendpage_locked: udplite_sendpage_locked,
-    setsockopt_locked: udplite_setsockopt_locked,
+    compat_setsockopt: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    compat_getsockopt: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    compat_ioctl: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    sendmsg: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    recvmsg: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    sendpage: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    bind: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    backlog_rcv: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    release_cb: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    hash: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    unhash: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    get_port: unsafe { core::mem::transmute(udplite_get_port as *const ()) },
+    enter_memory_pressure: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    sock_rcv_skb: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    mib_lookup: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    mib_addr_lookup: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    diag_destroy: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    diag_handler: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    get_timeo: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    cmsg_send: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    cmsg_recv: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    bind_conflict: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    get_rx_skb_len: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    setsockopt_compat: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    getsockopt_compat: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    sendmsg_locked: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    sendpage_locked: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
+    setsockopt_locked: unsafe { core::mem::transmute(udplite_dummy as *const ()) },
 };
 
 /// UDPLite protocol
@@ -171,7 +183,7 @@ pub unsafe extern "C" fn udplite_init_sock(sk: *mut sock) -> c_int {
 /// Set UDPLite socket options
 #[no_mangle]
 pub unsafe extern "C" fn udplite_setsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *const c_void, optlen: c_int) -> c_int {
-    if level != SOL_UDPLITE {
+    if level != 136 { // SOL_UDPLITE = IPPROTO_UDPLITE
         return -EINVAL;
     }
 
@@ -207,7 +219,7 @@ pub unsafe extern "C" fn udplite_setsockopt(sk: *mut sock, level: c_int, optname
 /// Get UDPLite socket options
 #[no_mangle]
 pub unsafe extern "C" fn udplite_getsockopt(sk: *mut sock, level: c_int, optname: c_int, optval: *mut c_void, optlen: *mut c_int) -> c_int {
-    if level != SOL_UDPLITE {
+    if level != 136 { // SOL_UDPLITE = IPPROTO_UDPLITE
         return -EINVAL;
     }
 
@@ -239,7 +251,7 @@ pub unsafe extern "C" fn udplite_getsockopt(sk: *mut sock, level: c_int, optname
 /// UDPLite receive function
 #[no_mangle]
 pub unsafe extern "C" fn udplite_rcv(skb: *mut sk_buff) -> c_int {
-    let udph = &mut *(skb.data as *mut udphdr);
+    let udph = &mut *((*skb).data as *mut udphdr);
     let len = ntohs(udph.len) as usize;
     let cscov = if len > core::mem::size_of::<udphdr>() {
         len - core::mem::size_of::<udphdr>()
@@ -247,13 +259,13 @@ pub unsafe extern "C" fn udplite_rcv(skb: *mut sk_buff) -> c_int {
         0
     };
 
-    let udp_sk = &mut *(skb.sk as *mut udplite_sock);
-    if cscov < udp_sk.cscov {
-        if !udp_sk.partial_cov {
+    let udp_sk = &mut *((*skb).sk as *mut udplite_sock);
+    if cscov < udp_sk.cscov as usize {
+        if udp_sk.partial_cov == 0 {
             kfree_skb(skb);
             return 0;
         }
-        let udp_cb = &mut *(skb.cb as *mut udplite_cb);
+        let udp_cb = &mut *((*skb).cb.as_mut_ptr() as *mut udplite_cb);
         udp_cb.partial_cov = 1;
     }
 
@@ -262,6 +274,14 @@ pub unsafe extern "C" fn udplite_rcv(skb: *mut sk_buff) -> c_int {
 
 /// UDPLite error handler
 #[no_mangle]
-pub unsafe extern "C" fn udplite_err(skb: *mut sk_buff, info: *mut u8, err: c_int, icmph: *mut icmp6hdr, dev: *mut net_device, inet6_skb_parm: *mut inet6_skb_parm, sock_exterr_skb: *mut sock_exterr_skb) {
+pub unsafe extern "C" fn udplite_err(skb: *mut sk_buff, info: *mut u8, err: c_int, icmph: *mut c_void, dev: *mut c_void, inet6_skb_parm: *mut c_void, sock_exterr_skb: *mut c_void) {
     udp_err(skb, info, err, icmph, dev, inet6_skb_parm, sock_exterr_skb);
 }
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn udplite_dummy() {}
