@@ -239,6 +239,7 @@ pub unsafe extern "C" fn inet_create(
     (*sock).state = SS_UNCONNECTED;
 
     err = -ESOCKTNOSUPPORT;
+    'lookup: loop {
     rcu_read_lock();
     let mut found = false;
     let mut list = &inetsw[(*sock).type_field];
@@ -282,12 +283,13 @@ pub unsafe extern "C" fn inet_create(
                                PF_INET, protocol);
             }
             try_loading_module += 1;
-            rcu_read_lock();
-            continue;
+            continue 'lookup;
         } else {
             rcu_read_unlock();
             return err;
         }
+    }
+    break;
     }
 
     err = -EPERM;
@@ -307,7 +309,7 @@ pub unsafe extern "C" fn inet_create(
     err = -ENOBUFS;
     sk = sk_alloc(net, PF_INET, GFP_KERNEL, answer_prot, kern);
     if sk.is_null() {
-        return;
+        return err;
     }
 
     unsafe {
