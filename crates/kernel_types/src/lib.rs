@@ -261,6 +261,17 @@ pub struct flowi {
     pub u: *mut core::ffi::c_void, // Auto-generated mock field
 }
 
+/// IPv6 flow identifier
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct flowi6 {
+    pub flowi6_oif: c_int,
+    pub flowi6_flags: c_int,
+    pub flowi6_mark: u32,
+    pub daddr: in6_addr,
+    pub saddr: in6_addr,
+}
+
 /// Destination operations
 #[repr(C)]
 #[derive(Copy, Clone)]
