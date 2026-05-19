@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use core::panic::PanicInfo;
 use core::ptr::null_mut;
@@ -8,6 +8,7 @@ pub type size_t = usize;
 pub type c_size_t = usize;
 pub type socklen_t = u32;
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

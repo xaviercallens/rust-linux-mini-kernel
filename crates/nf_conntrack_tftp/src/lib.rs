@@ -4,7 +4,7 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
@@ -133,6 +133,7 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
             PORTS[0] = TFTP_PORT;
             PORTS_C = 1;
         }
+    }
 
     // Register helpers for both IPv4 and IPv6
     for i in 0..unsafe { PORTS_C } {
@@ -167,6 +168,8 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
                 ptr::null_mut(),
                 THIS_MODULE,
             );
+        }
+    }
 
     // Register helpers
     ret = unsafe { nf_conntrack_helpers_register(TFTP.as_mut_ptr(), 2 * PORTS_C as c_int) };
@@ -186,8 +189,8 @@ pub extern "C" fn nf_conntrack_tftp_fini() {
 pub extern "C" fn tftp_help(
     skb: *mut sk_buff,
     protoff: c_uint,
-    _ct: *mut nf_conn,
-    _ctinfo: c_int,
+    ct: *mut nf_conn,
+    ctinfo: c_int,
 ) -> c_int {
     let mut ret: c_int = 0;
     let mut tfh: *const tftphdr = ptr::null();
@@ -214,10 +217,8 @@ pub extern "C" fn tftp_help(
         ntohs(u16::from_ne_bytes(raw))
     };
 
-    if opcode != TFTP_OPCODE_READ && opcode != TFTP_OPCODE_WRITE {
-        return NF_ACCEPT;
-    }
-
+    match opcode {
+        TFTP_OPCODE_READ | TFTP_OPCODE_WRITE => {
             // Allocate expectation
             exp = unsafe { nf_ct_expect_alloc(ct) };
             if exp.is_null() {
@@ -392,3 +393,8 @@ static TFTP_EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy 
 
 // Static storage for helpers
 static mut TFTP: [nf_conntrack_helper; 16] = unsafe { [core::mem::zeroed(); 16] };
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

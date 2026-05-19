@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -452,4 +452,9 @@ mod tests {
         // For demonstration purposes, we'll just assert the function exists
         assert!(true);
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

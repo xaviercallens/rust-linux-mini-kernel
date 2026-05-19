@@ -75,11 +75,6 @@ pub struct mld2_report {
 }
 
 #[inline]
-fn ntohs(v: u16) -> u16 {
-    u16::from_be(v)
-}
-
-#[inline]
 fn ipv6_transport_header(skb: *mut sk_buff) -> *const c_void {
     unsafe { skb_transport_header(skb as *const sk_buff) as *const c_void }
 }
@@ -159,7 +154,7 @@ fn ipv6_mc_check_mld_query(skb: *mut sk_buff) -> c_int {
         }
     }
 
-    let mld = unsafe { skb_transport_header(skb) as *const mld_msg };
+    let mld = unsafe { skb_transport_header(skb as *const _) as *const mld_msg };
     let mld_mca = unsafe { &(*mld).mld_mca };
 
     if unsafe { ipv6_addr_any(mld_mca) } != 0
@@ -171,10 +166,6 @@ fn ipv6_mc_check_mld_query(skb: *mut sk_buff) -> c_int {
     0
 }
 
-fn skb_transport_header(skb: *mut sk_buff) -> *const c_void {
-    unsafe { (*skb).data as *const c_void }
-}
-
 fn ipv6_mc_check_mld_msg(skb: *mut sk_buff) -> c_int {
     let len = unsafe { ipv6_transport_len(skb) } + size_of::<mld_msg>() as c_int;
 
@@ -182,7 +173,7 @@ fn ipv6_mc_check_mld_msg(skb: *mut sk_buff) -> c_int {
         return ENODATA;
     }
 
-    let mld = unsafe { skb_transport_header(skb) as *const mld_msg };
+    let mld = unsafe { skb_transport_header(skb as *const _) as *const mld_msg };
     let mld_type = unsafe { (*mld).mld_type };
 
     match mld_type {

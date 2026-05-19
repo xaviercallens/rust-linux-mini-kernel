@@ -1,6 +1,6 @@
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_void, c_int, c_uint, c_ulong};
@@ -363,3 +363,8 @@ static icmpv6_nla_policy: *const c_void = ptr::null();
 
 #[cfg(feature = "nf_conntrack_timeout")]
 static icmpv6_timeout_nla_policy: *const c_void = ptr::null();
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_int, c_void};
@@ -452,4 +452,9 @@ extern "C" {
     fn flowi6_to_flowi(fl6: *mut flowi6) -> *mut c_void;
     fn ipv6_select_ident(net: *mut c_void, daddr: *mut in6_addr, saddr: *mut in6_addr) -> u32;
     fn nf_queue_entry_reroute(entry: *const nf_queue_entry) -> *mut ip6_rt_info;
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

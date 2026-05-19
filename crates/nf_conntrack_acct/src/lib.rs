@@ -1,6 +1,6 @@
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ptr;
@@ -78,6 +78,7 @@ pub unsafe extern "C" fn nf_conntrack_acct_fini() {
     nf_ct_extend_unregister(&acct_extend as *const nf_ct_ext_type);
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {

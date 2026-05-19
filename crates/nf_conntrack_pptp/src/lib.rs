@@ -4,8 +4,8 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_int, c_uint, c_void};
@@ -357,4 +357,9 @@ mod tests {
         // Basic test case for pptp_expectfn
         // Would require kernel environment to run
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

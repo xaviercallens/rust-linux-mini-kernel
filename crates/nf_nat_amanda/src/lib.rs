@@ -4,8 +4,8 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -239,4 +239,9 @@ unsafe fn htons(x: u16) -> u16 {
 #[inline]
 unsafe fn ntohs(x: u16) -> u16 {
     u16::from_be(x)
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

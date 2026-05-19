@@ -1,6 +1,6 @@
 ```rust
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
 use core::ffi::c_int;
@@ -49,6 +49,7 @@ extern "C" {
     fn inner_ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}

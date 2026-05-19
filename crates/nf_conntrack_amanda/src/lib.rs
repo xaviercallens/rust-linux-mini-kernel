@@ -35,7 +35,7 @@ pub struct nf_conntrack_amanda_hook {
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
@@ -288,6 +288,7 @@ pub unsafe extern "C" fn amanda_help(
     NF_ACCEPT
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
