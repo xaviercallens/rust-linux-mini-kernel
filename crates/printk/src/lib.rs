@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 //! Kernel logging - Phase 1: Serial port output via QEMU
 
 #[allow(non_camel_case_types)]
@@ -17,13 +17,27 @@ unsafe fn serial_write_byte(byte: u8) {
     x86_out8(SERIAL_PORT, byte);
 }
 
+/// Write a string to the serial port.
+///
+/// # Safety
+///
+/// - `s` must be a valid pointer to a buffer of at least `len` bytes
+/// - The buffer must remain valid for the duration of this call
+/// - `len` must accurately represent the buffer size
 #[no_mangle]
 pub unsafe extern "C" fn printk_str(s: *const u8, len: usize) {
-    if !s.is_null() {
+    if !s.is_null() && len > 0 {
         core::slice::from_raw_parts(s, len).iter().for_each(|&b| serial_write_byte(b));
     }
 }
 
+/// Write a null-terminated C string to the serial port.
+///
+/// # Safety
+///
+/// - `s` must be a valid pointer to a null-terminated string
+/// - The string must remain valid for the duration of this call
+/// - The string must contain a null terminator within accessible memory
 #[no_mangle]
 pub unsafe extern "C" fn printk_cstr(s: *const u8) {
     if !s.is_null() {
@@ -32,6 +46,18 @@ pub unsafe extern "C" fn printk_cstr(s: *const u8) {
     }
 }
 
+/// Initialize the serial port (COM1 at 0x3F8).
+///
+/// Configures the 16550 UART with:
+/// - 9600 baud (divisor 0x000C)
+/// - 8 data bits, no parity, 1 stop bit (8N1)
+/// - FIFO enabled
+///
+/// # Safety
+///
+/// - Must be called before any printk operations
+/// - Uses x86 port I/O which is inherently unsafe
+/// - Assumes serial port hardware is present at 0x3F8
 #[no_mangle]
 pub unsafe extern "C" fn printk_init() -> c_int {
     x86_out8(SERIAL_PORT + 1, 0x00);
@@ -44,8 +70,261 @@ pub unsafe extern "C" fn printk_init() -> c_int {
     0
 }
 
+/// Cleanup function for printk subsystem.
+///
+/// # Safety
+///
+/// - Currently a no-op, safe to call at any time
 #[no_mangle]
 pub unsafe extern "C" fn printk_exit() {}
 
 #[no_mangle]
 pub static mut PRINTK_INITIALIZED: bool = false;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    // Mock storage for port I/O operations
+    static MOCK_STATE: Mutex<MockState> = Mutex::new(MockState::new());
+
+    #[derive(Debug)]
+    struct MockState {
+        out_calls: Vec<(u16, u8)>,
+        in_value: u8,
+    }
+
+    impl MockState {
+        const fn new() -> Self {
+            Self {
+                out_calls: Vec::new(),
+                in_value: 0x20, // TX ready by default
+            }
+        }
+
+        fn reset(&mut self) {
+            self.out_calls.clear();
+            self.in_value = 0x20;
+        }
+
+        fn set_in_value(&mut self, val: u8) {
+            self.in_value = val;
+        }
+
+        fn record_out(&mut self, port: u16, value: u8) {
+            self.out_calls.push((port, value));
+        }
+
+        fn get_out_calls(&self) -> &[(u16, u8)] {
+            &self.out_calls
+        }
+    }
+
+    // Mock implementations for x86 port I/O
+    #[no_mangle]
+    pub unsafe extern "C" fn x86_out8(port: u16, value: u8) {
+        MOCK_STATE.lock().unwrap().record_out(port, value);
+    }
+
+    #[no_mangle]
+    pub unsafe extern "C" fn x86_in8(_port: u16) -> u8 {
+        MOCK_STATE.lock().unwrap().in_value
+    }
+
+    #[test]
+    fn test_printk_init_success() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            let result = printk_init();
+            assert_eq!(result, 0, "printk_init should return 0");
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let calls = state.get_out_calls();
+        assert_eq!(calls.len(), 7, "Should have 7 port I/O operations");
+
+        // Verify serial port initialization sequence
+        assert_eq!(calls[0], (SERIAL_PORT + 1, 0x00), "Disable interrupts");
+        assert_eq!(calls[1], (SERIAL_PORT + 3, 0x80), "Set DLAB");
+        assert_eq!(calls[2], (SERIAL_PORT, 0x0C), "Set baud divisor low");
+        assert_eq!(calls[3], (SERIAL_PORT + 1, 0x00), "Set baud divisor high");
+        assert_eq!(calls[4], (SERIAL_PORT + 3, 0x03), "8N1 mode");
+        assert_eq!(calls[5], (SERIAL_PORT + 2, 0xC7), "Enable FIFO");
+        assert_eq!(calls[6], (SERIAL_PORT + 4, 0x0B), "Enable DTR/RTS");
+    }
+
+    #[test]
+    fn test_printk_str_null_pointer() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            printk_str(core::ptr::null(), 100);
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.get_out_calls().len(), 0, "Should not write for null pointer");
+    }
+
+    #[test]
+    fn test_printk_str_zero_length() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"test";
+        unsafe {
+            printk_str(msg.as_ptr(), 0);
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.get_out_calls().len(), 0, "Should not write for zero length");
+    }
+
+    #[test]
+    fn test_printk_str_valid() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"Hi";
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let calls = state.get_out_calls();
+
+        // Each character requires checking ready status then writing
+        // Due to the polling loop, we only see the writes
+        let writes: Vec<u8> = calls.iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+
+        assert_eq!(writes, vec![b'H', b'i'], "Should write 'Hi'");
+    }
+
+    #[test]
+    fn test_printk_str_long_message() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"Hello, World!";
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let calls = state.get_out_calls();
+
+        let writes: Vec<u8> = calls.iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+
+        assert_eq!(writes, msg.to_vec(), "Should write entire message");
+    }
+
+    #[test]
+    fn test_printk_cstr_null_pointer() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            printk_cstr(core::ptr::null());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.get_out_calls().len(), 0, "Should not write for null pointer");
+    }
+
+    #[test]
+    fn test_printk_cstr_empty() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"\0";
+        unsafe {
+            printk_cstr(msg.as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.get_out_calls().len(), 0, "Should not write for empty string");
+    }
+
+    #[test]
+    fn test_printk_cstr_valid() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"Test\0";
+        unsafe {
+            printk_cstr(msg.as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let calls = state.get_out_calls();
+
+        let writes: Vec<u8> = calls.iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+
+        assert_eq!(writes, b"Test".to_vec(), "Should write 'Test' without null terminator");
+    }
+
+    #[test]
+    fn test_printk_cstr_with_newline() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"Line1\nLine2\0";
+        unsafe {
+            printk_cstr(msg.as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let calls = state.get_out_calls();
+
+        let writes: Vec<u8> = calls.iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+
+        assert_eq!(writes, b"Line1\nLine2".to_vec(), "Should write multiline correctly");
+    }
+
+    #[test]
+    fn test_printk_exit_is_safe() {
+        unsafe {
+            printk_exit(); // Should not panic
+        }
+    }
+
+    #[test]
+    fn test_serial_port_constant() {
+        assert_eq!(SERIAL_PORT, 0x3F8, "COM1 port address");
+    }
+
+    #[test]
+    fn test_printk_initialized_flag() {
+        // Test that the flag exists and can be accessed
+        unsafe {
+            let initial = PRINTK_INITIALIZED;
+            PRINTK_INITIALIZED = true;
+            assert!(PRINTK_INITIALIZED);
+            PRINTK_INITIALIZED = initial; // Restore
+        }
+    }
+}
