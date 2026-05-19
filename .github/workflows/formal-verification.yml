@@ -1,0 +1,46 @@
+name: Mathematical Kernel Validation (Lean 4)
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+' # Triggers on major/minor/patch release tags (e.g., v7.0.0)
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  formal-verification:
+    name: Lean 4 Formal Verification
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Elan (Lean 4 version manager)
+        run: |
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y --default-toolchain leanprover/lean4:stable
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Verify Lean Environment
+        run: lean --version
+
+      - name: Compile and Validate Kernel Specifications
+        run: |
+          echo "Validating FULL_KERNEL_SPECIFICATION.lean..."
+          # The lean compiler checks all theorems for mathematical validity.
+          # If any safety theorem is broken or unproven, the build fails.
+          lean specifications/FULL_KERNEL_SPECIFICATION.lean
+
+      - name: Check for 'sorry' tactics
+        run: |
+          # Ensure no 'sorry' (unproven) tactics exist in the specification
+          if grep -q "sorry" specifications/FULL_KERNEL_SPECIFICATION.lean; then
+            echo "❌ Error: Found 'sorry' tactic in specification. Proofs are incomplete!"
+            exit 1
+          else
+            echo "✅ No 'sorry' tactics found. All proofs are complete."
+          fi
+
+      - name: Report Formal Verification Success
+        if: success()
+        run: |
+          echo "✅ Mathematical Verification Passed: All safety invariants hold true for this release."
