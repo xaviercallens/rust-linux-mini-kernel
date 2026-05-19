@@ -210,10 +210,7 @@ pub unsafe extern "C" fn lookup_reuseport(
     _sk: *mut sock,
     _skb: *mut sk_buff,
 ) -> *mut sock {
-    if (*sk).sk_reuseport != 0 && (*sk).sk_state != TCP_ESTABLISHED {
-        let hash = udp6_ehashfn(net, daddr, hnum, saddr, sport);
-        return reuseport_select_sock(sk, hash, skb, mem::size_of::<udphdr>());
-    }
+    // Stub implementation - reuseport not fully supported
     ptr::null_mut()
 }
 
