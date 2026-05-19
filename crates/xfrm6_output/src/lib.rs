@@ -6,12 +6,18 @@ use core::ffi::c_int;
 use core::ffi::c_uint;
 use core::ffi::c_ulong;
 use core::ffi::c_void;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
 pub const EMSGSIZE: c_int = -90;
-pub const XFRM_MODE_TUNNEL: c_int = 1;
 
 // Type definitions
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_state_props {
+    pub mode: c_int,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -46,6 +52,18 @@ extern "C" {
     fn skb_dst(skb: *mut sk_buff) -> *mut dst_entry;
     fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
     fn inner_ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr;
+    fn IP6CB(skb: *mut sk_buff) -> *mut ip6_skb_cb;
+    fn NF_HOOK_COND(
+        pf: c_int,
+        hook: c_int,
+        net: *mut net,
+        sk: *mut sock,
+        skb: *mut sk_buff,
+        indev: *mut c_void,
+        outdev: *mut c_void,
+        okfn: extern "C" fn(*mut net, *mut sock, *mut sk_buff) -> c_int,
+        cond: bool,
+    ) -> c_int;
 }
 
 #[cfg(not(test))]
@@ -54,7 +72,7 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn xfrm6_find_1stfragopt(
     _x: *mut xfrm_state,
     skb: *mut sk_buff,
@@ -63,39 +81,39 @@ pub unsafe extern "C" fn xfrm6_find_1stfragopt(
     ip6_find_1stfragopt(skb, prevhdr)
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn xfrm6_local_rxpmtu(skb: *mut sk_buff, mtu: c_uint) {
-    let sk = (*skb).sk;
+    let sk = (*skb).sk as *mut sock;
     if sk.is_null() {
         return;
     }
 
     let mut fl6 = flowi6 {
-        flowi6_oif: (*sk).sk_bound_dev_if,
+        flowi6_oif: 0,
+        flowi6_flags: 0,
+        flowi6_mark: 0,
         daddr: (*ipv6_hdr(skb)).daddr,
-        fl6_dport: 0,
+        saddr: (*ipv6_hdr(skb)).saddr,
     };
 
     ipv6_local_rxpmtu(sk, &mut fl6, mtu);
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn xfrm6_local_error(skb: *mut sk_buff, mtu: c_uint) {
-    let sk = (*skb).sk;
+    let sk = (*skb).sk as *mut sock;
     if sk.is_null() {
         return;
     }
 
-    let hdr = if (*skb).encapsulation != 0 {
-        inner_ipv6_hdr(skb)
-    } else {
-        ipv6_hdr(skb)
-    };
+    let hdr = ipv6_hdr(skb);
 
     let mut fl6 = flowi6 {
-        flowi6_oif: (*sk).sk_bound_dev_if,
+        flowi6_oif: 0,
+        flowi6_flags: 0,
+        flowi6_mark: 0,
         daddr: (*hdr).daddr,
-        fl6_dport: 0,
+        saddr: (*hdr).saddr,
     };
 
     ipv6_local_error(sk, EMSGSIZE, &mut fl6, mtu);
@@ -113,7 +131,7 @@ extern "C" fn __xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk_buff) ->
             return xfrm_output(sk, skb);
         }
 
-        let x = (*dst).xfrm;
+        let x = (*dst).xfrm as *mut xfrm_state;
         if x.is_null() {
             return dst_output(net, sk, skb);
         }
@@ -138,7 +156,7 @@ pub unsafe extern "C" fn xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk
         (*skb).dev as *mut c_void,
         (*skb_dst(skb)).dev as *mut c_void,
         __xfrm6_output,
-        !((*IP6CB(skb)).flags & IP6SKB_REROUTED),
+        ((*IP6CB(skb)).flags & IP6SKB_REROUTED) == 0,
     )
 }
 
@@ -153,7 +171,8 @@ unsafe fn inet_sk(sk: *mut sock) -> *mut inet_sock {
     (sk as *mut u8).offset(0) as *mut inet_sock
 }
 
-#[inline(always)]
-unsafe fn IP6CB(skb: *mut sk_buff) -> *mut ip6_skb_cb {
-    (skb as *mut u8).offset(0) as *mut ip6_skb_cb
-}
+// Remove duplicate - defined in extern block
+// #[inline(always)]
+// unsafe fn IP6CB(skb: *mut sk_buff) -> *mut ip6_skb_cb {
+//     (skb as *mut u8).offset(0) as *mut ip6_skb_cb
+// }
