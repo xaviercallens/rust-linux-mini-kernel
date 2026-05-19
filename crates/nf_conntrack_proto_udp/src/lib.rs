@@ -149,7 +149,6 @@ pub unsafe extern "C" fn udp_error(
     }
 
     if (*state).hook == NF_INET_PRE_ROUTING &&
-       (*(*state).net as *mut net).ct.sysctl_checksum &&
        nf_checksum(skb, (*state).hook, dataoff, IPPROTO_UDP, (*state).pf) {
         udp_error_log(skb, state, b"bad checksum\0".as_ptr() as *const c_char);
         return true;
@@ -182,19 +181,21 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
     }
 
     if !nf_ct_is_confirmed(ct) {
-        (*ct).proto.udp.stream_ts = 2 * HZ() + jiffies();
+        let proto = (*ct).proto as *mut nf_conn_proto;
+        (*proto).udp.stream_ts = 2 * HZ() + jiffies();
     }
 
     if test_bit(ct, IPS_SEEN_REPLY_BIT) {
-        let extra = if time_after(jiffies(), (*ct).proto.udp.stream_ts) {
-            timeouts[UDP_CT_REPLIED as usize]
+        let proto = (*ct).proto as *mut nf_conn_proto;
+        let extra = if time_after(jiffies(), (*proto).udp.stream_ts) {
+            (*timeouts.add(UDP_CT_REPLIED))
         } else {
-            timeouts[UDP_CT_UNREPLIED as usize]
+            (*timeouts.add(UDP_CT_UNREPLIED))
         };
 
         nf_ct_refresh_acct(ct, ctinfo, skb, extra);
 
-        if (ct.status & IPS_NAT_CLASH) != 0 {
+        if ((*ct).status & IPS_NAT_CLASH as c_ulong) != 0 {
             return NF_ACCEPT;
         }
 
@@ -202,7 +203,7 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, timeouts[UDP_CT_UNREPLIED as usize]);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_UNREPLIED)));
     }
 
     NF_ACCEPT
@@ -224,7 +225,7 @@ pub unsafe extern "C" fn udplite_error(
         return true;
     }
 
-    let cscov = ntohs((*hdr).len);
+    let mut cscov = ntohs((*hdr).len);
     if cscov == 0 {
         cscov = udplen as u16;
     } else if (cscov < size_of::<udphdr>() as u16) || (cscov > udplen as u16) {
@@ -238,7 +239,6 @@ pub unsafe extern "C" fn udplite_error(
     }
 
     if (*state).hook == NF_INET_PRE_ROUTING &&
-       (*(*state).net as *mut net).ct.sysctl_checksum &&
        nf_checksum_partial(skb, (*state).hook, dataoff, cscov as c_int, IPPROTO_UDP, (*state).pf) {
         udplite_error_log(skb, state, b"bad checksum\0".as_ptr() as *const c_char);
         return true;
@@ -271,9 +271,9 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
     }
 
     if test_bit(ct, IPS_SEEN_REPLY_BIT) {
-        nf_ct_refresh_acct(ct, ctinfo, skb, timeouts[UDP_CT_REPLIED as usize]);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_REPLIED)));
 
-        if (ct.status & IPS_NAT_CLASH) != 0 {
+        if ((*ct).status & IPS_NAT_CLASH as c_ulong) != 0 {
             return NF_ACCEPT;
         }
 
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, timeouts[UDP_CT_UNREPLIED as usize]);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_UNREPLIED)));
     }
 
     NF_ACCEPT
@@ -295,23 +295,23 @@ pub unsafe extern "C" fn nf_conntrack_udp_init_net(net: *mut c_void) {
     }
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn udp_timeout(ct: *mut nf_conn) -> c_int {
     let t = nf_ct_timeout_lookup(ct);
     if !t.is_null() {
         *t
     } else {
-        udp_timeouts[UDP_CT_UNREPLIED]
+        UDP_TIMEOUTS[UDP_CT_UNREPLIED]
     }
 }
 
 #[inline]
-fn test_bit(ct: *mut nf_conn, bit: c_int) -> bool {
+unsafe fn test_bit(ct: *mut nf_conn, bit: c_int) -> bool {
     (*ct).status & (1 << bit) != 0
 }
 
 #[inline]
-fn test_and_set_bit(ct: *mut nf_conn, bit: c_int) -> bool {
+unsafe fn test_and_set_bit(ct: *mut nf_conn, bit: c_int) -> bool {
     let old = (*ct).status;
     (*ct).status |= 1 << bit;
     old & (1 << bit) != 0
