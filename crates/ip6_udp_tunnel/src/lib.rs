@@ -6,7 +6,7 @@ pub struct ip6_udp_tunnel {
     pub encap_type: c_int,
     pub encap_rcv: Option<extern "C" fn(skb: *mut sk_buff) -> c_int>,
     pub encap_destroy: Option<extern "C" fn(t: *mut ip6_udp_tunnel)>,
-    pub err_handler: Option<extern "C" fn(sk: *mut sock, err: c_int)>,
+    pub err_handler: Option<extern "C" fn(sk: *mut sock, err: c_int) -> c_int>,
     pub encap_sport: __be16,
     pub encap_dport: __be16,
     pub encap_flags: c_int,
