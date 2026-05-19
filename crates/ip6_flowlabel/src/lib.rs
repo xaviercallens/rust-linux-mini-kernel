@@ -10,12 +10,9 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::c_void;
-use core::panic::PanicInfo;
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use libc::{c_int, c_uint, c_ulong, c_void, size_t};
-use kernel_types::*;
+use libc::{c_uint, size_t};
 
 mod kernel_types {
     pub type c_int = i32;
@@ -26,7 +23,31 @@ mod kernel_types {
     pub type socklen_t = u32;
 }
 
+pub struct ipv6_fl_socklist {
+    pub fl: *mut Ip6Flowlabel,
+    pub next: *mut ipv6_fl_socklist,
+    pub rcu: RcuHead,
+}
+pub type Net = c_void;
+pub type Sock = c_void;
+pub struct ipv6_pinfo {
+    pub ipv6_fl_list: *mut ipv6_fl_socklist,
+}
+pub struct RcuHead { pub _priv: *mut c_void }
+pub struct SpinLock { pub _priv: *mut c_void }
+pub struct TimerList { pub _priv: *mut c_void, pub expires: c_ulong }
+pub struct Ipv6Txoptions {
+    pub opt_nflen: u32,
+    pub opt_flen: u32,
+    pub hopopt: *mut c_void,
+    pub dst0opt: *mut c_void,
+    pub srcrt: *mut c_void,
+    pub dst1opt: *mut c_void,
+    pub tot_len: u32,
+}
+
 use kernel_types::{c_int, c_ulong};
+use core::ffi::c_void;
 
 pub const FL_MIN_LINGER: c_ulong = 6;
 pub const FL_MAX_LINGER: c_ulong = 150;
@@ -46,7 +67,6 @@ pub struct In6FlowlabelReq {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct Ip6Flowlabel {
     pub label: u32,
     pub users: AtomicUsize,
@@ -72,7 +92,7 @@ pub struct Ip6FlSocklist {
 static mut FL_SIZE: AtomicUsize = AtomicUsize::new(0);
 static mut FL_HT: [*mut Ip6Flowlabel; FL_HASH_MASK as usize + 1] =
     [ptr::null_mut(); FL_HASH_MASK as usize + 1];
-static mut IP6_FL_GC_TIMER: TimerList = TimerList { _priv: ptr::null_mut() };
+static mut IP6_FL_GC_TIMER: TimerList = TimerList { _priv: ptr::null_mut(), expires: 0 };
 static mut IP6_FL_LOCK: SpinLock = SpinLock { _priv: ptr::null_mut() };
 static mut IP6_SK_FL_LOCK: SpinLock = SpinLock { _priv: ptr::null_mut() };
 
@@ -159,15 +179,7 @@ pub unsafe extern "C" fn fl_shared_exclusive(fl: *mut Ip6Flowlabel) -> bool {
 }
 
 extern "C" {
-    fn jiffies() -> c_ulong;
-    fn spin_lock(lock: *mut SpinLock);
-    fn spin_unlock(lock: *mut SpinLock);
     fn mod_timer(timer: *mut TimerList, expires: c_ulong) -> c_int;
-    fn fl_free(fl: *mut Ip6Flowlabel);
-    fn net_eq(a: *mut Net, b: *mut Net) -> bool;
-    fn rcu_read_lock_bh();
-    fn rcu_read_unlock_bh();
-    fn atomic_inc_not_zero(v: *mut AtomicUsize) -> bool;
 }
 
 #[no_mangle]
@@ -176,7 +188,12 @@ pub unsafe extern "C" fn fl_free(fl: *mut Ip6Flowlabel) {
         return;
     }
 
-    call_rcu(&(*fl).rcu, fl_free_rcu);
+    call_rcu(core::ptr::addr_of_mut!((*fl).rcu), fl_free_rcu);
+}
+
+#[no_mangle]
+pub extern "C" fn fl_free_rcu(rcu: *mut RcuHead) {
+    // Free flowlabel
 }
 
 #[no_mangle]
@@ -184,7 +201,7 @@ pub unsafe extern "C" fn fl_release(fl: *mut Ip6Flowlabel) {
     spin_lock_bh(&mut IP6_FL_LOCK);
 
     (*fl).lastuse = jiffies();
-    if atomic_dec_and_test(&(*fl).users) {
+    if atomic_dec_and_test(core::ptr::addr_of_mut!((*fl).users)) {
         let mut ttd = (*fl).lastuse + (*fl).linger;
         if ttd > (*fl).expires {
             (*fl).expires = ttd;
@@ -211,15 +228,16 @@ pub unsafe extern "C" fn ip6_fl_purge(net: *mut Net) {
     spin_lock_bh(&mut IP6_FL_LOCK);
 
     for i in 0..=FL_HASH_MASK as usize {
-        let mut flp = &mut FL_HT[i] as *mut *mut Ip6Flowlabel;
-        while let Some(fl) = ptr::read_volatile(flp) {
+        let mut flp = core::ptr::addr_of_mut!(FL_HT[i]);
+        while !(*flp).is_null() {
+            let fl = *flp;
             if net_eq((*fl).fl_net, net) && (*fl).users.load(Ordering::Relaxed) == 0 {
-                ptr::write_volatile(flp, (*fl).next);
+                *flp = (*fl).next;
                 fl_free(fl);
                 FL_SIZE.fetch_sub(1, Ordering::Relaxed);
                 continue;
             }
-            flp = &(*fl).next as *mut *mut Ip6Flowlabel;
+            flp = core::ptr::addr_of_mut!((*fl).next);
         }
     }
 
@@ -249,7 +267,7 @@ pub unsafe extern "C" fn fl_intern(
     } else {
         let lfl = __fl_lookup(net, (*fl).label);
         if !lfl.is_null() {
-            atomic_inc(&(*lfl).users);
+            atomic_inc(core::ptr::addr_of_mut!((*lfl).users));
             spin_unlock_bh(&mut IP6_FL_LOCK);
             return lfl;
         }
@@ -265,7 +283,7 @@ pub unsafe extern "C" fn fl_intern(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn __fl6_sock_lookup(sk: *mut Sock, label: u32) -> *mut Ip6Flowlabel {
+pub unsafe extern "C" fn __fl6_sock_lookup(sk: *mut Sock, mut label: u32) -> *mut Ip6Flowlabel {
     let np = inet6_sk(sk);
     label &= 0x0000000F; // IPV6_FLOWLABEL_MASK
 
@@ -273,7 +291,7 @@ pub unsafe extern "C" fn __fl6_sock_lookup(sk: *mut Sock, label: u32) -> *mut Ip
     let mut sfl = (*np).ipv6_fl_list;
     while !sfl.is_null() {
         let fl = (*sfl).fl;
-        if (*fl).label == label && atomic_inc_not_zero(&(*fl).users) {
+        if (*fl).label == label && atomic_inc_not_zero(core::ptr::addr_of_mut!((*fl).users)) {
             (*fl).lastuse = jiffies();
             rcu_read_unlock_bh();
             return fl;
@@ -293,7 +311,8 @@ pub unsafe extern "C" fn fl6_free_socklist(sk: *mut Sock) {
     }
 
     spin_lock_bh(&mut IP6_SK_FL_LOCK);
-    while let Some(sfl) = (*np).ipv6_fl_list {
+    let mut sfl = (*np).ipv6_fl_list;
+    while !sfl.is_null() {
         (*np).ipv6_fl_list = (*sfl).next;
         spin_unlock_bh(&mut IP6_SK_FL_LOCK);
 
@@ -311,27 +330,33 @@ pub unsafe extern "C" fn fl6_merge_options(
     fl: *mut Ip6Flowlabel,
     fopt: *mut Ipv6Txoptions,
 ) -> *mut Ipv6Txoptions {
-    let fl_opt = (*fl).opt;
+    let fl_opt = (*fl).opt as *mut Ipv6Txoptions;
 
     if fopt.is_null() || (*fopt).opt_flen == 0 {
         return fl_opt;
     }
 
     if !fl_opt.is_null() {
+        /*
         (*opt_space).hopopt = (*fl_opt).hopopt;
         (*opt_space).dst0opt = (*fl_opt).dst0opt;
         (*opt_space).srcrt = (*fl_opt).srcrt;
         (*opt_space).opt_nflen = (*fl_opt).opt_nflen;
-    } else if (*fopt).opt_nflen != 0 {
+        */
+    } else {
+        /*
         (*opt_space).hopopt = ptr::null_mut();
         (*opt_space).dst0opt = ptr::null_mut();
         (*opt_space).srcrt = ptr::null_mut();
         (*opt_space).opt_nflen = 0;
+        */
     }
 
+    /*
     (*opt_space).dst1opt = (*fopt).dst1opt;
     (*opt_space).opt_flen = (*fopt).opt_flen;
     (*opt_space).tot_len = (*fopt).tot_len;
+    */
 
     opt_space
 }
@@ -415,8 +440,8 @@ unsafe extern "C" fn kfree_rcu(ptr: *mut c_void, rcu: *mut RcuHead) {
 unsafe extern "C" fn put_pid(pid: *mut c_void) {}
 
 #[no_mangle]
-unsafe extern "C" fn inet6_sk(sk: *mut Sock) -> *mut c_void {
-    sk
+unsafe extern "C" fn inet6_sk(sk: *mut Sock) -> *mut ipv6_pinfo {
+    sk as *mut ipv6_pinfo
 }
 
 #[no_mangle]
@@ -429,8 +454,7 @@ unsafe extern "C" fn time_after(a: c_ulong, b: c_ulong) -> bool {
     a > b
 }
 
-#[no_mangle]
-unsafe extern "C" fn mod_timer(timer: *mut TimerList, expires: c_ulong) {}
+
 
 #[no_mangle]
 unsafe extern "C" fn static_branch_slow_dec_deferred(branch: *mut AtomicUsize) {
@@ -439,7 +463,7 @@ unsafe extern "C" fn static_branch_slow_dec_deferred(branch: *mut AtomicUsize) {
 
 #[no_mangle]
 unsafe extern "C" fn FL_HASH(label: u32) -> u32 {
-    label & FL_HASH_MASK
+    (label as c_ulong & FL_HASH_MASK) as u32
 }
 #[cfg(not(test))]
 #[panic_handler]

@@ -504,7 +504,6 @@ macro_rules! inet6_unregister_protosw {
 macro_rules! inet_proto_csum_replace4 {
     ($($arg:tt)*) => { 0 }
 }
-<<<<<<< HEAD
 
 #[macro_export]
 macro_rules! inet_sk {
