@@ -4,10 +4,17 @@
 #[allow(non_camel_case_types)]
 type c_int = i32;
 
+#[cfg(not(test))]
+mod memory;
+
 extern "C" {
     fn printk_init() -> c_int;
     fn printk_str(s: *const u8, len: usize);
     fn arch_setup_init() -> c_int;
+    #[cfg(not(test))]
+    fn page_alloc_init() -> c_int;
+    #[cfg(not(test))]
+    fn slab_init() -> c_int;
 }
 
 #[inline]
@@ -28,7 +35,7 @@ unsafe fn print(msg: &[u8]) {
 #[no_mangle]
 pub unsafe extern "C" fn start_kernel() -> ! {
     printk_init();
-    print(b"Rust Linux Mini Kernel v8.2.0 booting...\n");
+    print(b"Rust Linux Mini Kernel v9.0.0-phase2 booting...\n");
 
     if arch_setup_init() != 0 {
         print(b"PANIC: arch_setup_init failed\n");
@@ -39,7 +46,30 @@ pub unsafe extern "C" fn start_kernel() -> ! {
     }
 
     print(b"Architecture initialized\n");
-    print(b"Kernel panic - Phase 1 boot complete!\n");
+
+    // Phase 2: Initialize memory management
+    #[cfg(not(test))]
+    {
+        if page_alloc_init() != 0 {
+            print(b"PANIC: page_alloc_init failed\n");
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            loop { core::arch::asm!("hlt", options(nomem, nostack)); }
+            #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+            panic!("page_alloc_init failed");
+        }
+        print(b"Page allocator initialized\n");
+
+        if slab_init() != 0 {
+            print(b"PANIC: slab_init failed\n");
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            loop { core::arch::asm!("hlt", options(nomem, nostack)); }
+            #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+            panic!("slab_init failed");
+        }
+        print(b"SLAB allocator initialized\n");
+    }
+
+    print(b"Kernel panic - Phase 2 boot complete!\n");
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     loop { core::arch::asm!("hlt", options(nomem, nostack)); }
