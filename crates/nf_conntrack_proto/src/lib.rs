@@ -9,8 +9,8 @@
 //! - Full implementation of connection tracking protocol logic
 //! - Maintains exact function signatures for exported symbols
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -359,4 +359,9 @@ mod tests {
             assert!(!invalid_proto.is_null());
         }
     }
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)] // For C-style type names
 
 use kernel_types::*;
@@ -73,6 +73,7 @@ extern "C" {
     fn netif_rx(skb: *mut sk_buff);
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}

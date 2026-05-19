@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![no_builtins]
 #![allow(non_camel_case_types)]
 
@@ -388,4 +388,9 @@ extern "C" {
     fn skb_network_header_offset(skb: *mut sk_buff) -> c_int;
     fn skb_dst(skb: *mut sk_buff) -> *mut sk_buff;
     fn skb_dst_drop(skb: *mut sk_buff);
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

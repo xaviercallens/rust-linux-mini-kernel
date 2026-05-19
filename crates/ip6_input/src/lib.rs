@@ -4,7 +4,7 @@
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -156,4 +156,9 @@ extern "C" {
     fn ipv6_addr_equal(a1: *const in6_addr, a2: *const in6_addr) -> bool;
 
     fn ip6_rcv_core(skb: *mut sk_buff, dev: *mut net_device, net: *mut net) -> *mut sk_buff;
+}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

@@ -3,8 +3,8 @@
 //! functionality. It implements connection tracking for UDP and UDPLITE protocols with timeout
 //! management and error checking capabilities.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
@@ -358,3 +358,8 @@ pub static NF_CONNTRACK_L4PROTO_UDPLITE: nf_conntrack_l4proto = nf_conntrack_l4p
     allow_clash: true,
     // ... (other fields omitted for brevity)
 };
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

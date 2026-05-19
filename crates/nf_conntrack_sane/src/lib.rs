@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -330,3 +330,8 @@ pub static NF_CONNTRACK_SANE_FINI_FN: unsafe extern "C" fn() = nf_conntrack_sane
 // Module license
 #[no_mangle]
 pub static NF_CONNTRACK_SANE_LICENSE: [u8; 4] = *b"GPL\0";
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

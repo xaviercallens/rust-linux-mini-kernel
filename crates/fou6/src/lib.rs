@@ -1,5 +1,5 @@
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
@@ -376,3 +376,8 @@ pub static MOD_LICENSE: [u8; 4] = *b"GPL\0";
 #[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_DESCRIPTION: [u8; 24] = *b"Foo over UDP (IPv6)\0";
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

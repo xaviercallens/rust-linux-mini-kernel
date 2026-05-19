@@ -3,7 +3,7 @@
 //! generic protocol connection tracking implementation. It maintains ABI
 //! compatibility with the original C implementation for netfilter/conntrack.
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
@@ -153,3 +153,8 @@ pub unsafe extern "C" fn generic_timeout_obj_to_nlattr(
 #[no_mangle]
 pub static NF_CT_GENERIC_TIMEOUT: unsafe extern "C" fn() -> c_uint =
     || -> c_uint { 600 * HZ as u32 };
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
