@@ -43,6 +43,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "builtin"
+version = "0.1.0"
+
+[[package]]
+name = "builtin_macros"
+version = "0.1.0"
+
+[[package]]
 name = "calipso"
 version = "0.4.0"
 dependencies = [
@@ -381,6 +389,10 @@ dependencies = [
 [[package]]
 name = "kernel_types"
 version = "0.1.0"
+dependencies = [
+ "builtin",
+ "builtin_macros",
+]
 
 [[package]]
 name = "libc"
