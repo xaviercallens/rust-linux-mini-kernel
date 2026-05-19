@@ -312,17 +312,17 @@ pub unsafe extern "C" fn inet_create(
         return err;
     }
 
-    unsafe {
-        __skb_queue_purge(&(*sk).sk_receive_queue);
+    __skb_queue_purge(&(*sk).sk_receive_queue);
 
-        if !(*sk).sk_rx_skb_cache.is_null() {
-            __kfree_skb((*sk).sk_rx_skb_cache);
-            (*sk).sk_rx_skb_cache = ptr::null_mut();
-        }
+    if !(*sk).sk_rx_skb_cache.is_null() {
+        __kfree_skb((*sk).sk_rx_skb_cache);
+        (*sk).sk_rx_skb_cache = ptr::null_mut();
+    }
 
-        __skb_queue_purge(&(*sk).sk_error_queue);
-        sk_mem_reclaim(sk);
+    __skb_queue_purge(&(*sk).sk_error_queue);
+    sk_mem_reclaim(sk);
 
+    let inet = &mut (*sk).inet_sk;
     inet.inet_id = 0;
     sock_init_data(sock, sk);
 
@@ -347,32 +347,9 @@ pub unsafe extern "C" fn inet_create(
             sk_common_release(sk);
             return err;
         }
-
-        if !sock_flag(sk, SOCK_DEAD) {
-            return;
-        }
-
-        if atomic_read(&(*sk).sk_rmem_alloc) != 0 {
-            return;
-        }
-        if refcount_read(&(*sk).sk_wmem_alloc) != 0 {
-            return;
-        }
-        if (*sk).sk_wmem_queued != 0 || (*sk).sk_forward_alloc != 0 {
-            return;
-        }
-
-        if !(*sk).sk_dst_cache.is_null() {
-            dst_release((*sk).sk_dst_cache);
-            (*sk).sk_dst_cache = ptr::null_mut();
-        }
-        if !(*sk).sk_rx_dst.is_null() {
-            dst_release((*sk).sk_rx_dst);
-            (*sk).sk_rx_dst = ptr::null_mut();
-        }
-
-        sk_refcnt_debug_dec(sk);
     }
+
+    0
 }
 
 // Helper functions (would be implemented in C in the kernel)
