@@ -105,8 +105,7 @@ unsafe fn mangle_contents(
             rep_buffer as *const u8,
             data.add(match_offset as usize),
             rep_len as usize,
-        )
-    };
+        );
 
         // Update skb length
         if rep_len > match_len {
