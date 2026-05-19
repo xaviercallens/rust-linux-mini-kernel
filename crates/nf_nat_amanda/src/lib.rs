@@ -86,21 +86,6 @@ const fn nf_ct_nat_helper_init(name: *const u8) -> nf_conntrack_nat_helper {
 }
 
 // Global static variables
-pub static mut NAT_HELPER_AMANDA: nf_conntrack_nat_helper = nf_ct_nat_helper_init(b"amanda\0".as_ptr() as *const u8);
-pub static mut NF_NAT_AMANDA_HOOK: Option<unsafe extern "C" fn(
-    skb: *mut sk_buff,
-    ctinfo: c_uint,
-    protoff: c_uint,
-    matchoff: c_uint,
-    matchlen: c_uint,
-    exp: *mut nf_conntrack_expect,
-) -> c_uint> = None;
-
-#[inline(always)]
-const fn ntohs(v: u16) -> u16 {
-    u16::from_be(v)
-}
-
 static AMANDA_NAME: &[u8; 7] = b"amanda\0";
 static ALL_PORTS_IN_USE: &[u8; 17] = b"all ports in use\0";
 static CANNOT_MANGLE_PACKET: &[u8; 21] = b"cannot mangle packet\0";
