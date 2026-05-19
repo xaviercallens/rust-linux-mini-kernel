@@ -6,7 +6,7 @@ SECTIONS {
     .boot :
     {
         /* Ensure boot section is first */
-        *(.multiboot)
+        KEEP(*(.multiboot))
     }
 
     .text :

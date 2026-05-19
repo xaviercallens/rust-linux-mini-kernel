@@ -19,27 +19,16 @@ pub struct nf_conn {
     _priv: [u8; 0],
 }
 #[repr(C)]
-pub struct nf_conntrack {
-    pub timeout: *mut nf_conntrack_timeout,
-    pub tuplehash: [*mut nf_conntrack_tuple_hash; 2],
-    pub status: u32,
-    pub mark: u32,
-    pub use_: u32,
-    pub id: u32,
-    pub master: *mut nf_conntrack,
-    pub helper: *mut nf_conntrack_helper,
-}
-#[repr(C)]
 pub struct nf_conntrack_helper {
     _priv: [u8; 0],
 }
 
 #[repr(C)]
 pub struct nf_conntrack_timeout {
-    pub next: *mut nf_conntrack_timeout,
     pub name: *const c_char,
     pub timeout: u32,
     pub hook_mask: u8,
+    pub next: *mut nf_conntrack_timeout,
     pub use_: u32,
 }
 
@@ -238,6 +227,7 @@ pub extern "C" fn nf_ct_timeout_put(timeout: *mut nf_conntrack_timeout) {
     }
 }
 
+
 #[no_mangle]
 pub extern "C" fn nf_ct_timeout_list_del(timeout: *mut nf_conntrack_timeout) {
     let mut prev: *mut nf_conntrack_timeout = core::ptr::null_mut();
@@ -269,7 +259,7 @@ pub extern "C" fn nf_ct_timeout_cleanup() {
 
     while !timeout_ptr.is_null() {
         let next = unsafe { (*timeout_ptr).next };
-        unsafe { nf_ct_timeout_destroy(timeout_ptr) };
+        unsafe { kfree(timeout_ptr as *mut c_void) };
         timeout_ptr = next;
     }
 

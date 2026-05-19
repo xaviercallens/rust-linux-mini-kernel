@@ -2,6 +2,28 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+use core::arch::global_asm;
+
+global_asm!(r#"
+.section .multiboot, "a"
+.align 4
+.long 0x1BADB002
+.long 0x00
+.long -(0x1BADB002)
+"#);
+
+#[no_mangle]
+pub unsafe extern "C" fn memset(dest: *mut u8, c: i32, n: usize) -> *mut u8 {
+    let mut i = 0;
+    while i < n {
+        *dest.add(i) = c as u8;
+        i += 1;
+    }
+    dest
+}
+
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {}
 
 // VGA text buffer constants
 const VGA_BUFFER: *mut u8 = 0xb8000 as *mut u8;
@@ -30,6 +52,7 @@ enum Color {
     White = 15,
 }
 
+#[derive(Copy, Clone)]
 #[repr(C)]
 struct ColorCode {
     value: u8,
@@ -149,9 +172,16 @@ fn print_prompt() {
     print_at(row, 0, prompt, color);
 }
 
+fn outb(port: u16, val: u8) {
+    unsafe {
+        asm!("out dx, al", in("dx") port, in("al") val, options(nomem, nostack, preserves_flags));
+    }
+}
+
 fn print_at(row: usize, col: usize, text: &str, color: ColorCode) {
     let offset = (row * VGA_WIDTH + col) * 2;
     for (i, byte) in text.bytes().enumerate() {
+        outb(0x3F8, byte);
         if col + i >= VGA_WIDTH {
             break;
         }
@@ -160,6 +190,7 @@ fn print_at(row: usize, col: usize, text: &str, color: ColorCode) {
             *VGA_BUFFER.offset(offset as isize + i as isize * 2 + 1) = color.value;
         }
     }
+    outb(0x3F8, b'\n');
 }
 
 // Panic handler
@@ -223,5 +254,5 @@ fn format_panic_location<'a>(location: &core::panic::Location, buf: &'a mut [u8]
 }
 
 // Assembly magic for inline asm
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 use core::arch::asm;
