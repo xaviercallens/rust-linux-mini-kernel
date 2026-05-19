@@ -65,15 +65,15 @@ pub struct ip6_tnl_encap_ops {
 
 #[repr(C)]
 pub struct inet6_protocol {
-    pub handler: extern "C" fn(skb: *mut sk_buff, opt: *mut c_void) -> c_int,
-    pub err_handler: extern "C" fn(
+    pub handler: Option<extern "C" fn(skb: *mut sk_buff, opt: *mut c_void) -> c_int>,
+    pub err_handler: Option<extern "C" fn(
         skb: *mut sk_buff,
         opt: *mut c_void,
         type_: u8,
         code: u8,
         offset: c_int,
         info: u32,
-    ) -> c_int,
+    ) -> c_int>,
 }
 
 unsafe extern "C" {
@@ -202,24 +202,26 @@ fn gue6_err_proto_handler(
 ) -> c_int {
     unsafe {
         let ipprot = ptr::read_volatile(&(*(&inet6_protos[proto as usize] as *const *const inet6_protocol)));
-        if !ipprot.is_null() && !(*ipprot).err_handler.is_null() {
-            let result = (*(*ipprot).err_handler)(
-                skb,
-                opt,
-                type_,
-                code,
-                offset,
-                info,
-            );
-            if result == 0 {
-                return 0;
+        if !ipprot.is_null() {
+            if let Some(handler) = (*ipprot).err_handler {
+                let result = handler(
+                    skb,
+                    opt,
+                    type_,
+                    code,
+                    offset,
+                    info,
+                );
+                if result == 0 {
+                    return 0;
+                }
             }
         }
         -ENOENT
     }
 }
 
-fn gue6_err(
+extern "C" fn gue6_err(
     skb: *mut sk_buff,
     opt: *mut c_void,
     type_: u8,
@@ -229,7 +231,8 @@ fn gue6_err(
 ) -> c_int {
     unsafe {
         let transport_offset = 0; // skb_transport_offset(skb)
-        let guehdr = &(*(&(*udp_hdr(skb) as *const udphdr).offset(1) as *const guehdr));
+        let udp = udp_hdr(skb);
+        let guehdr = &(*(udp.offset(1) as *const guehdr));
 
         let len = mem::size_of::<udphdr>() + mem::size_of::<guehdr>();
         if pskb_may_pull(skb, (transport_offset + len) as usize) == 0 {
@@ -282,7 +285,8 @@ fn gue6_err(
             return -EINVAL;
         }
 
-        let guehdr = &(*(&(*udp_hdr(skb) as *const udphdr).offset(1) as *const guehdr));
+        let udp = udp_hdr(skb);
+        let guehdr = &(*(udp.offset(1) as *const guehdr));
         if validate_gue_flags(guehdr, optlen) != 0 {
             return -EINVAL;
         }
@@ -302,20 +306,29 @@ fn gue6_err(
             info,
         );
 
-        skb_set_transport_header(skb, transport_offset);
+        skb_set_transport_header(skb, transport_offset as isize);
         ret
     }
 }
 
+// Safe wrappers for unsafe functions
+extern "C" fn fou_encap_hlen_wrapper(e: *const ip_tunnel_encap) -> c_int {
+    unsafe { fou_encap_hlen(e) }
+}
+
+extern "C" fn gue_encap_hlen_wrapper(e: *const ip_tunnel_encap) -> c_int {
+    unsafe { gue_encap_hlen(e) }
+}
+
 // Static data
 static mut fou_ip6tun_ops: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
-    encap_hlen: fou_encap_hlen,
+    encap_hlen: fou_encap_hlen_wrapper,
     build_header: fou6_build_header,
     err_handler: gue6_err,
 };
 
 static mut gue_ip6tun_ops: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
-    encap_hlen: gue_encap_hlen,
+    encap_hlen: gue_encap_hlen_wrapper,
     build_header: gue6_build_header,
     err_handler: gue6_err,
 };
@@ -342,14 +355,14 @@ pub struct icmp6hdr {
 pub unsafe extern "C" fn ip6_tnl_encap_add_fou_ops() -> c_int {
     let mut ret = ip6_tnl_encap_add_ops(&fou_ip6tun_ops, 1); // TUNNEL_ENCAP_FOU
     if ret < 0 {
-        pr_err(b"can't add fou6 ops\0".as_ptr() as *const u8);
+        pr_err(b"can't add fou6 ops\0".as_ptr() as *const c_char);
         return ret;
     }
 
     ret = ip6_tnl_encap_add_ops(&gue_ip6tun_ops, 2); // TUNNEL_ENCAP_GUE
     if ret < 0 {
         ip6_tnl_encap_del_ops(&fou_ip6tun_ops, 1);
-        pr_err(b"can't add gue6 ops\0".as_ptr() as *const u8);
+        pr_err(b"can't add gue6 ops\0".as_ptr() as *const c_char);
         return ret;
     }
 
@@ -376,7 +389,7 @@ pub unsafe extern "C" fn fou6_fini() {
 // Module metadata
 #[link_section = ".modinfo"]
 #[no_mangle]
-pub static MOD_AUTHOR: [u8; 22] = *b"Tom Herbert <therbert@google.com>\0";
+pub static MOD_AUTHOR: [u8; 34] = *b"Tom Herbert <therbert@google.com>\0";
 
 #[link_section = ".modinfo"]
 #[no_mangle]
@@ -384,7 +397,7 @@ pub static MOD_LICENSE: [u8; 4] = *b"GPL\0";
 
 #[link_section = ".modinfo"]
 #[no_mangle]
-pub static MOD_DESCRIPTION: [u8; 24] = *b"Foo over UDP (IPv6)\0";
+pub static MOD_DESCRIPTION: [u8; 20] = *b"Foo over UDP (IPv6)\0";
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
