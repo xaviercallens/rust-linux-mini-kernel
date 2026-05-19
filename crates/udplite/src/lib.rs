@@ -251,6 +251,10 @@ pub unsafe extern "C" fn udplite_getsockopt(sk: *mut sock, level: c_int, optname
 /// UDPLite receive function
 #[no_mangle]
 pub unsafe extern "C" fn udplite_rcv(skb: *mut sk_buff) -> c_int {
+    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: udplite_csum_no_degradation)
+    requires!(!skb.is_null(), "udplite_csum_no_degradation: skb invariant violated");
+    requires!(!(*skb).data.is_null(), "udplite_csum_no_degradation: skb.data invariant violated");
+
     let udph = &mut *((*skb).data as *mut udphdr);
     let len = ntohs(udph.len) as usize;
     let cscov = if len > core::mem::size_of::<udphdr>() {
