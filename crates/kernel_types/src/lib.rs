@@ -355,6 +355,7 @@ pub struct sk_buff {
     pub mark: *mut core::ffi::c_void, // Auto-generated mock field
     pub data: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk: *mut core::ffi::c_void, // Force injected mock field
+    pub dst: *mut core::ffi::c_void, // Force injected mock field
 }
 
 /// IPv6 control block (in sk_buff->cb)
