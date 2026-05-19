@@ -614,7 +614,19 @@ macro_rules! inet_proto_csum_replace4 {
 }
 extern "C" {
     pub fn udplite_get_port(sk: *mut core::ffi::c_void, snum: u16, recycling: i32) -> i32;
+
+    // Kernel memory allocators
+    pub fn kmalloc(size: usize, flags: c_uint) -> *mut c_void;
+    pub fn kfree(ptr: *mut c_void);
+    pub fn kzalloc(size: usize, flags: c_uint) -> *mut c_void;
 }
+
+/// GFP allocation flags type
+pub type gfp_t = c_uint;
+
+/// Common GFP flags
+pub const GFP_KERNEL: gfp_t = 0xCC0;
+pub const GFP_ATOMIC: gfp_t = 0x20;
 
 // ============================================================================
 // Formal Verification Contracts (v7.0.0 Experimental Symbolic Execution)

@@ -1,15 +1,7 @@
 use kernel_types::*;
-use core::ptr;
+use core::{mem, ptr};
 
 type ExpectFn = Option<extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> c_int>;
-type gfp_t = c_uint;
-
-unsafe extern "C" {
-    fn kmalloc(size: usize, flags: gfp_t) -> *mut c_void;
-    fn kfree(objp: *const c_void);
-}
-
-const GFP_KERNEL: gfp_t = 0x10u32;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -64,16 +56,15 @@ pub extern "C" fn h323_expect_create(
         return ptr::null_mut();
     }
 
-    let layout = core::alloc::Layout::new::<h323_expect>();
-    let expect_ptr = unsafe { core::alloc::alloc(layout) };
+    let size = mem::size_of::<h323_expect>();
+    let expect_ptr = unsafe { kmalloc(size, GFP_KERNEL) as *mut h323_expect };
 
     if expect_ptr.is_null() {
         return ptr::null_mut();
     }
 
     unsafe {
-        let expect = expect_ptr as *mut h323_expect;
-        ptr::write(expect, h323_expect {
+        ptr::write(expect_ptr, h323_expect {
             call: *call,
             timeout,
             flags,
@@ -81,10 +72,9 @@ pub extern "C" fn h323_expect_create(
             expectfn,
             expect_data,
         });
-        expect
     }
 
-    expect
+    expect_ptr
 }
 
 #[no_mangle]
@@ -92,8 +82,7 @@ pub extern "C" fn h323_expect_destroy(expect: *mut h323_expect) {
     if !expect.is_null() {
         unsafe {
             ptr::drop_in_place(expect);
-            let layout = core::alloc::Layout::new::<h323_expect>();
-            core::alloc::dealloc(expect as *mut u8, layout);
+            kfree(expect as *mut c_void);
         }
     }
 }
