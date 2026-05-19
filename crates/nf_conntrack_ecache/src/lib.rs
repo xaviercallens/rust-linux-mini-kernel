@@ -26,6 +26,9 @@ const NFCT_ECACHE_DESTROY_FAIL: u32 = 1;
 const NFCT_ECACHE_DESTROY_SENT: u32 = 2;
 const IPCT_DESTROY: u32 = 4;
 
+// Global mutex for ecache operations
+static mut NF_CT_ECACHE_MUTEX: c_void = unsafe { core::mem::zeroed() };
+
 #[repr(u8)]
 enum retry_state {
     STATE_CONGESTED = 0,
@@ -49,12 +52,20 @@ struct nf_conn {
 }
 
 #[repr(C)]
+struct nf_ct_event {
+    ct: *mut nf_conn,
+    portid: u32,
+    report: c_int,
+}
+
+#[repr(C)]
 struct nf_ct_event_notifier {
     fcn: extern "C" fn(c_uint, *mut nf_ct_event),
 }
 
 #[repr(C)]
 struct nf_conntrack_ecache {
+    cache: c_uint,
     state: c_uint,
     portid: u32,
     ctmask: u16,
@@ -79,6 +90,12 @@ struct netns_ct {
     _pad: [u8; 7],
     pcpu: *mut ct_pcpu,
     pcpu_count: c_uint,
+    ct: nf_ct_net_events,
+}
+
+#[repr(C)]
+struct nf_ct_net_events {
+    nf_conntrack_event_cb: *mut nf_ct_event_notifier,
 }
 
 #[repr(C)]
@@ -96,6 +113,33 @@ unsafe extern "C" {
     fn local_bh_disable();
     fn local_bh_enable();
     fn schedule_delayed_work(work: *mut delayed_work, delay: u32);
+
+    // RCU (Read-Copy-Update) synchronization primitives
+    fn rcu_read_lock();
+    fn rcu_read_unlock();
+    fn rcu_dereference(ptr: *const c_void) -> *mut c_void;
+    fn synchronize_rcu();
+
+    // Mutex synchronization
+    fn mutex_lock(lock: *const c_void);
+    fn mutex_unlock(lock: *const c_void);
+
+    // Spinlock synchronization
+    fn spin_lock_bh(lock: *const c_void);
+    fn spin_unlock_bh(lock: *const c_void);
+
+    // Netfilter connection tracking utilities
+    fn nf_ct_net(ct: *const nf_conn) -> *mut netns_ct;
+    fn nf_ct_is_dying(ct: *const nf_conn) -> c_int;
+
+    // Atomic operations
+    fn xchg(ptr: *mut c_uint, val: c_uint) -> c_uint;
+
+    // RCU pointer assignment
+    fn rcu_assign_pointer(ptr: *mut c_void, val: *mut c_void);
+
+    // Kernel BUG macro
+    fn BUG_ON(condition: c_int);
 }
 
 fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
@@ -110,7 +154,7 @@ fn ecache_work_evict_list(pcpu: *mut ct_pcpu) -> retry_state {
             let h = n as *mut nf_conntrack_tuple_hash;
             let ct = nf_ct_tuplehash_to_ctrack(h);
 
-            if !nf_ct_is_confirmed(ct) {
+            if nf_ct_is_confirmed(ct) == 0 {
                 n = (*n).next;
                 continue;
             }
@@ -169,7 +213,7 @@ fn ecache_work(work: *mut delayed_work) {
 
         while cpu < 1 {
             // for_each_possible_cpu
-            let pcpu = unsafe { (*ctnet).offset(cpu as isize) };
+            let pcpu = unsafe { (*ctnet).pcpu.offset(cpu as isize) };
             let ret = ecache_work_evict_list(pcpu);
 
             match ret {
@@ -188,7 +232,7 @@ fn ecache_work(work: *mut delayed_work) {
         local_bh_enable();
 
         unsafe {
-            (*ctnet).ecache_dwork_pending = delay > 0;
+            (*ctnet).ecache_dwork_pending = if delay > 0 { 1 } else { 0 };
         }
         if delay >= 0 {
             unsafe {
@@ -211,7 +255,7 @@ pub unsafe extern "C" fn nf_conntrack_eventmask_report(
 
     rcu_read_lock();
 
-    let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
+    let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb as *const c_void) as *mut nf_ct_event_notifier;
     if notify.is_null() {
         rcu_read_unlock();
         return 0;
@@ -223,7 +267,7 @@ pub unsafe extern "C" fn nf_conntrack_eventmask_report(
         return 0;
     }
 
-    if nf_ct_is_confirmed(ct) {
+    if nf_ct_is_confirmed(ct) != 0 {
         let mut item = nf_ct_event {
             ct,
             portid: if (*e).portid != 0 {
@@ -235,16 +279,16 @@ pub unsafe extern "C" fn nf_conntrack_eventmask_report(
         };
         let missed = if (*e).portid != 0 { 0 } else { (*e).missed };
 
-        if !((eventmask | missed) & (*e).ctmask as c_uint) {
+        if ((eventmask | missed as c_uint) & (*e).ctmask as c_uint) == 0 {
             rcu_read_unlock();
             return 0;
         }
 
-        let notify_fcn = (*notify).fcn;
-        ret = (notify_fcn)(eventmask | missed, &mut item);
+        let notify_fcn = (*(notify as *mut nf_ct_event_notifier)).fcn;
+        (notify_fcn)(eventmask | missed as c_uint, &mut item);
 
         if ret < 0 || missed != 0 {
-            spin_lock_bh(ct);
+            spin_lock_bh(ct as *const c_void);
             if ret < 0 {
                 if eventmask & (1 << IPCT_DESTROY) != 0 {
                     if (*e).portid == 0 && portid != 0 {
@@ -257,7 +301,7 @@ pub unsafe extern "C" fn nf_conntrack_eventmask_report(
             } else {
                 (*e).missed &= !missed as u16;
             }
-            spin_unlock_bh(ct);
+            spin_unlock_bh(ct as *const c_void);
         }
     }
 
@@ -280,13 +324,13 @@ pub unsafe extern "C" fn nf_ct_deliver_cached_events(ct: *mut nf_conn) {
 
     rcu_read_lock();
 
-    let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
+    let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb as *const c_void) as *mut nf_ct_event_notifier;
     if notify.is_null() {
         rcu_read_unlock();
         return;
     }
 
-    if !nf_ct_is_confirmed(ct) || nf_ct_is_dying(ct) {
+    if nf_ct_is_confirmed(ct) == 0 || nf_ct_is_dying(ct) != 0 {
         rcu_read_unlock();
         return;
     }
@@ -297,29 +341,29 @@ pub unsafe extern "C" fn nf_ct_deliver_cached_events(ct: *mut nf_conn) {
         return;
     }
 
-    events = xchg(&(*e).cache, 0);
+    events = xchg(&mut (*e).cache as *mut c_uint, 0);
     missed = (*e).missed;
 
-    if !((events | missed) & (*e).ctmask as c_uint) {
+    if ((events | missed as c_uint) & (*e).ctmask as c_uint) == 0 {
         rcu_read_unlock();
         return;
     }
 
     let notify_fcn = (*notify).fcn;
-    ret = (notify_fcn)(events | missed, &mut item);
+    (notify_fcn)(events | missed as c_uint, &mut item);
 
     if ret == 0 && missed == 0 {
         rcu_read_unlock();
         return;
     }
 
-    spin_lock_bh(ct);
+    spin_lock_bh(ct as *const c_void);
     if ret < 0 {
         (*e).missed |= events as u16;
     } else {
         (*e).missed &= !missed as u16;
     }
-    spin_unlock_bh(ct);
+    spin_unlock_bh(ct as *const c_void);
 
     rcu_read_unlock();
 }
@@ -332,13 +376,14 @@ pub unsafe extern "C" fn nf_conntrack_register_notifier(
 ) -> c_int {
     mutex_lock(&NF_CT_ECACHE_MUTEX);
 
-    let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
+    let net_typed = net as *mut netns_ct;
+    let notify = rcu_dereference((*net_typed).ct.nf_conntrack_event_cb as *const c_void) as *mut nf_ct_event_notifier;
     if !notify.is_null() {
         mutex_unlock(&NF_CT_ECACHE_MUTEX);
-        return -EBUSY;
+        return EBUSY;
     }
 
-    rcu_assign_pointer((*net).ct.nf_conntrack_event_cb, new);
+    rcu_assign_pointer((*net_typed).ct.nf_conntrack_event_cb as *mut c_void, new as *mut c_void);
     mutex_unlock(&NF_CT_ECACHE_MUTEX);
     0
 }
@@ -351,49 +396,21 @@ pub unsafe extern "C" fn nf_conntrack_unregister_notifier(
 ) {
     mutex_lock(&NF_CT_ECACHE_MUTEX);
 
-    let notify = rcu_dereference((*net).ct.nf_conntrack_event_cb);
-    BUG_ON(notify != new);
-    RCU_INIT_POINTER((*net).ct.nf_conntrack_event_cb, ptr::null_mut());
+    let net_typed = net as *mut netns_ct;
+    let notify = rcu_dereference((*net_typed).ct.nf_conntrack_event_cb as *const c_void) as *mut nf_ct_event_notifier;
+    BUG_ON(if notify != new { 1 } else { 0 });
+    RCU_INIT_POINTER(&mut (*net_typed).ct.nf_conntrack_event_cb, ptr::null_mut());
 
     mutex_unlock(&NF_CT_ECACHE_MUTEX);
     synchronize_rcu();
 }
 
-// Helper functions
-#[inline]
-unsafe fn spin_lock_bh(ct: *mut nf_conn) {
-    // Simulated spinlock - actual implementation would use kernel primitives
-}
-
-#[inline]
-unsafe fn spin_unlock_bh(ct: *mut nf_conn) {
-    // Simulated spinlock - actual implementation would use kernel primitives
-}
-
-#[inline]
-unsafe fn xchg<T>(ptr: *mut T, val: T) -> T {
-    // Simulated atomic exchange
-    let old = *ptr;
-    *ptr = val;
-    old
-}
-
-#[inline]
-unsafe fn rcu_assign_pointer<T>(ptr: *mut *mut T, val: *mut T) {
-    // Simulated RCU assignment
-    *ptr = val;
-}
-
+// Helper macros
 #[inline]
 unsafe fn RCU_INIT_POINTER<T>(ptr: *mut *mut T, val: *mut T) {
     // Simulated RCU initialization
     *ptr = val;
 }
-
-// Constants for event types
-const IPCT_DESTROY: c_uint = 0;
-const NFCT_ECACHE_DESTROY_FAIL: c_uint = 1;
-const NFCT_ECACHE_DESTROY_SENT: c_uint = 2;
 
 // Tests (conditional compilation)
 #[cfg(test)]

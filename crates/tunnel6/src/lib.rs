@@ -78,7 +78,6 @@ unsafe extern "C" {
 }
 
 
-
 static tunnel6_protocol: inet6_protocol = inet6_protocol {
     handler: tunnel6_rcv,
     err_handler: Some(tunnel6_err),
@@ -116,21 +115,21 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
     // Lock the mutex before modifying the list
     mutex_lock(tunnel6_mutex);
 
-    let mut pprev: *mut *mut xfrm6_tunnel;
-    match family {
-        AF_INET6 => pprev = &mut tunnel6_handlers,
-        AF_INET => pprev = &mut tunnel46_handlers,
-        AF_MPLS => pprev = &mut tunnelmpls6_handlers,
+    let mut ret = ENOENT;
+    let priority = (*handler).priority;
+
+    let mut pprev: *mut *mut xfrm6_tunnel = match family {
+        AF_INET6 => core::ptr::addr_of_mut!(tunnel6_handlers),
+        AF_INET => core::ptr::addr_of_mut!(tunnel46_handlers),
+        AF_MPLS => core::ptr::addr_of_mut!(tunnelmpls6_handlers),
         _ => {
             mutex_unlock(tunnel6_mutex);
             return EINVAL;
         }
-    }
-
-
+    };
 
     while !(*pprev).is_null() {
-        let mut current = *pprev;
+        let current = *pprev;
         let current_priority = (*current).priority;
         if current_priority > priority {
             break;
@@ -141,7 +140,6 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
             return EEXIST;
         }
         pprev = &mut (*current).next;
-        current = *pprev;
     }
 
     (*handler).next = *pprev;
@@ -155,23 +153,22 @@ pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, famil
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_deregister(handler: *mut xfrm6_tunnel, family: c_int) -> c_int {
-    let mut ret = -ENOENT;
     if handler.is_null() {
         return EINVAL;
     }
 
     mutex_lock(tunnel6_mutex);
 
-    let mut pprev: *mut *mut xfrm6_tunnel;
-    match family {
-        AF_INET6 => pprev = &mut tunnel6_handlers,
-        AF_INET => pprev = &mut tunnel46_handlers,
-        AF_MPLS => pprev = &mut tunnelmpls6_handlers,
+    let mut ret = ENOENT;
+    let mut pprev: *mut *mut xfrm6_tunnel = match family {
+        AF_INET6 => core::ptr::addr_of_mut!(tunnel6_handlers),
+        AF_INET => core::ptr::addr_of_mut!(tunnel46_handlers),
+        AF_MPLS => core::ptr::addr_of_mut!(tunnelmpls6_handlers),
         _ => {
             mutex_unlock(tunnel6_mutex);
             return EINVAL;
         }
-    }
+    };
 
     let mut current: *mut xfrm6_tunnel = *pprev;
     while !current.is_null() {
@@ -244,7 +241,7 @@ pub unsafe extern "C" fn tunnel6_rcv(skb: *mut sk_buff) -> c_int {
 // Implementation of tunnel6_rcv_cb
 #[no_mangle]
 pub unsafe extern "C" fn tunnel6_rcv_cb(skb: *mut sk_buff, proto: u8, err: c_int) -> c_int {
-    let head: *mut xfrm6_tunnel = if (proto as c_int) == IPPROTO_IPV6 {
+    let head: *mut xfrm6_tunnel = if proto == IPPROTO_IPV6 as u8 {
         tunnel6_handlers
     } else {
         tunnel46_handlers

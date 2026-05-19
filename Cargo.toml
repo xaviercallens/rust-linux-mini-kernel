@@ -22,7 +22,3 @@ panic = "abort"
 opt-level = 3
 lto = true
 panic = "abort"
-
-[profile.test]
-panic = "abort"
-

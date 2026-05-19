@@ -9,6 +9,7 @@
 #![allow(non_camel_case_types)]
 
 use core::ffi::{c_int, c_uint, c_void};
+use core::ptr;
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
