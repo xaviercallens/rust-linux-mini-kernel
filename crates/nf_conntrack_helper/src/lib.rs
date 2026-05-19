@@ -15,6 +15,9 @@ pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const ENOENT: c_int = -2;
 
+// Hash table size for connection tracking helpers
+static mut nf_ct_helper_hsize: c_uint = 256;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_address {
@@ -26,9 +29,17 @@ pub struct nf_conntrack_tuple_address {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
+    pub src_l3num: u8,
     pub src: nf_conntrack_tuple_address,
     pub dst: nf_conntrack_tuple_address,
-    pub src_l3num: u16,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_mask {
+    pub src_l3num: u8,
+    pub src: nf_conntrack_tuple_address,
+    pub dst: nf_conntrack_tuple_address,
 }
 
 #[repr(C)]
@@ -159,11 +170,19 @@ pub unsafe extern "C" fn __nf_ct_helper_find(
     let h = helper_hash(tuple);
     let head = &mut *NF_CT_HELPER_HASH.offset(h as isize);
 
+    let mut node = (*head).first;
+    let mask = nf_conntrack_tuple_mask {
+        src_l3num: 0xFF,
+        src: nf_conntrack_tuple_address { all: 0xFFFF, protonum: 0xFF, _pad: 0 },
+        dst: nf_conntrack_tuple_address { all: 0xFFFF, protonum: 0xFF, _pad: 0 },
+    };
+
     while !node.is_null() {
         let helper = helper_from_hnode(node);
         if nf_ct_tuple_src_mask_cmp(tuple, &(*helper).tuple, &mask) {
             return helper;
         }
+        node = (*node).next;
         node = (*node).next;
     }
 
