@@ -427,37 +427,6 @@ pub unsafe extern "C" fn udpv6_recvmsg(
     0
 }
 
-// Helper functions
-unsafe fn sock_net(sk: *mut sock) -> *mut net {
-    // Implementation depends on kernel structure
-    ptr::null_mut()
-}
-
-unsafe fn net_eq(net1: *const net, net2: *const net) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn ipv6_addr_equal(addr1: *const in6_addr, addr2: *const in6_addr) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn ipv6_addr_any(addr: *const in6_addr) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn udp_sk_bound_dev_eq(net: *const net, bound_dev_if: c_int, dif: c_int, sdif: c_int) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn raw_smp_processor_id() -> c_int {
-    // Implementation depends on kernel structure
-    0
-}
-
 // Test cases
 #[cfg(test)]
 mod tests {
