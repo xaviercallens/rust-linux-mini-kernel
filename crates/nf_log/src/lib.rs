@@ -11,7 +11,7 @@
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
-use core::slice;
+use core::sync::atomic::AtomicI32;
 use kernel_types::*;
 
 pub const NF_LOGGER_NAME_LEN: usize = 64;
@@ -76,13 +76,6 @@ pub type nf_log_fn = extern "C" fn(
     prefix: *const u8,
 );
 
-// Internal state
-static mut loggers: [[*mut nf_logger; NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO] =
-    unsafe { mem::zeroed() };
-static mut nf_log_mutex: Mutex = Mutex { lock: 0 };
-static mut emergency_ptr: *mut nf_log_buf = ptr::null_mut();
-static mut sysctl_nf_log_all_netns: c_int = 0;
-
 // Mutex implementation (simplified for FFI compatibility)
 #[repr(C)]
 pub struct Mutex {
@@ -90,28 +83,33 @@ pub struct Mutex {
 }
 
 impl Mutex {
-    fn lock(&mut self) {
-        while unsafe { self.lock.compare_exchange(
+    const fn new() -> Self {
+        Mutex {
+            lock: AtomicI32::new(0),
+        }
+    }
+
+    fn lock(&self) {
+        while self.lock.compare_exchange(
             0,
             1,
             core::sync::atomic::Ordering::Acquire,
             core::sync::atomic::Ordering::Relaxed,
-        ) } != Ok(0)
+        ).is_err()
         {
             // Spin until lock is available
         }
     }
 
-    fn unlock(&mut self) {
-        unsafe {
-            self.lock = 0;
-        }
+    fn unlock(&self) {
+        self.lock.store(0, core::sync::atomic::Ordering::Release);
     }
 }
 
+// Internal state
 static mut loggers: [[*mut nf_logger; NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO] =
     [[ptr::null_mut(); NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO];
-static nf_log_mutex: Mutex = Mutex::new();
+static mut nf_log_mutex: Mutex = Mutex::new();
 static mut emergency_ptr: *mut nf_log_buf = ptr::null_mut();
 static mut sysctl_nf_log_all_netns: c_int = 0;
 
@@ -174,24 +172,23 @@ pub unsafe extern "C" fn nf_log_set(net: *mut c_void, pf: u8, logger: *const nf_
         return -EOPNOTSUPP;
     }
 
-    let mut mutex = &mut nf_log_mutex;
-    mutex.lock();
+    nf_log_mutex.lock();
 
     let net_nf_ptr = net as *mut net_nf;
     if net_nf_ptr.is_null() {
-        mutex.unlock();
+        nf_log_mutex.unlock();
         return -EINVAL;
     }
 
-    let current_logger = nft_log_dereference((*net_nf_ptr).nf_loggers[pf as usize]);
+    let current_logger = rcu_dereference((*net_nf_ptr).nf_loggers[pf as usize]);
     if current_logger.is_null() {
         rcu_assign_pointer(
-            &mut (*net_nf_ptr).nf_loggers[pf as usize],
+            &mut (*net_nf_ptr).nf_loggers[pf as usize] as *mut *mut nf_logger,
             logger as *mut nf_logger,
         );
     }
 
-    mutex.unlock();
+    nf_log_mutex.unlock();
 
     0
 }
@@ -203,44 +200,40 @@ pub unsafe extern "C" fn nf_log_set(net: *mut c_void, pf: u8, logger: *const nf_
 /// - `logger` must be a valid logger pointer
 #[no_mangle]
 pub unsafe extern "C" fn nf_log_unset(net: *mut c_void, logger: *const nf_logger) {
-    let mut mutex = &mut nf_log_mutex;
-    mutex.lock();
+    nf_log_mutex.lock();
 
     let net_nf_ptr = net as *mut net_nf;
     if net_nf_ptr.is_null() {
-        mutex.unlock();
+        nf_log_mutex.unlock();
         return;
     }
 
     for i in 0..NFPROTO_NUMPROTO {
-        let current_logger = nft_log_dereference((*net_nf_ptr).nf_loggers[i]);
-        if current_logger == logger {
-            RCU_INIT_POINTER(
-                &mut (*net_nf_ptr).nf_loggers[i],
+        let current_logger = rcu_dereference((*net_nf_ptr).nf_loggers[i]);
+        if current_logger == logger as *mut nf_logger {
+            rcu_assign_pointer(
+                &mut (*net_nf_ptr).nf_loggers[i] as *mut *mut nf_logger,
                 ptr::null_mut(),
             );
         }
     }
 
-    nf_log_mutex.lock();
-    rcu_assign_pointer((*netns).nf.nf_loggers.as_mut_ptr().add(pf as usize), ptr::null_mut());
     nf_log_mutex.unlock();
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn nf_log_register(pf: u8, logger: *mut nf_logger) -> c_int {
     if pf >= NFPROTO_NUMPROTO as u8 {
         return -EINVAL;
     }
 
-    let mut mutex = &mut nf_log_mutex;
-    mutex.lock();
+    nf_log_mutex.lock();
 
     let mut ret = 0;
 
     if pf == NFPROTO_UNSPEC {
         for i in 0..NFPROTO_NUMPROTO {
-            let existing = rcu_access_pointer(loggers[i].as_ptr());
+            let existing = rcu_dereference(loggers[i][(*logger).type_ as usize]);
             if !existing.is_null() {
                 ret = -EEXIST;
                 break;
@@ -250,27 +243,25 @@ pub unsafe extern "C" fn nf_log_register(pf: u8, logger: *mut nf_logger) -> c_in
         if ret == 0 {
             for i in 0..NFPROTO_NUMPROTO {
                 rcu_assign_pointer(
-                    &mut loggers[i][(*logger).type_ as usize],
+                    &mut loggers[i][(*logger).type_ as usize] as *mut *mut nf_logger,
                     logger,
                 );
             }
         }
     } else {
-        let existing =
-            rcu_access_pointer(&loggers[pf as usize][(*logger).type_ as usize]);
+        let existing = rcu_dereference(loggers[pf as usize][(*logger).type_ as usize]);
         if !existing.is_null() {
             ret = -EEXIST;
         } else {
             rcu_assign_pointer(
-                &mut loggers[pf as usize][(*logger).type_ as usize],
+                &mut loggers[pf as usize][(*logger).type_ as usize] as *mut *mut nf_logger,
                 logger,
             );
         }
     }
 
-    loggers[pf as usize][t as usize] = logger;
     nf_log_mutex.unlock();
-    0
+    ret
 }
 
 /// Unregister a network logger
@@ -279,20 +270,19 @@ pub unsafe extern "C" fn nf_log_register(pf: u8, logger: *mut nf_logger) -> c_in
 /// - `logger` must be a valid logger pointer
 #[no_mangle]
 pub unsafe extern "C" fn nf_log_unregister(logger: *mut nf_logger) {
-    let mut mutex = &mut nf_log_mutex;
-    mutex.lock();
+    nf_log_mutex.lock();
 
     for i in 0..NFPROTO_NUMPROTO {
-        let current_logger = nft_log_dereference(loggers[i][(*logger).type_ as usize]);
+        let current_logger = rcu_dereference(loggers[i][(*logger).type_ as usize]);
         if current_logger == logger {
-            RCU_INIT_POINTER(
-                &mut loggers[i][(*logger).type_ as usize],
+            rcu_assign_pointer(
+                &mut loggers[i][(*logger).type_ as usize] as *mut *mut nf_logger,
                 ptr::null_mut(),
             );
         }
     }
 
-    mutex.unlock();
+    nf_log_mutex.unlock();
     synchronize_rcu();
 }
 

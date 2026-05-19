@@ -64,12 +64,7 @@ pub struct ip6_tnl_net {
     pub collect_md_tun: *mut ip6_tnl,
 }
 
-unsafe extern "C" {
-    static mut ip6_tnl_net_id: c_int;
-    fn net_generic(net: *mut Net, id: c_int) -> *mut ip6_tnl_net;
-    fn ipv6_addr_equal(a1: *const in6_addr, a2: *const in6_addr) -> bool;
-    fn ipv6_addr_hash(a: *const in6_addr) -> c_uint;
-}
+static mut ip6_tnl_net_id: c_int = 0;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -77,13 +72,17 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-unsafe fn in6_addr_any() -> in6_addr {
-    core::mem::zeroed()
+unsafe fn in6_addr_is_any(a: *const in6_addr) -> bool {
+    if a.is_null() {
+        true
+    } else {
+        let bytes = &(*a).in6_u.u6_addr8;
+        bytes.iter().all(|&b| b == 0)
+    }
 }
 
-unsafe fn in6_addr_is_any(a: *const in6_addr) -> bool {
-    let any = in6_addr_any();
-    ipv6_addr_equal(a, &any as *const in6_addr)
+unsafe fn ipv6_addr_any(addr: *const in6_addr) -> bool {
+    in6_addr_is_any(addr)
 }
 
 unsafe fn get_list(mut head: *mut ip6_tnl, mut f: impl FnMut(*mut ip6_tnl)) {
@@ -121,8 +120,11 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
     }
 
     let hash = HASH(remote, local);
-    let ip6n = net_generic(net, IP6_TNL_NET_ID);
-    let any = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
+    let ip6n = net_generic(net, ip6_tnl_net_id);
+    let any = in6_addr {
+        in6_u: in6_addr_union { u6_addr8: [0; 16] },
+        s6_addr: ptr::null_mut(),
+    };
     let mut cand: *mut ip6_tnl = ptr::null_mut();
 
     let h1 = HASH(remote, local) as usize;
@@ -262,32 +264,13 @@ pub unsafe extern "C" fn ip6_tnl_unlink(
 }
 
 // Helper functions
-unsafe fn get_list(head: *mut *mut ip6_tnl) -> impl Iterator<Item = *mut ip6_tnl> {
-    let mut current = *head;
-    core::iter::from_fn(move || {
-        if current.is_null() {
-            None
-        } else {
-            let next = (*current).next;
-            Some(current)
-        }
-    })
-}
-
 unsafe fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool {
     if a.is_null() || b.is_null() {
         false
     } else {
-        ptr::read(a) == ptr::read(b)
-    }
-}
-
-unsafe fn ipv6_addr_any(addr: *const in6_addr) -> bool {
-    if addr.is_null() {
-        true
-    } else {
-        let zero = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
-        ptr::read(addr) == zero
+        let a_bytes = &(*a).in6_u.u6_addr8;
+        let b_bytes = &(*b).in6_u.u6_addr8;
+        a_bytes == b_bytes
     }
 }
 
@@ -295,9 +278,9 @@ unsafe fn ipv6_addr_hash(addr: *const in6_addr) -> c_uint {
     if addr.is_null() {
         0
     } else {
-        let a = &(*addr).in6_u.u6_addr8;
-        let mut hash = 0;
-        for &byte in a {
+        let bytes = &(*addr).in6_u.u6_addr8;
+        let mut hash: c_uint = 0;
+        for &byte in bytes {
             hash = hash.wrapping_mul(31).wrapping_add(byte as c_uint);
         }
         hash
@@ -310,7 +293,6 @@ unsafe fn net_generic(net: *mut c_void, id: c_int) -> *mut ip6_tnl_net {
 }
 
 // Module parameters
-static mut IP6_TNL_NET_ID: c_int = 0;
 static mut LOG_ECN_ERROR: bool = true;
 
 // Tests (conditional compilation)
@@ -320,8 +302,14 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        let a = in6_addr { in6_u: in6_addr_union { u6_addr8: [1; 16] } };
-        let b = in6_addr { in6_u: in6_addr_union { u6_addr8: [2; 16] } };
+        let a = in6_addr {
+            in6_u: in6_addr_union { u6_addr8: [1; 16] },
+            s6_addr: ptr::null_mut(),
+        };
+        let b = in6_addr {
+            in6_u: in6_addr_union { u6_addr8: [2; 16] },
+            s6_addr: ptr::null_mut(),
+        };
         unsafe {
             let h = HASH(&a, &b);
             assert!(h != 0);
