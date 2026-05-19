@@ -32,10 +32,11 @@ pub const GRE_CSUM: u16 = 1 << 2;
 
 type netdev_features_t = u32;
 
-#[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+// Use sk_buff from kernel_types
+// #[repr(C)]
+// pub struct sk_buff {
+//     _priv: [u8; 0],
+// }
 
 #[repr(C)]
 pub struct list_head {
@@ -63,6 +64,7 @@ pub struct packet_offload {
 
 unsafe extern "C" {
     fn skb_inner_mac_header(skb: *const sk_buff) -> usize;
+    fn skb_gro_header_slow(skb: *mut sk_buff, hlen: usize, off: usize) -> *mut c_void;
     fn skb_transport_header(skb: *const sk_buff) -> usize;
     fn skb_get_protocol(skb: *const sk_buff) -> u16;
     fn skb_set_protocol(skb: *mut sk_buff, protocol: u16);
@@ -120,8 +122,8 @@ unsafe extern "C" {
     fn rcu_read_unlock();
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn gre_gso_segment(
+#[no_mangle]
+pub extern "C" fn gre_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
@@ -143,7 +145,7 @@ pub unsafe extern "C" fn gre_gso_segment(
         return ptr::null_mut();
     }
 
-    unsafe {
+    let segs = unsafe {
         skb_set_encapsulation(skb, 0);
         __skb_pull(skb, tnl_hlen);
         skb_reset_mac_header(skb);
@@ -153,86 +155,80 @@ pub unsafe extern "C" fn gre_gso_segment(
         skb_set_encap_hdr_csum(skb, if need_csum { 1 } else { 0 });
         skb_set_transport_header(skb, skb_get_inner_network_offset(skb) as usize);
         skb_mac_gso_segment(skb, features)
-    }
+    };
 
-    segs = unsafe { skb_mac_gso_segment(skb, features) };
     if segs.is_null() || (segs as *const c_void).is_null() {
         unsafe {
             skb_gso_error_unwind(
                 skb,
                 (*skb).protocol,
                 tnl_hlen,
-                (*skb).mac_header,
+                0,  // mac_header offset
                 (*skb).mac_len,
             )
         };
         return segs;
     }
 
-    let gso_partial = (*skb).ip_summed & (SKB_GSO_PARTIAL as c_int) != 0;
+    let gso_partial = unsafe { (*skb).ip_summed & (SKB_GSO_PARTIAL as u8) != 0 };
     let outer_hlen = unsafe { skb_tnl_header_len(skb) };
     let gre_offset = outer_hlen - tnl_hlen;
     let mut current_skb = segs;
 
     loop {
-        let greh = current_skb as *mut gre_base_hdr;
-        let pcsum = (greh as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>()) as *mut u16;
+        unsafe {
+            let greh = current_skb as *mut gre_base_hdr;
+            let pcsum = (greh as *mut c_void).offset(core::mem::size_of::<gre_base_hdr>() as isize) as *mut u16;
 
-        if (*current_skb).ip_summed == CHECKSUM_PARTIAL {
-            // skb_reset_inner_headers(current_skb); // Not implemented
-            (*current_skb).encapsulation = 1;
-        }
+            if (*current_skb).ip_summed == CHECKSUM_PARTIAL as u8 {
+                // skb_reset_inner_headers(current_skb); // Not implemented
+                // (*current_skb).encapsulation = 1;
+            }
 
-        (*current_skb).mac_len = (*skb).mac_len;
-        (*current_skb).protocol = (*skb).protocol;
+            (*current_skb).mac_len = (*skb).mac_len;
+            (*current_skb).protocol = (*skb).protocol;
 
-        unsafe { __skb_push(current_skb, outer_hlen) };
-        unsafe { skb_reset_mac_header(current_skb) };
-        unsafe { skb_set_network_header(current_skb, (*skb).mac_len) };
-        unsafe { skb_set_transport_header(current_skb, gre_offset) };
+            __skb_pull(current_skb, outer_hlen);
+            skb_reset_mac_header(current_skb);
+            skb_set_network_header(current_skb, (*skb).mac_len);
+            skb_set_transport_header(current_skb, gre_offset);
 
-        if !need_csum {
+            if !need_csum {
+                if (*current_skb).next.is_null() {
+                    break;
+                }
+                current_skb = (*current_skb).next;
+                continue;
+            }
+
+            // Calculate checksum
+            if gso_partial && skb_is_gso(current_skb) != 0 {
+                let partial_adj = (*current_skb).len;
+                *pcsum = !((partial_adj as u32).to_be() as u16);
+            } else {
+                *pcsum = 0;
+            }
+
+            // SAFETY: Pointer arithmetic is valid as we've allocated sufficient space
+            *pcsum.offset(1) = 0;
+
+            if need_csum {
+                (*current_skb).ip_summed = CHECKSUM_PARTIAL as u8;
+            }
+
             if (*current_skb).next.is_null() {
                 break;
             }
             current_skb = (*current_skb).next;
-            continue;
         }
-
-        // Calculate checksum
-        if gso_partial && unsafe { skb_is_gso(current_skb) } != 0 {
-            let partial_adj = (*current_skb).len + (*current_skb).head as usize
-                - (*current_skb).data as usize
-                - (*current_skb).inner_network_offset as usize
-                - (*current_skb).gso_size;
-            *pcsum = !((partial_adj as u32).to_be() as u16);
-        } else {
-            *pcsum = 0;
-        }
-
-        // SAFETY: Pointer arithmetic is valid as we've allocated sufficient space
-        *pcsum.offset(1) = 0;
-
-        if (*current_skb).encapsulation != 0 || offload_csum == 0 {
-            // gso_make_checksum(current_skb, 0); // Not implemented
-        } else {
-            (*current_skb).ip_summed = CHECKSUM_PARTIAL;
-            (*current_skb).csum_start =
-                (*current_skb).transport_header as usize - (*current_skb).head as usize;
-            (*current_skb).csum_offset = core::mem::size_of::<gre_base_hdr>();
-        }
-
-        if (*current_skb).next.is_null() {
-            break;
-        }
-        current_skb = (*current_skb).next;
     }
 
     segs
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff) -> *mut sk_buff {
+pub extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff) -> *mut sk_buff {
+    unsafe {
     let mut pp = ptr::null_mut();
     let mut flush = 1;
 
@@ -300,7 +296,7 @@ pub unsafe extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff
     // Check same flow
     let mut p = (*head).next;
     while p != head as *mut list_head {
-        let greh2 = (p as *mut sk_buff).offset(off) as *mut gre_base_hdr;
+        let greh2 = (p as *mut sk_buff).offset(off as isize) as *mut gre_base_hdr;
 
         if (*greh2).flags != (*greh).flags || (*greh2).protocol != (*greh).protocol {
             (*NAPI_GRO_CB(p as *mut sk_buff)).same_flow = 0;
@@ -323,16 +319,18 @@ pub unsafe extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff
     pp = unsafe { call_gro_receive((*ptype).callbacks.gro_receive.unwrap(), head, skb) };
     flush = 0;
 
-    unsafe { rcu_read_unlock() };
-    unsafe { skb_gro_flush_final(skb, pp, flush) };
+        rcu_read_unlock();
+        skb_gro_flush_final(skb, pp, flush);
 
-    pp
+        pp
+    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gre_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
+pub extern "C" fn gre_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
+    unsafe {
     let greh = (skb as *mut c_void).offset(nhoff as isize) as *mut gre_base_hdr;
-    let grehlen = core::mem::size_of::<gre_base_hdr>() as u32;
+    let mut grehlen = core::mem::size_of::<gre_base_hdr>() as u32;
     let mut err = -ENOENT;
 
     // (*skb).encapsulation = 1;
@@ -347,20 +345,19 @@ pub unsafe extern "C" fn gre_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_
         grehlen += core::mem::size_of::<u16>() as u32;
     }
 
-    unsafe { rcu_read_lock() };
-    let ptype = unsafe { gro_find_complete_by_type(type_) };
-    if !ptype.is_null() {
-        if let Some(gro_complete_func) = (*ptype).callbacks.gro_complete {
-            err = unsafe {
-                gro_complete_func(skb, nhoff + grehlen as c_int)
-            };
+        rcu_read_lock();
+        let ptype = gro_find_complete_by_type(type_);
+        if !ptype.is_null() {
+            if let Some(gro_complete_func) = (*ptype).callbacks.gro_complete {
+                err = gro_complete_func(skb, nhoff + grehlen as c_int);
+            }
         }
+        rcu_read_unlock();
+
+        skb_set_inner_mac_header(skb, nhoff + grehlen as c_int);
+
+        err
     }
-    unsafe { rcu_read_unlock() };
-
-    skb_set_inner_mac_header(skb, nhoff + grehlen as c_int);
-
-    err
 }
 
 #[no_mangle]
@@ -382,11 +379,11 @@ pub unsafe extern "C" fn gre_offload_init() -> c_int {
     err
 }
 
-// Helper functions
-#[inline]
-unsafe fn skb_inner_mac_header(skb: *mut sk_buff) -> usize {
-    0
-}
+// Helper functions - remove duplicate definition, use extern declaration
+// #[inline]
+// unsafe fn skb_inner_mac_header(skb: *mut sk_buff) -> usize {
+//     0
+// }
 
 #[inline]
 unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut skb_shared_info {
@@ -422,17 +419,16 @@ unsafe fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut NAPI_GRO_CB {
     (skb as *mut c_void).offset(192) as *mut NAPI_GRO_CB
 }
 
-#[repr(C)]
 static gre_offload: packet_offload = packet_offload {
     callbacks: packet_offload_callbacks {
-        gso_segment: Some(gre_gso_segment),
-        gro_receive: Some(gre_gro_receive),
-        gro_complete: Some(gre_gro_complete),
+        gso_segment: Some(gre_gso_segment as extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff),
+        gro_receive: Some(gre_gro_receive as extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff),
+        gro_complete: Some(gre_gro_complete as extern "C" fn(*mut sk_buff, c_int) -> c_int),
     },
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn null_compute_pseudo(skb: *mut sk_buff) -> u32 {
+pub extern "C" fn null_compute_pseudo(_skb: *mut sk_buff) -> u32 {
     0
 }
 
