@@ -151,8 +151,7 @@ pub unsafe extern "C" fn generic_timeout_obj_to_nlattr(
 
 // Constants
 #[no_mangle]
-pub static NF_CT_GENERIC_TIMEOUT: unsafe extern "C" fn() -> c_uint =
-    || -> c_uint { 600 * HZ as u32 };
+pub static NF_CT_GENERIC_TIMEOUT: c_uint = 600 * HZ as u32;
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
