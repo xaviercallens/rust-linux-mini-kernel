@@ -28,16 +28,6 @@ pub struct xfrm_dst {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct flowi6 {
-    pub flowi6_oif: c_int,
-    pub flowi6_flags: c_int,
-    pub flowi6_mark: u32,
-    pub daddr: in6_addr,
-    pub saddr: in6_addr,
-}
-
-#[repr(C)]
 pub struct xfrm_policy_afinfo {
     pub dst_ops: *const dst_ops,
     pub dst_lookup: Option<
