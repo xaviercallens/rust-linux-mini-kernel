@@ -153,14 +153,11 @@ pub unsafe extern "C" fn calipso_cache_init() -> c_int {
     }
 
     for i in 0..CALIPSO_CACHE_BUCKETS {
-        spin_lock_init(&(*cache).lock);
+        let cache = base.add(i as usize);
+        spin_lock_init(&mut (*cache).lock);
         (*cache).size = 0;
         (*cache).list.next = &mut (*cache).list;
         (*cache).list.prev = &mut (*cache).list;
-        let cache_ptr = cache.offset(1);
-        if i < CALIPSO_CACHE_BUCKETS - 1 {
-            cache = cache_ptr;
-        }
     }
 
     calipso_cache = base;

@@ -16,7 +16,9 @@ libc = "0.2"
 
 [profile.dev]
 opt-level = 0
+panic = "abort"
 
 [profile.release]
 opt-level = 3
 lto = true
+panic = "abort"
