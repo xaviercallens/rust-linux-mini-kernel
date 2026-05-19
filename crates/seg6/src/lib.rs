@@ -6,6 +6,7 @@
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::mem;
+use core::panic::PanicInfo;
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -153,4 +154,3 @@ pub unsafe extern "C" fn seg6_exit() {}
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
 }
-```
