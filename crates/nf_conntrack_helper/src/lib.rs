@@ -8,6 +8,7 @@
 use core::ffi::{c_int, c_uint, c_void};
 use core::mem;
 use core::ptr;
+use core::sync::atomic::{AtomicUsize, Ordering};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
