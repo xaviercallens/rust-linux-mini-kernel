@@ -282,12 +282,12 @@ pub unsafe extern "C" fn inet_sock_destruct(sk: *mut sock_extended) {
 
     // Validate state for TCP sockets
     if (*sk).sk_type == SOCK_STREAM && (*sk).sk_state != TCP_CLOSE {
-        pr_err("Attempt to release TCP socket in state %d %p\n", (*sk).sk_state, sk);
+        pr_err(b"Attempt to release TCP socket in invalid state\n".as_ptr() as *const c_char);
         return;
     }
 
     if !sock_flag(sk, SOCK_DEAD) {
-        pr_err("Attempt to release alive inet socket %p\n", sk);
+        pr_err(b"Attempt to release alive inet socket\n".as_ptr() as *const c_char);
         return;
     }
 
@@ -390,13 +390,14 @@ pub unsafe extern "C" fn inet_create(
     'lookup: loop {
     rcu_read_lock();
     let mut found = false;
-    let mut list = &inetsw[(*sock).type_field];
+    let list_ptr = &mut INETSW[(*sock).type_field as usize][0];
+    let mut list = list_ptr;
     while !found {
-        if list.next == list {
+        if (*list).next.is_null() || (*list).next == list {
             break;
         }
-        answer = container_of(list.next, inet_protosw, list);
-        list = list.next;
+        answer = (*list).next as *mut inet_protosw;
+        list = (*list).next;
 
         err = 0;
         // Check the non-wild match
@@ -424,11 +425,9 @@ pub unsafe extern "C" fn inet_create(
         if try_loading_module < 2 {
             rcu_read_unlock();
             if try_loading_module == 1 {
-                request_module("net-pf-%d-proto-%d-type-%d",
-                               PF_INET, protocol, (*sock).type_field);
+                request_module(b"net-pf-inet-proto-type\n".as_ptr() as *const c_char);
             } else {
-                request_module("net-pf-%d-proto-%d",
-                               PF_INET, protocol);
+                request_module(b"net-pf-inet-proto\n".as_ptr() as *const c_char);
             }
             try_loading_module += 1;
             continue 'lookup;
@@ -524,16 +523,6 @@ unsafe extern "C" fn BPF_CGROUP_RUN_PROG_INET_SOCK(sk: *mut sock) -> c_int { 0 }
 
 // Constants and macros
 pub const IPPROTO_MAX: c_int = 256;
-pub const INET_PROTOSW_REUSE: c_int = 1;
-pub const INET_PROTOSW_ICSK: c_int = 2;
-pub const SK_CAN_REUSE: c_int = 1;
-pub const IPPROTO_RAW: c_int = 255;
-pub const PF_INET: c_int = 2;
-pub const GFP_KERNEL: c_int = 0;
-pub const CAP_NET_RAW: c_int = 1;
-pub const BPF_SOCK_OPS_TCP_LISTEN_CB: c_int = 1;
-pub const TFO_SERVER_WO_SOCKOPT: c_int = 1 << 1;
-pub const TFO_SERVER_ENABLE: c_int = 1;
 
 // Tests (conditional compilation)
 #[cfg(test)]
