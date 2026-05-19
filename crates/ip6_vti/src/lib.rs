@@ -65,17 +65,6 @@ unsafe fn hash(_remote: *const in6_addr, _local: *const in6_addr) -> c_int {
     0
 }
 
-unsafe fn get_vti6_net(_net: *mut c_void) -> *mut vti6_net {
-    ptr::null_mut()
-}
-
-unsafe fn ipv6_addr_equal(_a: *const in6_addr, _b: *const in6_addr) -> bool {
-    false
-}
-
-unsafe fn ipv6_addr_any(_a: *const in6_addr) -> bool {
-    false
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn vti6_tnl_lookup(
@@ -257,17 +246,28 @@ pub unsafe extern "C" fn vti6_locate(
 
 // Helper functions
 #[inline]
-fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool {
-    unsafe { ptr::read(a) == ptr::read(b) }
+unsafe fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> bool {
+    if a.is_null() || b.is_null() {
+        false
+    } else {
+        let a_bytes = &(*a).in6_u.u6_addr8;
+        let b_bytes = &(*b).in6_u.u6_addr8;
+        a_bytes == b_bytes
+    }
 }
 
 #[inline]
-fn ipv6_addr_any(a: *const in6_addr) -> bool {
-    unsafe { ptr::read(a).in6_u.u6_addr32[0] == 0 && ptr::read(a).in6_u.u6_addr32[1] == 0 }
+unsafe fn ipv6_addr_any(a: *const in6_addr) -> bool {
+    if a.is_null() {
+        true
+    } else {
+        let bytes = &(*a).in6_u.u6_addr8;
+        bytes.iter().all(|&b| b == 0)
+    }
 }
 
 #[inline]
-fn HASH(addr1: *const in6_addr, addr2: *const in6_addr) -> c_uint {
+unsafe fn HASH(addr1: *const in6_addr, addr2: *const in6_addr) -> c_uint {
     let hash1 = ipv6_addr_hash(addr1);
     let hash2 = ipv6_addr_hash(addr2);
     hash_32(hash1 ^ hash2, IP6_VTI_HASH_SIZE_SHIFT as u32)
@@ -275,19 +275,22 @@ fn HASH(addr1: *const in6_addr, addr2: *const in6_addr) -> c_uint {
 
 #[inline]
 fn hash_32(mut val: u32, bits: u32) -> c_uint {
-    val = val.wrapping_mul(0x9e3779b9);
+    let val = val.wrapping_mul(0x9e3779b9);
     (val >> (32 - bits)) as c_uint
 }
 
 #[inline]
-fn ipv6_addr_hash(addr: *const in6_addr) -> u32 {
-    // Simplified hash implementation
-    let bytes = unsafe { &(*addr).in6_u.u6_addr8 };
-    let mut hash = 0;
-    for &b in bytes.iter() {
-        hash = hash.wrapping_mul(31).wrapping_add(b as u32);
+unsafe fn ipv6_addr_hash(addr: *const in6_addr) -> u32 {
+    if addr.is_null() {
+        0
+    } else {
+        let bytes = &(*addr).in6_u.u6_addr8;
+        let mut hash: u32 = 0;
+        for &b in bytes.iter() {
+            hash = hash.wrapping_mul(31).wrapping_add(b as u32);
+        }
+        hash
     }
-    hash
 }
 
 // FFI helpers (mocked for example)
