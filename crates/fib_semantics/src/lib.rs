@@ -91,9 +91,8 @@ pub unsafe extern "C" fn fib_nh_common_release(nhc: *mut fib_nh_common) {
 
 #[no_mangle]
 pub unsafe extern "C" fn free_fib_info(fi: *mut fib_info) {
-    if fi.is_null() {
-        return;
-    }
+    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: route_lookup_bounds)
+    requires!(!fi.is_null(), "route_lookup_bounds: fi invariant violated");
 
     if (*fi).fib_dead == 0 {
         return;

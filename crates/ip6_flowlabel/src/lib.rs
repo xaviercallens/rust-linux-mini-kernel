@@ -13,6 +13,7 @@
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use libc::{c_uint, size_t};
+use ::kernel_types::{requires, ensures};
 
 mod kernel_types {
     pub type c_int = i32;
@@ -174,8 +175,13 @@ pub unsafe extern "C" fn fl_lookup(net: *mut Net, label: u32) -> *mut Ip6Flowlab
 
 #[no_mangle]
 pub unsafe extern "C" fn fl_shared_exclusive(fl: *mut Ip6Flowlabel) -> bool {
+    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: ip6_flowlabel_atomic_safety)
+    requires!(!fl.is_null(), "ip6_flowlabel_atomic_safety: fl invariant violated");
+
     let share = (*fl).share;
-    share == 1 || share == 2 || share == 3
+    let is_shared = share == 1 || share == 2 || share == 3;
+    ensures!(share >= 0, "ip6_flowlabel_atomic_safety: share >= 0");
+    is_shared
 }
 
 extern "C" {

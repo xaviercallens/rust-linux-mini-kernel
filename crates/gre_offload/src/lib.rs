@@ -125,6 +125,9 @@ pub unsafe extern "C" fn gre_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
+    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: gre_encap_bounds_check)
+    requires!(!skb.is_null(), "gre_encap_bounds_check: skb invariant violated");
+
     let tnl_hlen = unsafe { skb_inner_mac_header(skb) - skb_transport_header(skb) };
     let need_csum = unsafe { skb_get_ip_summed(skb) == CHECKSUM_PARTIAL };
 
