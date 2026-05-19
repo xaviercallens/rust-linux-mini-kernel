@@ -241,5 +241,5 @@ fn format_panic_location<'a>(location: &core::panic::Location, buf: &'a mut [u8]
 }
 
 // Assembly magic for inline asm
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 use core::arch::asm;
