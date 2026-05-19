@@ -550,7 +550,13 @@ extern "C" {
 // Formal Verification Contracts (v7.0.0 Experimental Symbolic Execution)
 // ============================================================================
 
+#[cfg(feature = "verus")]
+pub extern crate builtin;
+#[cfg(feature = "verus")]
+pub extern crate builtin_macros;
+
 /// Represents a precondition that must be mathematically satisfied (maps to Lean 4 axioms).
+#[cfg(not(feature = "verus"))]
 #[macro_export]
 macro_rules! requires {
     ($cond:expr, $msg:expr) => {
@@ -562,13 +568,30 @@ macro_rules! requires {
     };
 }
 
+#[cfg(feature = "verus")]
+#[macro_export]
+macro_rules! requires {
+    ($cond:expr, $msg:expr) => {
+        $crate::builtin::requires($cond);
+    };
+}
+
 /// Represents a postcondition that the function mathematically guarantees.
+#[cfg(not(feature = "verus"))]
 #[macro_export]
 macro_rules! ensures {
     ($cond:expr, $msg:expr) => {
         if !($cond) {
             panic!("Formal Verification Postcondition Failed: {}", $msg);
         }
+    };
+}
+
+#[cfg(feature = "verus")]
+#[macro_export]
+macro_rules! ensures {
+    ($cond:expr, $msg:expr) => {
+        $crate::builtin::ensures($cond);
     };
 }
 
