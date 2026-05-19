@@ -193,6 +193,10 @@ pub unsafe extern "C" fn ipv6_sock_ac_join(
     _ifindex: c_int,
     addr: *const in6_addr,
 ) -> c_int {
+    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: anycast_resolution_termination)
+    requires!(!sk.is_null(), "anycast_resolution_termination: sk invariant violated");
+    requires!(!addr.is_null(), "anycast_resolution_termination: addr invariant violated");
+
     let netns = sock_net(sk);
 
     if !ns_capable((*netns).user_ns, CAP_NET_ADMIN) {
