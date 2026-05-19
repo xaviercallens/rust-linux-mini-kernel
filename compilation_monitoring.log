@@ -4199,3 +4199,193 @@ Summary:
   ❌ Failing: 5/5
 
 
+========================================
+📊 Compilation Check - 2026-05-19 10:53:15
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 10:58:17
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:03:18
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:08:20
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:13:21
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:18:23
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:23:24
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:28:26
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:33:28
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 11:38:30
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 85 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ❌ core has 64 errors
+
+Summary:
+  ✅ Compiling: 0/5 (0.0%)
+  ❌ Failing: 5/5
+
+

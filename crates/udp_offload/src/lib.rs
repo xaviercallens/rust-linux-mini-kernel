@@ -5,16 +5,7 @@
 
 use core::ffi::{c_int, c_void};
 use core::ptr;
-use kernel_types::*;
-
-mod kernel_types {
-    pub use core::ffi::{
-        c_char, c_int, c_long, c_short, c_uchar, c_uint, c_ulong, c_ushort, c_void,
-    };
-    pub type size_t = usize;
-    pub type c_size_t = usize;
-    pub type socklen_t = u32;
-}
+use core::mem;
 use kernel_types::*;
 
 pub const IPPROTO_UDP: c_int = 17;
