@@ -225,32 +225,4 @@ mod tests {
             assert_eq!(dst.in6_u.u6_addr8[8..], [2; 8]);
         }
     }
-
-    let outhdr_ref = &mut *outhdr;
-    outhdr_ref.nexthdr = inhdr_ref.nexthdr;
-    let seg_len = (n as usize * (16 - cmpri as usize)) + (16 - cmpre as usize);
-    outhdr_ref.hdrlen = (seg_len >> 3) as u8;
-
-    if (seg_len & 0x7) != 0 {
-        outhdr_ref.hdrlen = outhdr_ref.hdrlen.wrapping_add(1);
-        outhdr_ref.pad = (8 - (seg_len & 0x7)) as u8;
-    } else {
-        outhdr_ref.pad = 0;
-    }
-
-    outhdr_ref.rsvd = inhdr_ref.rsvd;
-    outhdr_ref.type_ = inhdr_ref.type_;
-    outhdr_ref.segments_left = inhdr_ref.segments_left;
-    outhdr_ref.cmpri = cmpri;
-    outhdr_ref.cmpre = cmpre;
-
-    for i in 0..n {
-        let seg = &*in_base.add(i as usize);
-        let pos = ipv6_rpl_segdata_pos(outhdr as *const ipv6_rpl_sr_hdr, i as c_int);
-        ipv6_rpl_addr_compress(pos, seg, cmpri);
-    }
-
-    let seg = &*in_base.add(n as usize);
-    let pos = ipv6_rpl_segdata_pos(outhdr as *const ipv6_rpl_sr_hdr, n as c_int);
-    ipv6_rpl_addr_compress(pos, seg, cmpre);
 }
