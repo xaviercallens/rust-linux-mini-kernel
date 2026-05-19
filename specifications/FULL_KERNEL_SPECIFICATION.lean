@@ -1,16 +1,19 @@
 -- Core Kernel Types
 structure NetDevice where
   type_ : Nat
+  deriving Inhabited
 
 structure SkBuff where
   dev : Option NetDevice
   data : Option Nat
   len : Nat
   csum : Nat
+  deriving Inhabited
 
 structure Ipv6FlowLabel where
   label : Nat
   share : Nat
+  deriving Inhabited
 
 -- ============================================================================
 -- MODULE 1: ARP Packet Processing
