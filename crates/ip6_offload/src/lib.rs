@@ -22,7 +22,31 @@ pub const INET6_PROTO_GSO_EXTHDR: c_int = 1;
 pub const ETH_P_IPV6: c_int = 0x86DD;
 pub const IPPROTO_UDP: c_int = 17;
 
+// SKB GSO constants
+pub const SKB_GSO_IPXIP4: c_uint = 1 << 6;
+pub const SKB_GSO_IPXIP6: c_uint = 1 << 7;
+pub const SKB_GSO_UDP: c_uint = 1 << 8;
+pub const SKB_GSO_PARTIAL: c_uint = 1 << 13;
+
+// IPv6 fragment constants
+pub const IP6_MF: u16 = 0x0001;
+
 // Type definitions
+
+/// IPv6 header type alias
+pub type Ipv6Hdr = ipv6hdr;
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ipv6hdr {
+    pub version_priority: u8,
+    pub flow_lbl: [u8; 3],
+    pub payload_len: __be16,
+    pub nexthdr: u8,
+    pub hop_limit: u8,
+    pub saddr: in6_addr,
+    pub daddr: in6_addr,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -59,6 +83,41 @@ pub static mut INET6_SOCKRAW_OPS: *mut c_void = ptr::null_mut();
 pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut c_void = ptr::null_mut();
 pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: *mut c_void = ptr::null_mut();
 
+// FFI function declarations
+unsafe extern "C" {
+    fn ipv6_hdr(skb: *const SkBuff) -> *mut Ipv6Hdr;
+    fn skb_shinfo(skb: *const SkBuff) -> *mut c_void;
+    fn skb_reset_network_header(skb: *mut SkBuff);
+    fn skb_reset_transport_header(skb: *mut SkBuff);
+    fn skb_mac_header(skb: *const SkBuff) -> *mut c_void;
+    fn skb_reset_mac_len(skb: *mut SkBuff);
+    fn ipv6_optlen(opt: *const Ipv6OptHdr) -> c_int;
+    fn inet6_offloads(proto: u8) -> *const NetOffload;
+    fn ip6_find_1stfragopt(skb: *mut SkBuff, prevhdr: *mut *mut c_void) -> c_int;
+    fn kfree_skb_list(skb: *mut SkBuff);
+    fn ntohs(val: __be16) -> u16;
+    fn rcu_dereference(ptr: *const c_void) -> *mut c_void;
+    fn pskb_may_pull(skb: *mut SkBuff, len: c_uint) -> bool;
+}
+
+// Helper functions
+#[inline]
+unsafe fn skb_is_gso(skb: *const SkBuff) -> bool {
+    !skb_shinfo(skb).is_null()
+}
+
+#[inline]
+unsafe fn IS_ERR_OR_NULL(ptr: *const c_void) -> bool {
+    ptr.is_null() || (ptr as usize) >= (-4096isize) as usize
+}
+
+// Macro-like functions (SKB_GSO_CB returns pointer to GSO control block)
+#[inline]
+unsafe fn SKB_GSO_CB(skb: *mut SkBuff) -> *mut c_void {
+    // GSO control block is typically stored in skb->cb
+    skb as *mut c_void
+}
+
 // Function implementations
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -> c_int {
@@ -66,8 +125,8 @@ pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -
     let mut ops: *const NetOffload = ptr::null();
 
     loop {
-        if proto_u8 != NEXTHDR_HOP {
-            let ops = rcu_dereference(inet6_offloads(proto_u8 as c_int));
+        if proto as u8 != NEXTHDR_HOP {
+            let ops = rcu_dereference(inet6_offloads(proto as u8 as c_int));
             if ops.is_null() {
                 break;
             }
@@ -87,11 +146,11 @@ pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -
             break;
         }
 
-        proto_u8 = (*opth).nexthdr;
+        proto as u8 = (*opth).nexthdr;
         __skb_pull(skb, len);
     }
 
-    proto_u8 as c_int
+    proto as u8 as c_int
 }
 
 #[no_mangle]
