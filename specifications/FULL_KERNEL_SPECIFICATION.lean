@@ -18,11 +18,11 @@ structure Ipv6FlowLabel where
 -- ============================================================================
 -- MODULE 1: ARP Packet Processing
 -- ============================================================================
-def valid_arp_pointer (skb : Option SkBuff) : Prop := skb.isSome
+def valid_pointer {α : Type} (ptr : Option α) : Prop := ptr.isSome
 
 theorem arp_send_safety (skb : Option SkBuff) :
-  valid_arp_pointer skb → 
-  valid_arp_pointer skb.get!.dev →
+  valid_pointer skb → 
+  valid_pointer skb.get!.dev →
   True := by
   intros h_skb h_dev
   exact True.intro
