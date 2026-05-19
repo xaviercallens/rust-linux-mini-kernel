@@ -9,29 +9,6 @@ use core::ptr;
 use core::ptr::null_mut;
 use kernel_types::*;
 
-#[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
-#[repr(C)]
-pub struct net_device {
-    _priv: [u8; 0],
-}
-#[repr(C)]
-pub struct inet6_dev {
-    _priv: [u8; 0],
-}
-#[repr(C)]
-pub struct dst_ops {
-    _priv: [u8; 0],
-}
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ListHead {
-    pub next: *mut ListHead,
-    pub prev: *mut ListHead,
-}
-
 pub const EHOSTUNREACH: c_int = -113;
 pub const ENODEV: c_int = -19;
 
@@ -128,9 +105,11 @@ pub unsafe extern "C" fn xfrm6_dst_lookup(
         flowi6_mark: mark,
         daddr: in6_addr {
             in6_u: in6_addr_union { u6_addr8: [0; 16] },
+            s6_addr: ptr::null_mut()
         },
         saddr: in6_addr {
             in6_u: in6_addr_union { u6_addr8: [0; 16] },
+            s6_addr: ptr::null_mut()
         },
     };
 
@@ -190,7 +169,7 @@ pub unsafe extern "C" fn xfrm6_fill_dst(
     (*xdst).rt6.rt6i_gateway = (*rt).rt6i_gateway;
     (*xdst).rt6.rt6i_dst = (*rt).rt6i_dst;
     (*xdst).rt6.rt6i_src = (*rt).rt6i_src;
-    INIT_LIST_HEAD(&mut (*xdst).rt6.rt6i_uncached);
+    INIT_LIST_HEAD(ptr::addr_of_mut!((*xdst).rt6.rt6i_uncached));
     rt6_uncached_list_add(&mut (*xdst).rt6);
 
     0
@@ -267,7 +246,7 @@ pub unsafe extern "C" fn xfrm6_dst_ifdown(
 
     let xdst = dst as *mut xfrm_dst;
     if (*(*xdst).rt6.rt6i_idev).dev == dev {
-        let loopback_idev = in6_dev_get(dev_net(dev).loopback_dev);
+        let loopback_idev = in6_dev_get((*dev_net(dev)).loopback_dev);
         let mut current_xdst = xdst;
 
         loop {
@@ -275,7 +254,7 @@ pub unsafe extern "C" fn xfrm6_dst_ifdown(
             (*current_xdst).rt6.rt6i_idev = loopback_idev;
             in6_dev_hold(loopback_idev);
 
-            let child = xfrm_dst_child(&(*current_xdst).u);
+            let child = xfrm_dst_child(&mut (*current_xdst).u as *mut _);
             if child.is_null() || (*child).xfrm.is_null() {
                 break;
             }
@@ -302,31 +281,16 @@ pub unsafe extern "C" fn xfrm6_policy_fini() {
 
 // External functions (assumed to exist in C)
 extern "C" {
-    fn l3mdev_master_ifindex_by_index(net: *mut net, oif: c_int) -> c_int;
-    fn ip6_route_output(net: *mut net, sk: *mut c_void, fl: *const flowi6) -> *mut dst_entry;
-    fn dst_release(dst: *mut dst_entry);
-    fn dev_hold(dev: *mut net_device);
-    fn in6_dev_get(dev: *mut net_device) -> *mut inet6_dev;
-    fn dev_put(dev: *mut net_device);
-    fn ipv6_dev_get_saddr(
-        net: *mut net,
-        dev: *mut net_device,
-        daddr: *const in6_addr,
-        flags: c_int,
-        saddr: *mut in6_addr,
-    );
-    fn INIT_LIST_HEAD(head: *mut ListHead);
-    fn rt6_uncached_list_add(rt: *mut rt6_info);
     fn atomic_inc(counter: *mut c_int);
     fn xfrm_policy_register_afinfo(afinfo: *const xfrm_policy_afinfo, family: c_int) -> c_int;
     fn xfrm_policy_unregister_afinfo(afinfo: *const xfrm_policy_afinfo);
     fn xfrm_dst_destroy(dst: *mut dst_entry);
     fn xfrm_dst_ifdown(dst: *mut dst_entry, dev: *mut net_device);
-    fn dev_net(dev: *mut net_device) -> *mut net;
-    fn in6_dev_put(idev: *mut inet6_dev);
     fn in6_dev_hold(idev: *mut inet6_dev);
+    fn in6_dev_put(idev: *mut inet6_dev);
     fn __in6_dev_put(idev: *mut inet6_dev);
     fn dst_destroy_metrics_generic(dst: *mut dst_entry);
+    fn rt6_uncached_list_del(rt: *mut rt6_info);
     fn xfrm_dst_child(dst: *mut dst_entry) -> *mut dst_entry;
 }
 
@@ -345,7 +309,7 @@ pub static mut xfrm6_dst_ops_template: dst_ops = dst_ops {
 
 #[no_mangle]
 pub static mut xfrm6_policy_afinfo: xfrm_policy_afinfo = xfrm_policy_afinfo {
-    dst_ops: &xfrm6_dst_ops_template,
+    dst_ops: unsafe { &xfrm6_dst_ops_template },
     dst_lookup: Some(xfrm6_dst_lookup as _),
     get_saddr: Some(xfrm6_get_saddr as _),
     fill_dst: Some(xfrm6_fill_dst as _),

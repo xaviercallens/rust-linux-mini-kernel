@@ -260,12 +260,26 @@ pub struct flowi {
     pub u: *mut core::ffi::c_void, // Auto-generated mock field
 }
 
+/// Destination operations
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct dst_ops {
+    pub family: c_int,
+    pub update_pmtu: Option<unsafe extern "C" fn(*mut dst_entry, *mut c_void, *mut c_void, u32, bool)>,
+    pub redirect: Option<unsafe extern "C" fn(*mut dst_entry, *mut c_void, *mut c_void)>,
+    pub cow_metrics: Option<unsafe extern "C" fn(*mut dst_entry, *mut c_void) -> *mut dst_entry>,
+    pub destroy: Option<unsafe extern "C" fn(*mut dst_entry)>,
+    pub ifdown: Option<unsafe extern "C" fn(*mut dst_entry, *mut net_device, c_int)>,
+    pub local_out: Option<unsafe extern "C" fn(*mut c_void) -> c_int>,
+    pub gc_thresh: c_int,
+}
+
 /// Destination entry (routing cache)
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct dst_entry {
     pub dev: *mut c_void, // struct net_device *
-    pub ops: *mut c_void, // struct dst_ops *
+    pub ops: *mut dst_ops,
     pub _rcuhead: *mut c_void,
     pub _metrics: [c_int; 17],
     pub _mtu: c_ulong,
@@ -283,12 +297,28 @@ pub struct dst_entry {
 pub struct rt6_info {
     pub dst: dst_entry,
     pub rt6_next: *mut rt6_info,
-    pub rt6i_idev: *mut c_void, // struct inet6_dev *
+    pub rt6i_idev: *mut inet6_dev,
     pub rt6i_flags: c_uint,
-    pub rt6i_uncached: *mut core::ffi::c_void, // Force injected mock field
+    pub rt6i_uncached: ListHead,
     pub rt6i_src: *mut core::ffi::c_void, // Force injected mock field
     pub rt6i_gateway: *mut core::ffi::c_void, // Force injected mock field
     pub rt6i_dst: *mut core::ffi::c_void, // Force injected mock field
+}
+
+/// IPv6 interface device info
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet6_dev {
+    pub dev: *mut net_device,
+    _padding: [u8; 0],
+}
+
+/// Network namespace
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net {
+    pub loopback_dev: *mut net_device,
+    _padding: [u8; 0],
 }
 
 /// Routing table link operations
