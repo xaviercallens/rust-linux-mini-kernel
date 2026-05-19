@@ -11,6 +11,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 use core::mem::{self, size_of};
+use core::ptr;
 use kernel_types::*;
 
 pub const IPPROTO_UDP: c_int = 17;
@@ -302,11 +303,6 @@ pub unsafe extern "C" fn udp_timeout(ct: *mut nf_conn) -> c_int {
     } else {
         udp_timeouts[UDP_CT_UNREPLIED]
     }
-}
-
-#[inline]
-fn ntohs(x: u16) -> u16 {
-    u16::from_be(x)
 }
 
 #[inline]
