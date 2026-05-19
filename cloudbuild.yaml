@@ -19,7 +19,7 @@ steps:
         # Install x86_64-elf-ld for linking bare metal
         wget https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/x86_64-elf-tools-linux.zip
         unzip x86_64-elf-tools-linux.zip -d /usr/local/
-        export PATH=$$PATH:/usr/local/bin
+        export PATH=$$PATH:/usr/local/x86_64-elf/bin
         
         rustup target add x86_64-unknown-none
         

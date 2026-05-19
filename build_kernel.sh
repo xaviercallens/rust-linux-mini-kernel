@@ -41,7 +41,7 @@ cd ../..
 
 echo -e "${YELLOW}Linking...${NC}"
 x86_64-elf-ld -n -T arch/x86_64/linker.ld -o $BUILD_DIR/$KERNEL_NAME.elf $BUILD_DIR/entry.o $BUILD_DIR/objects/*.o 2>/dev/null || \
-  ld.lld -n -T arch/x86_64/linker.ld -o $BUILD_DIR/$KERNEL_NAME.elf $BUILD_DIR/entry.o $BUILD_DIR/objects/*.o 2>/dev/null || \
+  rust-lld -flavor gnu -n -T arch/x86_64/linker.ld -o $BUILD_DIR/$KERNEL_NAME.elf $BUILD_DIR/entry.o $BUILD_DIR/objects/*.o 2>/dev/null || \
   ld -m elf_x86_64 -n -T arch/x86_64/linker.ld -o $BUILD_DIR/$KERNEL_NAME.elf $BUILD_DIR/entry.o $BUILD_DIR/objects/*.o
 
 if [ -f "$BUILD_DIR/$KERNEL_NAME.elf" ]; then
