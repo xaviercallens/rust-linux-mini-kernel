@@ -5,12 +5,9 @@
 #![allow(clippy::implicit_return_in_non_void_function)]
 
 use core::alloc::{GlobalAlloc, Layout};
-use core::ffi::{c_int, c_void};
+use core::ffi::{c_int, c_uint, c_ulong, c_void};
 use core::{mem, ptr};
 use kernel_types::*;
-use core::ptr;
-use core::mem;
-use core::ffi::{c_void, c_int, c_uint, c_ulong};
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -151,15 +148,6 @@ pub struct spinlock_t {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_state {
-    pub data: *mut crypto_aead,
-    pub props: xfrm_state_props,
-    pub encap: *mut xfrm_encap_tmpl,
-    pub lock: spinlock_t,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct rcu_head {
     _private: [u8; 0],
 }
@@ -271,8 +259,8 @@ pub unsafe extern "C" fn esp_tmp_iv(
         return (tmp as *mut u8).add(extralen as usize);
     }
 
-    let align_mask = crypto_aead_alignmask(aead) + 1;
-    let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
+    let align_mask = (crypto_aead_alignmask(aead) + 1) as usize;
+    let offset = (extralen as usize + align_mask - 1) & !(align_mask - 1);
 
     (tmp as *mut u8).add(offset)
 }
@@ -286,10 +274,11 @@ pub unsafe extern "C" fn esp_tmp_req(
         return ptr::null_mut();
     }
 
-    let ivsize = crypto_aead_ivsize(aead);
-    let offset = ivsize + (crypto_tfm_ctx_alignment() - 1) & !(crypto_tfm_ctx_alignment() - 1);
+    let ivsize = crypto_aead_ivsize(aead) as usize;
+    let align = crypto_tfm_ctx_alignment() as usize;
+    let offset = (ivsize + align - 1) & !(align - 1);
 
-    let req = (iv as *mut u8).add(offset) as *mut aead_request;
+    let req = (iv as *mut u8).add(offset as usize) as *mut aead_request;
     aead_request_set_tfm(req, aead);
     req
 }
@@ -421,11 +410,6 @@ pub unsafe extern "C" fn esp_find_tcp_sk(x: *mut xfrm_state) -> *mut sock {
 
 // Helper functions (declared as extern in C)
 extern "C" {
-    fn crypto_aead_ivsize(aead: *mut crypto_aead) -> c_int;
-    fn crypto_aead_alignmask(aead: *mut crypto_aead) -> c_int;
-    fn crypto_tfm_ctx_alignment() -> c_int;
-    fn crypto_aead_reqsize(aead: *mut crypto_aead) -> c_int;
-    fn aead_request_set_tfm(req: *mut aead_request, aead: *mut crypto_aead);
     fn sg_next(sg: *mut scatterlist) -> *mut scatterlist;
     fn sg_page(sg: *mut scatterlist) -> *mut page;
     fn put_page(page: *mut page);
