@@ -23,40 +23,10 @@ pub const NF_DROP: c_int = 1;
 pub const NF_CT_EXPECT_CLASS_DEFAULT: u8 = 0;
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
+pub const IPS_NAT_MASK: u32 = 0x0000FF00;
 
 pub type size_t = usize;
 
-// Replace raw pointers with proper Rust types
-pub static mut __UDP_DISCONNECT: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
-pub static mut ICMPV6_ERR_CONVERT: *mut nf_conntrack_amanda_hook = core::ptr::null_mut();
-pub static mut INET6_SOCKRAW_OPS: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
-pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
-pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: *mut nf_conntrack_amanda_ops = core::ptr::null_mut();
-
-// Add proper initialization and safety invariants
-pub fn init_nf_conntrack_amanda() -> Result<(), &'static str> {
-    unsafe {
-        __UDP_DISCONNECT = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
-        ICMPV6_ERR_CONVERT = Box::into_raw(Box::new(nf_conntrack_amanda_hook::new()));
-        INET6_SOCKRAW_OPS = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
-        IP6_DATAGRAM_CONNECT_V6_ONLY = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
-        IP6_DATAGRAM_RECV_COMMON_CTL = Box::into_raw(Box::new(nf_conntrack_amanda_ops::new()));
-    }
-    Ok(())
-}
-
-// Add proper documentation and safety invariants
-/// Netfilter connection tracking Amanda operations
-#[repr(C)]
-pub struct nf_conntrack_amanda_ops {
-    // Fields and methods
-}
-
-/// Netfilter connection tracking Amanda hook
-#[repr(C)]
-pub struct nf_conntrack_amanda_hook {
-    // Fields and methods
-}
 pub type socklen_t = u32;
 
 #[repr(C)]
@@ -195,10 +165,12 @@ unsafe extern "C" {
     fn textSEARCH_destroy(ts: *mut ts_config);
 
     fn nf_ct_helper_log(skb: *mut c_void, ct: *mut nf_conn, msg: *const c_char);
+    fn skb_copy_bits(skb: *const c_void, offset: c_uint, to: *mut c_void, len: c_uint) -> c_int;
+    fn nf_ct_l3num(ct: *const nf_conn) -> u8;
 }
 
 #[inline]
-fn ctinfo2dir(ctinfo: c_int) -> u8 {
+fn CTINFO2DIR(ctinfo: c_int) -> u8 {
     (ctinfo as u8) & 0x01
 }
 
@@ -228,7 +200,7 @@ pub unsafe extern "C" fn amanda_help(
     if start == c_uint::MAX {
         return NF_ACCEPT;
     }
-    let mut start = start + dataoff + SEARCH[0].len;
+    let mut start = start + dataoff + SEARCH[0].len as c_uint;
 
     let stop = skb_find_text(skb, start, (*(skb as *mut sk_buff)).len, SEARCH[1].ts);
     if stop == c_uint::MAX {
@@ -241,16 +213,16 @@ pub unsafe extern "C" fn amanda_help(
         if off == c_uint::MAX {
             continue;
         }
-        let mut off = off + start + SEARCH[i].len;
+        let mut off = off + start + SEARCH[i].len as c_uint;
 
         let mut pbuf: [u8; 6] = [0; 6];
-        let len = (stop - off).min(pbuf.len() - 1) as usize;
-        if skb_copy_bits(skb, off, pbuf.as_mut_ptr(), len) != 0 {
+        let len = (stop - off).min((pbuf.len() - 1) as c_uint);
+        if skb_copy_bits(skb, off, pbuf.as_mut_ptr() as *mut c_void, len) != 0 {
             break;
         }
-        pbuf[len] = 0;
+        pbuf[len as usize] = 0;
 
-        let port = u16::from_str_radix(core::str::from_utf8_unchecked(&pbuf[..len]), 10)
+        let port = u16::from_str_radix(core::str::from_utf8_unchecked(&pbuf[..len as usize]), 10)
             .map_or(0, |n| n as u16);
         if port == 0 || len > 5 {
             break;
@@ -258,7 +230,7 @@ pub unsafe extern "C" fn amanda_help(
 
         let exp = nf_ct_expect_alloc(ct);
         if exp.is_null() {
-            nf_ct_helper_log(skb, ct, b"cannot alloc expectation\0".as_ptr() as *const u8);
+            nf_ct_helper_log(skb, ct, b"cannot alloc expectation\0".as_ptr() as *const c_char);
             ret = NF_DROP;
             continue;
         }
@@ -275,11 +247,13 @@ pub unsafe extern "C" fn amanda_help(
             &port,
         );
 
-        let nf_nat_amanda = nf_nat_amanda_hook.load(Ordering::Relaxed);
+        let nf_nat_amanda = NF_NAT_AMANDA_HOOK.load(Ordering::Relaxed);
         if !nf_nat_amanda.is_null() && ((*ct).status & IPS_NAT_MASK) != 0 {
-            ret = nf_nat_amanda(skb, ctinfo, protoff, off - dataoff, len as c_uint, exp);
+            let func: extern "C" fn(*mut c_void, c_int, c_uint, c_uint, c_uint, *mut nf_conntrack_expect) -> c_int
+                = core::mem::transmute(nf_nat_amanda);
+            ret = func(skb, ctinfo, protoff, off - dataoff, len, exp);
         } else if nf_ct_expect_related(exp, 0) != 0 {
-            nf_ct_helper_log(skb, ct, b"cannot add expectation\0".as_ptr() as *const u8);
+            nf_ct_helper_log(skb, ct, b"cannot add expectation\0".as_ptr() as *const c_char);
             ret = NF_DROP;
         }
         nf_ct_expect_put(exp);
