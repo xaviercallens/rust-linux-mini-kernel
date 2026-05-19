@@ -216,6 +216,9 @@ pub unsafe extern "C" fn inet6_csk_xmit(
         return ENOMEM;
     }
 
+    0 // Success return
+}
+
 // Exported symbols
 #[no_mangle]
 pub unsafe extern "C" fn inet6_csk_route_req_export() {
