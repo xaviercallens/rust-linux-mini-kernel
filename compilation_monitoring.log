@@ -4940,3 +4940,41 @@ Summary:
   ❌ Failing: 4/5
 
 
+========================================
+📊 Compilation Check - 2026-05-19 14:24:11
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 78 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 1/5 (20.0%)
+  ❌ Failing: 4/5
+
+
+========================================
+📊 Compilation Check - 2026-05-19 14:29:12
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ❌ af_inet has 2 errors
+Checking udp...
+  ❌ udp has 78 errors
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 1/5 (20.0%)
+  ❌ Failing: 4/5
+
+
