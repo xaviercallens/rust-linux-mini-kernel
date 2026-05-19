@@ -195,7 +195,7 @@ pub unsafe extern "C" fn __nf_conntrack_helper_find(
     l3num: u16,
     protonum: u8,
 ) -> *mut nf_conntrack_helper {
-    if name.is_null() || nf_ct_helper_count == 0 || nf_ct_helper_hash.is_null() {
+    if name.is_null() || NF_CT_HELPER_COUNT == 0 || NF_CT_HELPER_HASH.is_null() {
         return ptr::null_mut();
     }
 
