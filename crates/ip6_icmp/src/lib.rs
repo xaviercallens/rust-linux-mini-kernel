@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use core::ptr;
 use kernel_types::*;
 
 #[repr(C)]
@@ -74,19 +74,19 @@ pub struct ip6_icmp_unreach {
 }
 
 /// Pointer to the UDP disconnect function.
-pub static mut __UDP_DISCONNECT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+pub static mut __UDP_DISCONNECT: *mut core::ffi::c_void = core::ptr::null_mut();
 
 /// Pointer to the ICMPv6 error conversion function.
-pub static mut ICMPV6_ERR_CONVERT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+pub static mut ICMPV6_ERR_CONVERT: *mut core::ffi::c_void = core::ptr::null_mut();
 
 /// Pointer to the IPv6 sockraw operations.
-pub static mut INET6_SOCKRAW_OPS: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+pub static mut INET6_SOCKRAW_OPS: *mut core::ffi::c_void = core::ptr::null_mut();
 
 /// Pointer to the IPv6 datagram connect function for v6 only.
-pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut core::ffi::c_void = core::ptr::null_mut();
 
 /// Pointer to the IPv6 datagram receive common control function.
-pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
+pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: *mut core::ffi::c_void = core::ptr::null_mut();
 
 extern "C" {
     pub fn ip6_icmp_send(
@@ -107,8 +107,11 @@ extern "C" {
 }
 
 #[inline]
-fn skb_cb_as_icmp(skb: NonNull<sk_buff>) -> *mut ip6_icmp {
-    let cb_ptr = unsafe { (*skb.as_ptr()).cb.as_mut_ptr() };
+fn skb_cb_as_icmp(skb: *mut sk_buff) -> *mut ip6_icmp {
+    if skb.is_null() {
+        return ptr::null_mut();
+    }
+    let cb_ptr = unsafe { (*skb).cb.as_mut_ptr() };
     cb_ptr.cast::<ip6_icmp>()
 }
 
@@ -119,33 +122,31 @@ pub fn ip6_icmp_send_echo_reply(
     offset: c_int,
     mtu: __be32,
 ) -> c_int {
-    let Some(skb_nn) = NonNull::new(skb) else {
+    if skb.is_null() {
         return -1;
     }
 
-    let icmp6h = unsafe { &mut (*skb).cb as *mut ip6_icmp };
-
-    let icmp6h = skb_cb_as_icmp(skb_nn);
+    let icmp6h = skb_cb_as_icmp(skb);
     if icmp6h.is_null() {
         return -1;
     }
 
-    let icmp6h_ref = unsafe { &*icmp6h };
-
-    if icmp6h_ref.type_ != type_ || icmp6h_ref.code != code {
-        return -1;
-    }
-
-    let echo = unsafe { &mut icmp6h_ref.un.u_echo };
-    echo.identifier = icmp6h_ref.un.u_echo.identifier;
-    echo.sequence = icmp6h_ref.un.u_echo.sequence;
-
     unsafe {
+        let icmp6h_ref = &*icmp6h;
+
+        if icmp6h_ref.type_ != type_ || icmp6h_ref.code != code {
+            return -1;
+        }
+
+        let echo = &mut (*icmp6h).un.u_echo;
+        echo.identifier = icmp6h_ref.un.u_echo.identifier;
+        echo.sequence = icmp6h_ref.un.u_echo.sequence;
+
         (*icmp6h).type_ = type_;
         (*icmp6h).code = code;
-    }
 
-    ip6_icmp_send(skb, type_, code, offset, mtu)
+        ip6_icmp_send(skb, type_, code, offset, mtu)
+    }
 }
 
 pub fn ip6_icmp_send_error(
@@ -155,27 +156,25 @@ pub fn ip6_icmp_send_error(
     offset: c_int,
     mtu: __be32,
 ) -> c_int {
-    let Some(skb_nn) = NonNull::new(skb) else {
+    if skb.is_null() {
         return -1;
     }
 
-    let icmp6h = unsafe { &mut (*skb).cb as *mut ip6_icmp };
-
-    let icmp6h = skb_cb_as_icmp(skb_nn);
+    let icmp6h = skb_cb_as_icmp(skb);
     if icmp6h.is_null() {
         return -1;
     }
 
-    let icmp6h_ref = unsafe { &*icmp6h };
-
-    if icmp6h_ref.type_ != type_ || icmp6h_ref.code != code {
-        return -1;
-    }
-
     unsafe {
+        let icmp6h_ref = &*icmp6h;
+
+        if icmp6h_ref.type_ != type_ || icmp6h_ref.code != code {
+            return -1;
+        }
+
         (*icmp6h).type_ = type_;
         (*icmp6h).code = code;
-    }
 
-    ip6_icmp_error(skb, type_, code, offset, mtu)
+        ip6_icmp_error(skb, type_, code, offset, mtu)
+    }
 }
