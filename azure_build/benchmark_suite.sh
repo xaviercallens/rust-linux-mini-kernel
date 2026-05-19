@@ -11,7 +11,7 @@ BENCHMARK_LOG="${BENCHMARK_LOG:-/workspace/benchmark_results.json}"
 ITERATIONS="${ITERATIONS:-1000}"
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║        C vs RUST KERNEL MODULE BENCHMARK SUITE                ║"
+echo "║        C vs RUST KERNEL MODULE BENCHMARK SUITE (99% COV)      ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
