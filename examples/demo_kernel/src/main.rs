@@ -30,6 +30,7 @@ enum Color {
     White = 15,
 }
 
+#[derive(Copy, Clone)]
 #[repr(C)]
 struct ColorCode {
     value: u8,
