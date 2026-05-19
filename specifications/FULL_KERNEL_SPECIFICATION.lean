@@ -1,5 +1,3 @@
-import Mathlib.Tactic.Basic
-
 -- Core Kernel Types
 structure NetDevice where
   type_ : Nat
