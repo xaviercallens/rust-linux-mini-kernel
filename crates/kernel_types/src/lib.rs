@@ -338,6 +338,10 @@ pub struct sk_buff {
     pub priority: __u32,
     pub protocol: __be16,
     pub cb: [__u8; 48],
+    pub ip_summed: __u8,      // Checksum status
+    pub csum_level: __u8,     // Checksum level
+    pub csum_valid: __u8,     // Checksum valid flag
+    pub csum_complete_sw: __u8, // Software checksum complete
     pub remcsum_offload: *mut core::ffi::c_void, // Auto-generated mock field
     pub mark: *mut core::ffi::c_void, // Auto-generated mock field
     pub data: *mut core::ffi::c_void, // Auto-generated mock field
