@@ -127,9 +127,7 @@ pub static INV_MAP: [u8; 256] = {
     arr[ICMP_ADDRESS as usize] = ICMP_ADDRESSREPLY + 1;
     arr[ICMP_ADDRESSREPLY as usize] = ICMP_ADDRESS + 1;
     arr
-}
-
-static INVMAP: [u8; 256] = build_invmap();
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn icmp_pkt_to_tuple(
@@ -228,7 +226,13 @@ pub unsafe extern "C" fn nf_conntrack_icmpv4_error(
     outer_daddr.ip = (*ip_hdr(skb)).daddr;
 
     let new_dataoff = dataoff + core::mem::size_of::<icmphdr>() as c_uint;
-    nf_conntrack_inet_error(_tmpl, skb, new_dataoff, state, IPPROTO_ICMP, &outer_daddr as *const _)
+
+    extern "C" {
+        fn nf_conntrack_inet_error(_tmpl: *mut nf_conn, skb: *const sk_buff, dataoff: c_uint,
+                                   state: *const nf_hook_state, proto: c_int,
+                                   outer_daddr: *const nf_inet_addr) -> c_int;
+    }
+    nf_conntrack_inet_error(_tmpl, skb, new_dataoff, state, IPPROTO_ICMP as c_int, &outer_daddr as *const _)
 }
 
 // Helper functions (these would be implemented in the kernel)
@@ -258,7 +262,7 @@ pub unsafe extern "C" fn icmp_error_log(
     state: *const nf_hook_state,
     msg: *const c_char,
 ) {
-    nf_l4proto_log_invalid(skb, (*state).net, (*state).pf, IPPROTO_ICMP, msg);
+    nf_l4proto_log_invalid(skb as *mut _, (*state).net, (*state).pf as c_int, IPPROTO_ICMP, msg);
 }
 
 // Constants
