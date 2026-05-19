@@ -10,6 +10,8 @@ type netdev_features_t = u64;
 type socklen_t = u32;
 type c_size_t = usize;
 
+
+
 #[repr(C)]
 pub struct tcphdr {
     pub check: u16,
@@ -27,9 +29,9 @@ struct NetOffload {
 
 #[repr(C)]
 struct NetOffloadCallbacks {
-    gso_segment: extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
-    gro_receive: extern "C" fn(*mut core::ffi::c_void, *mut sk_buff) -> *mut sk_buff,
-    gro_complete: extern "C" fn(*mut sk_buff, c_int) -> c_int,
+    gso_segment: unsafe extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
+    gro_receive: unsafe extern "C" fn(*mut core::ffi::c_void, *mut sk_buff) -> *mut sk_buff,
+    gro_complete: unsafe extern "C" fn(*mut sk_buff, c_int) -> c_int,
 }
 
 #[repr(C)]
@@ -51,7 +53,7 @@ fn err_ptr(_errno: c_int) -> *mut sk_buff {
 #[no_mangle]
 pub extern "C" fn tcp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
     unsafe {
-    let cb = napi_gro_cb_ptr(skb);
+    let cb = NAPI_GRO_CB(skb);
 
     if (*cb).flush == 0 && skb_gro_checksum_validate(skb, IPPROTO_TCP, ip6_gro_compute_pseudo) != 0 {
         (*cb).flush = 1;
