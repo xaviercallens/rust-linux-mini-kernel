@@ -14,7 +14,7 @@ steps:
     args: 
       - '-c'
       - |
-        apt-get update && apt-get install -y gcc-multilib qemu-system-x86 nasm binutils xz-utils wget unzip
+        apt-get update && apt-get install -y gcc-multilib qemu-system-x86 nasm binutils xz-utils wget unzip lld
         
         # Install x86_64-elf-ld for linking bare metal
         wget https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/x86_64-elf-tools-linux.zip
