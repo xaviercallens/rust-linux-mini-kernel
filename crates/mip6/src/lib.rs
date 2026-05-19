@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::ptr;
+use core::{mem, ptr};
 use kernel_types::*;
 
 pub const IPPROTO_DSTOPTS: c_int = 60;
@@ -31,9 +31,6 @@ pub const IPV6_TLV_PADN: u8 = 0x01;
 pub const IPV6_TLV_HAO: u8 = 0x08;
 pub const XFRM_TYPE_NON_FRAGMENT: c_int = 0x0001;
 pub const XFRM_TYPE_LOCAL_COADDR: c_int = 0x0002;
-
-pub const XFRM_TYPE_NON_FRAGMENT: c_int = 1 << 0;
-pub const XFRM_TYPE_LOCAL_COADDR: c_int = 1 << 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -176,33 +173,24 @@ pub extern "C" fn mip6_mh_len(type_: c_int) -> c_int {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn mip6_destopt_init_state(_x: *mut xfrm_state) -> c_int {
-    0
-}
-
-#[no_mangle]
-pub extern "C" fn mip6_destopt_destroy(_x: *mut xfrm_state) {}
-
-#[no_mangle]
-pub extern "C" fn mip6_destopt_input(_x: *mut xfrm_state, _skb: *mut c_void) -> c_int {
-    0
-}
+// Remove duplicate simple stubs - use full implementations below
 
 /// Initialize MIPv6 destination options state
 ///
 /// # Safety
 /// - `state` must be valid pointer to xfrm_state
 #[no_mangle]
-pub unsafe extern "C" fn mip6_destopt_init_state(state: *mut xfrm_state) -> c_int {
-    if state.is_null() {
-        return EINVAL;
+pub extern "C" fn mip6_destopt_init_state(state: *mut xfrm_state) -> c_int {
+    unsafe {
+        if state.is_null() {
+            return EINVAL;
+        }
+
+        (*state).props.mode = XFRM_MODE_ROUTEOPTIMIZATION;
+        (*state).props.header_len = mem::size_of::<ipv6_destopt_hdr>() as c_int;
+
+        0
     }
-
-    (*state).props.mode = XFRM_MODE_ROUTEOPTIMIZATION;
-    (*state).props.header_len = mem::size_of::<ipv6_destopt_hdr>() as c_int;
-
-    0
 }
 
 /// Destroy MIPv6 destination options state
@@ -210,7 +198,7 @@ pub unsafe extern "C" fn mip6_destopt_init_state(state: *mut xfrm_state) -> c_in
 /// # Safety
 /// - `state` must be valid pointer to xfrm_state
 #[no_mangle]
-pub unsafe extern "C" fn mip6_destopt_destroy(state: *mut xfrm_state) {
+pub extern "C" fn mip6_destopt_destroy(_state: *mut xfrm_state) {
     // Cleanup resources if needed
 }
 
@@ -220,17 +208,19 @@ pub unsafe extern "C" fn mip6_destopt_destroy(state: *mut xfrm_state) {
 /// - `state` must be valid pointer to xfrm_state
 /// - `skb` must be valid pointer to sk_buff
 #[no_mangle]
-pub unsafe extern "C" fn mip6_destopt_input(state: *mut xfrm_state, skb: *mut c_void) -> c_int {
-    let skb = skb as *mut sk_buff;
+pub extern "C" fn mip6_destopt_input(state: *mut xfrm_state, skb: *mut c_void) -> c_int {
+    unsafe {
+        let skb = skb as *mut sk_buff;
 
-    if skb.is_null() || state.is_null() {
-        return EINVAL;
+        if skb.is_null() || state.is_null() {
+            return EINVAL;
+        }
+
+        // Process destination options
+        // Implementation would parse and validate destination options
+
+        0
     }
-
-    // Process destination options
-    // Implementation would parse and validate destination options
-
-    0
 }
 
 /// Process output packet with MIPv6 destination options
@@ -239,17 +229,19 @@ pub unsafe extern "C" fn mip6_destopt_input(state: *mut xfrm_state, skb: *mut c_
 /// - `state` must be valid pointer to xfrm_state
 /// - `skb` must be valid pointer to sk_buff
 #[no_mangle]
-pub unsafe extern "C" fn mip6_destopt_output(state: *mut xfrm_state, skb: *mut c_void) -> c_int {
-    let skb = skb as *mut sk_buff;
+pub extern "C" fn mip6_destopt_output(state: *mut xfrm_state, skb: *mut c_void) -> c_int {
+    unsafe {
+        let skb = skb as *mut sk_buff;
 
-    if skb.is_null() || state.is_null() {
-        return EINVAL;
+        if skb.is_null() || state.is_null() {
+            return EINVAL;
+        }
+
+        // Add destination options to packet
+        // Implementation would construct and append destination options
+
+        0
     }
-
-    // Add destination options to packet
-    // Implementation would construct and append destination options
-
-    0
 }
 
 /// Reject packet with MIPv6 destination options
@@ -259,21 +251,23 @@ pub unsafe extern "C" fn mip6_destopt_output(state: *mut xfrm_state, skb: *mut c
 /// - `skb` must be valid pointer to sk_buff
 /// - `err` must be valid pointer to error information
 #[no_mangle]
-pub unsafe extern "C" fn mip6_destopt_reject(
+pub extern "C" fn mip6_destopt_reject(
     state: *mut xfrm_state,
     skb: *mut c_void,
     err: *const c_void,
 ) -> c_int {
-    let skb = skb as *mut sk_buff;
+    unsafe {
+        let skb = skb as *mut sk_buff;
 
-    if skb.is_null() || state.is_null() {
-        return EINVAL;
+        if skb.is_null() || state.is_null() {
+            return EINVAL;
+        }
+
+        // Send rejection message
+        // Implementation would send appropriate error message
+
+        0
     }
-
-    // Send rejection message
-    // Implementation would send appropriate error message
-
-    0
 }
 
 /// Get header offset for MIPv6 destination options
@@ -283,27 +277,29 @@ pub unsafe extern "C" fn mip6_destopt_reject(
 /// - `skb` must be valid pointer to sk_buff
 /// - `offset` must be valid pointer to store offset
 #[no_mangle]
-pub unsafe extern "C" fn mip6_destopt_offset(
+pub extern "C" fn mip6_destopt_offset(
     state: *mut xfrm_state,
     skb: *mut c_void,
     offset: *mut *mut u8,
 ) -> c_int {
-    let skb = skb as *mut sk_buff;
+    unsafe {
+        let skb = skb as *mut sk_buff;
 
-    if skb.is_null() || state.is_null() || offset.is_null() {
-        return EINVAL;
+        if skb.is_null() || state.is_null() || offset.is_null() {
+            return EINVAL;
+        }
+
+        // Calculate header offset
+        // Implementation would determine the offset of destination options header
+
+        0
     }
-
-    // Calculate header offset
-    // Implementation would determine the offset of destination options header
-
-    0
 }
 
 // Exported xfrm_type for MIPv6 destination options
 #[no_mangle]
 pub static mut mip6_destopt_type: xfrm_type = xfrm_type {
-    description: b"MIP6DESTOPT\0".as_ptr() as *const u8,
+    description: b"MIP6DESTOPT\0".as_ptr() as *const c_char,
     owner: ptr::null(),
     proto: IPPROTO_DSTOPTS,
     flags: XFRM_TYPE_NON_FRAGMENT | XFRM_TYPE_LOCAL_COADDR,
