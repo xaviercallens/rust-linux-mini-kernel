@@ -504,6 +504,7 @@ macro_rules! inet6_unregister_protosw {
 macro_rules! inet_proto_csum_replace4 {
     ($($arg:tt)*) => { 0 }
 }
+<<<<<<< HEAD
 
 #[macro_export]
 macro_rules! inet_sk {
@@ -637,4 +638,7 @@ macro_rules! offset {
 #[macro_export]
 macro_rules! request_sock {
     ($($arg:tt)*) => { 0 }
+}
+extern "C" {
+    pub fn udplite_get_port(sk: *mut core::ffi::c_void, snum: u16, recycling: i32) -> i32;
 }
