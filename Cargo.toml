@@ -29,6 +29,22 @@ members = [
     "crates/migrate",
     "crates/compaction",
     "crates/page_owner",
+    # Process Management modules
+    "crates/fork",
+    "crates/sched_core",
+    "crates/sched_fair",
+    "crates/sched_idle",
+    "crates/sched_wait",
+    "crates/exit",
+    "crates/signal",
+    "crates/ptrace",
+    "crates/capability",
+    "crates/exec",
+    "crates/kthread",
+    "crates/workqueue",
+    "crates/taskstats",
+    "crates/cpuset",
+    "crates/cgroup",
 ]
 
 [workspace.package]
