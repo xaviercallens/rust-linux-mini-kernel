@@ -24,7 +24,7 @@ def initial_arch_state : ArchState := {
 
 -- x86_64 CLI instruction (Clear Interrupt Flag)
 -- Disables maskable hardware interrupts
-axiom x86_cli : IO Unit
+opaque x86_cli : IO Unit
 
 -- Architecture initialization specification matching arch_setup_init()
 -- Phase 1: Only disables interrupts
@@ -153,7 +153,7 @@ namespace Future
     access : UInt8
     flags : UInt8
 
-  axiom setup_gdt : List GDTDescriptor → IO Bool
+  opaque setup_gdt : List GDTDescriptor → IO Bool
 
   -- IDT initialization (Phase 2)
   structure IDTEntry where
@@ -162,13 +162,13 @@ namespace Future
     ist : UInt8
     type_attr : UInt8
 
-  axiom setup_idt : List IDTEntry → IO Bool
+  opaque setup_idt : List IDTEntry → IO Bool
 
   -- Paging setup (Phase 3)
   structure PageTable where
     entries : List UInt64
 
-  axiom setup_paging : PageTable → IO Bool
+  opaque setup_paging : PageTable → IO Bool
 
   -- Future complete initialization
   def arch_setup_full_spec : IO ArchState := do

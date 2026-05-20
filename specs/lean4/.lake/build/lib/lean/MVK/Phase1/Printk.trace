@@ -1,0 +1,32 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["87e626aba4d5a6d6.olean"],
+  "i": "830e066478e20154.ilean",
+  "c": "5e3d6e336d5d4efe.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/lean /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/MVK/Phase1/Printk.lean -o /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/MVK/Phase1/Printk.olean -i /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/MVK/Phase1/Printk.ilean -c /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/Printk.c --setup /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/Printk.setup.json --json",
+   "level": "trace"},
+  {"message": "MVK/Phase1/Printk.lean:55:8: declaration uses `sorry`",
+   "level": "warning"}],
+ "inputs":
+ [["MVK.Phase1.Printk:deps",
+   [["deps",
+     [["mvk_specs/MVK:extraDep", [["@mvk_specs:extraDep", "00000000000006bb"]]],
+      ["imports", "00000000000006bb"]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+   "fa77a35a41db35c0"],
+  ["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/MVK/Phase1/Printk.lean",
+   "bb08ade517ceb25f"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: MVK.Phase1.Printk", "d7d4510b8bc280fa"],
+  ["Package.id?: (some mvk_specs)", "87e214ad4fcfa210"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "8fdaa91704ce1338"}
