@@ -40,6 +40,8 @@ pub struct sip_header {
         Option<unsafe extern "C" fn(*const nf_conn, *const c_uchar, *const c_uchar, *mut c_int) -> c_int>,
 }
 
+unsafe impl Sync for sip_header {}
+
 #[inline]
 unsafe fn isalpha(c: c_uchar) -> c_int {
     if (c >= b'a' && c <= b'z') || (c >= b'A' && c <= b'Z') {
@@ -273,7 +275,7 @@ pub unsafe extern "C" fn epaddr_len(ct: *const nf_conn, dptr: *const u8, limit: 
     let mut aux = dptr;
 
     if sip_parse_addr(ct, dptr, &mut end, &mut addr, limit, 1) == 0 {
-        pr_debug(b"ip: %s parse failed.\n\0".as_ptr() as *const u8, dptr);
+        pr_debug(b"ip: %s parse failed.\n\0".as_ptr() as *const u8);
         return 0;
     }
 
@@ -421,30 +423,7 @@ pub unsafe extern "C" fn in6_pton(cp: *const u8, len: c_int, buf: *mut u8, _flag
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn isalpha(c: u8) -> c_int {
-    if (c >= b'A' && c <= b'Z') || (c >= b'a' && c <= b'z') {
-        1
-    } else {
-        0
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn isdigit(c: u8) -> c_int {
-    if c >= b'0' && c <= b'9' {
-        1
-    } else {
-        0
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn isalnum(c: u8) -> c_int {
-    isalpha(c) != 0 || isdigit(c) != 0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn pr_debug(fmt: *const u8, args: ...) {
+pub unsafe extern "C" fn pr_debug(_fmt: *const u8) {
     // Stub implementation for debugging
 }
 
@@ -472,64 +451,77 @@ pub unsafe extern "C" fn module_param_sip_timeout() {
 pub static HELPER_NAME: [u8; 4] = *b"SIP\0";
 
 #[no_mangle]
-pub static NF_CT_HELPER_SIP: nf_conntrack_helper = nf_conntrack_helper {
-    _private: [0; 0],
+pub static NF_CT_HELPER_SIP: nf_conntrack_helper = unsafe {
+    nf_conntrack_helper {
+        list: ptr::null_mut(),
+        hnode: ptr::null_mut(),
+        name: [0; 16],
+        tuple: mem::zeroed(),
+        module: ptr::null_mut(),
+        me: ptr::null_mut(),
+        refcnt: 0,
+        max_expected: 0,
+        timeout: 0,
+        flags: 0,
+        help: ptr::null_mut(),
+        from_nlattr: ptr::null_mut(),
+    }
 };
 
 #[no_mangle]
 pub static CT_SIP_HDRS: [sip_header; 9] = unsafe {
     [
         sip_header {
-            name: b"CSeq\0".as_ptr() as *const u8,
+            name: b"CSeq\0".as_ptr() as *const c_char,
             short_name: ptr::null(),
             uri_prefix: ptr::null(),
             value_len: Some(string_len),
         },
         sip_header {
-            name: b"From\0".as_ptr() as *const u8,
-            short_name: b"f\0".as_ptr() as *const u8,
-            uri_prefix: b"sip:\0".as_ptr() as *const u8,
+            name: b"From\0".as_ptr() as *const c_char,
+            short_name: b"f\0".as_ptr() as *const c_char,
+            uri_prefix: b"sip:\0".as_ptr() as *const c_char,
             value_len: Some(skp_epaddr_len),
         },
         sip_header {
-            name: b"To\0".as_ptr() as *const u8,
-            short_name: b"t\0".as_ptr() as *const u8,
-            uri_prefix: b"sip:\0".as_ptr() as *const u8,
+            name: b"To\0".as_ptr() as *const c_char,
+            short_name: b"t\0".as_ptr() as *const c_char,
+            uri_prefix: b"sip:\0".as_ptr() as *const c_char,
             value_len: Some(skp_epaddr_len),
         },
         sip_header {
-            name: b"Contact\0".as_ptr() as *const u8,
-            short_name: b"m\0".as_ptr() as *const u8,
-            uri_prefix: b"sip:\0".as_ptr() as *const u8,
+            name: b"Contact\0".as_ptr() as *const c_char,
+            short_name: b"m\0".as_ptr() as *const c_char,
+            uri_prefix: b"sip:\0".as_ptr() as *const c_char,
             value_len: Some(skp_epaddr_len),
         },
         sip_header {
-            name: b"Via\0".as_ptr() as *const u8,
-            short_name: b"v\0".as_ptr() as *const u8,
-            uri_prefix: b"UDP \0".as_ptr() as *const u8,
+            name: b"Via\0".as_ptr() as *const c_char,
+            short_name: b"v\0".as_ptr() as *const c_char,
+            uri_prefix: b"UDP \0".as_ptr() as *const c_char,
             value_len: Some(epaddr_len),
         },
         sip_header {
-            name: b"Via\0".as_ptr() as *const u8,
-            short_name: b"v\0".as_ptr() as *const u8,
-            uri_prefix: b"TCP \0".as_ptr() as *const u8,
+            name: b"Via\0".as_ptr() as *const c_char,
+            short_name: b"v\0".as_ptr() as *const c_char,
+            uri_prefix: b"TCP \0".as_ptr() as *const c_char,
             value_len: Some(epaddr_len),
         },
         sip_header {
-            name: b"Expires\0".as_ptr() as *const u8,
+            name: b"Expires\0".as_ptr() as *const c_char,
             short_name: ptr::null(),
             uri_prefix: ptr::null(),
             value_len: Some(digits_len),
         },
         sip_header {
-            name: b"Content-Length\0".as_ptr() as *const u8,
-            short_name: b"l\0".as_ptr() as *const u8,
+            name: b"Content-Length\0".as_ptr() as *const c_char,
+            short_name: b"l\0".as_ptr() as *const c_char,
             uri_prefix: ptr::null(),
             value_len: Some(digits_len),
         },
         sip_header {
-            name: b"Call-Id\0".as_ptr() as *const u8,
-            short_name: b"i\0".as_ptr() as *const u8,
+            name: b"Call-Id\0".as_ptr() as *const c_char,
+            short_name: b"i\0".as_ptr() as *const c_char,
             uri_prefix: ptr::null(),
             value_len: Some(callid_len),
         },
@@ -540,9 +532,9 @@ pub static CT_SIP_HDRS: [sip_header; 9] = unsafe {
 #[no_mangle]
 pub static MODULE_LICENSE: [u8; 4] = *b"GPL\0";
 #[no_mangle]
-pub static MODULE_AUTHOR: [u8; 44] = *b"Christian Hentschel <chentschel@arnet.com.ar>\0";
+pub static MODULE_AUTHOR: [u8; 46] = *b"Christian Hentschel <chentschel@arnet.com.ar>\0";
 #[no_mangle]
-pub static MODULE_DESCRIPTION: [u8; 27] = *b"SIP connection tracking helper\0";
+pub static MODULE_DESCRIPTION: [u8; 31] = *b"SIP connection tracking helper\0";
 #[no_mangle]
 pub static MODULE_ALIAS: [u8; 17] = *b"ip_conntrack_sip\0";
 #[cfg(not(test))]

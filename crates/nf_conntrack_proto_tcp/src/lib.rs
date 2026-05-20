@@ -1,32 +1,3 @@
-
-// Use lazy_static to manage global state safely
-use lazy_static::lazy_static;
-use std::sync::Mutex;
-
-// Rename static variables to follow the upper case naming convention
-lazy_static! {
-    pub static ref __UDP_DISCONNECT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
-    pub static ref ICMPV6_ERR_CONVERT: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
-    pub static ref INET6_SOCKRAW_OPS: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
-    pub static ref IP6_DATAGRAM_CONNECT_V6_ONLY: Mutex<*mut core::ffi::c_void> = Mutex::new(core::ptr::null_mut());
-}
-
-// Ensure FFI compatibility
-pub fn initialize_globals() {
-    // Initialize the global state safely
-    let mut udp_disconnect = __UDP_DISCONNECT.lock().unwrap();
-    *udp_disconnect = // Initialize the pointer to the appropriate function or data
-
-    let mut icmpv6_err_convert = ICMPV6_ERR_CONVERT.lock().unwrap();
-    *icmpv6_err_convert = // Initialize the pointer to the appropriate function or data
-
-    let mut inet6_sockraw_ops = INET6_SOCKRAW_OPS.lock().unwrap();
-    *inet6_sockraw_ops = // Initialize the pointer to the appropriate function or data
-
-    let mut ip6_datagram_connect_v6_only = IP6_DATAGRAM_CONNECT_V6_ONLY.lock().unwrap();
-    *ip6_datagram_connect_v6_only = // Initialize the pointer to the appropriate function or data
-}
-
 //! TCP connection tracking module for Netfilter
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
@@ -39,6 +10,8 @@ pub fn initialize_globals() {
 
 use core::ffi::{c_int, c_uint, c_char, c_void};
 use kernel_types::*;
+
+pub const HZ: c_uint = 100;
 
 #[repr(u8)]
 pub enum TcpBitSet {
@@ -68,6 +41,7 @@ pub enum TcpConntrack {
 
 // TCP header structure
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct tcphdr {
     pub source: __be16,
     pub dest: __be16,
@@ -175,21 +149,19 @@ pub unsafe extern "C" fn get_conntrack_index(tcph: *const c_void) -> c_uint {
 }
 
 // TCP state names
-static TCP_CONNTRACK_NAMES: [*const c_char; 11] = {
-    let names = [
-        "NONE\0".as_ptr() as *const c_char,
-        "SYN_SENT\0".as_ptr() as *const c_char,
-        "SYN_RECV\0".as_ptr() as *const c_char,
-        "ESTABLISHED\0".as_ptr() as *const c_char,
-        "FIN_WAIT\0".as_ptr() as *const c_char,
-        "CLOSE_WAIT\0".as_ptr() as *const c_char,
-        "LAST_ACK\0".as_ptr() as *const c_char,
-        "TIME_WAIT\0".as_ptr() as *const c_char,
-        "CLOSE\0".as_ptr() as *const c_char,
-        "SYN_SENT2\0".as_ptr() as *const c_char,
-    ];
-    names
-};
+static TCP_CONNTRACK_NAMES: [&[u8]; 11] = [
+    b"NONE\0",
+    b"SYN_SENT\0",
+    b"SYN_RECV\0",
+    b"ESTABLISHED\0",
+    b"FIN_WAIT\0",
+    b"CLOSE_WAIT\0",
+    b"LAST_ACK\0",
+    b"TIME_WAIT\0",
+    b"CLOSE\0",
+    b"SYN_SENT2\0",
+    b"IGNORE\0",
+];
 
 #[cfg(test)]
 mod tests {

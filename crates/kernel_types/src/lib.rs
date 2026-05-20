@@ -480,6 +480,8 @@ pub struct nf_conntrack_helper {
     pub from_nlattr: *mut c_void,
 }
 
+unsafe impl Sync for nf_conntrack_helper {}
+
 /// Netfilter connection tracking tuple hash
 #[repr(C)]
 #[derive(Copy, Clone)]

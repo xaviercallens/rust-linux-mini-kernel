@@ -1,0 +1,11 @@
+{"plugins":
+ ["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase2_Common.dylib",
+  "/Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/lean/libLake_shared.dylib"],
+ "package": "mvk_specs",
+ "options": {},
+ "name": "MVK.Phase1.Printk",
+ "isModule": false,
+ "importArts":
+ {"MVK.Phase2.Common":
+  ["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/MVK/Phase2/Common.olean"]},
+ "dynlibs": []}

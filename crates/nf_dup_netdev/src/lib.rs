@@ -16,10 +16,10 @@ pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const EOPNOTSU
 
 // Type definitions for FFI compatibility
 #[repr(C)]
-pub struct nft_pktinfo { pub skb: *mut sk_buff, pub net: *mut c_void, // net namespace }
+pub struct nft_pktinfo { pub skb: *mut sk_buff, pub net: *mut c_void }
 
 #[repr(C)]
-pub struct nft_offload_ctx { pub net: *mut c_void, // net namespace, pub num_actions: c_int }
+pub struct nft_offload_ctx { pub net: *mut c_void, pub num_actions: c_int }
 
 #[repr(C)]
 pub struct nft_flow_rule { pub rule: *mut c_void }

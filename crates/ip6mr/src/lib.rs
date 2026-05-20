@@ -8,10 +8,11 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::{ptr, ffi::{c_int, c_void}, mem::size_of};
+use core::{ptr, ffi::{c_int, c_void, c_uint}, mem::{self, size_of}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
+pub const FR_ACT_TO_TBL: u8 = 1;
 
 pub type size_t = usize;
 pub type c_size_t = usize;
@@ -20,6 +21,10 @@ pub type socklen_t = u32;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct rhltable { _priv: [u8; 128] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -187,7 +192,7 @@ pub unsafe extern "C" fn ip6mr_free_table(mrt: *mut mr_table) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_get_table(net: *mut net, id: u32) -> *mut mr_table {
+pub unsafe extern "C" fn ip6mr_get_table(net: *const net, id: u32) -> *mut mr_table {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     {
         let mut mrt: *mut mr_table = ptr::null_mut();
@@ -235,6 +240,11 @@ pub unsafe extern "C" fn ip6mr_mr_table_iter(net: *mut net, mrt: *mut mr_table) 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn fib_rule_matchall(rule: *const fib_rule) -> bool {
+    (*rule).flags & 0x1 != 0
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn ip6mr_rule_default(rule: *const fib_rule) -> bool {
     let rule = &*rule;
     fib_rule_matchall(rule)
@@ -246,7 +256,7 @@ pub unsafe extern "C" fn ip6mr_rule_default(rule: *const fib_rule) -> bool {
 // Helper functions (simplified for example)
 #[no_mangle]
 pub unsafe extern "C" fn mr_table_alloc(
-    net: *mut net,
+    net: *const net,
     id: u32,
     ops: *const mr_table_ops,
     expire_process: Option<unsafe extern "C" fn(t: *mut timer_list)>,
@@ -263,7 +273,7 @@ pub unsafe extern "C" fn mr_table_alloc(
     // ... initialize other fields
 
     if let Some(set) = new_table_set {
-        set(mrt, net);
+        set(mrt, net as *mut net);
     }
 
     mrt
@@ -275,7 +285,7 @@ pub unsafe extern "C" fn del_timer_sync(timer: *mut timer_list) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mroute_clean_tables(mrt: *mut mr_table, flags: c_int) {
+pub unsafe extern "C" fn mroute_clean_tables(mrt: *mut mr_table, flags: u32) {
     // Placeholder for actual table cleaning
 }
 

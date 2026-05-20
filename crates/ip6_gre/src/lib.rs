@@ -87,9 +87,9 @@ extern "C" {
 // Helper functions
 fn htons(x: u16) -> u16 { x.to_be() }
 
-fn HASH_ADDR(_addr: *const in6_addr) -> usize { 0 // Placeholder hash }
+fn HASH_ADDR(_addr: *const in6_addr) -> usize { 0 }
 
-fn HASH_KEY(_key: u32) -> usize { 0 // Placeholder hash }
+fn HASH_KEY(_key: u32) -> usize { 0 }
 
 // Function implementations
 #[no_mangle]

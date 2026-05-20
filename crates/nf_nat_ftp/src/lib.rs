@@ -9,7 +9,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::{ffi::c_void, panic::PanicInfo};
+use core::{ffi::c_void, ptr};
 use kernel_types::*;
 
 pub const NF_DROP: c_int = 0x01;
@@ -31,15 +31,14 @@ pub struct nf_conntrack_l4proto { pub tcp: nf_ct_port }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_man_proto { pub u: nf_conntrack_l4proto }
+pub struct nf_conntrack_man_proto {
+    pub tcp: nf_ct_port,
+    pub u: nf_conntrack_l4proto
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple { pub dst: nf_conntrack_man_proto }
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -56,6 +55,17 @@ pub struct nf_nat_helper { pub name: *const c_char }
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_inet_addr { pub ip: u32, pub ip6: [u32; 4] }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_expect {
+    pub master: *mut nf_conn,
+    pub tuple: nf_conntrack_tuple,
+    pub saved_proto: nf_conntrack_man_proto,
+    pub dir: c_int,
+    pub expectfn: Option<unsafe extern "C" fn(*mut nf_conntrack_expect)>,
+    _private: [u8; 0],
+}
 
 unsafe extern "C" {
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_uint) -> c_int;
@@ -157,7 +167,7 @@ pub unsafe extern "C" fn nf_nat_ftp_fmt_cmd(
             let p_high = (port >> 8) as u8;
             let p_low = (port & 0xFF) as u8;
 
-            let ok = push_u8_dec(out, &mut p, bytes[0])
+            let _ok = push_u8_dec(out, &mut p, bytes[0])
                 && push_byte(out, &mut p, b',')
                 && push_u8_dec(out, &mut p, bytes[1])
                 && push_byte(out, &mut p, b',')
@@ -169,22 +179,12 @@ pub unsafe extern "C" fn nf_nat_ftp_fmt_cmd(
                 && push_byte(out, &mut p, b',')
                 && push_u8_dec(out, &mut p, p_low);
 
-            let len = write(buffer, buflen, &result);
-            len as c_int
-        },
-        NF_CT_FTP_EPRT => {
-            if nf_ct_l3num(ct) == NFPROTO_IPV4 {
-                let mut result = format_args!("|1|%pI4|%u|", &addr.ip, port);
-                let len = write(buffer, buflen, &result);
-                len as c_int
-            } else {
-                let mut result = format_args!("|2|%pI6|%u|", &addr.ip6, port);
-                let len = write(buffer, buflen, &result);
-                len as c_int
-            }
             p as c_int
+        },
+        NF_CT_FTP_EPRT | NF_CT_FTP_EPSV => {
+            // Extended EPRT/EPSV not fully implemented
+            0
         }
-        NF_CT_FTP_EPRT | NF_CT_FTP_EPSV => 0,
         _ => 0,
     }
 }
@@ -203,11 +203,14 @@ pub unsafe extern "C" fn nf_nat_ftp(
     let ct = (*exp).master.as_mut().unwrap();
 
     let dir = !CTINFO2DIR(ctinfo);
-    let newaddr = (*ct).tuplehash[dir as usize].tuple.dst.u;
+    let mut newaddr = nf_inet_addr {
+        ip: 0,
+        ip6: [0; 4],
+    };
 
-    (*exp).saved_proto = (*exp).tuple.dst.u;
+    (*exp).saved_proto.tcp = (*exp).tuple.dst.u.tcp;
     (*exp).dir = dir;
-    (*exp).expectfn = nf_nat_follow_master;
+    (*exp).expectfn = Some(nf_nat_follow_master);
 
     let mut port = ntohs((*exp).saved_proto.tcp.port);
     let mut found = false;
@@ -227,21 +230,21 @@ pub unsafe extern "C" fn nf_nat_ftp(
     }
 
     if !found {
-        nf_ct_helper_log(skb, ct, b"all ports in use\0".as_ptr() as *const u8);
+        nf_ct_helper_log(skb, ct, b"all ports in use\0".as_ptr() as *const c_char);
         return NF_DROP;
     }
 
     let mut buffer = [0u8; 128];
-    let buflen = nf_nat_ftp_fmt_cmd(ct, type_, buffer.as_mut_ptr(), buffer.len() as size_t, &newaddr, port);
+    let buflen = nf_nat_ftp_fmt_cmd(ct, type_, buffer.as_mut_ptr(), buffer.len() as size_t, &mut newaddr as *mut nf_inet_addr, port);
 
     if buflen <= 0 {
-        nf_ct_helper_log(skb, ct, b"cannot format command\0".as_ptr() as *const u8);
+        nf_ct_helper_log(skb, ct, b"cannot format command\0".as_ptr() as *const c_char);
         nf_ct_unexpect_related(exp);
         return NF_DROP;
     }
 
     if !nf_nat_mangle_tcp_packet(skb, ct, ctinfo, protoff, matchoff, matchlen, buffer.as_ptr(), buflen as c_int) {
-        nf_ct_helper_log(skb, ct, b"cannot mangle packet\0".as_ptr() as *const u8);
+        nf_ct_helper_log(skb, ct, b"cannot mangle packet\0".as_ptr() as *const c_char);
         nf_ct_unexpect_related(exp);
         return NF_DROP;
     }
@@ -261,7 +264,7 @@ pub unsafe extern "C" fn nf_nat_ftp_init() -> c_int {
     if !NF_NAT_FTP_HOOK.is_null() {
         return -1; // BUG_ON
     }
-    nf_nat_helper_register(&NAT_HELPER_FTP);
+    nf_nat_helper_register(&mut NAT_HELPER_FTP);
     RCU_INIT_POINTER(&mut NF_NAT_FTP_HOOK, nf_nat_ftp as *mut c_void);
     0
 }
@@ -274,90 +277,24 @@ pub unsafe extern "C" fn warn_set(val: *const u8, kp: *const c_void) -> c_int {
 }
 
 // Constants
-static NAT_HELPER_NAME: &str = "ftp";
-static NF_CT_NAT_HELPER_INIT: nf_conntrack_helper = nf_conntrack_helper {
-    name: NAT_HELPER_NAME.as_ptr() as *const u8,
-};
+static NAT_HELPER_NAME: &[u8] = b"ftp\0";
 
 static mut NAT_HELPER_FTP: nf_nat_helper = nf_nat_helper {
-    name: NAT_HELPER_NAME.as_ptr() as *const u8,
+    name: NAT_HELPER_NAME.as_ptr() as *const c_char,
 };
 
 // Module macros
 #[no_mangle]
 pub static mut NF_NAT_FTP_HOOK: *mut c_void = ptr::null_mut();
 
-// FFI compatibility functions
+// FFI compatibility functions (only unique ones, rest from kernel_types)
 #[no_mangle]
 pub unsafe extern "C" fn nf_ct_l3num(ct: *mut nf_conn) -> c_int {
-    (*ct).nfct_net as c_int
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn CTINFO2DIR(ctinfo: c_int) -> c_int {
-    // Simplified implementation
-    ctinfo & 1
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ntohs(port: u16) -> u16 {
-    u16::from_be(port)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn htons(port: u16) -> u16 {
-    u16::to_be(port)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_int) -> c_int {
-    // Simulated implementation
-    0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_ct_unexpect_related(exp: *mut nf_conntrack_expect) {
-    // Simulated implementation
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_ct_helper_log(skb: *mut c_void, ct: *mut nf_conn, msg: *const u8) {
-    // Simulated implementation
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_nat_mangle_tcp_packet(
-    skb: *mut c_void,
-    ct: *mut nf_conn,
-    ctinfo: c_int,
-    protoff: c_int,
-    matchoff: c_int,
-    matchlen: c_int,
-    buffer: *const u8,
-    buflen: c_int,
-) -> c_int {
-    // Simulated implementation
-    1
+    NFPROTO_IPV4
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_helper_register(helper: *mut nf_nat_helper) {
-    // Simulated implementation
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nf_nat_helper_unregister(helper: *mut nf_nat_helper) {
-    // Simulated implementation
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn RCU_INIT_POINTER(ptr: *mut *mut c_void, val: *mut c_void) {
-    // Simulated implementation
-    *ptr = val;
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn synchronize_rcu() {
     // Simulated implementation
 }
 
@@ -368,7 +305,7 @@ pub unsafe extern "C" fn pr_info(msg: *const u8) {
 
 // Module exports
 #[no_mangle]
-pub static NF_NAT_FTP_MODULE: Module = Module {
+pub static mut NF_NAT_FTP_MODULE: Module = Module {
     license: b"GPL\0".as_ptr() as *const u8,
     author: b"Rusty Russell <rusty@rustcorp.com.au>\0".as_ptr() as *const u8,
     description: b"ftp NAT helper\0".as_ptr() as *const u8,
@@ -384,7 +321,7 @@ struct Module {
 // Helper function for formatting
 unsafe fn write(buffer: *mut u8, buflen: size_t, args: &core::fmt::Arguments) -> size_t {
     let mut writer = BufferWriter { buffer, pos: 0 };
-    core::fmt::Write::write_fmt(&mut writer, args).unwrap();
+    core::fmt::Write::write_fmt(&mut writer, *args).unwrap();
     writer.pos
 }
 

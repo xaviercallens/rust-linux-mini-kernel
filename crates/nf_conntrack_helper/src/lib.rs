@@ -5,8 +5,8 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::{ffi::{c_int, c_uint, c_void}, mem, ptr, sync::atomic::{AtomicUsize, Ordering}};
-use kernel_types::{c_int, c_uint, c_uchar, c_char, c_void, size_t, sk_buff, hlist_node};
+use core::{ffi::{c_int, c_uint, c_void, c_char, c_uchar}, mem, ptr, sync::atomic::{AtomicUsize, Ordering}};
+use kernel_types::{size_t, sk_buff};
 use kernel_types::nf_conntrack_helper as kt_nf_conntrack_helper;
 use kernel_types::nf_conntrack_tuple as kt_nf_conntrack_tuple;
 
@@ -45,6 +45,24 @@ pub struct nf_conntrack_tuple_mask {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct hlist_node { pub next: *mut hlist_node, pub pprev: *mut *mut hlist_node }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_helper {
+    pub hnode: hlist_node,
+    pub name: [c_char; 16],
+    pub tuple: nf_conntrack_tuple,
+    pub expect_policy: *const c_void,
+    pub expect_class_max: u32,
+    pub help: *const c_void,
+    pub from_nlattr: *const c_void,
+    pub me: *const c_void,
+    pub refcnt: c_uint,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -178,7 +196,7 @@ pub unsafe extern "C" fn __nf_ct_helper_find(
 #[no_mangle]
 pub unsafe extern "C" fn __nf_conntrack_helper_find(
     name: *const c_char,
-    l3num: u16,
+    l3num: u8,
     protonum: u8,
 ) -> *mut nf_conntrack_helper {
     if name.is_null() || NF_CT_HELPER_COUNT == 0 || NF_CT_HELPER_HASH.is_null() {
@@ -214,7 +232,7 @@ pub unsafe extern "C" fn __nf_conntrack_helper_find(
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
     name: *const u8,
-    l3num: u16,
+    l3num: u8,
     protonum: u8,
 ) -> *mut nf_conntrack_helper {
     if name.is_null() {
@@ -223,7 +241,7 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
 
     rcu_read_lock();
 
-    let h = __nf_conntrack_helper_find(name, l3num, protonum);
+    let h = __nf_conntrack_helper_find(name as *const c_char, l3num, protonum);
 
     // Module loading logic
     if h.is_null() {
@@ -232,12 +250,12 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
         return ptr::null_mut();
     }
 
-    if !try_module_get((*h).me) {
+    if !try_module_get((*h).me as *mut c_void) {
         return ptr::null_mut();
     }
 
     if !refcount_inc_not_zero(&*((&(*h).refcnt) as *const c_uint as *const AtomicUsize)) {
-        module_put((*h).me);
+        module_put((*h).me as *mut c_void);
         return ptr::null_mut();
     }
 
@@ -253,7 +271,7 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
 pub unsafe extern "C" fn nf_conntrack_helper_put(helper: *mut nf_conntrack_helper) {
     if !helper.is_null() {
         refcount_dec(&*((&(*helper).refcnt) as *const c_uint as *const AtomicUsize));
-        module_put((*helper).me);
+        module_put((*helper).me as *mut c_void);
     }
 }
 

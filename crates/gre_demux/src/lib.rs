@@ -18,6 +18,39 @@ pub const IPPROTO_GRE: c_int = 47;
 
 pub const ETH_P_WCCP: u16 = 0x883E; pub const ETH_P_ERSPAN: u16 = 0x88BE; pub const ETH_P_ERSPAN2: u16 = 0x22EB;
 
+// Network byte order conversion
+#[inline]
+fn htons(val: u16) -> u16 {
+    val.to_be()
+}
+
+#[inline]
+fn cpu_to_be32(val: u32) -> u32 {
+    val.to_be()
+}
+
+// Helper functions for ERSPAN
+#[inline]
+unsafe fn get_session_id(hdr: *const erspan_base_hdr) -> u32 {
+    (*hdr).session_id
+}
+
+// RCU helper stubs (simplified for FFI)
+#[inline]
+unsafe fn rcu_read_lock() {}
+
+#[inline]
+unsafe fn rcu_read_unlock() {}
+
+#[inline]
+unsafe fn rcu_dereference<T>(ptr: *const AtomicPtr<T>) -> *const T {
+    (*ptr).load(Ordering::Acquire)
+}
+
+// Error handling helper
+#[inline]
+unsafe fn goto_drop(_skb: *mut c_void) {}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct gre_protocol {
@@ -66,6 +99,7 @@ unsafe extern "C" {
     fn null_compute_pseudo(skb: *mut c_void) -> c_int;
     fn gre_flags_to_tnl_flags(flags: u16) -> u16;
     fn gre_calc_hlen(flags: u16) -> u16;
+    fn skb_header_pointer(skb: *mut c_void, offset: c_int, len: c_int, buffer: *mut c_void) -> *mut c_void;
 }
 
 #[cfg(not(test))]
@@ -128,7 +162,7 @@ pub unsafe extern "C" fn gre_parse_header(
         return EINVAL;
     }
 
-    let greh = (skb.add(nhs)) as *const gre_base_hdr;
+    let greh = (skb.add(nhs as usize)) as *const gre_base_hdr;
     if (*greh).flags & (GRE_VERSION | GRE_ROUTING) != 0 {
         return EINVAL;
     }
@@ -137,11 +171,11 @@ pub unsafe extern "C" fn gre_parse_header(
     (*tpi).flags = gre_flags_to_tnl_flags((*greh).flags);
     let mut hdr_len = gre_calc_hlen((*tpi).flags);
 
-    if !pskb_may_pull(skb, (nhs + hdr_len) as usize) {
+    if !pskb_may_pull(skb, (nhs + hdr_len as c_int) as usize) {
         return EINVAL;
     }
 
-    let greh = (skb.add(nhs)) as *const gre_base_hdr;
+    let greh = (skb.add(nhs as usize)) as *const gre_base_hdr;
     (*tpi).proto = (*greh).protocol;
 
     let mut options = (greh as *const u8).add(core::mem::size_of::<gre_base_hdr>()) as *const u32;
@@ -175,7 +209,7 @@ pub unsafe extern "C" fn gre_parse_header(
 
     // WCCP version handling
     if (*greh).flags == 0 && (*tpi).proto == htons(ETH_P_WCCP) {
-        let val = skb_header_pointer(skb, nhs + hdr_len, 1, ptr::null_mut()) as *const u8;
+        let val = skb_header_pointer(skb, nhs + hdr_len as c_int, 1, ptr::null_mut()) as *const u8;
         if val.is_null() {
             return EINVAL;
         }
@@ -193,12 +227,12 @@ pub unsafe extern "C" fn gre_parse_header(
     {
         if !pskb_may_pull(
             skb,
-            (nhs + hdr_len + core::mem::size_of::<erspan_base_hdr>()) as usize,
+            (nhs as usize + hdr_len as usize + core::mem::size_of::<erspan_base_hdr>()),
         ) {
             return EINVAL;
         }
 
-        let ershdr = (skb.add(nhs + hdr_len)) as *const erspan_base_hdr;
+        let ershdr = (skb.add((nhs + hdr_len as c_int) as usize)) as *const erspan_base_hdr;
         (*tpi).key = cpu_to_be32(get_session_id(ershdr));
     }
 
@@ -207,12 +241,12 @@ pub unsafe extern "C" fn gre_parse_header(
 
 #[no_mangle]
 pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
-    if !pskb_may_pull(skb as *mut u8, 12) {
+    if !pskb_may_pull(skb, 12) {
         goto_drop(skb);
         return -1;
     }
 
-    let ver = (*(skb as *mut u8).add(1)).read_volatile() & 0x7f;
+    let ver = ptr::read_volatile((skb as *mut u8).add(1)) & 0x7f;
     if ver as usize >= GREPROTO_MAX {
         goto_drop(skb);
         return -1;
@@ -220,7 +254,7 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
 
     rcu_read_lock();
     let proto = rcu_dereference(&gre_proto[ver as usize]);
-    if proto.is_null() || (*proto).handler.is_null() {
+    if proto.is_null() {
         rcu_read_unlock();
         goto_drop(skb);
         return -1;
