@@ -197,7 +197,7 @@ structure StartKernelContract where
   requires_valid_hardware :
     ∀ (state : KernelState),
     -- Serial port exists at expected address
-    Printk.serial_port_exists state.serial.port
+    state.serial.port = Printk.SERIAL_PORT
 
   -- Postconditions
   ensures_halted_on_success :

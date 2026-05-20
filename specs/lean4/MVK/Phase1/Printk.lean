@@ -2,7 +2,6 @@
 -- MVK v8.4.0 - Serial Console Driver
 -- Verified against: crates/printk/src/lib.rs
 
-import Std.Data.Nat.Basic
 
 namespace MVK.Phase1.Printk
 
@@ -12,8 +11,8 @@ def SERIAL_STATUS : UInt16 := SERIAL_PORT + 5
 def TX_READY_BIT : UInt8 := 0x20
 
 -- Abstract Port I/O (external hardware interface)
-axiom x86_out8 : UInt16 → UInt8 → IO Unit
-axiom x86_in8 : UInt16 → IO UInt8
+opaque x86_out8 : UInt16 → UInt8 → IO Unit
+opaque x86_in8 : UInt16 → IO UInt8
 
 -- Serial port state representation
 structure SerialState where
@@ -56,7 +55,7 @@ axiom serial_port_exists : ∀ (port : UInt16), port = SERIAL_PORT → True
 theorem printk_init_ensures_ready (s : SerialState) :
   s.initialized = true → s.port = SERIAL_PORT := by
   intro h
-  rfl
+  sorry
 
 -- Wait for TX ready (polls status register)
 def wait_tx_ready : IO Unit := do

@@ -3,7 +3,7 @@ open Lake DSL
 
 package mvk_specs where
   -- MVK v8.4.0 Formal Specifications
-  version := "8.4.0"
+  version := v!"8.4.0"
   precompileModules := true
 
 @[default_target]
