@@ -30,6 +30,7 @@ This document outlines the strategic roadmap for achieving a fully stable, forma
 - [ ] **Milestone 5.2**: Establish hardware-boundary fuzzing on all `unsafe` blocks using `cargo-fuzz`.
 - [ ] **Milestone 5.3**: Implement Kernel Address Space Layout Randomization (KASLR) and kCFI exploit mitigations.
 - [ ] **Milestone 5.4**: Privilege De-escalation (Microkernel Design) - Move drivers into Ring-3 userspace to protect core scheduler.
+- [x] **Milestone 5.8**: Create a Headless Docker-to-QEMU/KVM emulation pipeline to optimize developer experience across architectures (ARM64 Mac to x86_64).
 
 ### ⚡ v9.0.0 Performance Optimization Milestones
 - [ ] **Milestone 5.5**: Eliminate FFI entirely by rewriting all remaining hardware stubs in pure Rust `asm!` blocks to resolve the $3.45\times$ FFI boundary overhead.
