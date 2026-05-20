@@ -17,6 +17,8 @@ pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const SIP_PORT: u16 = 5060;
 pub const SIP_TIMEOUT: u32 = 1200;
+pub const AF_INET: c_int = 2;
+pub const AF_INET6: c_int = 10;
 
 // Type definitions
 
@@ -208,39 +210,7 @@ pub unsafe extern "C" fn media_len(
     len
 }
 
-unsafe fn nf_ct_l3num(_ct: *const nf_conn) -> c_int { AF_INET }
-
-unsafe fn in4_pton(
-    src: *const c_uchar,
-    srclen: c_int,
-    dst: *mut c_uchar,
-    _delim: c_int,
-    end: *mut *const c_uchar,
-) -> c_int {
-    if src.is_null() || dst.is_null() || srclen <= 0 {
-        return 0;
-    }
-    if !end.is_null() {
-        *end = src.add(srclen as usize);
-    }
-    1
-}
-
-unsafe fn in6_pton(
-    src: *const c_uchar,
-    srclen: c_int,
-    dst: *mut c_uchar,
-    _delim: c_int,
-    end: *mut *const c_uchar,
-) -> c_int {
-    if src.is_null() || dst.is_null() || srclen <= 0 {
-        return 0;
-    }
-    if !end.is_null() {
-        *end = src.add(srclen as usize);
-    }
-    1
-}
+// Duplicate helper functions removed - using public versions at end of file
 
 #[no_mangle]
 pub unsafe extern "C" fn sip_parse_addr(
@@ -481,7 +451,7 @@ pub unsafe extern "C" fn pr_debug(fmt: *const u8, args: ...) {
 // Module parameters (simplified)
 static mut PORTS: [u16; 8] = [0; 8];
 static mut PORTS_C: usize = 0;
-static mut SIP_TIMEOUT: u32 = SIP_TIMEOUT;
+static mut SIP_TIMEOUT_VAR: u32 = 1200; // Renamed to avoid conflict with const
 static mut SIP_DIRECT_SIGNALLING: c_int = 1;
 static mut SIP_DIRECT_MEDIA: c_int = 1;
 static mut SIP_EXTERNAL_MEDIA: c_int = 0;
