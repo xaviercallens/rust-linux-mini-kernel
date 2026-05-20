@@ -1,10 +1,18 @@
 #![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
 use kernel_types::*;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::ffi::c_void;
+use core::panic::PanicInfo;
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
 
 // Error constants
 pub const ENOSPC: c_int = -28;
@@ -182,7 +190,7 @@ pub unsafe extern "C" fn nf_flow_table_inet_delete(
     let used = table.used.load(Ordering::Relaxed);
 
     for i in 0..used {
-        let entry = &*table.entries.add(i);
+        let entry = &mut *table.entries.add(i);
         if entry.key.saddr.all == key.saddr.all
             && entry.key.daddr.all == key.daddr.all
             && entry.key.l4proto == key.l4proto
@@ -190,7 +198,7 @@ pub unsafe extern "C" fn nf_flow_table_inet_delete(
             && entry.key.zone == key.zone
         {
             if i < used - 1 {
-                let last_entry = &mut *table.entries.add(used - 1);
+                let last_entry = &*table.entries.add(used - 1);
                 *entry = *last_entry;
             }
             table.used.store(used - 1, Ordering::Relaxed);

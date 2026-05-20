@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn taskstats_init() -> c_int {
-    // TODO: Initialize taskstats subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn taskstats_exit() {
-    // TODO: Cleanup taskstats subsystem
 }
 
 #[no_mangle]

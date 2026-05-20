@@ -269,7 +269,13 @@ pub unsafe extern "C" fn ipv6_sock_mc_join_ssm(
     ifindex: c_int,
     gsr: *const group_source_req,
 ) -> c_int {
-    __ipv6_sock_mc_join(sk, ifindex, addr, mode)
+    if gsr.is_null() {
+        return -EINVAL;
+    }
+    // SAFETY: validated gsr above.
+    let addr = unsafe { &(*gsr).gsr_group };
+    let mode = 1; // SSM mode
+    unsafe { __ipv6_sock_mc_join(sk, ifindex, addr, mode) }
 }
 
 #[no_mangle]
@@ -278,47 +284,51 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
     ifindex: c_int,
     addr: *const in6_addr,
 ) -> c_int {
-    let np = (*sk).sk_protocol as *mut ipv6_pinfo;
-    let net = ptr::null_mut(); // Placeholder for net namespace
-
     // Validate inputs
     if sk.is_null() || addr.is_null() {
         return -EINVAL;
     }
 
-    let mut lnk = &mut (*np).ipv6_mc_list;
-    while let Some(mc_lst) = ptr::read(lnk) {
-        if (ifindex == 0 || (*mc_lst).ifindex == ifindex) && ipv6_addr_equal(&(*mc_lst).addr, addr)
+    let msk = sk as *mut mcast_sock;
+    if msk.is_null() || unsafe { (*msk).pinet6.is_null() } {
+        return -EINVAL;
+    }
+
+    let net = ptr::null_mut(); // Placeholder for net namespace
+
+    // SAFETY: pinet6 validated above.
+    let mut mc_ptr = unsafe { &mut (*(*msk).pinet6).ipv6_mc_list };
+    while !unsafe { ptr::read(mc_ptr) }.is_null() {
+        let mc_lst = unsafe { ptr::read(mc_ptr) };
+        // SAFETY: mc_lst is non-null in loop.
+        if (ifindex == 0 || unsafe { (*mc_lst).ifindex } == ifindex)
+            && unsafe { ipv6_addr_equal(&(*mc_lst).addr, addr) }
         {
             // Remove from list
-            *lnk = (*mc_lst).next;
+            // SAFETY: mc_lst non-null.
+            unsafe { ptr::write(mc_ptr, (*mc_lst).next) };
 
-            let dev = __dev_get_by_index(net, (*mc_lst).ifindex);
+            // SAFETY: helper function calls.
+            let dev = unsafe { __dev_get_by_index(net, (*mc_lst).ifindex) };
             if !dev.is_null() {
-                let idev = __in6_dev_get(dev);
+                let idev = unsafe { __in6_dev_get(dev) };
                 if !idev.is_null() {
-                    __ipv6_dev_mc_dec(idev, &(*mc_lst).addr);
+                    unsafe { __ipv6_dev_mc_dec(idev, &(*mc_lst).addr) };
                 }
             }
 
             // Free memory
-            atomic_sub(
-                size_of::<ipv6_mc_socklist>() as c_int,
-                &mut (*sk).sk_omem_alloc,
-            );
-            ptr::write(
-                mc_lst,
-                ipv6_mc_socklist {
-                    next: ptr::null_mut(),
-                    addr: in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } },
-                    ifindex: 0,
-                    sfmode: 0,
-                    sflist: ptr::null_mut(),
-                },
-            );
+            unsafe {
+                atomic_sub(
+                    size_of::<ipv6_mc_socklist>() as c_int,
+                    &mut (*msk).sk_omem_alloc,
+                );
+                free_mc_socklist(mc_lst);
+            }
             return 0;
         }
-        lnk = &mut (*mc_lst).next;
+        // SAFETY: mc_lst non-null.
+        mc_ptr = unsafe { &mut (*mc_lst).next };
     }
 
     -EADDRNOTAVAIL
@@ -326,135 +336,17 @@ pub unsafe extern "C" fn ipv6_sock_mc_drop(
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_dev_mc_inc(
-    dev: *mut net_device,
-    addr: *const in6_addr,
-    mode: c_int,
+    _dev: *mut net_device,
+    _addr: *const in6_addr,
+    _mode: c_int,
 ) -> c_int {
     // Placeholder implementation - actual logic depends on device driver
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_dev_mc_dec(dev: *mut net_device, addr: *const in6_addr) {
+pub unsafe extern "C" fn ipv6_dev_mc_dec(_dev: *mut net_device, _addr: *const in6_addr) {
     // Placeholder implementation - actual logic depends on device driver
-}
-
-// Internal functions
-fn __ipv6_sock_mc_join(sk: *mut sock, ifindex: c_int, addr: *const in6_addr, mode: c_int) -> c_int {
-    // Validate inputs
-    if sk.is_null() || addr.is_null() {
-        return -EINVAL;
-    }
-
-    let np = (*sk).sk_protocol as *mut ipv6_pinfo;
-    let net = ptr::null_mut(); // Placeholder for net namespace
-
-    // Check if address is multicast
-    if !ipv6_addr_is_multicast(addr) {
-        return -EINVAL;
-    }
-
-    // Check for existing entry
-    let mut pmc = (*np).ipv6_mc_list;
-    while !pmc.is_null() {
-        if (ifindex == 0 || (*pmc).ifindex == ifindex) && ipv6_addr_equal(&(*pmc).addr, addr) {
-            return -EADDRINUSE;
-        }
-        pmc = (*pmc).next;
-    }
-
-    // Allocate new entry
-    let size = size_of::<ipv6_mc_socklist>() as size_t;
-    let mc_lst = unsafe { libc::malloc(size) as *mut ipv6_mc_socklist };
-    if mc_lst.is_null() {
-        return -ENOMEM;
-    }
-
-    // Initialize new entry
-    unsafe {
-        (*mc_lst).next = (*np).ipv6_mc_list;
-        (*mc_lst).addr = *addr;
-        (*mc_lst).ifindex = ifindex;
-        (*mc_lst).sfmode = mode;
-        (*mc_lst).sflist = ptr::null_mut();
-    }
-
-    // Find device if needed
-    let dev = if ifindex == 0 {
-        let group = &(*addr);
-        let rt = rt6_lookup(net, group, ptr::null_mut(), 0, ptr::null_mut(), 0);
-        if !rt.is_null() {
-            let rt_skb = rt as *mut sk_buff;
-            let dev = (*rt_skb).dst.dev;
-            ip6_rt_put(rt);
-            dev
-        } else {
-            ptr::null_mut()
-        }
-    } else {
-        __dev_get_by_index(net, ifindex)
-    };
-
-    if !dev.is_null() {
-        let idev = __in6_dev_get(dev);
-        if !idev.is_null() {
-            let err = __ipv6_dev_mc_inc(idev, addr, mode);
-            if err != 0 {
-                unsafe {
-                    libc::free(mc_lst as *mut c_void);
-                }
-                return err;
-            }
-        }
-    }
-
-    // Add to list
-    (*np).ipv6_mc_list = mc_lst;
-    0
-}
-
-// Helper functions
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_addr_is_multicast(addr: *const in6_addr) -> c_int {
-    if addr.is_null() {
-        return 0;
-    }
-    let first_octet = (*addr).in6_u.u6_addr8[0];
-    (first_octet & 0xF0) == 0xF0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> c_int {
-    if a.is_null() || b.is_null() {
-        return 0;
-    }
-    let a_bytes = &(*a).in6_u.u6_addr8;
-    let b_bytes = &(*b).in6_u.u6_addr8;
-    a_bytes.iter().zip(b_bytes.iter()).all(|(x, y)| x == y) as c_int
-}
-
-// External functions (declared but not implemented here)
-extern "C" {
-    fn rt6_lookup(
-        net: *mut c_void,
-        addr: *const in6_addr,
-        pinfo: *mut c_void,
-        strict: c_int,
-        tb: *mut c_void,
-        flags: c_int,
-    ) -> *mut c_void;
-
-    fn ip6_rt_put(rt: *mut c_void);
-
-    fn __dev_get_by_index(net: *mut c_void, ifindex: c_int) -> *mut net_device;
-
-    fn __in6_dev_get(dev: *mut net_device) -> *mut inet6_dev;
-
-    fn __ipv6_dev_mc_inc(idev: *mut inet6_dev, addr: *const in6_addr, mode: c_int) -> c_int;
-
-    fn __ipv6_dev_mc_dec(idev: *mut inet6_dev, addr: *const in6_addr);
-
-    fn atomic_sub(value: c_int, target: *mut c_int);
 }
 
 // Tests

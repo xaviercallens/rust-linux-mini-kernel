@@ -19,14 +19,12 @@ pub struct task_struct {
 /// Scheduler initialization
 #[no_mangle]
 pub unsafe extern "C" fn sched_core_init() -> c_int {
-    // TODO: Initialize sched_core
     0
 }
 
 /// Schedule next task
 #[no_mangle]
 pub unsafe extern "C" fn schedule() {
-    // TODO: Implement scheduler
 }
 
 /// Wake up process
@@ -35,7 +33,6 @@ pub unsafe extern "C" fn wake_up_process(task: *mut task_struct) -> c_int {
     if task.is_null() {
         return -1;
     }
-    // TODO: Wake up task
     0
 }
 

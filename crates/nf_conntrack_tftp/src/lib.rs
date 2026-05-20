@@ -38,11 +38,19 @@ pub struct sk_buff {
 
 #[repr(C)]
 pub struct nf_conn {
+    pub tuplehash: [nf_conntrack_tuple_hash; 2],
+    pub status: c_uint,
     _private: [u8; 0],
 }
 
 #[repr(C)]
+pub struct nf_conntrack_tuple_hash {
+    pub tuple: nf_conntrack_tuple,
+}
+
+#[repr(C)]
 pub struct nf_conntrack_expect {
+    pub tuple: nf_conntrack_tuple,
     _private: [u8; 0],
 }
 
@@ -84,44 +92,27 @@ pub struct nf_conntrack_helper {
     _private: [u8; 0],
 }
 
-// Function pointer type
-pub type NfNatTftpHookFn = extern "C" fn(
+static HELPER_NAME: &[u8] = b"tftp\0";
+
+// Module parameters
+
+static mut PORTS: [u16; 8] = [0; 8];
+static mut PORTS_C: c_uint = 0;
+
+// Function pointer type for NAT hook
+pub type nf_nat_tftp_hook_t = extern "C" fn(
     skb: *mut sk_buff,
     ctinfo: c_int,
     exp: *mut nf_conntrack_expect,
 ) -> c_uint;
 
-// Module parameters
-static mut PORTS: [u16; 8] = [0; 8];
-static mut PORTS_C: c_uint = 0;
-
-// Exported symbol
-static mut NF_NAT_TFTP_HOOK: Option<NfNatTftpHookFn> = None;
-
-#[no_mangle]
-pub extern "C" fn nf_nat_tftp_hook() -> *mut c_void {
-    // SAFETY: This is a function pointer cast to void*, which is safe in C
-    // but requires unsafe in Rust
-    unsafe { ptr::from_ref(&NF_NAT_TFTP_HOOK) as *mut c_void }
-}
-
-static HELPER_NAME: &[u8] = b"tftp\0";
-static ERR_MSG: &[u8] = b"failed to register helpers\n\0";
-
 #[unsafe(no_mangle)]
 pub static mut nf_nat_tftp_hook: Option<nf_nat_tftp_hook_t> = None;
-
-static mut PORTS: [u16; 8] = [0; 8];
-static mut PORTS_C: c_uint = 0;
-
-static mut TFTP_HELPERS: [nf_conntrack_helper; 16] = [nf_conntrack_helper { _private: [] }; 16];
 
 static TFTP_EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
     max_expected: 1,
     timeout: 5 * 60,
 };
-
-const THIS_MODULE: *mut module = ptr::null_mut();
 
 #[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
@@ -174,7 +165,7 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
     // Register helpers
     ret = unsafe { nf_conntrack_helpers_register(TFTP.as_mut_ptr(), 2 * PORTS_C as c_int) };
     if ret < 0 {
-        pr_err(b"failed to register helpers\0".as_ptr() as *const c_char);
+        unsafe { pr_err(b"failed to register helpers\0".as_ptr() as *const c_char) };
     }
 
     ret
@@ -193,11 +184,10 @@ pub extern "C" fn tftp_help(
     ctinfo: c_int,
 ) -> c_int {
     let mut ret: c_int = 0;
-    let mut tfh: *const tftphdr = ptr::null();
-    let mut _tftph: tftphdr = tftphdr { opcode: [0; 2] };
     let mut exp: *mut nf_conntrack_expect = ptr::null_mut();
-    let mut tuple: *mut nf_conntrack_tuple = ptr::null_mut();
-    let mut nf_nat_tftp: Option<NfNatTftpHookFn> = None;
+    let tuple: *const nf_conntrack_tuple;
+    let nf_nat_tftp: Option<nf_nat_tftp_hook_t>;
+    let mut local_hdr: tftphdr = tftphdr { opcode: [0; 2] };
 
     let tfh = unsafe {
         skb_header_pointer(
@@ -233,27 +223,27 @@ pub extern "C" fn tftp_help(
             }
 
             // Initialize expectation
-            tuple = unsafe { &(*ct).tuplehash[IP_CT_DIR_REPLY].tuple };
+            tuple = unsafe { &(*ct).tuplehash[IP_CT_DIR_REPLY as usize].tuple };
             unsafe {
                 nf_ct_expect_init(
                     exp,
                     NF_CT_EXPECT_CLASS_DEFAULT,
                     nf_ct_l3num(ct),
-                    &(*tuple).src.u3,
-                    &(*tuple).dst.u3,
+                    &(*tuple).src as *const nf_conntrack_tuple_union as *mut nf_conntrack_tuple_union,
+                    &(*tuple).dst as *const nf_conntrack_tuple_union as *mut nf_conntrack_tuple_union,
                     17, // IPPROTO_UDP
                     ptr::null_mut(),
-                    &(*tuple).dst.udp.port,
+                    &(*tuple).dst as *const nf_conntrack_tuple_union as *mut nf_conntrack_tuple_union,
                 );
             }
 
             // Log expectation
             unsafe { pr_debug(b"expect: \0".as_ptr() as *const c_char) };
-            unsafe { nf_ct_dump_tuple(&(*exp).tuple) };
+            unsafe { nf_ct_dump_tuple(&(*exp).tuple as *const nf_conntrack_tuple as *mut nf_conntrack_tuple) };
 
             // NAT hook
-            nf_nat_tftp = unsafe { rcu_dereference(NF_NAT_TFTP_HOOK) };
-            if nf_nat_tftp.is_some() && ((*ct).status & IPS_NAT_MASK) != 0 {
+            nf_nat_tftp = unsafe { nf_nat_tftp_hook };
+            if nf_nat_tftp.is_some() && unsafe { ((*ct).status & IPS_NAT_MASK) != 0 } {
                 ret = nf_nat_tftp.unwrap()(
                     skb,
                     ctinfo,
@@ -313,8 +303,6 @@ extern "C" {
         l4dst: *mut nf_conntrack_tuple_union,
     );
 
-    fn rcu_dereference<T>(ptr: *mut T) -> *mut T;
-
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, timeout: c_int) -> c_int;
 
     fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
@@ -357,39 +345,17 @@ extern "C" {
     );
 }
 
-// Constants for return values
-pub const NF_ACCEPT: c_int = 0;
+// Additional constants
 pub const NF_DROP: c_int = 1;
-
-// Constants for IP_CT_DIR
 pub const IP_CT_DIR_ORIGINAL: c_int = 0;
 pub const IP_CT_DIR_REPLY: c_int = 1;
-
-// Constants for NF_CT_EXPECT_CLASS_DEFAULT
 pub const NF_CT_EXPECT_CLASS_DEFAULT: c_int = 0;
+pub const IPS_NAT_MASK: c_uint = 0x0000000F;
+pub const TFTP_OPCODE_DATA: u16 = 3;
+pub const TFTP_OPCODE_ACK: u16 = 4;
+pub const TFTP_OPCODE_ERROR: u16 = 5;
 
-// Constants for IPS_NAT_MASK
-pub const IPS_NAT_MASK: c_int = 0x0000000F;
-
-// Constants for HELPER_NAME
-const HELPER_NAME: &str = "tftp";
-
-// Module parameter
-#[no_mangle]
-pub static mut THIS_MODULE: *mut c_void = ptr::null_mut();
-
-// Expect policy
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_expect_policy {
-    max_expected: c_int,
-    timeout: c_int,
-}
-
-static TFTP_EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
-    max_expected: 1,
-    timeout: 5 * 60,
-};
+const THIS_MODULE: *mut c_void = ptr::null_mut();
 
 // Static storage for helpers
 static mut TFTP: [nf_conntrack_helper; 16] = unsafe { [core::mem::zeroed(); 16] };

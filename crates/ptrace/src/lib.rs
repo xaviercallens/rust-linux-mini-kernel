@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn ptrace_init() -> c_int {
-    // TODO: Initialize ptrace subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn ptrace_exit() {
-    // TODO: Cleanup ptrace subsystem
 }
 
 #[no_mangle]

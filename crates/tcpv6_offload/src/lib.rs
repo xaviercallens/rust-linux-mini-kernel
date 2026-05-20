@@ -175,9 +175,7 @@ unsafe fn tcp_v6_check(
 }
 
 #[inline]
-unsafe extern "C" fn ip6_gro_compute_pseudo(_skb: *mut sk_buff) -> c_int {
-    0
-}
+unsafe extern "C" fn ip6_gro_compute_pseudo(_skb: *mut sk_buff) -> c_int { 0 }
 
 #[inline]
 unsafe fn skb_network_header(_skb: *mut sk_buff) -> *mut c_void {

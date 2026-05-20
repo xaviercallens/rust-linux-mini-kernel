@@ -31,7 +31,6 @@ pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const EOPNOTSUPP: c_int = -95;
 pub const EINPROGRESS: c_int = -115;
-pub const AF_INET6: c_int = 10;
 pub const EAGAIN: c_int = -11;
 
 // Type definitions
@@ -109,8 +108,8 @@ pub struct list_head {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net_offload_callbacks {
-    pub gro_receive: extern "C" fn(*mut sk_buff) -> *mut sk_buff,
-    pub gso_segment: extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
+    pub gro_receive: unsafe extern "C" fn(*mut sk_buff) -> *mut sk_buff,
+    pub gso_segment: unsafe extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
 }
 
 #[repr(C)]
@@ -125,9 +124,46 @@ pub struct xfrm_type_offload {
     pub description: *const u8,
     pub owner: *const c_void,
     pub proto: u8,
-    pub input_tail: extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int,
-    pub xmit: extern "C" fn(*mut xfrm_state, *mut sk_buff, netdev_features_t) -> c_int,
-    pub encap: extern "C" fn(*mut xfrm_state, *mut sk_buff),
+    pub input_tail: unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int,
+    pub xmit: unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff, netdev_features_t) -> c_int,
+    pub encap: unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff),
+}
+
+// SAFETY: xfrm_type_offload is safe to share between threads
+unsafe impl Sync for xfrm_type_offload {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ip6_control_block {
+    pub nhoff: c_int,
+    pub flags: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_tunnel_skb_cb {
+    pub tunnel: xfrm_tunnel_info,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_tunnel_info {
+    pub ip6: *mut c_void,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_spi_skb_cb {
+    pub family: c_int,
+    pub daddroff: c_int,
+    pub seq: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct napi_gro_cb {
+    pub same_flow: c_int,
+    pub flush: c_int,
 }
 
 #[no_mangle]
@@ -166,15 +202,6 @@ pub unsafe extern "C" fn esp6_nexthdr_esp_offset(ipv6_hdr: *const ipv6hdr, nhlen
     0
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_optlen(hdr: *const ipv6_opt_hdr) -> c_int {
-    if hdr.is_null() {
-        return 0;
-    }
-    let len = (*hdr).nexthdr & 0x0F;
-    (len as c_int) * 8
-}
-
 /// GRO receive handler for ESP IPv6
 ///
 /// # Safety
@@ -193,19 +220,11 @@ pub unsafe extern "C" fn esp6_gro_receive(
     if !pskb_pull(skb, offset) {
         return ptr::null_mut();
     }
-    skb
-}
 
-#[no_mangle]
-pub unsafe extern "C" fn esp6_gso_segment(skb: *mut sk_buff, _features: netdev_features_t) -> *mut sk_buff {
-    skb
-}
-
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {
-        core::hint::spin_loop();
+    let mut spi: u32 = 0;
+    let mut seq: u32 = 0;
+    if xfrm_parse_spi(skb, IPPROTO_ESP, &mut spi, &mut seq) != 0 {
+        return ptr::null_mut();
     }
 
     if xo.is_null() || (*xo).flags & (1 << 0) == 0 {
@@ -263,6 +282,14 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     (*NAPI_GRO_CB(skb)).flush = 1;
 
     ptr::null_mut()
+}
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {
+        core::hint::spin_loop();
+    }
 }
 
 /// GSO segment handler for ESP IPv6
@@ -356,13 +383,13 @@ pub unsafe extern "C" fn esp6_offload_init() -> c_int {
         return -EAGAIN;
     }
 
-    inet6_add_offload(&esp6_offload, IPPROTO_ESP)
+    inet6_add_offload(&esp6_offload, IPPROTO_ESP as c_int)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn esp6_offload_exit() {
     xfrm_unregister_type_offload(&esp6_type_offload, AF_INET6);
-    inet6_del_offload(&esp6_offload, IPPROTO_ESP);
+    inet6_del_offload(&esp6_offload, IPPROTO_ESP as c_int);
 }
 
 // Helper functions (simplified for brevity)
@@ -482,7 +509,7 @@ pub unsafe extern "C" fn secpath_set(skb: *mut sk_buff) -> *mut sec_path {
 #[no_mangle]
 pub unsafe extern "C" fn xfrm_state_lookup(
     net: *mut c_void,
-    mark: u32,
+    mark: *mut c_void,
     daddr: *const nf_inet_addr,
     spi: u32,
     proto: u8,
@@ -493,9 +520,9 @@ pub unsafe extern "C" fn xfrm_state_lookup(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm_smark_get(mark: u32, x: *mut xfrm_state) -> u32 {
+pub unsafe extern "C" fn xfrm_smark_get(mark: *mut c_void, x: *mut xfrm_state) -> *mut c_void {
     // Implementation would interface with kernel APIs
-    0
+    mark
 }
 
 #[no_mangle]
@@ -517,19 +544,19 @@ pub unsafe extern "C" fn dev_net(sk: *mut sock) -> *mut c_void {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn IP6CB(skb: *mut sk_buff) -> *mut c_void {
+pub unsafe extern "C" fn IP6CB(_skb: *mut sk_buff) -> *mut ip6_control_block {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn XFRM_TUNNEL_SKB_CB(skb: *mut sk_buff) -> *mut c_void {
+pub unsafe extern "C" fn XFRM_TUNNEL_SKB_CB(_skb: *mut sk_buff) -> *mut xfrm_tunnel_skb_cb {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn XFRM_SPI_SKB_CB(skb: *mut sk_buff) -> *mut c_void {
+pub unsafe extern "C" fn XFRM_SPI_SKB_CB(_skb: *mut sk_buff) -> *mut xfrm_spi_skb_cb {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
@@ -555,7 +582,7 @@ pub unsafe extern "C" fn skb_push(skb: *mut sk_buff, len: c_int) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut c_void {
+pub unsafe extern "C" fn NAPI_GRO_CB(_skb: *mut sk_buff) -> *mut napi_gro_cb {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }

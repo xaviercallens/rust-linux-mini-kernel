@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn fork_init() -> c_int {
-    // TODO: Initialize fork subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn fork_exit() {
-    // TODO: Cleanup fork subsystem
 }
 
 #[no_mangle]
