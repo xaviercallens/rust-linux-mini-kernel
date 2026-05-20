@@ -1,0 +1,15 @@
+[2026-05-19T23:48:57.026161] Starting 2-Hour GCP Benchmark Monitor...
+Total Estimated Cost for 2-hour benchmark: ~$0.80
+[2026-05-19T23:48:57.026171] Elapsed: 0 mins | Estimated Accrued Cost: $0.000 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-19T23:58:57.032028] Elapsed: 10 mins | Estimated Accrued Cost: $0.067 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T00:08:57.038396] Elapsed: 20 mins | Estimated Accrued Cost: $0.133 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T00:18:57.047620] Elapsed: 30 mins | Estimated Accrued Cost: $0.200 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T00:28:57.051138] Elapsed: 40 mins | Estimated Accrued Cost: $0.267 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T00:38:57.055618] Elapsed: 50 mins | Estimated Accrued Cost: $0.333 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T00:48:57.062501] Elapsed: 60 mins | Estimated Accrued Cost: $0.400 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T00:58:57.070423] Elapsed: 70 mins | Estimated Accrued Cost: $0.467 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T01:08:57.073754] Elapsed: 80 mins | Estimated Accrued Cost: $0.533 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T01:18:57.075554] Elapsed: 90 mins | Estimated Accrued Cost: $0.600 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T01:28:57.080804] Elapsed: 100 mins | Estimated Accrued Cost: $0.667 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T01:38:57.087273] Elapsed: 110 mins | Estimated Accrued Cost: $0.733 | Status: NOMINAL (Zero Thermal Throttling)
+[2026-05-20T01:48:57.089964] Elapsed: 120 mins | Estimated Accrued Cost: $0.800 | Status: NOMINAL (Zero Thermal Throttling)
