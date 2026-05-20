@@ -24,4 +24,12 @@ This document outlines the strategic roadmap for achieving a fully stable, forma
 - [ ] **Milestone 4.3**: Propose and upstream the most stable translated modules into the official Rust-for-Linux kernel tree.
 
 ---
+
+## 🛡️ Phase 5: MVK v9.0 Security Hardening (Next Objective)
+- [x] **Milestone 5.1**: Integrate `cargo-audit` and `Miri` (UB interpreter) into GitHub Actions for continuous vulnerability detection.
+- [ ] **Milestone 5.2**: Establish hardware-boundary fuzzing on all `unsafe` blocks using `cargo-fuzz`.
+- [ ] **Milestone 5.3**: Implement Kernel Address Space Layout Randomization (KASLR) and kCFI exploit mitigations.
+- [ ] **Milestone 5.4**: Privilege De-escalation (Microkernel Design) - Move drivers into Ring-3 userspace to protect core scheduler.
+
+---
 *If you are interested in accelerating this roadmap, check out our [CONTRIBUTING.md](./CONTRIBUTING.md) and jump into the codebase!*

@@ -1,0 +1,38 @@
+name: V9 Security Audit (Miri & Cargo Audit)
+
+on:
+  push:
+    branches: [ main, mvk-alpha ]
+  pull_request:
+    branches: [ main, mvk-alpha ]
+
+jobs:
+  security-audit:
+    name: Continuous Vulnerability & UB Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Nightly with Miri
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: miri, rust-src
+          override: true
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run Cargo Audit (Dependency Supply Chain Security)
+        run: |
+          echo "Scanning Cargo.lock against RustSec Advisory Database..."
+          cargo audit
+
+      - name: Run Miri (Undefined Behavior & Memory Safety)
+        run: |
+          echo "Running tests under Miri interpreter to detect strict-aliasing violations and UB..."
+          # Run miri tests on critical standard library compliant components
+          # MVK tests are executed to ensure zero unsafe-block memory leakage
+          cargo miri test
