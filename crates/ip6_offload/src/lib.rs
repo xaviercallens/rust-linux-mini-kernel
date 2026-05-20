@@ -8,9 +8,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_int, c_uint};
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_uint}, panic::PanicInfo};
 use kernel_types::*;
 
 // Constants from C
@@ -50,16 +48,11 @@ pub struct ipv6hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct FragHdr {
-    pub frag_off: u16,
-}
+pub struct FragHdr { pub frag_off: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct NetOffload {
-    pub flags: c_int,
-    pub callbacks: NetOffloadCallbacks,
-}
+pub struct NetOffload { pub flags: c_int, pub callbacks: NetOffloadCallbacks }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -71,10 +64,7 @@ pub struct NetOffloadCallbacks {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PacketOffload {
-    pub type_: c_int,
-    pub callbacks: NetOffloadCallbacks,
-}
+pub struct PacketOffload { pub type_: c_int, pub callbacks: NetOffloadCallbacks }
 
 // Static variables
 pub static mut __UDP_DISCONNECT: *mut c_void = ptr::null_mut();
@@ -101,9 +91,7 @@ unsafe extern "C" {
 
 // Helper functions
 #[inline]
-unsafe fn skb_is_gso(skb: *const SkBuff) -> bool {
-    !skb_shinfo(skb).is_null()
-}
+unsafe fn skb_is_gso(skb: *const SkBuff) -> bool { !skb_shinfo(skb).is_null() }
 
 #[inline]
 unsafe fn IS_ERR_OR_NULL(ptr: *const c_void) -> bool {

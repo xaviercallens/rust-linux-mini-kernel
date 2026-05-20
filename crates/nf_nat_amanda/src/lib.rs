@@ -18,34 +18,22 @@ pub const NF_ACCEPT: c_uint = 0x0000_0001;
 pub const EBUSY: c_int = 16;
 
 #[repr(C)]
-struct nf_conntrack_proto {
-    tcp: nf_conntrack_proto_tcp,
-}
+struct nf_conntrack_proto { tcp: nf_conntrack_proto_tcp }
 
 #[repr(C)]
-struct nf_conntrack_proto_tcp {
-    port: u16,
-}
+struct nf_conntrack_proto_tcp { port: u16 }
 
 #[repr(C)]
-struct nf_conntrack_tuple_dst {
-    u: nf_conntrack_tuple_u,
-}
+struct nf_conntrack_tuple_dst { u: nf_conntrack_tuple_u }
 
 #[repr(C)]
-struct nf_conntrack_tuple_u {
-    tcp: nf_conntrack_tuple_tcp,
-}
+struct nf_conntrack_tuple_u { tcp: nf_conntrack_tuple_tcp }
 
 #[repr(C)]
-struct nf_conntrack_tuple_tcp {
-    port: u16,
-}
+struct nf_conntrack_tuple_tcp { port: u16 }
 
 #[repr(C)]
-struct nf_conntrack_tuple {
-    dst: nf_conntrack_tuple_dst,
-}
+struct nf_conntrack_tuple { dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 struct nf_conntrack_expect {
@@ -56,9 +44,7 @@ struct nf_conntrack_expect {
 }
 
 #[repr(C)]
-struct nf_conntrack_nat_helper {
-    name: *const u8,
-}
+struct nf_conntrack_nat_helper { name: *const u8 }
 
 // Function declarations for kernel functions
 extern "C" {
@@ -91,7 +77,7 @@ static ALL_PORTS_IN_USE: &[u8; 17] = b"all ports in use\0";
 static CANNOT_MANGLE_PACKET: &[u8; 21] = b"cannot mangle packet\0";
 
 static mut NAT_HELPER_AMANDA: nf_conntrack_nat_helper =
-    nf_ct_nat_helper_init(AMANDA_NAME.as_ptr() as *const c_char);
+    nf_ct_nat_helper_init(AMANDA_NAME.as_ptr());
 
 #[unsafe(no_mangle)]
 static mut nf_nat_amanda_hook: Option<
@@ -202,29 +188,25 @@ pub unsafe extern "C" fn help(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_nat_amanda_fini() {
     nf_nat_helper_unregister(&mut NAT_HELPER_AMANDA);
-    NF_NAT_AMANDA_HOOK = None;
+    nf_nat_amanda_hook = None;
     synchronize_rcu();
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_nat_amanda_init() {
     // SAFETY: This is a module init function, called once at load time
-    assert!(NF_NAT_AMANDA_HOOK.is_none(), "Hook already initialized");
+    assert!(nf_nat_amanda_hook.is_none(), "Hook already initialized");
 
     nf_nat_helper_register(&mut NAT_HELPER_AMANDA);
-    NF_NAT_AMANDA_HOOK = Some(help);
+    nf_nat_amanda_hook = Some(help);
 }
 
 // Helper functions for byte order conversion
 #[inline]
-unsafe fn htons(x: u16) -> u16 {
-    x.to_be()
-}
+unsafe fn htons(x: u16) -> u16 { x.to_be() }
 
 #[inline]
-unsafe fn ntohs(x: u16) -> u16 {
-    u16::from_be(x)
-}
+unsafe fn ntohs(x: u16) -> u16 { u16::from_be(x) }
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {

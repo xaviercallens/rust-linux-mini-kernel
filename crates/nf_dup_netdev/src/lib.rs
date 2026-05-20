@@ -12,71 +12,44 @@ use core::ffi::c_int;
 use core::ptr;
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const EOPNOTSUPP: c_int = -95;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const EOPNOTSUPP: c_int = -95;
 
 // Type definitions for FFI compatibility
 #[repr(C)]
-pub struct nft_pktinfo {
-    pub skb: *mut sk_buff,
-    pub net: *mut c_void, // net namespace
-}
+pub struct nft_pktinfo { pub skb: *mut sk_buff, pub net: *mut c_void }
 
 #[repr(C)]
-pub struct nft_offload_ctx {
-    pub net: *mut c_void, // net namespace
-    pub num_actions: c_int,
-}
+pub struct nft_offload_ctx { pub net: *mut c_void, pub num_actions: c_int }
 
 #[repr(C)]
-pub struct nft_flow_rule {
-    pub rule: *mut flow_action_entry,
-}
+pub struct nft_flow_rule { pub rule: *mut c_void }
 
 #[repr(C)]
-pub struct flow_action_entry {
-    pub id: c_int,
-    pub dev: *mut net_device,
-}
-
-#[repr(C)]
-pub struct nft_flow_rule {
-    pub rule: *mut c_void,
-}
-
-#[repr(C)]
-pub struct flow_action_entry {
-    pub id: c_int,
-    pub dev: *mut net_device,
-}
+pub struct flow_action_entry { pub id: c_int, pub dev: *mut net_device }
 
 unsafe extern "C" {
     fn dev_get_by_index_rcu(net: *mut c_void, ifindex: c_int) -> *mut net_device;
     fn dev_get_by_index(net: *mut c_void, ifindex: c_int) -> *mut net_device;
     fn kfree_skb(skb: *mut sk_buff);
     fn skb_clone(skb: *mut sk_buff, gfp_mask: c_int) -> *mut sk_buff;
-    fn nf_do_netdev_egress(skb: *mut sk_buff, dev: *mut net_device);
+    fn dev_queue_xmit(skb: *mut sk_buff) -> c_int;
     fn nft_flow_rule_action_entry(rule: *mut c_void, index: c_int) -> *mut flow_action_entry;
 }
 
 // Internal helper function
-fn nf_do_netdev_egress(skb: *mut sk_buff, dev: *mut net_device) {
-    // SAFETY: Caller guarantees skb and dev are valid pointers
-    unsafe {
-        // Check if MAC header is set
-        if skb.is_null() {
-            return;
-        }
-
-        // In C, skb_push is a macro that adjusts the data pointer
-        // We don't need to implement it here as it's handled by the C ABI
-        // Just call the function that would be called after skb_push
-
-        (*skb).dev = dev;
-        (*skb).tstamp = 0;
-        dev_queue_xmit(skb);
+unsafe fn nf_do_netdev_egress(skb: *mut sk_buff, dev: *mut net_device) {
+    // Check if MAC header is set
+    if skb.is_null() {
+        return;
     }
+
+    // In C, skb_push is a macro that adjusts the data pointer
+    // We don't need to implement it here as it's handled by the C ABI
+    // Just call the function that would be called after skb_push
+
+    (*skb).dev = dev as *mut c_void;
+    (*skb).tstamp = 0;
+    dev_queue_xmit(skb);
 }
 
 #[unsafe(no_mangle)]
@@ -85,13 +58,14 @@ pub unsafe extern "C" fn nf_fwd_netdev_egress(pkt: *const nft_pktinfo, oif: c_in
         return;
     }
 
+    let skb = (*pkt).skb;
     let dev = dev_get_by_index_rcu((*pkt).net, oif);
     if dev.is_null() {
-        unsafe { kfree_skb(skb) };
+        kfree_skb(skb);
         return;
     }
 
-    unsafe { nf_do_netdev_egress(skb, dev) };
+    nf_do_netdev_egress(skb, dev);
 }
 
 #[unsafe(no_mangle)]
@@ -100,14 +74,15 @@ pub unsafe extern "C" fn nf_dup_netdev_egress(pkt: *const nft_pktinfo, oif: c_in
         return;
     }
 
+    let orig_skb = (*pkt).skb;
     let dev = dev_get_by_index_rcu((*pkt).net, oif);
     if dev.is_null() {
         return;
     }
 
-    let skb = unsafe { skb_clone(orig_skb, GFP_ATOMIC) };
+    let skb = skb_clone(orig_skb, GFP_ATOMIC as c_int);
     if !skb.is_null() {
-        unsafe { nf_do_netdev_egress(skb, dev) };
+        nf_do_netdev_egress(skb, dev);
     }
 }
 
@@ -128,11 +103,8 @@ pub unsafe extern "C" fn nft_fwd_dup_netdev_offload(
         return EOPNOTSUPP;
     }
 
-    let entry = &mut (*(*flow).rule);
-    (*entry).id = id;
-    (*entry).dev = dev;
-
-    unsafe {
+    let entry = nft_flow_rule_action_entry((*flow).rule, (*ctx).num_actions);
+    if !entry.is_null() {
         (*entry).id = id;
         (*entry).dev = dev;
         (*ctx).num_actions += 1;

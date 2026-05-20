@@ -18,9 +18,7 @@ pub const EAGAIN: c_int = -11;
 pub const ENOBUFS: c_int = -105;
 
 // FRA constants
-pub const FRA_SRC: c_int = 1;
-pub const FRA_DST: c_int = 2;
-pub const FRA_FLOW: c_int = 3;
+pub const FRA_SRC: c_int = 1; pub const FRA_DST: c_int = 2; pub const FRA_FLOW: c_int = 3;
 
 // Type definitions
 
@@ -99,10 +97,7 @@ pub struct fib_rule_hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nlattr {
-    pub len: c_ushort,
-    pub type_: c_ushort,
-}
+pub struct nlattr { pub len: c_ushort, pub type_: c_ushort }
 
 // Helper functions for container_of pattern
 #[inline]

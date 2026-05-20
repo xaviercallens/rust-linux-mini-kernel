@@ -15,21 +15,13 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
 }
 
 #[repr(C)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-    pub pprev: *mut *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node, pub pprev: *mut *mut hlist_node }
 
 #[repr(C)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
-pub struct net_device {
-    pub ifindex: c_int,
-    pub name: [c_char; 16],
-}
+pub struct net_device { pub ifindex: c_int, pub name: [c_char; 16] }
 
 #[repr(C)]
 pub struct in_ifaddr {
@@ -50,10 +42,7 @@ pub struct in_device {
 }
 
 #[repr(C)]
-pub struct CacheKey {
-    pub ifindex: c_int,
-    pub addr: u32,
-}
+pub struct CacheKey { pub ifindex: c_int, pub addr: u32 }
 
 #[repr(C)]
 pub struct CacheStatistics {

@@ -1,52 +1,22 @@
--- MVK v8.4.0 Formal Specifications Root Module
--- Top-level imports for all specifications
+-- MVK v9.0.0 Formal Specifications Root Module
+-- Auto-generated module index
 
+-- Phase 1: Boot Subsystem
 import MVK.Phase1.Printk
 import MVK.Phase1.ArchSetup
 import MVK.Phase1.InitMain
 
-namespace MVK
+-- Phase 2: Memory Management
+import MVK.Phase2.Common
+import MVK.Phase2.PageAlloc
+import MVK.Phase2.Slab
 
--- Version information
-def VERSION : String := "8.4.0"
-def PHASE : Nat := 1
-def MODULES_SPECIFIED : Nat := 3
+-- Phase 3: Netfilter Core
+import MVK.Phase3.ConntrackCore
+import MVK.Phase3.ConntrackTCP
+import MVK.Phase3.ConntrackUDP
+import MVK.Phase3.ConntrackICMP
 
--- Specification completeness tracking
-structure SpecificationStatus where
-  module_name : String
-  has_contracts : Bool
-  has_proofs : Bool
-  proof_completion : Nat  -- percentage 0-100
-  deriving Repr
-
-def phase1_specifications : List SpecificationStatus := [
-  { module_name := "printk",
-    has_contracts := true,
-    has_proofs := true,
-    proof_completion := 30
-  },
-  { module_name := "arch_setup",
-    has_contracts := true,
-    has_proofs := true,
-    proof_completion := 20
-  },
-  { module_name := "init_main",
-    has_contracts := true,
-    has_proofs := true,
-    proof_completion := 15
-  }
-]
-
--- Overall specification coverage
-def specification_coverage : Nat :=
-  let total := phase1_specifications.length
-  let completed := phase1_specifications.filter (fun s => s.has_contracts)
-  (completed.length * 100) / total
-
--- Proof completion percentage
-def proof_completion_percentage : Nat :=
-  let total_completion := phase1_specifications.foldl (fun acc s => acc + s.proof_completion) 0
-  total_completion / phase1_specifications.length
-
-end MVK
+-- Phase 4: Network Stack - IPv4/IPv6 Core
+import MVK.Phase4.IPv4IPv6.AfInet
+import MVK.Phase4.IPv4IPv6.AfInet6

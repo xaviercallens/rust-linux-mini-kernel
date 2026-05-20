@@ -13,8 +13,7 @@
 use core::panic::PanicInfo;
 use kernel_types::*;
 
-pub const H323_ERROR_NONE: c_int = 0;
-pub const H323_ERROR_BOUND: c_int = 1;
+pub const H323_ERROR_NONE: c_int = 0; pub const H323_ERROR_BOUND: c_int = 1;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -47,6 +46,20 @@ pub struct bitstr {
 }
 
 type decoder_t = unsafe extern "C" fn(*mut bitstr, *const field_t, *mut c_void, c_int) -> c_int;
+
+// Decoder function stubs
+unsafe extern "C" fn decode_nul(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_bool(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_oid(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_int(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_enum(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_bitstr(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_numstr(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_octstr(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_bmpstr(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_seq(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_seqof(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
+unsafe extern "C" fn decode_choice(_bs: *mut bitstr, _f: *const field_t, _base: *mut c_void, _level: c_int) -> c_int { 0 }
 
 // Decoder functions vector
 static DECODERS: [decoder_t; 12] = [

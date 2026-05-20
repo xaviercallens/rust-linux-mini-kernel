@@ -35,9 +35,7 @@ pub const ETH_HLEN: usize = 14;
 pub const ARPOP_REQUEST: c_int = 1;
 
 #[repr(C)]
-pub struct net_device {
-    pub type_: c_int,
-}
+pub struct net_device { pub type_: c_int }
 
 #[repr(C)]
 pub struct arphdr {
@@ -51,10 +49,7 @@ pub struct arphdr {
 }
 
 #[repr(C)]
-pub struct neighbour {
-    pub dev: *mut net_device,
-    pub ops: *mut ndisc_ops,
-}
+pub struct neighbour { pub dev: *mut net_device, pub ops: *mut ndisc_ops }
 
 #[repr(C)]
 pub struct ndisc_ops {
@@ -62,9 +57,7 @@ pub struct ndisc_ops {
 }
 
 #[inline(always)]
-pub fn htons(x: c_int) -> u16 {
-    x.to_be() as u16
-}
+pub fn htons(x: c_int) -> u16 { x.to_be() as u16 }
 
 #[no_mangle]
 pub extern "C" fn arp_send(

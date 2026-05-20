@@ -90,10 +90,7 @@ mod tests {
     static MOCK_STATE: Mutex<MockState> = Mutex::new(MockState::new());
 
     #[derive(Debug)]
-    struct MockState {
-        out_calls: Vec<(u16, u8)>,
-        in_value: u8,
-    }
+    struct MockState { out_calls: Vec<(u16, u8)>, in_value: u8 }
 
     impl MockState {
         const fn new() -> Self {
@@ -326,5 +323,365 @@ mod tests {
             assert!(PRINTK_INITIALIZED);
             PRINTK_INITIALIZED = initial; // Restore
         }
+    }
+
+    // === Additional stress and edge case tests ===
+
+    #[test]
+    fn test_printk_str_single_byte() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"X";
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, vec![b'X']);
+    }
+
+    #[test]
+    fn test_printk_str_special_characters() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"\n\r\t\0";
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, msg.to_vec());
+    }
+
+    #[test]
+    fn test_printk_str_max_length() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = vec![b'A'; 1024];
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes.len(), 1024);
+    }
+
+    #[test]
+    fn test_printk_str_binary_data() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg: [u8; 4] = [0xFF, 0x00, 0xAA, 0x55];
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, msg.to_vec());
+    }
+
+    #[test]
+    fn test_printk_cstr_long_string() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let mut msg = vec![b'B'; 512];
+        msg.push(0);
+        unsafe {
+            printk_cstr(msg.as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes.len(), 512);
+    }
+
+    #[test]
+    fn test_printk_cstr_single_char() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"Z\0";
+        unsafe {
+            printk_cstr(msg.as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, vec![b'Z']);
+    }
+
+    #[test]
+    fn test_printk_multiple_init_calls() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            printk_init();
+            printk_init();
+            printk_init();
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        // Each init should perform 7 port I/O operations
+        assert_eq!(state.get_out_calls().len(), 21);
+    }
+
+    #[test]
+    fn test_serial_write_sequence() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            printk_str(b"A".as_ptr(), 1);
+            printk_str(b"B".as_ptr(), 1);
+            printk_str(b"C".as_ptr(), 1);
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, vec![b'A', b'B', b'C']);
+    }
+
+    #[test]
+    fn test_printk_str_consecutive_calls() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        for _ in 0..10 {
+            unsafe {
+                printk_str(b"T".as_ptr(), 1);
+            }
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes.len(), 10);
+    }
+
+    #[test]
+    fn test_printk_cstr_consecutive_calls() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        for _ in 0..10 {
+            unsafe {
+                printk_cstr(b"X\0".as_ptr());
+            }
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes.len(), 10);
+    }
+
+    #[test]
+    fn test_printk_mixed_calls() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            printk_str(b"str1".as_ptr(), 4);
+            printk_cstr(b"cstr1\0".as_ptr());
+            printk_str(b"str2".as_ptr(), 4);
+            printk_cstr(b"cstr2\0".as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, b"str1cstr1str2cstr2".to_vec());
+    }
+
+    #[test]
+    fn test_printk_exit_multiple_calls() {
+        unsafe {
+            printk_exit();
+            printk_exit();
+            printk_exit();
+        }
+    }
+
+    #[test]
+    fn test_printk_str_with_length_one() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"test";
+        unsafe {
+            printk_str(msg.as_ptr(), 1);
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, vec![b't']);
+    }
+
+    #[test]
+    fn test_printk_str_numeric_content() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"0123456789";
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, msg.to_vec());
+    }
+
+    #[test]
+    fn test_printk_str_unicode_utf8_bytes() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = "Hello🦀".as_bytes();
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, msg.to_vec());
+    }
+
+    #[test]
+    fn test_printk_cstr_with_spaces() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"Hello World From Kernel\0";
+        unsafe {
+            printk_cstr(msg.as_ptr());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, b"Hello World From Kernel".to_vec());
+    }
+
+    #[test]
+    fn test_printk_init_port_sequence() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            printk_init();
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let calls = state.get_out_calls();
+
+        // Verify each port write individually
+        assert_eq!(calls.len(), 7);
+        for (i, call) in calls.iter().enumerate() {
+            assert!(call.0 >= SERIAL_PORT && call.0 <= SERIAL_PORT + 5,
+                    "Port {} out of range at index {}", call.0, i);
+        }
+    }
+
+    #[test]
+    fn test_printk_str_stress_1000_chars() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = vec![b'X'; 1000];
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes.len(), 1000);
+        assert!(writes.iter().all(|&b| b == b'X'));
+    }
+
+    #[test]
+    fn test_printk_str_alternating_pattern() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"ABABABABAB";
+        unsafe {
+            printk_str(msg.as_ptr(), msg.len());
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        let writes: Vec<u8> = state.get_out_calls().iter()
+            .filter(|(port, _)| *port == SERIAL_PORT)
+            .map(|(_, val)| *val)
+            .collect();
+        assert_eq!(writes, msg.to_vec());
     }
 }

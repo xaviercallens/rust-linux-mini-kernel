@@ -1,0 +1,18 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs": "0385a9f609d35581.o",
+ "log":
+ [{"message":
+   ".> /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/clang -c -o /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/PageAlloc.c.o.export /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/PageAlloc.c -I /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/include -fstack-clash-protection -fdata-sections -ffunction-sections -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1 -nostdinc -isystem /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
+   "level": "trace"}],
+ "inputs":
+ [["MVK.Phase2.PageAlloc:c",
+   [["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/PageAlloc.c",
+     "4651659e07e1983a"],
+    ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+     "fa77a35a41db35c0"]]],
+  ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+   "fa77a35a41db35c0"],
+  ["traceArgs: #[-O3, -DNDEBUG, -DLEAN_EXPORTING]", "c1efb66122fb2b9a"],
+  ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
+ "depHash": "197b172e8da0447f"}

@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -27,22 +26,15 @@ pub struct hlist_nulls_node {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_nulls_head {
-    pub first: *const hlist_nulls_node,
-}
+pub struct hlist_nulls_head { pub first: *const hlist_nulls_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_hashinfo {
-    pub ehash_mask: u32,
-    pub ehash: *mut inet_ehash_bucket,
-}
+pub struct inet_hashinfo { pub ehash_mask: u32, pub ehash: *mut inet_ehash_bucket }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_ehash_bucket {
-    pub chain: hlist_nulls_head,
-}
+pub struct inet_ehash_bucket { pub chain: hlist_nulls_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -55,34 +47,23 @@ pub struct sock_common {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sock_min {
-    pub __sk_common: sock_common,
-}
+pub struct sock_min { pub __sk_common: sock_common }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sock {
-    pub sk: sock_min,
-}
+pub struct sock { pub sk: sock_min }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_addr_union {
-    pub u6_addr32: [u32; 4],
-}
+pub struct ipv6_addr_union { pub u6_addr32: [u32; 4] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub in6_u: ipv6_addr_union,
-}
+pub struct in6_addr { pub in6_u: ipv6_addr_union }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_pinfo {
-    pub saddr: in6_addr,
-    pub daddr: in6_addr,
-}
+pub struct ipv6_pinfo { pub saddr: in6_addr, pub daddr: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -31,9 +31,7 @@ pub struct ipv6_fl_socklist {
 }
 pub type Net = c_void;
 pub type Sock = c_void;
-pub struct ipv6_pinfo {
-    pub ipv6_fl_list: *mut ipv6_fl_socklist,
-}
+pub struct ipv6_pinfo { pub ipv6_fl_list: *mut ipv6_fl_socklist }
 pub struct RcuHead { pub _priv: *mut c_void }
 pub struct SpinLock { pub _priv: *mut c_void }
 pub struct TimerList { pub _priv: *mut c_void, pub expires: c_ulong }
@@ -56,16 +54,11 @@ pub const FL_MAX_PER_SOCK: c_ulong = 32;
 pub const FL_MAX_SIZE: c_ulong = 4096;
 pub const FL_HASH_MASK: c_ulong = 255;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const EPERM: c_int = -1;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const EPERM: c_int = -1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct In6FlowlabelReq {
-    pub flr_label: u32,
-    pub flr_linger: c_ulong,
-}
+pub struct In6FlowlabelReq { pub flr_label: u32, pub flr_linger: c_ulong }
 
 #[repr(C)]
 pub struct Ip6Flowlabel {
@@ -101,9 +94,7 @@ static mut IP6_SK_FL_LOCK: SpinLock = SpinLock { _priv: ptr::null_mut() };
 pub static IPV6_FLOWLABEL_EXCLUSIVE: AtomicUsize = AtomicUsize::new(0);
 
 #[inline]
-fn fl_hash(label: u32) -> usize {
-    (label as usize) & (FL_HASH_MASK as usize)
-}
+fn fl_hash(label: u32) -> usize { (label as usize) & (FL_HASH_MASK as usize) }
 
 #[no_mangle]
 pub unsafe extern "C" fn ip6_fl_gc(_unused: *mut TimerList) {

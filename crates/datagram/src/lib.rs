@@ -36,27 +36,19 @@ pub struct flowi6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct pktinfo {
-    pub ipi6_ifindex: c_int,
-}
+pub struct pktinfo { pub ipi6_ifindex: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rxopt_bits {
-    pub rxpmtu: c_int,
-}
+pub struct rxopt_bits { pub rxpmtu: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_flowlabel {
-    pub opt: *mut ipv6_txoptions,
-}
+pub struct ip6_flowlabel { pub opt: *mut ipv6_txoptions }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_txoptions {
-    _unused: [u8; 0],
-}
+pub struct ipv6_txoptions { _unused: [u8; 0] }
 
 unsafe extern "C" {
     fn ipv6_addr_v4mapped(a: *const in6_addr) -> bool;
@@ -204,25 +196,7 @@ pub unsafe extern "C" fn ip6_datagram_release_cb(
     ip6_datagram_dst_update(sk, 0);
 }
 
-#[inline]
-unsafe fn security_sk_classify_flow(sk: *mut sock, fl: *mut flowi6) {
-    // Placeholder for security classification
-}
-
-#[inline]
-unsafe fn fl6_sock_lookup(sk: *mut sock, label: u32) -> *mut ip6_flowlabel {
-    ptr::null_mut()
-}
-
-#[inline]
-unsafe fn rcu_dereference<T>(ptr: *mut T) -> *mut T {
-    ptr
-}
-
-#[inline]
-unsafe fn ip6_dst_lookup_flow(net: *mut c_void, sk: *mut sock, fl6: *mut flowi6, final_p: *mut *mut in6_addr) -> *mut dst_entry {
-    ptr::null_mut()
-}
+// Duplicate implementations removed - using extern declarations above
 
 #[inline]
 unsafe fn __sk_dst_get(sk: *mut sock) -> *mut dst_entry {
@@ -238,19 +212,3 @@ unsafe fn ip6_sk_dst_store_flow(sk: *mut sock, dst: *mut dst_entry, fl6: *mut fl
 unsafe fn fl6_sock_release(flowlabel: *mut ip6_flowlabel) {
     // Placeholder
 }
-
-#[inline]
-unsafe fn sock_net(sk: *mut sock) -> *mut c_void {
-    ptr::null_mut()
-}
-
-#[repr(C)]
-struct dst_entry {
-    obsolete: c_int,
-    ops: *mut dst_ops,
-}
-
-#[repr(C)]
-struct dst_ops {
-    check: Option<unsafe extern "C" fn(*mut dst_entry, c_ulong) -> *mut dst_entry>,
-};

@@ -4,29 +4,18 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::mem;
-use core::ptr;
-use core::sync::atomic::AtomicU32;
+use core::{ffi::{c_char, c_int, c_uint, c_void}, mem, ptr, sync::atomic::{AtomicU32, Ordering}};
 use kernel_types::*;
 
 // Opaque kernel objects (FFI-safe)
 #[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-}
+pub struct net { _private: [u8; 0] }
 #[repr(C)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
+pub struct sk_buff { _private: [u8; 0] }
 #[repr(C)]
-pub struct xfrm_state {
-    _private: [u8; 0],
-}
+pub struct xfrm_state { _private: [u8; 0] }
 #[repr(C)]
-pub struct spinlock_t {
-    _private: u32,
-}
+pub struct spinlock_t { _private: u32 }
 
 // Constants from C
 const XFRM6_TUNNEL_SPI_BYADDR_HSIZE: c_uint = 256;
@@ -36,25 +25,16 @@ const XFRM6_TUNNEL_SPI_MAX: u32 = 0xFFFF_FFFF;
 
 // Type definitions
 #[repr(C)]
-struct hlist_head {
-    first: *mut hlist_node,
-}
+struct hlist_head { first: *mut hlist_node }
 
 #[repr(C)]
-struct hlist_node {
-    next: *mut hlist_node,
-    pprev: *mut *mut hlist_node,
-}
+struct hlist_node { next: *mut hlist_node, pprev: *mut *mut hlist_node }
 
 #[repr(C)]
-struct xfrm_address_t {
-    addr: [u8; 16],
-}
+struct xfrm_address_t { addr: [u8; 16] }
 
 #[repr(C)]
-struct rcu_head {
-    func: Option<extern "C" fn(head: *mut rcu_head)>,
-}
+struct rcu_head { func: Option<extern "C" fn(head: *mut rcu_head)> }
 
 #[repr(C)]
 struct xfrm6_tunnel_net {
@@ -119,6 +99,24 @@ unsafe extern "C" {
     fn rcu_read_lock_bh();
     fn rcu_read_unlock_bh();
     fn xfrm6_addr_equal(a: *const xfrm_address_t, b: *const xfrm_address_t) -> bool;
+    fn spin_lock_bh(lock: *mut spinlock_t);
+    fn spin_unlock_bh(lock: *mut spinlock_t);
+    fn call_rcu(head: *mut rcu_head, func: extern "C" fn(*mut rcu_head));
+    fn kmem_cache_alloc(cache: *mut c_void, flags: c_int) -> *mut c_void;
+}
+
+// Helper functions for hlist operations
+unsafe fn hlist_del_rcu(_node: *mut hlist_node) {
+    // Stub: remove from list
+}
+
+unsafe fn hlist_add_head_rcu(_node: *mut hlist_node, _head: *mut hlist_head) {
+    // Stub: add to head of list
+}
+
+// RCU callback
+extern "C" fn x6spi_destroy_rcu(_head: *mut rcu_head) {
+    // Stub implementation
 }
 
 // Stub pernet callbacks (can be replaced by full impl)
@@ -131,11 +129,13 @@ extern "C" fn xfrm6_tunnel_net_exit(_net: *mut net) {}
 static mut xfrm6_tunnel_net_id: c_int = 0;
 static mut xfrm6_tunnel_spi_kmem: *mut c_void = ptr::null_mut();
 static mut xfrm6_tunnel_spi_lock: spinlock_t = spinlock_t { _private: 0 };
-static mut xfrm6_tunnel_net_ops: pernet_operations = pernet_operations {
-    init: xfrm6_tunnel_net_init,
-    exit: xfrm6_tunnel_net_exit,
-    id: &mut xfrm6_tunnel_net_id,
-    size: mem::size_of::<xfrm6_tunnel_net>() as c_int,
+static mut xfrm6_tunnel_net_ops: pernet_operations = unsafe {
+    pernet_operations {
+        init: xfrm6_tunnel_net_init,
+        exit: xfrm6_tunnel_net_exit,
+        id: &raw mut xfrm6_tunnel_net_id,
+        size: mem::size_of::<xfrm6_tunnel_net>() as c_int,
+    }
 };
 
 #[inline]
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_spi_lookup(n: *mut net, saddr: *const xfrm
     let mut spi: u32 = 0;
     rcu_read_lock_bh();
     {
-        let xfrm6_tn = xfrm6_tunnel_pernet(net);
+        let xfrm6_tn = xfrm6_tunnel_pernet(n);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
 
         let head = &(*xfrm6_tn).spi_byaddr[h as usize];
@@ -176,7 +176,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_spi_lookup(n: *mut net, saddr: *const xfrm
 
         while !node.is_null() {
             let x6spi = (node as *mut xfrm6_tunnel_spi)
-                .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
+                .offset(-(mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize));
 
             if xfrm6_addr_equal(&(*x6spi).addr, saddr) {
                 spi = (*x6spi).spi;
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_
 
         while !node.is_null() {
             let x6spi = (node as *mut xfrm6_tunnel_spi)
-                .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
+                .offset(-(mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize));
 
             if xfrm6_addr_equal(&(*x6spi).addr, saddr) {
                 (*x6spi).refcnt.fetch_add(1, Ordering::Relaxed);
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_free_spi(net: *mut net, saddr: *mut xfrm_a
 
         while !node.is_null() {
             let x6spi = (node as *mut xfrm6_tunnel_spi)
-                .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize);
+                .offset(-(mem::offset_of!(xfrm6_tunnel_spi, list_byaddr) as isize));
 
             if xfrm6_addr_equal(&(*x6spi).addr, saddr) {
                 if (*x6spi).refcnt.fetch_sub(1, Ordering::Relaxed) == 1 {
@@ -288,7 +288,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_spi_check(net: *mut net, spi: u32) -> c_
 
     while !node.is_null() {
         let x6spi = (node as *mut xfrm6_tunnel_spi)
-            .offset(-mem::offset_of!(xfrm6_tunnel_spi, list_byspi) as isize);
+            .offset(-(mem::offset_of!(xfrm6_tunnel_spi, list_byspi) as isize));
 
         if (*x6spi).spi == spi {
             return -1;
@@ -325,7 +325,6 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
         if index >= 0 {
             break;
         }
-        node = (*node).next;
     }
 
     if index < 0 {
@@ -365,10 +364,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
     spi
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(_n: *mut net, _saddr: *mut xfrm_address_t) -> u32 {
-    XFRM6_TUNNEL_SPI_MIN.min(XFRM6_TUNNEL_SPI_MAX)
-}
+// Duplicate removed - main implementation at line 180
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {

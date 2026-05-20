@@ -31,52 +31,33 @@ pub type socklen_t = u32;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_ip,
-    pub dst: nf_conntrack_tuple_ip,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_ip, pub dst: nf_conntrack_tuple_ip }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_ip {
-    pub u3: nf_conntrack_tuple_ip_u3,
-}
+pub struct nf_conntrack_tuple_ip { pub u3: nf_conntrack_tuple_ip_u3 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_ip_u3 {
-    pub _addr: [u8; 16], // Flexible based on address family
-}
+pub struct nf_conntrack_tuple_ip_u3 { pub _addr: [u8; 16] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tuplehash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conn_tuplehash; 2],
-    pub status: u32,
-}
+pub struct nf_conn { pub tuplehash: [nf_conn_tuplehash; 2], pub status: u32 }
 
 #[repr(C)]
-pub struct nf_conntrack_expect {
-    pub _data: [u8; 1], // Opaque data
-}
+pub struct nf_conntrack_expect { pub _data: [u8; 1] }
 
 #[repr(C)]
-pub struct ts_config {
-    pub _data: [u8; 1], // Opaque textSEARCH config
-}
+pub struct ts_config { pub _data: [u8; 1] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect_policy {
-    pub max_expected: c_uint,
-    pub timeout: c_uint,
-}
+pub struct nf_conntrack_expect_policy { pub max_expected: c_uint, pub timeout: c_uint }
 
 pub type nf_nat_amanda_hook_t = unsafe extern "C" fn(
     *mut c_void,
@@ -170,9 +151,7 @@ unsafe extern "C" {
 }
 
 #[inline]
-fn CTINFO2DIR(ctinfo: c_int) -> u8 {
-    (ctinfo as u8) & 0x01
-}
+fn CTINFO2DIR(ctinfo: c_int) -> u8 { (ctinfo as u8) & 0x01 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn amanda_help(

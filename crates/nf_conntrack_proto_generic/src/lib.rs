@@ -17,26 +17,22 @@ pub const CTA_TIMEOUT_GENERIC_TIMEOUT: usize = 1;
 pub const CTA_TIMEOUT_GENERIC_MAX: usize = 2;
 pub const ENOSPC: c_int = -12;
 
-pub const NLA_U32: c_uint = 1;
-pub const IPPROTO_RAW: u8 = 255;
+pub const NLA_U32: c_uint = 1; pub const IPPROTO_RAW: u8 = 255;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nlattr {
-    _unused: [u8; 0],
-}
+pub struct nlattr { _unused: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct NfGenericNet {
-    timeout: c_uint,
-}
+struct NfGenericNet { timeout: c_uint }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct NlaPolicy {
-    type_: c_uint,
-}
+struct NlaPolicy { type_: c_uint }
+
+unsafe impl Send for NlaPolicy {}
+unsafe impl Sync for NlaPolicy {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -50,13 +46,12 @@ struct NfCtnlTimeout {
     nla_policy: *const NlaPolicy,
 }
 
+unsafe impl Send for NfCtnlTimeout {}
+unsafe impl Sync for NfCtnlTimeout {}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct NfConntrackL4proto {
-    l4proto: u8,
-    #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
-    ctnl_timeout: NfCtnlTimeout,
-}
+pub struct NfConntrackL4proto { l4proto: u8, ctnl_timeout: NfCtnlTimeout }
 
 #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
 #[no_mangle]
@@ -69,13 +64,31 @@ static generic_timeout_nla_policy: [NlaPolicy; CTA_TIMEOUT_GENERIC_MAX + 1] = {
 #[no_mangle]
 pub static NF_CONNTRACK_L4PROTO_GENERIC: NfConntrackL4proto = NfConntrackL4proto {
     l4proto: 255,
-    #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
     ctnl_timeout: NfCtnlTimeout {
+        #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
         nlattr_to_obj: Some(generic_timeout_nlattr_to_obj),
+        #[cfg(not(CONFIG_NF_CONNTRACK_TIMEOUT))]
+        nlattr_to_obj: None,
+
+        #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
         obj_to_nlattr: Some(generic_timeout_obj_to_nlattr),
+        #[cfg(not(CONFIG_NF_CONNTRACK_TIMEOUT))]
+        obj_to_nlattr: None,
+
+        #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
         nlattr_max: CTA_TIMEOUT_GENERIC_MAX,
+        #[cfg(not(CONFIG_NF_CONNTRACK_TIMEOUT))]
+        nlattr_max: 0,
+
+        #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
         obj_size: size_of::<c_uint>(),
+        #[cfg(not(CONFIG_NF_CONNTRACK_TIMEOUT))]
+        obj_size: 0,
+
+        #[cfg(CONFIG_NF_CONNTRACK_TIMEOUT)]
         nla_policy: &GENERIC_TIMEOUT_NLA_POLICY as *const NlaPolicy,
+        #[cfg(not(CONFIG_NF_CONNTRACK_TIMEOUT))]
+        nla_policy: ptr::null(),
     },
 };
 

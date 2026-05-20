@@ -15,8 +15,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 // Error constants
-pub const ENOSPC: c_int = -28;
-pub const ENOENT: c_int = -2;
+pub const ENOSPC: c_int = -28; pub const ENOENT: c_int = -2;
 
 /// Flow table entry for IPv4/IPv6
 #[repr(C)]

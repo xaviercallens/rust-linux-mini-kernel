@@ -7,8 +7,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_char, c_int, c_uint, c_void}};
 use kernel_types::*;
 
 pub const TFTP_PORT: u16 = 69;
@@ -21,20 +20,14 @@ pub const IPPROTO_UDP: c_int = 17;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct tftphdr {
-    pub opcode: [u8; 2],
-}
+pub struct tftphdr { pub opcode: [u8; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udphdr {
-    _private: [u8; 8],
-}
+pub struct udphdr { _private: [u8; 8] }
 
 #[repr(C)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
+pub struct sk_buff { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct nf_conn {
@@ -44,21 +37,14 @@ pub struct nf_conn {
 }
 
 #[repr(C)]
-pub struct nf_conntrack_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conntrack_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
-pub struct nf_conntrack_expect {
-    pub tuple: nf_conntrack_tuple,
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_expect { pub tuple: nf_conntrack_tuple, _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_udp {
-    pub port: [u8; 2],
-}
+pub struct nf_conntrack_tuple_udp { pub port: [u8; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -76,21 +62,14 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect_policy {
-    pub max_expected: c_uint,
-    pub timeout: c_uint,
-}
+pub struct nf_conntrack_expect_policy { pub max_expected: c_uint, pub timeout: c_uint }
 
 #[repr(C)]
-pub struct module {
-    _private: [u8; 0],
-}
+pub struct module { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_helper {
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_helper { _private: [u8; 0] }
 
 static HELPER_NAME: &[u8] = b"tftp\0";
 

@@ -15,25 +15,17 @@ pub const IPPROTO_IPV6: u8 = 41;
 pub const IPPROTO_IPIP: u8 = 4;
 pub const IPPROTO_UDPLITE: u8 = 136;
 
-pub const EINVAL: c_int = -22;
-pub const ENOENT: c_int = -2;
-pub const EOPNOTSUPP: c_int = -95;
+pub const EINVAL: c_int = -22; pub const ENOENT: c_int = -2; pub const EOPNOTSUPP: c_int = -95;
 
 // Type definitions
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_tunnel_encap {
-    pub dport: __be16,
-    pub flags: __be16,
-}
+pub struct ip_tunnel_encap { pub dport: __be16, pub flags: __be16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct flowi6 {
-    pub saddr: in6_addr,
-    pub daddr: in6_addr,
-}
+pub struct flowi6 { pub saddr: in6_addr, pub daddr: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -387,15 +379,12 @@ pub unsafe extern "C" fn fou6_fini() {
 }
 
 // Module metadata
-#[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_AUTHOR: [u8; 34] = *b"Tom Herbert <therbert@google.com>\0";
 
-#[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_LICENSE: [u8; 4] = *b"GPL\0";
 
-#[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_DESCRIPTION: [u8; 20] = *b"Foo over UDP (IPv6)\0";
 #[cfg(not(test))]

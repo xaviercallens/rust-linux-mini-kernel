@@ -8,16 +8,12 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_uint, c_void}};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
-pub const HZ: c_int = 100;
-pub const IPPROTO_GRE: u8 = 47;
+pub const HZ: c_int = 100; pub const IPPROTO_GRE: u8 = 47;
 
 pub const PPTP_START_SESSION_REQUEST: u16 = 1;
 pub const PPTP_START_SESSION_REPLY: u16 = 2;
@@ -34,8 +30,7 @@ pub const PPTP_WAN_ERROR_NOTIFY: u16 = 17;
 pub const PPTP_SET_LINK_INFO: u16 = 18;
 pub const PPTP_MSG_MAX: u16 = 18;
 
-pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ;
-pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ;
+pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ; pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ;
 
 pub const PPTP_SESSION_NONE: c_int = 0;
 pub const PPTP_SESSION_REQUESTED: c_int = 1;
@@ -43,33 +38,23 @@ pub const PPTP_SESSION_CONFIRMED: c_int = 2;
 pub const PPTP_SESSION_ERROR: c_int = 3;
 pub const PPTP_SESSION_STOPREQ: c_int = 4;
 
-pub const PPTP_START_OK: u16 = 1;
-pub const PPTP_STOP_OK: u16 = 1;
+pub const PPTP_START_OK: u16 = 1; pub const PPTP_STOP_OK: u16 = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpControlHeader {
-    pub messageType: u16,
-}
+pub struct PptpControlHeader { pub messageType: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpStartSessionReply {
-    pub resultCode: u16,
-}
+pub struct PptpStartSessionReply { pub resultCode: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpStopSessionReply {
-    pub resultCode: u16,
-}
+pub struct PptpStopSessionReply { pub resultCode: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpOutCallAck {
-    pub callID: u16,
-    pub peersCallID: u16,
-}
+pub struct PptpOutCallAck { pub callID: u16, pub peersCallID: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -81,22 +66,32 @@ pub union pptp_ctrl_union {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_gre_address {
-    pub key: u16,
+pub struct nf_conntrack_gre_address { pub key: u16 }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_proto_gre {
+    pub stream_timeout: c_uint,
+    pub timeout: c_uint,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_proto {
-    pub gre: nf_conn_proto_gre,
-}
+pub struct nf_conn_proto { pub gre: nf_conn_proto_gre }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conn {
+    pub ct_general: *mut c_void,
+    pub tuplehash: [nf_conn_tuple_hash; 2],
+    pub timeout: c_uint,
+    pub status: c_uint,
     pub proto: nf_conn_proto,
     pub master: *mut nf_conn,
-    pub status: c_int,
 }
 
 #[repr(C)]
@@ -140,19 +135,43 @@ pub type nf_nat_pptp_hook_inbound_t = Option<
 pub type nf_nat_pptp_hook_exp_gre_t =
     Option<unsafe extern "C" fn(*mut nf_conntrack_expect, *mut nf_conntrack_expect)>;
 
+pub type nf_nat_pptp_hook_expectfn_t = Option<unsafe extern "C" fn(*mut nf_conn, *mut nf_conntrack_expect)>;
+
 // Exported symbols
-pub static mut NF_NAT_PPTP_HOOK_OUTBOUND: nf_nat_pptp_hook_outbound_t = ptr::null_mut();
-pub static mut NF_NAT_PPTP_HOOK_INBOUND: nf_nat_pptp_hook_inbound_t = ptr::null_mut();
-pub static mut NF_NAT_PPTP_HOOK_EXP_GRE: nf_nat_pptp_hook_exp_gre_t = ptr::null_mut();
-pub static mut NF_NAT_PPTP_HOOK_EXPECTFN: nf_nat_pptp_hook_expectfn_t = ptr::null_mut();
+pub static mut nf_nat_pptp_hook_outbound: nf_nat_pptp_hook_outbound_t = None;
+pub static mut nf_nat_pptp_hook_inbound: nf_nat_pptp_hook_inbound_t = None;
+pub static mut nf_nat_pptp_hook_exp_gre: nf_nat_pptp_hook_exp_gre_t = None;
+pub static mut nf_nat_pptp_hook_expectfn: nf_nat_pptp_hook_expectfn_t = None;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    _private: [u8; 0],
-}
+pub struct spinlock_t { _private: [u8; 0] }
+
+pub static mut nf_pptp_lock: spinlock_t = spinlock_t { _private: [] };
 
 static NF_PPTP_LOCK: spinlock_t = spinlock_t { _private: [] };
+
+extern "C" {
+    fn nf_ct_expect_find_get(
+        net: *mut c_void,
+        zone: *const c_void,
+        tuple: *const nf_conntrack_tuple,
+    ) -> *mut nf_conntrack_expect;
+
+    fn nf_ct_unexpect_related(exp: *mut nf_conntrack_expect);
+
+    fn nf_ct_expect_put(exp: *mut nf_conntrack_expect);
+
+    fn ntohs(n: u16) -> u16;
+}
+
+// Helper to set GRE key in tuple union
+#[inline(always)]
+unsafe fn set_gre_key(u: *mut nf_conntrack_tuple_u, key: u16) {
+    // The all field is at the same offset as the gre key
+    let ptr = u as *mut u16;
+    *ptr = key;
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn pptp_expectfn(ct: *mut nf_conn, exp: *mut nf_conntrack_expect) {
@@ -160,13 +179,13 @@ pub unsafe extern "C" fn pptp_expectfn(ct: *mut nf_conn, exp: *mut nf_conntrack_
         return;
     }
 
-    (*ct).proto.gre.timeout = PPTP_GRE_TIMEOUT;
-    (*ct).proto.gre.stream_timeout = PPTP_GRE_STREAM_TIMEOUT;
+    (*ct).proto.gre.timeout = PPTP_GRE_TIMEOUT as c_uint;
+    (*ct).proto.gre.stream_timeout = PPTP_GRE_STREAM_TIMEOUT as c_uint;
 
-    let nf_nat_pptp_expectfn = NF_NAT_PPTP_HOOK_EXPECTFN;
-    if !nf_nat_pptp_expectfn.is_null() && !(*ct).master.is_null() && (*(*ct).master).status & 1 != 0
+    let nf_nat_pptp_expectfn = nf_nat_pptp_hook_expectfn;
+    if nf_nat_pptp_expectfn.is_some() && !(*ct).master.is_null() && (*(*ct).master).status & 1 != 0
     {
-        nf_nat_pptp_expectfn(ct, exp);
+        nf_nat_pptp_expectfn.unwrap()(ct, exp);
     } else {
         let mut inv_t: nf_conntrack_tuple = core::mem::zeroed();
         let mut exp_other: *mut nf_conntrack_expect = ptr::null_mut();
@@ -200,8 +219,8 @@ pub unsafe extern "C" fn pptp_destroy_siblings(ct: *mut nf_conn) {
     let dir = 0; // IP_CT_DIR_ORIGINAL
     ptr::copy_nonoverlapping(&(*ct).tuplehash[dir].tuple, &mut t, 1);
     t.dst.protonum = IPPROTO_GRE;
-    t.src.u3.gre.key = (*ct_pptp_info).pns_call_id;
-    t.dst.u3.gre.key = (*ct_pptp_info).pac_call_id;
+    set_gre_key(&mut t.src.u as *mut nf_conntrack_tuple_u, (*ct_pptp_info).pns_call_id);
+    set_gre_key(&mut t.dst.u as *mut nf_conntrack_tuple_u, (*ct_pptp_info).pac_call_id);
 
     destroy_sibling_or_exp(ptr::null_mut(), ct, &t);
 
@@ -209,8 +228,8 @@ pub unsafe extern "C" fn pptp_destroy_siblings(ct: *mut nf_conn) {
     let dir = 1; // IP_CT_DIR_REPLY
     ptr::copy_nonoverlapping(&(*ct).tuplehash[dir].tuple, &mut t, 1);
     t.dst.protonum = IPPROTO_GRE;
-    t.src.u3.gre.key = (*ct_pptp_info).pac_call_id;
-    t.dst.u3.gre.key = (*ct_pptp_info).pns_call_id;
+    set_gre_key(&mut t.src.u as *mut nf_conntrack_tuple_u, (*ct_pptp_info).pac_call_id);
+    set_gre_key(&mut t.dst.u as *mut nf_conntrack_tuple_u, (*ct_pptp_info).pns_call_id);
 
     destroy_sibling_or_exp(ptr::null_mut(), ct, &t);
 }

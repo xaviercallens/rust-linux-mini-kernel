@@ -11,10 +11,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_int, c_void};
-use core::mem;
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{mem, ptr, ffi::{c_int, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
 // Most types come from kernel_types, but define any that are missing locally
@@ -22,26 +19,20 @@ use kernel_types::*;
 pub type netdev_features_t = usize;
 
 // Constants from C
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 // Function pointer types
 type nf_hookfn =
     extern "C" fn(u8, *mut c_void, *mut sock, *mut sk_buff, *mut c_void, *mut c_void) -> c_int;
 
 // Internal functions
-fn skb_shared(_skb: *mut sk_buff) -> bool {
-    false
-}
+fn skb_shared(_skb: *mut sk_buff) -> bool { false }
 
 fn skb_clone(_skb: *mut sk_buff, _gfp_mask: c_int) -> *mut sk_buff {
     ptr::null_mut()
 }
 
-fn pskb_expand_head(_skb: *mut sk_buff, _delta: c_int, _gfp_mask: c_int) -> c_int {
-    0
-}
+fn pskb_expand_head(_skb: *mut sk_buff, _delta: c_int, _gfp_mask: c_int) -> c_int { 0 }
 
 fn consume_skb(_skb: *mut sk_buff) {}
 
@@ -49,35 +40,23 @@ fn kfree_skb(_skb: *mut sk_buff) {}
 
 fn IP6_INC_STATS(_net: *mut net, _idev: *mut inet6_dev, _stat: c_int) {}
 
-fn ipv6_addr_is_multicast(_addr: *mut in6_addr) -> bool {
-    false
-}
+fn ipv6_addr_is_multicast(_addr: *mut in6_addr) -> bool { false }
 
-fn sk_mc_loop(_sk: *mut sock) -> bool {
-    true
-}
+fn sk_mc_loop(_sk: *mut sock) -> bool { true }
 
-fn mroute6_is_socket(_net: *mut net, _skb: *mut sk_buff) -> bool {
-    false
-}
+fn mroute6_is_socket(_net: *mut net, _skb: *mut sk_buff) -> bool { false }
 
 fn IP6CB(_skb: *mut sk_buff) -> *mut c_void {
     ptr::null_mut()
 }
 
-fn dev_loopback_xmit(_skb: *mut sk_buff) -> c_int {
-    0
-}
+fn dev_loopback_xmit(_skb: *mut sk_buff) -> c_int { 0 }
 
 fn IP6_UPD_PO_STATS(_net: *mut net, _idev: *mut inet6_dev, _stat: c_int, _len: c_int) {}
 
-fn lwtunnel_xmit_redirect(_lwtstate: *mut c_void) -> bool {
-    false
-}
+fn lwtunnel_xmit_redirect(_lwtstate: *mut c_void) -> bool { false }
 
-fn lwtunnel_xmit(_skb: *mut sk_buff) -> c_int {
-    0
-}
+fn lwtunnel_xmit(_skb: *mut sk_buff) -> c_int { 0 }
 
 fn rt6_nexthop(_rt6_info: *mut c_void, _daddr: *mut in6_addr) -> *mut in6_addr {
     ptr::null_mut()
@@ -96,27 +75,17 @@ fn __neigh_create(
     ptr::null_mut()
 }
 
-fn IS_ERR(_ptr: *mut c_void) -> bool {
-    false
-}
+fn IS_ERR(_ptr: *mut c_void) -> bool { false }
 
 fn sock_confirm_neigh(_skb: *mut sk_buff, _neigh: *mut c_void) {}
 
-fn neigh_output(_neigh: *mut c_void, _skb: *mut sk_buff, _flag: bool) -> c_int {
-    0
-}
+fn neigh_output(_neigh: *mut c_void, _skb: *mut sk_buff, _flag: bool) -> c_int { 0 }
 
-fn dst_output(_net: *mut net, _sk: *mut sock, _skb: *mut sk_buff) -> c_int {
-    0
-}
+fn dst_output(_net: *mut net, _sk: *mut sock, _skb: *mut sk_buff) -> c_int { 0 }
 
-fn ip6_skb_dst_mtu(_skb: *mut sk_buff) -> c_int {
-    1500
-}
+fn ip6_skb_dst_mtu(_skb: *mut sk_buff) -> c_int { 1500 }
 
-fn skb_gso_validate_network_len(_skb: *mut sk_buff, _mtu: c_int) -> bool {
-    true
-}
+fn skb_gso_validate_network_len(_skb: *mut sk_buff, _mtu: c_int) -> bool { true }
 
 fn skb_gso_segment(_skb: *mut sk_buff, _features: netdev_features_t) -> *mut sk_buff {
     ptr::null_mut()
@@ -133,9 +102,7 @@ fn ip6_fragment(
     0
 }
 
-fn BPF_CGROUP_RUN_PROG_INET_EGRESS(_sk: *mut sock, _skb: *mut sk_buff) -> c_int {
-    0
-}
+fn BPF_CGROUP_RUN_PROG_INET_EGRESS(_sk: *mut sock, _skb: *mut sk_buff) -> c_int { 0 }
 
 fn NF_HOOK_COND(
     _proto: u8,
@@ -159,9 +126,7 @@ extern "C" fn ip6_finish_output(_net: *mut net, _sk: *mut sock, _skb: *mut sk_bu
     0
 }
 
-fn ip6_dst_hoplimit(_dst: *mut dst_entry) -> c_int {
-    64
-}
+fn ip6_dst_hoplimit(_dst: *mut dst_entry) -> c_int { 64 }
 
 fn ip6_flow_hdr(_hdr: *mut ipv6hdr, _tclass: c_int, _flowlabel: u32) {}
 
@@ -175,9 +140,7 @@ fn ip6_make_flowlabel(
     0
 }
 
-fn ip6_autoflowlabel(_net: *mut net, _np: *mut ipv6_pinfo) -> bool {
-    true
-}
+fn ip6_autoflowlabel(_net: *mut net, _np: *mut ipv6_pinfo) -> bool { true }
 
 fn ipv6_push_frag_opts(_skb: *mut sk_buff, _opt: *mut c_void, _proto: *mut u8) {}
 

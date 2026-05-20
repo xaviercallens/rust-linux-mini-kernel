@@ -5,9 +5,7 @@
 use core::{ffi::c_void, panic::PanicInfo, ptr};
 use kernel_types::*;
 
-pub const EINVAL: c_int = 22;
-pub const ENOMEM: c_int = 12;
-pub const ENOSYS: c_int = 38;
+pub const EINVAL: c_int = 22; pub const ENOMEM: c_int = 12; pub const ENOSYS: c_int = 38;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -41,17 +39,11 @@ pub struct neighbour {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct neigh_parms {
-    pub reachable_time: c_int,
-    pub data: [c_int; 10],
-}
+pub struct neigh_parms { pub reachable_time: c_int, pub data: [c_int; 10] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nd_opt_hdr {
-    pub nd_opt_type: u8,
-    pub nd_opt_len: u8,
-}
+pub struct nd_opt_hdr { pub nd_opt_type: u8, pub nd_opt_len: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
