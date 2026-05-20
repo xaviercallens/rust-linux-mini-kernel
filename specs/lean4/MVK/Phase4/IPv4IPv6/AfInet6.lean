@@ -646,6 +646,7 @@ theorem init_exit_safe :
 -- Module Exports
 --------------------------------------------------
 
+/-
 -- Public API
 export ipv6_mod_enabled
 export inet6_sk_generic
@@ -662,5 +663,6 @@ export is_multicast
 export is_ipv4_mapped
 export is_dual_stack
 export is_pmtu_enabled
+-/
 
 end MVK.Phase4.IPv4IPv6.AfInet6

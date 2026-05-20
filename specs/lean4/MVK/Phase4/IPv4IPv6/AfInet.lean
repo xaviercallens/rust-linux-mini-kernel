@@ -697,6 +697,7 @@ theorem listen_constant_time_if_listening
 -- Module Exports
 --------------------------------------------------
 
+/-
 -- Public API
 export inet_create
 export inet_listen
@@ -712,5 +713,6 @@ export is_closed
 export is_tcp_socket
 export is_udp_socket
 export is_raw_socket
+-/
 
 end MVK.Phase4.IPv4IPv6.AfInet

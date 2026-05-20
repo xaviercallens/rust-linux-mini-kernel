@@ -372,6 +372,7 @@ theorem short_packets_rejected :
 -- Module Exports
 --------------------------------------------------
 
+/-
 -- Public API
 export udp_error
 export udplite_error
@@ -395,5 +396,6 @@ export IPPROTO_UDPLITE
 export UDP_CT_UNREPLIED
 export UDP_CT_REPLIED
 export UDP_TIMEOUTS
+-/
 
 end MVK.Phase3.ConntrackUDP

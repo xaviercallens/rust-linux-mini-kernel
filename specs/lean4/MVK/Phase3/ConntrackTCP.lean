@@ -463,6 +463,7 @@ theorem rst_immediate_termination (ct : ConntrackCore.NfConn) (tcph : TcpHdr) :
 -- Module Exports
 --------------------------------------------------
 
+/-
 -- Public API
 export get_conntrack_index
 export tcp_print_conntrack
@@ -479,5 +480,6 @@ export TcpHdr
 export TCP_TIMEOUTS
 export TCP_CONNTRACK_NAMES
 export HZ
+-/
 
 end MVK.Phase3.ConntrackTCP
