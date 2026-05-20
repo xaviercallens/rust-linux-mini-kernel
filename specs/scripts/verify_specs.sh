@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verify Lean 4 specifications for MVK v9.2.0-gamma
+# Verify Lean 4 specifications for MVK v9.3.0-gamma
 # Usage: ./verify_specs.sh [--verbose]
 
 set -e
@@ -10,7 +10,7 @@ if [[ "$1" == "--verbose" ]]; then
 fi
 
 echo "========================================"
-echo "  MVK v9.2.0-gamma Formal Verification"
+echo "  MVK v9.3.0-gamma Formal Verification"
 echo "========================================"
 echo ""
 
