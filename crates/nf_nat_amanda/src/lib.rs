@@ -18,34 +18,22 @@ pub const NF_ACCEPT: c_uint = 0x0000_0001;
 pub const EBUSY: c_int = 16;
 
 #[repr(C)]
-struct nf_conntrack_proto {
-    tcp: nf_conntrack_proto_tcp,
-}
+struct nf_conntrack_proto { tcp: nf_conntrack_proto_tcp }
 
 #[repr(C)]
-struct nf_conntrack_proto_tcp {
-    port: u16,
-}
+struct nf_conntrack_proto_tcp { port: u16 }
 
 #[repr(C)]
-struct nf_conntrack_tuple_dst {
-    u: nf_conntrack_tuple_u,
-}
+struct nf_conntrack_tuple_dst { u: nf_conntrack_tuple_u }
 
 #[repr(C)]
-struct nf_conntrack_tuple_u {
-    tcp: nf_conntrack_tuple_tcp,
-}
+struct nf_conntrack_tuple_u { tcp: nf_conntrack_tuple_tcp }
 
 #[repr(C)]
-struct nf_conntrack_tuple_tcp {
-    port: u16,
-}
+struct nf_conntrack_tuple_tcp { port: u16 }
 
 #[repr(C)]
-struct nf_conntrack_tuple {
-    dst: nf_conntrack_tuple_dst,
-}
+struct nf_conntrack_tuple { dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 struct nf_conntrack_expect {
@@ -56,9 +44,7 @@ struct nf_conntrack_expect {
 }
 
 #[repr(C)]
-struct nf_conntrack_nat_helper {
-    name: *const u8,
-}
+struct nf_conntrack_nat_helper { name: *const u8 }
 
 // Function declarations for kernel functions
 extern "C" {
@@ -217,14 +203,10 @@ pub unsafe extern "C" fn nf_nat_amanda_init() {
 
 // Helper functions for byte order conversion
 #[inline]
-unsafe fn htons(x: u16) -> u16 {
-    x.to_be()
-}
+unsafe fn htons(x: u16) -> u16 { x.to_be() }
 
 #[inline]
-unsafe fn ntohs(x: u16) -> u16 {
-    u16::from_be(x)
-}
+unsafe fn ntohs(x: u16) -> u16 { u16::from_be(x) }
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {

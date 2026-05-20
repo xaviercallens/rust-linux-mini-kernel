@@ -26,8 +26,7 @@ pub const IPPROTO_ICMPV6: u8 = 58;
 pub const IPPROTO_DCCP: u8 = 33;
 pub const IPPROTO_GRE: u8 = 47;
 
-pub const NF_NAT_MANIP_SRC: c_int = 0;
-pub const NF_NAT_MANIP_DST: c_int = 1;
+pub const NF_NAT_MANIP_SRC: c_int = 0; pub const NF_NAT_MANIP_DST: c_int = 1;
 
 // Type definitions
 
@@ -84,10 +83,7 @@ pub struct dccp_hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_man,
-    pub dst: nf_conntrack_man,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_man, pub dst: nf_conntrack_man }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -544,9 +540,7 @@ pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
 }
 
 // Error codes
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 // Test cases
 #[cfg(test)]

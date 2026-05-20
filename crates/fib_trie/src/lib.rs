@@ -16,9 +16,7 @@ pub const inflate_threshold: c_int = 50;
 pub const halve_threshold_root: c_int = 15;
 pub const inflate_threshold_root: c_int = 30;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -29,9 +27,7 @@ pub struct rcu_head {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_head {
-    pub first: *mut c_void,
-}
+pub struct hlist_head { pub first: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -65,9 +61,7 @@ pub struct tnode {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct trie {
-    pub kv: key_vector,
-}
+pub struct trie { pub kv: key_vector }
 
 #[no_mangle]
 pub static mut tnode_free_size: usize = 0;

@@ -8,16 +8,12 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_uint, c_void}};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
-pub const HZ: c_int = 100;
-pub const IPPROTO_GRE: u8 = 47;
+pub const HZ: c_int = 100; pub const IPPROTO_GRE: u8 = 47;
 
 pub const PPTP_START_SESSION_REQUEST: u16 = 1;
 pub const PPTP_START_SESSION_REPLY: u16 = 2;
@@ -34,8 +30,7 @@ pub const PPTP_WAN_ERROR_NOTIFY: u16 = 17;
 pub const PPTP_SET_LINK_INFO: u16 = 18;
 pub const PPTP_MSG_MAX: u16 = 18;
 
-pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ;
-pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ;
+pub const PPTP_GRE_TIMEOUT: c_int = 10 * 60 * HZ; pub const PPTP_GRE_STREAM_TIMEOUT: c_int = 5 * 60 * 60 * HZ;
 
 pub const PPTP_SESSION_NONE: c_int = 0;
 pub const PPTP_SESSION_REQUESTED: c_int = 1;
@@ -43,33 +38,23 @@ pub const PPTP_SESSION_CONFIRMED: c_int = 2;
 pub const PPTP_SESSION_ERROR: c_int = 3;
 pub const PPTP_SESSION_STOPREQ: c_int = 4;
 
-pub const PPTP_START_OK: u16 = 1;
-pub const PPTP_STOP_OK: u16 = 1;
+pub const PPTP_START_OK: u16 = 1; pub const PPTP_STOP_OK: u16 = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpControlHeader {
-    pub messageType: u16,
-}
+pub struct PptpControlHeader { pub messageType: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpStartSessionReply {
-    pub resultCode: u16,
-}
+pub struct PptpStartSessionReply { pub resultCode: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpStopSessionReply {
-    pub resultCode: u16,
-}
+pub struct PptpStopSessionReply { pub resultCode: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PptpOutCallAck {
-    pub callID: u16,
-    pub peersCallID: u16,
-}
+pub struct PptpOutCallAck { pub callID: u16, pub peersCallID: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -81,15 +66,11 @@ pub union pptp_ctrl_union {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_gre_address {
-    pub key: u16,
-}
+pub struct nf_conntrack_gre_address { pub key: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_proto {
-    pub gre: nf_conn_proto_gre,
-}
+pub struct nf_conn_proto { pub gre: nf_conn_proto_gre }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -148,9 +129,7 @@ pub static mut NF_NAT_PPTP_HOOK_EXPECTFN: nf_nat_pptp_hook_expectfn_t = ptr::nul
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    _private: [u8; 0],
-}
+pub struct spinlock_t { _private: [u8; 0] }
 
 static NF_PPTP_LOCK: spinlock_t = spinlock_t { _private: [] };
 

@@ -24,24 +24,16 @@ pub const XFRM_MODE_TUNNEL: c_int = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_comp_hdr {
-    pub cpi: __be16,
-}
+pub struct ip_comp_hdr { pub cpi: __be16 }
 
 #[repr(C)]
-pub struct inet6_skb_parm {
-    _priv: [u8; 0],
-}
+pub struct inet6_skb_parm { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct xfrm_state {
-    _priv: [u8; 0],
-}
+pub struct xfrm_state { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 #[cfg(not(test))]
 #[panic_handler]

@@ -28,9 +28,7 @@ pub struct ctl_table {
 }
 
 #[repr(C)]
-pub struct ctl_table_header {
-    _private: [u8; 0],
-}
+pub struct ctl_table_header { _private: [u8; 0] }
 
 unsafe extern "C" {
     pub fn register_net_sysctl_sz(

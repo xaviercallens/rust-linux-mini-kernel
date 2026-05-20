@@ -51,34 +51,23 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conntrack_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect {
-    pub class: c_int,
-}
+pub struct nf_conntrack_expect { pub class: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect_policy {
-    pub max_expected: c_uint,
-    pub timeout: c_uint,
-}
+pub struct nf_conntrack_expect_policy { pub max_expected: c_uint, pub timeout: c_uint }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_helper {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_helper { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct Spinlock {
-    _private: u32,
-}
+struct Spinlock { _private: u32 }
 
 type nf_nat_irc_hook_t = Option<
     unsafe extern "C" fn(
@@ -476,11 +465,9 @@ pub unsafe extern "C" fn spin_unlock_bh(lock: *mut Spinlock) {
 }
 
 // Constants
-const AF_INET: u8 = 2;
-const IPPROTO_TCP: u8 = 6;
+const AF_INET: u8 = 2; const IPPROTO_TCP: u8 = 6;
 const HELPER_NAME: &str = "irc";
-const IRC_PORT: u16 = 6667;
-const IPS_NAT_MASK: u32 = 0x0000000F;
+const IRC_PORT: u16 = 6667; const IPS_NAT_MASK: u32 = 0x0000000F;
 
 // Module exports
 #[no_mangle]

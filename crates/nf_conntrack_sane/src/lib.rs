@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::{mem, ptr};
+use core::{{mem, ptr}, ffi::{c_char, c_int, c_uint, c_void}};
 use kernel_types::*;
 
 pub type size_t = usize;
@@ -25,28 +24,20 @@ pub const fn CTINFO2DIR(ctinfo: c_int) -> c_int {
 pub const SANE_PORT: u16 = 6566;
 
 // SANE protocol constants
-pub const SANE_NET_START: u32 = 7;
-pub const SANE_STATUS_SUCCESS: u32 = 0;
+pub const SANE_NET_START: u32 = 7; pub const SANE_STATUS_SUCCESS: u32 = 0;
 
 // Error codes
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12;
 
 // Missing kernel FFI opaque types
 #[repr(C)]
-pub struct nf_conntrack_expect_policy {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_expect_policy { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_conntrack_expect {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_expect { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_conntrack_tuple {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_tuple { _priv: [u8; 0] }
 
 // C struct translations
 #[repr(C)]
@@ -60,10 +51,7 @@ pub struct tcphdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sane_request {
-    pub RPC_code: u32,
-    pub handle: u32,
-}
+pub struct sane_request { pub RPC_code: u32, pub handle: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -76,15 +64,11 @@ pub struct sane_reply_net_start {
 // Helper data structure
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_sane_master {
-    pub state: c_int,
-}
+pub struct nf_ct_sane_master { pub state: c_int }
 
 // Opaque helper type
 #[repr(C)]
-pub struct nf_conntrack_helper {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_helper { _priv: [u8; 0] }
 
 // Extern declarations for kernel functions
 unsafe extern "C" {

@@ -4,29 +4,18 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::mem;
-use core::ptr;
-use core::sync::atomic::AtomicU32;
+use core::{ffi::{c_char, c_int, c_uint, c_void}, mem, ptr, sync::atomic::AtomicU32};
 use kernel_types::*;
 
 // Opaque kernel objects (FFI-safe)
 #[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-}
+pub struct net { _private: [u8; 0] }
 #[repr(C)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
+pub struct sk_buff { _private: [u8; 0] }
 #[repr(C)]
-pub struct xfrm_state {
-    _private: [u8; 0],
-}
+pub struct xfrm_state { _private: [u8; 0] }
 #[repr(C)]
-pub struct spinlock_t {
-    _private: u32,
-}
+pub struct spinlock_t { _private: u32 }
 
 // Constants from C
 const XFRM6_TUNNEL_SPI_BYADDR_HSIZE: c_uint = 256;
@@ -36,25 +25,16 @@ const XFRM6_TUNNEL_SPI_MAX: u32 = 0xFFFF_FFFF;
 
 // Type definitions
 #[repr(C)]
-struct hlist_head {
-    first: *mut hlist_node,
-}
+struct hlist_head { first: *mut hlist_node }
 
 #[repr(C)]
-struct hlist_node {
-    next: *mut hlist_node,
-    pprev: *mut *mut hlist_node,
-}
+struct hlist_node { next: *mut hlist_node, pprev: *mut *mut hlist_node }
 
 #[repr(C)]
-struct xfrm_address_t {
-    addr: [u8; 16],
-}
+struct xfrm_address_t { addr: [u8; 16] }
 
 #[repr(C)]
-struct rcu_head {
-    func: Option<extern "C" fn(head: *mut rcu_head)>,
-}
+struct rcu_head { func: Option<extern "C" fn(head: *mut rcu_head)> }
 
 #[repr(C)]
 struct xfrm6_tunnel_net {

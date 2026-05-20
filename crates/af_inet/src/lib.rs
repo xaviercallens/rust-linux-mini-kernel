@@ -19,23 +19,15 @@ pub const ENOBUFS: c_int = -55;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct socket_ops {
-    pub family: c_int,
-}
+pub struct socket_ops { pub family: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct proto {
-    pub name: *const c_char,
-    pub slab: *mut c_void,
-}
+pub struct proto { pub name: *const c_char, pub slab: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -54,29 +46,19 @@ pub type dst_entry = c_void;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct linger {
-    pub l_onoff: c_int,
-    pub l_linger: c_int,
-}
+pub struct linger { pub l_onoff: c_int, pub l_linger: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct wait_queue_head_t {
-    _unused: c_int,
-}
+pub struct wait_queue_head_t { _unused: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct timer_list {
-    _unused: c_int,
-}
+pub struct timer_list { _unused: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct timeval {
-    tv_sec: c_int,
-    tv_usec: c_int,
-}
+pub struct timeval { tv_sec: c_int, tv_usec: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -166,40 +148,27 @@ unsafe extern "C" {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_sock_extended {
-    pub inet_opt: *mut c_void,
-}
+pub struct inet_sock_extended { pub inet_opt: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub user_ns: *mut c_void,
-    pub ipv4: *mut net_ipv4,
-}
+pub struct net { pub user_ns: *mut c_void, pub ipv4: *mut net_ipv4 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_ipv4 {
-    pub sysctl_tcp_fastopen: c_int,
-}
+pub struct net_ipv4 { pub sysctl_tcp_fastopen: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_connection_sock {
-    pub icsk_accept_queue: *mut accept_queue,
-}
+pub struct inet_connection_sock { pub icsk_accept_queue: *mut accept_queue }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct accept_queue {
-    pub fastopenq: fastopen_queue,
-}
+pub struct accept_queue { pub fastopenq: fastopen_queue }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct fastopen_queue {
-    pub max_qlen: c_int,
-}
+pub struct fastopen_queue { pub max_qlen: c_int }
 
 // Helper function to cast sock to inet_sock
 #[no_mangle]

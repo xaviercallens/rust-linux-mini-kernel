@@ -24,9 +24,7 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_seqadj {
-    pub seq: [nf_ct_seqadj; 2],
-}
+pub struct nf_conn_seqadj { pub seq: [nf_ct_seqadj; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -41,10 +39,7 @@ pub struct tcphdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct tcp_sack_block_wire {
-    pub start_seq: __be32,
-    pub end_seq: __be32,
-}
+pub struct tcp_sack_block_wire { pub start_seq: __be32, pub end_seq: __be32 }
 
 unsafe extern "C" {
     fn set_bit(bit: c_int, addr: *mut u32);
@@ -54,14 +49,10 @@ unsafe extern "C" {
     fn ip_hdrlen(skb: *mut sk_buff) -> c_int;
 }
 
-pub const IPPROTO_TCP: u16 = 6;
-pub const EINVAL: c_int = -22;
-pub const IPS_SEQ_ADJUST_BIT: c_int = 0;
+pub const IPPROTO_TCP: u16 = 6; pub const EINVAL: c_int = -22; pub const IPS_SEQ_ADJUST_BIT: c_int = 0;
 
 #[inline]
-fn after(a: __be32, b: __be32) -> bool {
-    (b.wrapping_sub(a) as i32) < 0
-}
+fn after(a: __be32, b: __be32) -> bool { (b.wrapping_sub(a) as i32) < 0 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_eh_personality() {}
@@ -373,18 +364,12 @@ pub unsafe extern "C" fn nf_ct_seq_offset(ct: *mut nf_conn, dir: c_int, seq: u32
 
 /// Helper function to check if a sequence number is after a position
 #[inline]
-fn after(seq: u32, pos: u32) -> bool {
-    seq.wrapping_sub(pos) < (1 << 31)
-}
+fn after(seq: u32, pos: u32) -> bool { seq.wrapping_sub(pos) < (1 << 31) }
 
 /// Helper function to convert network to host long
 #[inline]
-fn ntohl(n: u32) -> u32 {
-    u32::from_be(n)
-}
+fn ntohl(n: u32) -> u32 { u32::from_be(n) }
 
 /// Helper function to convert host to network long
 #[inline]
-fn htonl(h: u32) -> u32 {
-    u32::to_be(h)
-}
+fn htonl(h: u32) -> u32 { u32::to_be(h) }

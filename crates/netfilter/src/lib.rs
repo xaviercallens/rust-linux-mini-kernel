@@ -2,8 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = 22;
@@ -28,9 +27,7 @@ pub struct ip6_rt_info {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_bridge_frag_data {
-    pub _priv: u8,
-}
+pub struct nf_bridge_frag_data { pub _priv: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -42,9 +39,7 @@ pub struct nf_queue_entry_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_queue_entry {
-    pub state: nf_queue_entry_state,
-}
+pub struct nf_queue_entry { pub state: nf_queue_entry_state }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

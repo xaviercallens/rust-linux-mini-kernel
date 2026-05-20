@@ -25,53 +25,35 @@ pub union ip6_icmp_body {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_echo {
-    pub identifier: __be16,
-    pub sequence: __be16,
-}
+pub struct ip6_icmp_echo { pub identifier: __be16, pub sequence: __be16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_paramprob {
-    pub pointer: __be32,
-}
+pub struct ip6_icmp_paramprob { pub pointer: __be32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_redirect {
-    pub target: in6_addr,
-}
+pub struct ip6_icmp_redirect { pub target: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_neighbor {
-    pub target: in6_addr,
-}
+pub struct ip6_icmp_neighbor { pub target: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_router {
-    pub lifetime: __be32,
-    pub addr: in6_addr,
-}
+pub struct ip6_icmp_router { pub lifetime: __be32, pub addr: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_routersolicit {
-    pub reserved: __be32,
-}
+pub struct ip6_icmp_routersolicit { pub reserved: __be32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_timeexceed {
-    pub unused: __be32,
-}
+pub struct ip6_icmp_timeexceed { pub unused: __be32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_icmp_unreach {
-    pub unused: __be32,
-}
+pub struct ip6_icmp_unreach { pub unused: __be32 }
 
 /// Pointer to the UDP disconnect function.
 pub static mut __UDP_DISCONNECT: *mut core::ffi::c_void = core::ptr::null_mut();

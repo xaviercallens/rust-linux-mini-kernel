@@ -49,16 +49,10 @@ pub struct sockaddr_in6 {
 }
 
 #[repr(C)]
-pub struct ipv6hdr {
-    pub saddr: in6_addr,
-    pub daddr: in6_addr,
-}
+pub struct ipv6hdr { pub saddr: in6_addr, pub daddr: in6_addr }
 
 #[repr(C)]
-pub struct tcphdr {
-    pub source: c_ushort,
-    pub dest: c_ushort,
-}
+pub struct tcphdr { pub source: c_ushort, pub dest: c_ushort }
 
 #[inline(always)]
 unsafe fn skb_dst(_skb: *const sk_buff) -> *mut c_void {
@@ -66,9 +60,7 @@ unsafe fn skb_dst(_skb: *const sk_buff) -> *mut c_void {
 }
 
 #[inline(always)]
-unsafe fn skb_iif(_skb: *const sk_buff) -> c_int {
-    0
-}
+unsafe fn skb_iif(_skb: *const sk_buff) -> c_int { 0 }
 
 #[inline(always)]
 unsafe fn sock_set_rx_dst(_sk: *mut sock, _dst: *mut c_void) {}
@@ -80,9 +72,7 @@ unsafe fn sock_set_rx_dst_ifindex(_sk: *mut sock, _ifindex: c_int) {}
 unsafe fn ipv6_pinfo_set_rx_dst_cookie(_np: *mut ipv6_pinfo, _cookie: u32) {}
 
 #[inline(always)]
-unsafe fn rt6_get_cookie(_rt: *const rt6_info) -> u32 {
-    0
-}
+unsafe fn rt6_get_cookie(_rt: *const rt6_info) -> u32 { 0 }
 
 #[inline(always)]
 unsafe fn skb_ipv6_hdr(_skb: *const sk_buff) -> ipv6hdr {
@@ -99,9 +89,7 @@ unsafe fn skb_ipv6_hdr(_skb: *const sk_buff) -> ipv6hdr {
 }
 
 #[inline(always)]
-unsafe fn skb_tcp_hdr(_skb: *const sk_buff) -> tcphdr {
-    tcphdr { source: 0, dest: 0 }
-}
+unsafe fn skb_tcp_hdr(_skb: *const sk_buff) -> tcphdr { tcphdr { source: 0, dest: 0 } }
 
 unsafe extern "C" {
     fn secure_tcpv6_seq(

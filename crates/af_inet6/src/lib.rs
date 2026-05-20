@@ -20,10 +20,7 @@ pub type size_t = usize;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -47,23 +44,15 @@ pub struct inet_protosw {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_sysctl {
-    pub bindv6only: c_int,
-    pub flowlabel_reflect: c_int,
-}
+pub struct ipv6_sysctl { pub bindv6only: c_int, pub flowlabel_reflect: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_net {
-    pub sysctl: ipv6_sysctl,
-}
+pub struct ipv6_net { pub sysctl: ipv6_sysctl }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub user_ns: *const c_void,
-    pub ipv6: ipv6_net,
-}
+pub struct net { pub user_ns: *const c_void, pub ipv6: ipv6_net }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -77,16 +66,11 @@ pub struct sockaddr_in6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_params {
-    pub disable_ipv6: c_int,
-    pub autoconf: c_int,
-}
+pub struct ipv6_params { pub disable_ipv6: c_int, pub autoconf: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct socket {
-    pub _priv: *mut c_void,
-}
+pub struct socket { pub _priv: *mut c_void }
 
 unsafe extern "C" {
     static mut inetsw6: [list_head; 16];

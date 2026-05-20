@@ -8,14 +8,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_void};
-use core::mem::size_of;
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}, mem::size_of};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 pub type size_t = usize;
 pub type c_size_t = usize;
@@ -23,22 +19,15 @@ pub type socklen_t = u32;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct fib_rules_ops {
-    _priv: [u8; 0],
-}
+pub struct fib_rules_ops { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rhashtable_compare_arg {
-    pub key: *const c_void,
-}
+pub struct rhashtable_compare_arg { pub key: *const c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -54,10 +43,7 @@ pub struct rhashtable_params {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct mfc6_cache_cmp_arg {
-    pub mf6c_origin: in6_addr,
-    pub mf6c_mcastgrp: in6_addr,
-}
+pub struct mfc6_cache_cmp_arg { pub mf6c_origin: in6_addr, pub mf6c_mcastgrp: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -95,17 +81,11 @@ pub struct ipv6_net {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub ipv6: ipv6_net,
-}
+pub struct net { pub ipv6: ipv6_net }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct flowi6 {
-    pub daddr: in6_addr,
-    pub saddr: in6_addr,
-}
-
+pub struct flowi6 { pub daddr: in6_addr, pub saddr: in6_addr }
 
 pub const MRT6_FLUSH_MIFS: u32 = 0x0001;
 pub const MRT6_FLUSH_MIFS_STATIC: u32 = 0x0002;

@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_void};
-use core::mem;
+use core::{mem, ffi::{c_int, c_void}};
 use kernel_types::*;
 
 #[cfg(not(test))]
@@ -27,9 +26,7 @@ pub union in6_addr_union {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub in6_u: in6_addr_union,
-}
+pub struct in6_addr { pub in6_u: in6_addr_union }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -47,9 +44,7 @@ pub struct flowi6 {
 }
 
 #[repr(C)]
-pub struct request_sock {
-    _priv: [u8; 0],
-}
+pub struct request_sock { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -71,9 +66,7 @@ pub struct sockaddr_in6 {
     pub sin6_scope_id: u32,
 }
 
-pub const ENOMEM: c_int = -12;
-pub const EINVAL: c_int = -22;
-pub const AF_INET6: u16 = 10;
+pub const ENOMEM: c_int = -12; pub const EINVAL: c_int = -22; pub const AF_INET6: u16 = 10;
 
 extern "C" {
     fn memset(s: *mut c_void, c: c_int, n: size_t) -> *mut c_void;

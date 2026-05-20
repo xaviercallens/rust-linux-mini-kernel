@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}};
 use kernel_types::*;
 
 #[cfg(not(test))]
@@ -27,8 +26,7 @@ pub const ENOENT: c_int = -2;
 pub const SKB_GSO_GRE: u16 = 1 << 12;
 
 // GRE flags
-pub const GRE_KEY: u16 = 1 << 1;
-pub const GRE_CSUM: u16 = 1 << 2;
+pub const GRE_KEY: u16 = 1 << 1; pub const GRE_CSUM: u16 = 1 << 2;
 
 type netdev_features_t = u32;
 
@@ -39,16 +37,10 @@ type netdev_features_t = u32;
 // }
 
 #[repr(C)]
-pub struct list_head {
-    next: *mut list_head,
-    prev: *mut list_head,
-}
+pub struct list_head { next: *mut list_head, prev: *mut list_head }
 
 #[repr(C)]
-pub struct gre_base_hdr {
-    flags: u16,
-    protocol: u16,
-}
+pub struct gre_base_hdr { flags: u16, protocol: u16 }
 
 #[repr(C)]
 pub struct packet_offload_callbacks {
@@ -58,9 +50,7 @@ pub struct packet_offload_callbacks {
 }
 
 #[repr(C)]
-pub struct packet_offload {
-    callbacks: packet_offload_callbacks,
-}
+pub struct packet_offload { callbacks: packet_offload_callbacks }
 
 unsafe extern "C" {
     fn skb_inner_mac_header(skb: *const sk_buff) -> usize;

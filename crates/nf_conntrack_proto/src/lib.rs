@@ -43,13 +43,10 @@ pub const NF_IP_PRI_CONNTRACK: i32 = -100;
 pub const NF_IP_PRI_CONNTRACK_CONFIRM: i32 = 100;
 
 // Protocol family constants
-pub const NFPROTO_IPV4: c_uint = 2;
-pub const NFPROTO_IPV6: c_uint = 10;
-pub const PF_INET: c_uint = 2;
+pub const NFPROTO_IPV4: c_uint = 2; pub const NFPROTO_IPV6: c_uint = 10; pub const PF_INET: c_uint = 2;
 
 // Socket option constants
-pub const SO_ORIGINAL_DST: c_int = 80;
-pub const IP6T_SO_ORIGINAL_DST: c_int = 80;
+pub const SO_ORIGINAL_DST: c_int = 80; pub const IP6T_SO_ORIGINAL_DST: c_int = 80;
 
 // Status bit constants
 pub const IPS_SEQ_ADJUST_BIT: usize = 2;
@@ -59,25 +56,19 @@ const THIS_MODULE: *mut c_void = core::ptr::null_mut();
 
 // Opaque kernel types that may not be present in kernel_types.
 #[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-}
+pub struct net { _private: [u8; 0] }
 
 // Opaque/FFI structs
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_help {
-    helper: *const nf_conntrack_helper,
-}
+pub struct nf_conn_help { helper: *const nf_conntrack_helper }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple_hash;
 
 #[repr(C)]
-pub struct nf_hook_state {
-    _private: [u8; 0],
-}
+pub struct nf_hook_state { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -89,9 +80,7 @@ pub struct nf_hook_ops {
 }
 
 #[repr(C)]
-pub struct nf_ct_zone_dflt {
-    _private: [u8; 0],
-}
+pub struct nf_ct_zone_dflt { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -106,14 +95,10 @@ pub struct nf_sockopt_ops {
 // Exported symbol types
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_l4proto { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct mutex {
-    _private: [u8; 0],
-}
+pub struct mutex { _private: [u8; 0] }
 
 // Static mutex initialization
 static NF_CT_PROTO_MUTEX: mutex = mutex {
@@ -268,7 +253,6 @@ pub static IPV4_CONNTRACK_OPS: [nf_hook_ops; 4] = [
         priority: NF_IP_PRI_CONNTRACK_CONFIRM,
     },
 ];
-
 
 // Socket option handlers
 #[no_mangle]

@@ -8,7 +8,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::panic::PanicInfo;
+use core::{panic::PanicInfo, ptr};
 use kernel_types::*;
 
 pub const SCTP_CID_INIT: u8 = 1;
@@ -54,14 +54,28 @@ pub struct sctp_chunkhdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_proto {
-    pub sctp: sctp_conntrack,
+pub struct sctp_conntrack {
+    pub state: u8,
+    pub vtag: [u32; 2],
+    pub init: [[u32; 2]; 2],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub proto: nf_conntrack_proto,
+pub struct nf_conntrack_proto { pub sctp: sctp_conntrack }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn { pub proto: nf_conntrack_proto }
+
+unsafe extern "C" {
+    fn skb_header_pointer(
+        skb: *const sk_buff,
+        offset: c_uint,
+        len: size_t,
+        buffer: *mut c_void,
+    ) -> *mut c_void;
+    fn set_bit(nr: c_ulong, addr: *mut c_ulong);
 }
 
 // Static data
@@ -133,19 +147,6 @@ pub unsafe extern "C" fn sctp_print_conntrack(s: *mut c_void, ct: *mut nf_conn) 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_eh_personality() {}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn sctp_print_conntrack(_s: *mut c_void, ct: *const nf_conn) {
-    if ct.is_null() {
-        return;
-    }
-    let state = (*ct).proto.sctp.state as usize;
-    let _name = if state < SCTP_CONNTRACK_NAMES.len() {
-        SCTP_CONNTRACK_NAMES[state]
-    } else {
-        "UNKNOWN"
-    };
-}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn do_basic_checks(
@@ -241,6 +242,7 @@ pub unsafe extern "C" fn sctp_packet(
     let mut sch: *mut sctp_chunkhdr = ptr::null_mut();
     let mut _sch: sctp_chunkhdr = sctp_chunkhdr {
         type_: 0,
+        flags: 0,
         length: 0,
     };
 
@@ -327,6 +329,7 @@ pub unsafe extern "C" fn sctp_new(
     let mut sch: *mut sctp_chunkhdr = ptr::null_mut();
     let mut _sch: sctp_chunkhdr = sctp_chunkhdr {
         type_: 0,
+        flags: 0,
         length: 0,
     };
 
@@ -378,7 +381,10 @@ pub unsafe extern "C" fn sctp_new(
     if count == 0 {
         return 0;
     }
-    let _ = new_state(ct, dir, chunk_type);
+    // Update state based on last seen chunk
+    if !sch.is_null() {
+        let _ = new_state(ct, dir, (*sch).type_);
+    }
     1
 }
 

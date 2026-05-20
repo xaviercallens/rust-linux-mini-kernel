@@ -36,27 +36,19 @@ pub struct flowi6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct pktinfo {
-    pub ipi6_ifindex: c_int,
-}
+pub struct pktinfo { pub ipi6_ifindex: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rxopt_bits {
-    pub rxpmtu: c_int,
-}
+pub struct rxopt_bits { pub rxpmtu: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_flowlabel {
-    pub opt: *mut ipv6_txoptions,
-}
+pub struct ip6_flowlabel { pub opt: *mut ipv6_txoptions }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_txoptions {
-    _unused: [u8; 0],
-}
+pub struct ipv6_txoptions { _unused: [u8; 0] }
 
 unsafe extern "C" {
     fn ipv6_addr_v4mapped(a: *const in6_addr) -> bool;
@@ -245,12 +237,7 @@ unsafe fn sock_net(sk: *mut sock) -> *mut c_void {
 }
 
 #[repr(C)]
-struct dst_entry {
-    obsolete: c_int,
-    ops: *mut dst_ops,
-}
+struct dst_entry { obsolete: c_int, ops: *mut dst_ops }
 
 #[repr(C)]
-struct dst_ops {
-    check: Option<unsafe extern "C" fn(*mut dst_entry, c_ulong) -> *mut dst_entry>,
-};
+struct dst_ops { check: Option<unsafe extern "C" fn(*mut dst_entry, c_ulong) -> *mut dst_entry> }

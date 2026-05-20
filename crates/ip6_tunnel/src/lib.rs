@@ -8,9 +8,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, ffi::{c_char, c_int, c_uint, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
 type Net = c_void;
@@ -81,9 +79,7 @@ unsafe fn in6_addr_is_any(a: *const in6_addr) -> bool {
     }
 }
 
-unsafe fn ipv6_addr_any(addr: *const in6_addr) -> bool {
-    in6_addr_is_any(addr)
-}
+unsafe fn ipv6_addr_any(addr: *const in6_addr) -> bool { in6_addr_is_any(addr) }
 
 unsafe fn get_list(mut head: *mut ip6_tnl, mut f: impl FnMut(*mut ip6_tnl)) {
     while !head.is_null() {

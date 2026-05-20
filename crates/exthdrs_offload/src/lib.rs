@@ -21,9 +21,7 @@ pub const IPPROTO_DSTOPTS: c_int = 44;
 pub const INET6_PROTO_GSO_EXTHDR: c_int = 0x0001;
 
 #[repr(C)]
-pub struct NetOffload {
-    pub flags: c_int,
-}
+pub struct NetOffload { pub flags: c_int }
 
 static RTHDR_OFFLOAD: NetOffload = NetOffload {
     flags: INET6_PROTO_GSO_EXTHDR,

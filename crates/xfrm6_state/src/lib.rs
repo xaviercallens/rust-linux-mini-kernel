@@ -12,8 +12,7 @@ use core::ffi::c_int;
 use core::panic::PanicInfo;
 use kernel_types::*;
 
-pub const AF_INET6: c_int = 10;
-pub const IPPROTO_IPV6: c_int = 41;
+pub const AF_INET6: c_int = 10; pub const IPPROTO_IPV6: c_int = 41;
 
 // Function pointer types
 type OutputFn = unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int;
@@ -21,19 +20,13 @@ type TransportFinishFn = unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int
 type LocalErrorFn = unsafe extern "C" fn(*mut c_void, *mut sockaddr, *mut c_void) -> c_int;
 
 #[repr(C)]
-pub struct xfrm_state {
-    _priv: [u8; 0],
-}
+pub struct xfrm_state { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct sockaddr {
-    _priv: [u8; 0],
-}
+pub struct sockaddr { _priv: [u8; 0] }
 
 #[repr(C)]
 pub struct xfrm_state_afinfo {

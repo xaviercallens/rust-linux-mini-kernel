@@ -6,32 +6,24 @@
 use core::ptr;
 use kernel_types::*;
 
-pub const ENOMEM: c_int = 12;
-pub const ENOENT: c_int = 2;
-pub const EINPROGRESS: c_int = 115;
+pub const ENOMEM: c_int = 12; pub const ENOENT: c_int = 2; pub const EINPROGRESS: c_int = 115;
 
 pub type __be16 = u16;
 pub type __be32 = u32;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sk_buff {
-    _private: [u8; 0],
-}
+pub struct sk_buff { _private: [u8; 0] }
 
 // Type definitions
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct frag_hdr {
-    pub frag_off: __be16,
-}
+pub struct frag_hdr { pub frag_off: __be16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_frags {
-    _private: [u8; 0],
-}
+pub struct inet_frags { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -68,31 +60,21 @@ pub struct frag_v6_compare_key {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_net {
-    pub fqdir: *mut inet_frags,
-}
+pub struct ipv6_net { pub fqdir: *mut inet_frags }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub ipv6: ipv6_net,
-}
+pub struct net { pub ipv6: ipv6_net }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_device {
-    pub ifindex: c_int,
-}
+pub struct net_device { pub ifindex: c_int }
 
 #[repr(C)]
-pub struct timer_list {
-    _private: [u8; 0],
-}
+pub struct timer_list { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct reasm_data {
-    _private: [u8; 0],
-}
+pub struct reasm_data { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -101,7 +83,6 @@ pub struct IP6CB {
     pub flags: c_int,
     pub frag_max_size: c_int,
 }
-
 
 #[inline(always)]
 unsafe fn ip6cb(_skb: *mut sk_buff) -> *mut IP6CB {

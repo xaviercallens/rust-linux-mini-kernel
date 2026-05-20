@@ -10,10 +10,7 @@ pub const FOU_F_REMCSUM_NOPARTIAL: u8 = 1 << 0;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -48,10 +45,7 @@ pub struct fou {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct fou_net {
-    pub fou_list: list_head,
-    pub fou_lock: *mut c_void,
-}
+pub struct fou_net { pub fou_list: list_head, pub fou_lock: *mut c_void }
 
 unsafe extern "C" {
     fn ip_hdr(skb: *mut sk_buff) -> *mut iphdr;

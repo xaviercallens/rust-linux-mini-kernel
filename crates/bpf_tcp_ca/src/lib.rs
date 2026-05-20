@@ -23,51 +23,35 @@ pub const TCP_CONG_MASK: c_uint = 0;
 // Opaque FFI types
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct Btf {
-    _private: [u8; 0],
-}
+pub struct Btf { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BtfType {
-    _private: [u8; 0],
-}
+pub struct BtfType { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BpfProg {
-    _private: [u8; 0],
-}
+pub struct BpfProg { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BpfInsnAccessAux {
-    _private: [u8; 0],
-}
+pub struct BpfInsnAccessAux { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BpfVerifierLog {
-    _private: [u8; 0],
-}
+pub struct BpfVerifierLog { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BpfFuncProto {
-    _private: [u8; 0],
-}
+pub struct BpfFuncProto { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BtfMember {
-    _private: [u8; 0],
-}
+pub struct BtfMember { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct tcp_sock {
-    _private: [u8; 0],
-}
+pub struct tcp_sock { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

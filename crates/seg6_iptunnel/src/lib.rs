@@ -36,29 +36,19 @@ pub struct ipv6_sr_hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct seg6_iptunnel_encap {
-    pub mode: c_int,
-    pub srh: *mut ipv6_sr_hdr,
-}
+pub struct seg6_iptunnel_encap { pub mode: c_int, pub srh: *mut ipv6_sr_hdr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct dst_cache {
-    _private: [u8; 1],
-}
+pub struct dst_cache { _private: [u8; 1] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct seg6_lwt {
-    pub cache: dst_cache,
-    pub tuninfo: [seg6_iptunnel_encap; 1],
-}
+pub struct seg6_lwt { pub cache: dst_cache, pub tuninfo: [seg6_iptunnel_encap; 1] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct lwtunnel_state {
-    pub data: *mut c_void,
-}
+pub struct lwtunnel_state { pub data: *mut c_void }
 
 // Function implementations
 
