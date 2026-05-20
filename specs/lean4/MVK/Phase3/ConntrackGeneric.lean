@@ -58,7 +58,7 @@ structure NfGenericNet where
 -- Netlink attribute policy
 structure NlaPolicy where
   type : UInt32
-  deriving Repr, BEq
+  deriving Repr, BEq, Inhabited
 
 -- Connection tracking timeout configuration
 structure NfCtnlTimeout where
@@ -67,17 +67,15 @@ structure NfCtnlTimeout where
   nlattr_max : Int
   obj_size : Nat
   nla_policy : Ptr
-  deriving Repr
 
 -- L4 protocol handler structure
 structure NfConntrackL4Proto where
   l4proto : UInt8
   ctnl_timeout : NfCtnlTimeout
-  deriving Repr
 
 -- Netlink attribute policy for generic timeout (Source: lib.rs:58-62)
 def generic_timeout_nla_policy : Array NlaPolicy := Id.run do
-  let mut arr := Array.mkArray (CTA_TIMEOUT_GENERIC_MAX + 1) (NlaPolicy.mk 0)
+  let mut arr := List.toArray (List.replicate (CTA_TIMEOUT_GENERIC_MAX + 1) (NlaPolicy.mk 0))
   arr := arr.set! CTA_TIMEOUT_GENERIC_TIMEOUT (NlaPolicy.mk NLA_U32)
   return arr
 
@@ -277,8 +275,8 @@ theorem generic_null_attr_uses_default
 /-- Timeout value validation prevents overflow -/
 theorem generic_timeout_no_overflow
     (seconds : UInt32) :
-    seconds < (UInt32.size / HZ.toNat) →
-    seconds * HZ < UInt32.size := by
+    seconds.toNat < (UInt32.size / HZ.toNat) →
+    seconds.toNat * HZ.toNat < UInt32.size := by
   -- Proof strategy:
   -- 1. Multiplication by HZ checked for overflow
   -- 2. Reasonable timeout values don't overflow

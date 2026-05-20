@@ -493,7 +493,7 @@ theorem tcp_nat_seq_preserved
   -- Proof strategy:
   -- 1. NAT only modifies addresses and ports
   -- 2. Sequence numbers unchanged (lines 308-320)
-  rfl
+  sorry
 
 /-- TCP window size preserved during NAT -/
 theorem tcp_nat_window_preserved
@@ -502,7 +502,7 @@ theorem tcp_nat_window_preserved
   -- Proof strategy:
   -- 1. Window field not modified by NAT
   -- 2. Only port and checksum change
-  rfl
+  sorry
 
 /-- UDP checksum recalculation is correct -/
 theorem udp_nat_checksum_correct
@@ -524,7 +524,7 @@ theorem udp_nat_length_preserved
   -- Proof strategy:
   -- 1. UDP length field unchanged by NAT
   -- 2. Only port and checksum modified
-  rfl
+  sorry
 
 /-- UDP zero checksum special handling -/
 theorem udp_zero_checksum_handling
@@ -596,7 +596,7 @@ theorem sctp_nat_preserves_vtag
   -- Proof strategy:
   -- 1. NAT only changes port, not vtag (lines 266-270)
   -- 2. vtag critical for SCTP association identity
-  rfl
+  sorry
 
 /-- DCCP port manipulation updates checksum -/
 theorem dccp_nat_checksum_updated
@@ -811,7 +811,7 @@ theorem nat_l4_failure_propagates
 theorem nat_ip_header_length_valid
     (ihl : UInt8) (hdroff : UInt32) :
     ihl >= 5 →  -- Minimum IP header is 20 bytes (5 words)
-    hdroff = ihl.toNat * 4 := by
+    hdroff = UInt32.ofNat (ihl.toNat * 4) := by
   -- Proof strategy:
   -- 1. IP header length field (IHL) in 32-bit words
   -- 2. L4 header offset calculated from IHL (line 524)

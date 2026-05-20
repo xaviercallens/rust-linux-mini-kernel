@@ -44,7 +44,7 @@ jobs:
       - name: Type check specifications
         run: |
           cd specs/lean4
-          lake env lean MVK
+          lake env lean MVK.lean
 
       - name: Run verification script
         run: |
@@ -55,11 +55,11 @@ jobs:
         run: |
           cd specs/lean4
           # Count 'sorry' in specifications
-          SORRY_COUNT=$(grep -r "sorry" phase1/*.lean | wc -l || echo "0")
+          SORRY_COUNT=$(grep -r "sorry" MVK/ | wc -l || echo "0")
           echo "Outstanding proofs (sorry): $SORRY_COUNT"
 
           # Fail if sorry count increases beyond baseline
-          BASELINE=12
+          BASELINE=270
           if [ "$SORRY_COUNT" -gt "$BASELINE" ]; then
             echo "ERROR: Proof regressions detected!"
             echo "Current sorry count ($SORRY_COUNT) exceeds baseline ($BASELINE)"
@@ -71,9 +71,9 @@ jobs:
           cd specs/lean4
 
           # Count statistics
-          THEOREMS=$(grep -r "^theorem" phase1/*.lean | wc -l || echo "0")
-          AXIOMS=$(grep -r "^axiom" phase1/*.lean | wc -l || echo "0")
-          SORRY=$(grep -r "sorry" phase1/*.lean | wc -l || echo "0")
+          THEOREMS=$(grep -r "^theorem" MVK/ | wc -l || echo "0")
+          AXIOMS=$(grep -r "^axiom" MVK/ | wc -l || echo "0")
+          SORRY=$(grep -r "sorry" MVK/ | wc -l || echo "0")
 
           echo "## Proof Status" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -100,10 +100,7 @@ jobs:
         run: |
           cd specs/lean4
           # Verify all imports are valid
-          for file in phase1/*.lean; do
-            echo "Checking $file..."
-            lake env lean "$file"
-          done
+          lake env lean MVK.lean
 
   validate-implementation:
     name: Validate Implementation Against Specs

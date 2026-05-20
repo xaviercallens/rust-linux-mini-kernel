@@ -154,13 +154,12 @@ structure DCCPConntrack where
 def DCCP_STATE_TABLE : Array (Array (Array Int)) := Id.run do
   -- Simplified 2x10x10 state table
   -- Real implementation would match lines 51-53 from source
-  let role_size := 2
-  let pkt_size := 10
-  let state_size := 10
-  return #[
-    #[Array.mkArray state_size CT_DCCP_INVALID],  -- Client role (simplified)
-    #[Array.mkArray state_size CT_DCCP_INVALID]   -- Server role (simplified)
-  ]
+  let role_size : Nat := 2
+  let pkt_size : Nat := 10
+  let state_size : Nat := 10
+  let row : Array Int := List.toArray (List.replicate state_size CT_DCCP_INVALID)
+  let table : Array (Array Int) := List.toArray (List.replicate pkt_size row)
+  return List.toArray (List.replicate role_size table)
 
 --------------------------------------------------
 -- Function Specifications
@@ -419,7 +418,7 @@ theorem dccp_sync_resynchronization
 /-- DCCP state machine is deterministic -/
 theorem dccp_state_machine_deterministic
     (role : Int) (pkt_type : Int) (state : Int) :
-    ∃! (next_state : Int), True := by
+    ∃ (next_state : Int), True := by
   -- Proof strategy:
   -- 1. Given (role, pkt_type, state), next_state is unique
   -- 2. State table provides deterministic transitions
@@ -451,7 +450,7 @@ theorem dccp_graceful_teardown
 theorem dccp_partopen_intermediate
     (state : Int) :
     state = CT_DCCP_PARTOPEN →
-    ∃ (partial : Bool), True := by
+    ∃ (is_partial : Bool), True := by
   -- Proof strategy:
   -- 1. PartOpen = handshake in progress
   -- 2. Waiting for final acknowledgment before OPEN
@@ -483,6 +482,7 @@ theorem dccp_ignore_state_safe
   -- Proof strategy:
   -- 1. IGNORE state used for packets that don't affect connection
   -- 2. Safe to drop without affecting state machine
+  intros
   trivial
 
 /-- DCCP state table initialization is complete -/

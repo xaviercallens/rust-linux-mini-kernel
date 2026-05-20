@@ -4,10 +4,14 @@
 #[allow(non_camel_case_types)]
 type c_int = i32;
 
+#[cfg(not(test))]
 extern "C" {
     fn x86_out8(port: u16, value: u8);
     fn x86_in8(port: u16) -> u8;
 }
+
+#[cfg(test)]
+use self::tests::{x86_in8, x86_out8};
 
 const SERIAL_PORT: u16 = 0x3F8;
 

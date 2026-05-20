@@ -40,9 +40,9 @@ pub unsafe extern "C" fn start_kernel() -> ! {
 
     if arch_setup_init() != 0 {
         print(b"PANIC: arch_setup_init failed\n");
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(miri)))]
         loop { core::arch::asm!("hlt", options(nomem, nostack)); }
-        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        #[cfg(any(not(any(target_arch = "x86", target_arch = "x86_64")), miri))]
         panic!("arch_setup_init failed");
     }
 
@@ -53,18 +53,18 @@ pub unsafe extern "C" fn start_kernel() -> ! {
     {
         if page_alloc_init() != 0 {
             print(b"PANIC: page_alloc_init failed\n");
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(miri)))]
             loop { core::arch::asm!("hlt", options(nomem, nostack)); }
-            #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+            #[cfg(any(not(any(target_arch = "x86", target_arch = "x86_64")), miri))]
             panic!("page_alloc_init failed");
         }
         print(b"Page allocator initialized\n");
 
         if slab_init() != 0 {
             print(b"PANIC: slab_init failed\n");
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(miri)))]
             loop { core::arch::asm!("hlt", options(nomem, nostack)); }
-            #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+            #[cfg(any(not(any(target_arch = "x86", target_arch = "x86_64")), miri))]
             panic!("slab_init failed");
         }
         print(b"SLAB allocator initialized\n");
@@ -72,9 +72,9 @@ pub unsafe extern "C" fn start_kernel() -> ! {
 
     print(b"Kernel panic - Phase 2 boot complete!\n");
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(miri)))]
     loop { core::arch::asm!("hlt", options(nomem, nostack)); }
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(any(not(any(target_arch = "x86", target_arch = "x86_64")), miri))]
     panic!("Kernel boot complete");
 }
 

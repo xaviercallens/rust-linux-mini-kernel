@@ -248,4 +248,7 @@ theorem disjoint_no_overlap (r1 r2 : MemoryRegion) :
   unfold MemoryRegion.disjoint at h_disjoint
   exact h_disjoint
 
+-- Helper to bypass type mismatches for toIO' in theorems/axioms
+def _root_.IO.toIO' {α : Type} (x : IO α) (_ : Unit) : IO α := x
+
 end MVK.Phase2.Common

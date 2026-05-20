@@ -210,10 +210,10 @@ axiom flag_detection_exhaustive :
 
 /-- Safety: State transitions are deterministic -/
 axiom state_transitions_deterministic :
-  ∀ (s1 s2 : TcpConntrack) (tcph : TcpHdr),
+  ∀ (ct : ConntrackCore.NfConn) (s1 s2 : TcpConntrack) (tcph : TcpHdr),
     s1 = s2 →
-    nf_conntrack_tcp_packet (default) tcph s1 =
-    nf_conntrack_tcp_packet (default) tcph s2
+    nf_conntrack_tcp_packet ct tcph s1 =
+    nf_conntrack_tcp_packet ct tcph s2
 
 /-- Safety: Timeouts are positive -/
 axiom timeouts_positive :
@@ -313,7 +313,7 @@ theorem timeout_lookup_bounded (state : TcpConntrack) :
 /-- Correctness: State names array is complete -/
 theorem state_names_complete :
   TCP_CONNTRACK_NAMES.size ≥ 10 := by
-  rfl
+  decide
 
 --------------------------------------------------
 -- State Machine Invariants

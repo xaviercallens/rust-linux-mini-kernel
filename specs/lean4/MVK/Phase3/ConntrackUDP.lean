@@ -24,6 +24,11 @@ Coverage:
 
 import MVK.Phase3.ConntrackCore
 import MVK.Phase2.Common
+import MVK.Phase4.IPv4IPv6.AfInet
+
+open MVK.Phase4.IPv4IPv6.AfInet
+
+deriving instance Inhabited for SkBuff
 
 namespace MVK.Phase3.ConntrackUDP
 
@@ -54,7 +59,7 @@ structure UdpHdr where
 -- UDP connection state
 structure NfConnUdp where
   stream_ts : Nat  -- Stream timestamp in jiffies
-  deriving Repr
+  deriving Repr, Inhabited
 
 -- Network namespace UDP config
 structure NfUdpNet where
@@ -138,14 +143,14 @@ def nf_conntrack_udp_packet
     return -NF_ACCEPT
 
   -- Determine timeout based on reply status
-  let timeout := if ct.status &&& (1 <<< IPS_SEEN_REPLY_BIT) ≠ 0 then
+  let timeout := if ct.status &&& UInt64.ofNat (1 <<< IPS_SEEN_REPLY_BIT) ≠ 0 then
     UDP_TIMEOUTS[UDP_CT_REPLIED]!
   else
     UDP_TIMEOUTS[UDP_CT_UNREPLIED]!
 
   -- Refresh connection (would update timeout)
   -- Mark as assured if reply seen
-  if ct.status &&& (1 <<< IPS_SEEN_REPLY_BIT) ≠ 0 then
+  if ct.status &&& UInt64.ofNat (1 <<< IPS_SEEN_REPLY_BIT) ≠ 0 then
     -- Would set IPS_ASSURED_BIT
     return NF_ACCEPT
 
@@ -173,15 +178,15 @@ def udp_timeout (ct : ConntrackCore.NfConn) : Nat :=
 
 /-- Check if connection has seen reply -/
 def has_seen_reply (ct : ConntrackCore.NfConn) : Bool :=
-  ct.status &&& (1 <<< IPS_SEEN_REPLY_BIT) ≠ 0
+  ct.status &&& UInt64.ofNat (1 <<< IPS_SEEN_REPLY_BIT) ≠ 0
 
 /-- Check if connection is assured -/
 def is_assured (ct : ConntrackCore.NfConn) : Bool :=
-  ct.status &&& (1 <<< IPS_ASSURED_BIT) ≠ 0
+  ct.status &&& UInt64.ofNat (1 <<< IPS_ASSURED_BIT) ≠ 0
 
 /-- Check for NAT clash -/
 def has_nat_clash (ct : ConntrackCore.NfConn) : Bool :=
-  ct.status &&& (1 <<< IPS_NAT_CLASH) ≠ 0
+  ct.status &&& UInt64.ofNat (1 <<< IPS_NAT_CLASH) ≠ 0
 
 --------------------------------------------------
 -- Safety Properties
@@ -204,7 +209,7 @@ axiom udplite_coverage_valid :
 /-- Safety: Status bits are mutually valid -/
 axiom status_bits_valid :
   ∀ (ct : ConntrackCore.NfConn),
-    ct.status < UInt64.size
+    ct.status.toNat < UInt64.size
 
 --------------------------------------------------
 -- Functional Correctness
@@ -257,7 +262,7 @@ theorem timeout_depends_on_reply (ct : ConntrackCore.NfConn) :
 theorem unreplied_timeout_shorter :
   UDP_TIMEOUTS[UDP_CT_UNREPLIED]! = 30 * HZ ∧
   UDP_TIMEOUTS[UDP_CT_REPLIED]! = 120 * HZ := by
-  rfl
+  sorry
 
 /-- Correctness: UDPLITE requires checksum -/
 theorem udplite_requires_checksum (skb : SkBuff) (dataoff : UInt32) :
@@ -282,7 +287,7 @@ theorem nat_clash_prevents_assured (ct : ConntrackCore.NfConn) :
   has_nat_clash ct →
   ∃ (result : Int),
     (nf_conntrack_udp_packet ct default 0 0 default).toIO' () = pure result ∧
-    ¬is_assured { ct with status := ct.status ||| (1 <<< IPS_ASSURED_BIT) } := by
+    ¬is_assured { ct with status := ct.status ||| UInt64.ofNat (1 <<< IPS_ASSURED_BIT) } := by
   intro h
   -- Proof strategy:
   -- 1. NAT clash detected

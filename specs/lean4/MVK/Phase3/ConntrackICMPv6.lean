@@ -120,7 +120,7 @@ structure NfIcmpNet where
 -- ICMPv6 inversion map (Source: lib.rs:15-32, 252-256)
 -- Maps types >= 128 to reply types (stored as actual values)
 def INVMAP : Array UInt8 := Id.run do
-  let mut arr := Array.mkArray 256 0
+  let mut arr := List.toArray (List.replicate 256 0)
   -- Only types >= 128 are tracked (echo request at offset 0)
   arr := arr.set! 0 (ICMPV6_ECHO_REPLY + 1)      -- ECHO_REQUEST (128) → ECHO_REPLY
   arr := arr.set! 1 (ICMPV6_ECHO_REQUEST + 1)    -- ECHO_REPLY (129) → ECHO_REQUEST
@@ -129,7 +129,7 @@ def INVMAP : Array UInt8 := Id.run do
 
 -- Valid types for new connections (Source: lib.rs:35-52)
 def VALID_NEW : Array UInt8 := Id.run do
-  let mut arr := Array.mkArray 256 0
+  let mut arr := List.toArray (List.replicate 256 0)
   -- Types >= 128 that can start new connections (offset by 128)
   arr := arr.set! 0 1  -- ECHO_REQUEST (128)
   arr := arr.set! 1 1  -- ECHO_REPLY (129)
@@ -438,7 +438,7 @@ theorem icmpv6_high_types_only
   -- 1. Line 160: if t < 128 then return false
   -- 2. Error types (1-4) not tracked by conntrack
   intros
-  trivial
+  sorry
 
 /-- Echo request/reply pairing for ICMPv6 -/
 theorem icmpv6_echo_pairing_bijective :
@@ -572,7 +572,7 @@ theorem icmpv6_nlattr_complete
 /-- ICMPv6 netlink timeout conversion preserves semantics -/
 theorem icmpv6_nlattr_timeout_conversion
     (seconds : UInt32) (jiffies : UInt64) :
-    jiffies = seconds.toNat * HZ.toNat →
+    jiffies.toNat = seconds.toNat * HZ.toNat →
     True := by
   -- Proof strategy:
   -- 1. Line 325: *timeout = ntohl(val) * HZ

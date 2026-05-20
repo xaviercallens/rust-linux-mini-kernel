@@ -528,7 +528,7 @@ theorem sctp_state_machine_deterministic
     (dir : Nat) (chunk_type : UInt8) (state : UInt8) :
     dir < 2 →
     state < SCTP_CONNTRACK_MAX →
-    ∃! (next_state : UInt8), True := by
+    ∃ (next_state : UInt8), True ∧ ∀ (other : UInt8), True → other = next_state := by
   -- Proof strategy:
   -- 1. Given (dir, chunk_type, state), next_state is unique
   -- 2. State table provides deterministic transitions
