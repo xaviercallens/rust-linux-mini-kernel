@@ -70,6 +70,8 @@ sns.barplot(
 axes[2].set_title('Syscall Execution Latency (Lower is Better)')
 axes[2].set_ylabel('Nanoseconds (ns)')
 
-plt.tight_layout()
-plt.savefig('/Users/xcallens/.gemini/antigravity/brain/8b1eff3f-b7e1-4d44-ae83-4b8f6e50eec8/gcp_benchmark_plot.png', dpi=300)
-print("Benchmark plot saved to artifacts: gcp_benchmark_plot.png")
+import os
+save_dir = '/Users/xcallens/.gemini/antigravity/brain/8b1eff3f-b7e1-4d44-ae83-4b8f6e50eec8'
+save_path = os.path.join(save_dir, 'gcp_benchmark_plot.png') if os.path.exists(save_dir) else 'gcp_benchmark_plot.png'
+plt.savefig(save_path, dpi=300)
+print(f"Benchmark plot saved to: {save_path}")
