@@ -77,7 +77,7 @@ static ALL_PORTS_IN_USE: &[u8; 17] = b"all ports in use\0";
 static CANNOT_MANGLE_PACKET: &[u8; 21] = b"cannot mangle packet\0";
 
 static mut NAT_HELPER_AMANDA: nf_conntrack_nat_helper =
-    nf_ct_nat_helper_init(AMANDA_NAME.as_ptr() as *const c_char);
+    nf_ct_nat_helper_init(AMANDA_NAME.as_ptr());
 
 #[unsafe(no_mangle)]
 static mut nf_nat_amanda_hook: Option<
@@ -188,17 +188,17 @@ pub unsafe extern "C" fn help(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_nat_amanda_fini() {
     nf_nat_helper_unregister(&mut NAT_HELPER_AMANDA);
-    NF_NAT_AMANDA_HOOK = None;
+    nf_nat_amanda_hook = None;
     synchronize_rcu();
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_nat_amanda_init() {
     // SAFETY: This is a module init function, called once at load time
-    assert!(NF_NAT_AMANDA_HOOK.is_none(), "Hook already initialized");
+    assert!(nf_nat_amanda_hook.is_none(), "Hook already initialized");
 
     nf_nat_helper_register(&mut NAT_HELPER_AMANDA);
-    NF_NAT_AMANDA_HOOK = Some(help);
+    nf_nat_amanda_hook = Some(help);
 }
 
 // Helper functions for byte order conversion

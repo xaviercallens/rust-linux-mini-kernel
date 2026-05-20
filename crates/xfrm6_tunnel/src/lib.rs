@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::{ffi::{c_char, c_int, c_uint, c_void}, mem, ptr, sync::atomic::AtomicU32};
+use core::{ffi::{c_char, c_int, c_uint, c_void}, mem, ptr, sync::atomic::{AtomicU32, Ordering}};
 use kernel_types::*;
 
 // Opaque kernel objects (FFI-safe)
@@ -99,6 +99,14 @@ unsafe extern "C" {
     fn rcu_read_lock_bh();
     fn rcu_read_unlock_bh();
     fn xfrm6_addr_equal(a: *const xfrm_address_t, b: *const xfrm_address_t) -> bool;
+    fn spin_lock_bh(lock: *mut spinlock_t);
+    fn spin_unlock_bh(lock: *mut spinlock_t);
+    fn call_rcu(head: *mut rcu_head, func: extern "C" fn(*mut rcu_head));
+}
+
+// RCU callback
+extern "C" fn x6spi_destroy_rcu(_head: *mut rcu_head) {
+    // Stub implementation
 }
 
 // Stub pernet callbacks (can be replaced by full impl)
@@ -345,10 +353,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
     spi
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(_n: *mut net, _saddr: *mut xfrm_address_t) -> u32 {
-    XFRM6_TUNNEL_SPI_MIN.min(XFRM6_TUNNEL_SPI_MAX)
-}
+// Duplicate removed - main implementation at line 180
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
