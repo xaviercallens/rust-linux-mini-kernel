@@ -1,0 +1,72 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["3831d620f83ab955.olean"],
+  "i": "0423879f30c392ef.ilean",
+  "c": "3012880edbf97d16.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/lean /Users/xcallens/rust-linux-mini-kernel/specs/lean4/MVK/Phase1/Printk.lean -o /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/MVK/Phase1/Printk.olean -i /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/MVK/Phase1/Printk.ilean -c /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/Printk.c --setup /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/Printk.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "MVK/Phase1/Printk.lean:179:5: unused variable `byte`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:184:5: unused variable `port`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:184:23: unused variable `value`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:217:5: unused variable `byte`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:291:5: unused variable `byte1`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:291:11: unused variable `byte2`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:298:5: unused variable `byte`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message": "MVK/Phase1/Printk.lean:316:8: declaration uses `sorry`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:326:5: unused variable `data`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:333:5: unused variable `data`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:344:5: unused variable `byte`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:381:5: unused variable `data1`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "MVK/Phase1/Printk.lean:381:11: unused variable `data2`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"}],
+ "inputs":
+ [["MVK.Phase1.Printk:deps",
+   [["deps",
+     [["mvk_specs/MVK:extraDep", [["@mvk_specs:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["MVK.Phase2.Common transitive imports (legacy)", "00000000000006bb"],
+        ["MVK.Phase2.Common:importAllArts", "4cf1fefd38870603"]]]]],
+    ["libs",
+     [["import dynlibs",
+       [["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase2_Common.dylib",
+         "dbd5f7aeee020317"]]],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+   "fa77a35a41db35c0"],
+  ["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/MVK/Phase1/Printk.lean",
+   "044e348603960c72"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: MVK.Phase1.Printk", "d7d4510b8bc280fa"],
+  ["Package.id?: (some mvk_specs)", "87e214ad4fcfa210"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "9728ce9124c25bf1"}

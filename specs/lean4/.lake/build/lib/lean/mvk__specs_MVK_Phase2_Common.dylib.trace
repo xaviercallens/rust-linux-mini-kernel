@@ -1,0 +1,17 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs": "dbd5f7aeee020317.dylib",
+ "log":
+ [{"message":
+   ".> MACOSX_DEPLOYMENT_TARGET=99.0 /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/clang -shared -o /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase2_Common.dylib /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c.o.export -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/lean --sysroot /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1 -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/libc -fuse-ld=lld -lc++ -lLake_shared -Wl,-undefined,dynamic_lookup -Wl,-no_fixup_chains -lgmp -luv -Wl,-dead_strip",
+   "level": "trace"}],
+ "inputs":
+ [["linkObjs",
+   [["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c.o.export",
+     "b5740044b9939487"]]],
+  ["linkLibs", "00000000000006bb"],
+  ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+   "fa77a35a41db35c0"],
+  ["traceArgs: #[]", "00000000000006bb"],
+  ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
+ "depHash": "11e4adda6ee9b72d"}

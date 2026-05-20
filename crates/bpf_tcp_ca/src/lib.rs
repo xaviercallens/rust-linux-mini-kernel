@@ -18,8 +18,6 @@ pub const NOT_INIT: c_int = -1;
 pub const TCP_CONG_MASK: c_uint = 0x00000007;
 pub const MAX_BPF_FUNC_ARGS: usize = 4;
 
-pub const TCP_CONG_MASK: c_uint = 0;
-
 // Opaque FFI types
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -35,7 +33,11 @@ pub struct BpfProg { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BpfInsnAccessAux { _private: [u8; 0] }
+pub struct BpfInsnAccessAux {
+    pub reg_type: c_int,
+    pub btf_id: c_uint,
+    _private: [u8; 0],
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -47,7 +49,10 @@ pub struct BpfFuncProto { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct BtfMember { _private: [u8; 0] }
+pub struct BtfMember {
+    pub type_field: c_int,
+    _private: [u8; 0],
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -56,6 +61,8 @@ pub struct tcp_sock { _private: [u8; 0] }
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TcpCongestionOps {
+    pub flags: c_uint,
+    pub name: [u8; 40],
     pub init: Option<extern "C" fn(*mut c_void)>,
     pub release: Option<extern "C" fn(*mut c_void)>,
     pub set_state: Option<extern "C" fn(*mut c_void, c_int)>,
@@ -142,7 +149,6 @@ unsafe extern "C" {
 static mut tcp_sock_type: *mut BtfType = ptr::null_mut();
 static mut tcp_sock_id: c_uint = 0;
 static mut sock_id: c_uint = 0;
-static mut btf_vmlinux: *mut Btf = ptr::null_mut();
 
 #[no_mangle]
 pub unsafe extern "C" fn bpf_tcp_send_ack(tp: *mut tcp_sock, rcv_nxt: u32) -> c_int {
@@ -150,42 +156,12 @@ pub unsafe extern "C" fn bpf_tcp_send_ack(tp: *mut tcp_sock, rcv_nxt: u32) -> c_
     0
 }
 
-extern "C" fn bpf_tcp_ca_get_func_proto(_func_id: c_int, _prog: *const BpfProg) -> *const BpfFuncProto {
-    ptr::null()
-}
-
-extern "C" fn bpf_tcp_ca_is_valid_access(
-    off: c_int,
-    size: c_int,
-    type_: c_int,
-    prog: *const BpfProg,
-    info: *mut BpfInsnAccessAux,
-) -> bool {
-    unsafe { btf_ctx_access(off, size, type_, prog, info) }
-}
-
-extern "C" fn bpf_tcp_ca_btf_struct_access(
-    log: *mut BpfVerifierLog,
-    btf: *mut Btf,
-    t: *mut BtfType,
-    off: c_int,
-    size: c_int,
-    atype: c_int,
-    next_btf_id: *mut c_uint,
-) -> c_int {
-    unsafe { btf_struct_access(log, btf, t, off, size, atype, next_btf_id) }
-}
-
-extern "C" fn bpf_tcp_ca_check_kfunc_call(_id: c_int) -> bool {
-    false
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn is_unsupported(member_offset: c_uint) -> bool {
     let mut i: usize = 0;
 
     while i < 1 {
-        if member_offset == *unsupported_ops.as_ptr().add(i) {
+        if member_offset == UNSUPPORTED_OPS[i] {
             return true;
         }
         i += 1;
@@ -195,8 +171,30 @@ pub unsafe extern "C" fn is_unsupported(member_offset: c_uint) -> bool {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn is_optional(member_offset: c_uint) -> bool {
+    let mut i: usize = 0;
+
+    while i < 9 {
+        if member_offset == OPTIONAL_OPS[i] {
+            return true;
+        }
+        i += 1;
+    }
+
+    false
+}
+
+// Stub for BPF kfunc IDs set
+static bpf_tcp_ca_kfunc_ids: [Option<unsafe extern "C" fn() -> ()>; 20] = [None; 20];
+
+// Stub for registration function
+extern "C" fn bpf_tcp_ca_reg(_kdata: *mut c_void) -> c_int {
+    0
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn bpf_tcp_ca_is_valid_access(off: c_int, size: c_int, type_: c_int, prog: *const BpfProg, info: *mut BpfInsnAccessAux) -> bool {
-    if off < 0 || off >= (MAX_BPF_FUNC_ARGS * 4) {
+    if off < 0 || off >= (MAX_BPF_FUNC_ARGS * 4) as c_int {
         return false;
     }
     if type_ != 1 { // BPF_READ
@@ -219,7 +217,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_is_valid_access(off: c_int, size: c_int, typ
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn bpf_tcp_ca_btf_struct_access(log: *mut BpfVerfierLog, btf: *mut Btf, t: *mut BtfType, off: c_int, size: c_int, atype: c_int, next_btf_id: *mut c_uint) -> c_int {
+pub unsafe extern "C" fn bpf_tcp_ca_btf_struct_access(log: *mut BpfVerifierLog, btf: *mut Btf, t: *mut BtfType, off: c_int, size: c_int, atype: c_int, next_btf_id: *mut c_uint) -> c_int {
     if atype == 1 { // BPF_READ
         return btf_struct_access(log, btf, t, off, size, atype, next_btf_id);
     }
@@ -304,7 +302,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_init_member(t: *const BtfType, member: *cons
 
     match moff {
         0 => { // offsetof(struct tcp_congestion_ops, flags)
-            if (*utcp_ca).flags & !TCP_CONG_MASK {
+            if ((*utcp_ca).flags & !TCP_CONG_MASK) != 0 {
                 return EINVAL;
             }
             (*tcp_ca).flags = (*utcp_ca).flags;
@@ -314,7 +312,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_init_member(t: *const BtfType, member: *cons
             if bpf_obj_name_cpy((*tcp_ca).name.as_mut_ptr(), (*utcp_ca).name.as_ptr(), 40) <= 0 {
                 return EINVAL;
             }
-            if !tcp_find((*utcp_ca).name.as_ptr()) {
+            if tcp_find((*utcp_ca).name.as_ptr()).is_null() {
                 return EEXIST;
             }
             return 1;
@@ -327,7 +325,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_init_member(t: *const BtfType, member: *cons
     }
 
     let prog_fd = *(udata as *const c_int);
-    if prog_fd == 0 && !is_optional(moff) && !is_unsupported(moff) {
+    if prog_fd == 0 && !is_optional(moff as c_uint) && !is_unsupported(moff as c_uint) {
         return EINVAL;
     }
 
@@ -340,24 +338,36 @@ extern "C" fn bpf_tcp_ca_check_member(_t: *const BtfType, _m: *const BtfMember) 
     0
 }
 
-extern "C" fn bpf_tcp_ca_init_member(
-    _t: *const BtfType,
-    _m: *const BtfMember,
-    _kdata: *mut c_void,
-    _value: *const c_void,
-) -> c_int {
-    0
-}
-
 extern "C" fn bpf_tcp_ca_init(_btf: *mut Btf) -> c_int {
     0
 }
 
+// Safe wrappers for verifier ops
+extern "C" fn bpf_tcp_ca_get_func_proto_wrapper(func_id: c_int, prog: *const BpfProg) -> *const BpfFuncProto {
+    unsafe { bpf_tcp_ca_get_func_proto(func_id, prog) }
+}
+
+extern "C" fn bpf_tcp_ca_is_valid_access_wrapper(off: c_int, size: c_int, type_: c_int, prog: *const BpfProg, info: *mut BpfInsnAccessAux) -> bool {
+    unsafe { bpf_tcp_ca_is_valid_access(off, size, type_, prog, info) }
+}
+
+extern "C" fn bpf_tcp_ca_btf_struct_access_wrapper(log: *mut BpfVerifierLog, btf: *mut Btf, t: *mut BtfType, off: c_int, size: c_int, atype: c_int, next_btf_id: *mut c_uint) -> c_int {
+    unsafe { bpf_tcp_ca_btf_struct_access(log, btf, t, off, size, atype, next_btf_id) }
+}
+
+extern "C" fn bpf_tcp_ca_check_kfunc_call_wrapper(kfunc_btf_id: c_int) -> bool {
+    unsafe { bpf_tcp_ca_check_kfunc_call(kfunc_btf_id) }
+}
+
+extern "C" fn bpf_tcp_ca_init_member_wrapper(t: *const BtfType, member: *const BtfMember, kdata: *mut c_void, udata: *const c_void) -> c_int {
+    unsafe { bpf_tcp_ca_init_member(t, member, kdata, udata) }
+}
+
 static BPF_TCP_CA_VERIFIER_OPS: BpfVerifierOps = BpfVerifierOps {
-    get_func_proto: bpf_tcp_ca_get_func_proto,
-    is_valid_access: bpf_tcp_ca_is_valid_access,
-    btf_struct_access: bpf_tcp_ca_btf_struct_access,
-    check_kfunc_call: bpf_tcp_ca_check_kfunc_call,
+    get_func_proto: bpf_tcp_ca_get_func_proto_wrapper,
+    is_valid_access: bpf_tcp_ca_is_valid_access_wrapper,
+    btf_struct_access: bpf_tcp_ca_btf_struct_access_wrapper,
+    check_kfunc_call: bpf_tcp_ca_check_kfunc_call_wrapper,
 };
 
 static BPF_TCP_CA_NAME: &[u8] = b"tcp_congestion_ops\0";
@@ -368,7 +378,7 @@ pub static BPF_TCP_CA_OPS: BpfStructOps = BpfStructOps {
     reg: bpf_tcp_ca_reg,
     unreg: bpf_tcp_ca_unreg,
     check_member: bpf_tcp_ca_check_member,
-    init_member: bpf_tcp_ca_init_member,
+    init_member: bpf_tcp_ca_init_member_wrapper,
     init: bpf_tcp_ca_init,
     name: BPF_TCP_CA_NAME.as_ptr(),
 };
@@ -376,10 +386,10 @@ pub static BPF_TCP_CA_OPS: BpfStructOps = BpfStructOps {
 // BPF verifier ops definition
 #[no_mangle]
 pub static mut bpf_tcp_ca_verifier_ops: BpfVerifierOps = BpfVerifierOps {
-    get_func_proto: bpf_tcp_ca_get_func_proto,
-    is_valid_access: bpf_tcp_ca_is_valid_access,
-    btf_struct_access: bpf_tcp_ca_btf_struct_access,
-    check_kfunc_call: bpf_tcp_ca_check_kfunc_call,
+    get_func_proto: bpf_tcp_ca_get_func_proto_wrapper,
+    is_valid_access: bpf_tcp_ca_is_valid_access_wrapper,
+    btf_struct_access: bpf_tcp_ca_btf_struct_access_wrapper,
+    check_kfunc_call: bpf_tcp_ca_check_kfunc_call_wrapper,
 };
 
 // Helper functions
@@ -417,15 +427,6 @@ static mut bpf_tcp_send_ack_proto: BpfFuncProto = BpfFuncProto {
     _private: [0; 0],
 };
 
-static mut bpf_sk_storage_get_proto: BpfFuncProto = BpfFuncProto {
-    // Actual fields would be initialized with appropriate values
-    _private: [0; 0],
-};
-
-static mut bpf_sk_storage_delete_proto: BpfFuncProto = BpfFuncProto {
-    // Actual fields would be initialized with appropriate values
-    _private: [0; 0],
-};
 
 // Test cases (conditional compilation)
 #[cfg(test)]

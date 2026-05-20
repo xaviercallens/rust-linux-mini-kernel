@@ -8753,3 +8753,1588 @@ Summary:
   ❌ Failing: 2/5
 
 
+========================================
+📊 Compilation Check - 2026-05-20 07:03:26
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:08:27
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:13:28
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:18:29
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:23:30
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:28:31
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:33:32
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:38:33
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:43:34
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:48:35
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:53:36
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 07:58:37
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:03:38
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:08:40
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:13:41
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:18:42
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:23:42
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:28:44
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:33:45
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 08:38:45
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:15:05
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:25:12
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:30:13
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+⏱️  Running full workspace check...
+
+🌐 Full Workspace Results:
+  Total modules: 296
+  Compiling: 260 (87.8%)
+  Failing: 36
+
+📈 IMPROVEMENT: +243 modules now compile!
+
+========================================
+📊 Compilation Check - 2026-05-20 09:36:22
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:41:23
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:46:24
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:51:25
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 09:56:26
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:01:28
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:06:29
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:11:30
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:16:31
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:21:32
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:26:33
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:31:34
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:36:35
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:41:37
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:46:38
+========================================
+Checking netfilter...
+  ❌ netfilter has 16 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:51:39
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 10:56:39
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:01:41
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:06:42
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:11:43
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:16:43
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:21:44
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:26:45
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:31:46
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:36:47
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:41:48
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:46:48
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:51:49
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 11:56:50
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:02:46
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:07:47
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:12:47
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:17:48
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:22:49
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:27:50
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:32:50
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:37:51
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:42:52
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:47:52
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:52:53
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 12:57:54
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:02:55
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:07:55
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:12:56
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:17:57
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:22:57
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:27:58
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:32:59
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:38:00
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:43:00
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:48:01
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:53:02
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 13:58:03
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:03:04
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:08:04
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:13:05
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:18:06
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:23:06
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:28:07
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+
+========================================
+📊 Compilation Check - 2026-05-20 14:33:08
+========================================
+Checking netfilter...
+  ✅ netfilter compiles
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 4/5 (80.0%)
+  ❌ Failing: 1/5
+
+

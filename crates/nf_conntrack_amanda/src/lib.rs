@@ -39,7 +39,7 @@ pub struct nf_conntrack_tuple_ip { pub u3: nf_conntrack_tuple_ip_u3 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_ip_u3 { pub _addr: [u8; 16], // Flexible based on address family }
+pub struct nf_conntrack_tuple_ip_u3 { pub _addr: [u8; 16] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -50,10 +50,10 @@ pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 pub struct nf_conn { pub tuplehash: [nf_conn_tuplehash; 2], pub status: u32 }
 
 #[repr(C)]
-pub struct nf_conntrack_expect { pub _data: [u8; 1], // Opaque data }
+pub struct nf_conntrack_expect { pub _data: [u8; 1] }
 
 #[repr(C)]
-pub struct ts_config { pub _data: [u8; 1], // Opaque textSEARCH config }
+pub struct ts_config { pub _data: [u8; 1] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

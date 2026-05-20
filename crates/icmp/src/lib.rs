@@ -28,6 +28,10 @@ pub struct Icmp6Hdr {
     pub icmp6_cksum: u16,
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_peer { _unused: [u8; 0] }
+
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo<'_>) -> ! {
@@ -43,34 +47,28 @@ pub unsafe extern "C" fn rust_eh_personality() {}
 pub unsafe extern "C" fn icmpv6_err(
     skb: *mut sk_buff,
     opt: *mut Inet6SkbParm,
-    _type: u8,
-    _code: u8,
-    _offset: c_int,
-    _info: u32,
+    type_: u8,
+    code_: u8,
+    offset: c_int,
+    info: u32,
 ) -> c_int {
     if skb.is_null() || opt.is_null() {
         return EINVAL;
     }
 
-    let icmp6 = (skb as *mut u8).add(offset as usize) as *mut Icmp6Hdr;
-    let net = dev_net((*skb).dev);
+    let icmp6 = ((*skb).data as *mut u8).add(offset as usize) as *mut Icmp6Hdr;
+    let net = dev_net((*skb).dev as *mut net_device);
 
     if type_ == ICMPV6_PKT_TOOBIG {
         ip6_update_pmtu(
             skb,
             net,
             info,
-            (*skb).dev.ifindex,
-            0,
-            sock_net_uid(net, core::ptr::null_mut()),
         );
     } else if type_ == NDISC_REDIRECT {
         ip6_redirect(
             skb,
             net,
-            (*skb).dev.ifindex,
-            0,
-            sock_net_uid(net, core::ptr::null_mut()),
         );
     }
 
@@ -103,13 +101,13 @@ fn icmpv6_xrlim_allow(sk: *mut sock, type_: u8, fl6: *mut flowi6) -> bool {
     true
 }
 
-fn is_ineligible(skb: *const sk_buff) -> bool {
+unsafe fn is_ineligible(skb: *const sk_buff) -> bool {
     if skb.is_null() {
         return true;
     }
 
     let ptr = (ipv6_hdr(skb) as *mut u8).add(1) as isize - (*skb).data as isize;
-    let len = (*skb).len - ptr as i32;
+    let len = (*skb).len as i32 - ptr as i32;
 
     if len < 0 {
         return true;
@@ -196,14 +194,40 @@ unsafe fn sock_net_uid(net: *mut net, sk: *mut sock) -> u32 {
 /// Update PMTU
 unsafe fn ip6_update_pmtu(
     skb: *mut sk_buff,
-    _type: u8,
-    _code: u8,
+    net: *mut net,
+    info: u32,
 ) -> c_int {
     if skb.is_null() {
         return EINVAL;
     }
 
     // Implementation would go here
+    0
+}
+
+unsafe fn ip6_redirect(
+    skb: *mut sk_buff,
+    net: *mut net,
+) -> c_int {
+    if skb.is_null() {
+        return EINVAL;
+    }
+
+    // Implementation would go here
+    0
+}
+
+unsafe fn ping_err(
+    skb: *mut sk_buff,
+    offset: c_int,
+    info: u32,
+) -> c_int {
+    if skb.is_null() {
+        return EINVAL;
+    }
+
+    // Implementation would go here
+    0
 }
 
 /// Check if rate limiting allows ICMP
@@ -217,18 +241,18 @@ unsafe fn icmpv6_mask_allow(net: *mut net, type_: u8) -> bool {
 }
 
 /// Get IPv6 header from skb
-unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+unsafe fn ipv6_hdr(skb: *const sk_buff) -> *const ipv6hdr {
     if skb.is_null() {
-        return core::ptr::null_mut();
+        return core::ptr::null();
     }
 
     // Implementation would go here
-    core::ptr::null_mut()
+    core::ptr::null()
 }
 
 /// Skip extension headers
 unsafe fn ipv6_skip_exthdr(
-    skb: *mut sk_buff,
+    skb: *const sk_buff,
     offset: isize,
     nexthdr: *mut u8,
     frag_off: *mut u16,
@@ -243,12 +267,12 @@ unsafe fn ipv6_skip_exthdr(
 
 /// Get pointer to data in skb
 unsafe fn skb_header_pointer(
-    skb: *mut sk_buff,
+    skb: *const sk_buff,
     offset: isize,
     len: isize,
-    data: *mut c_void,
-) -> *mut c_void {
-    if skb.is_null() || data.is_null() {
+    data: *mut u8,
+) -> *mut u8 {
+    if skb.is_null() {
         return core::ptr::null_mut();
     }
 

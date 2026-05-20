@@ -2,8 +2,9 @@ import Lake
 open Lake DSL
 
 package mvk_specs where
-  -- MVK v8.4.0 Formal Specifications
-  version := "8.4.0"
+  -- MVK v9.0.0 Formal Specifications
+  -- Phase 1: Boot Subsystem (printk, arch_setup, init_main)
+  -- Phase 2: Memory Subsystem (page_alloc, slab)
   precompileModules := true
 
 @[default_target]

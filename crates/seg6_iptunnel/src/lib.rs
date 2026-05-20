@@ -50,6 +50,19 @@ pub struct seg6_lwt { pub cache: dst_cache, pub tuninfo: [seg6_iptunnel_encap; 1
 #[derive(Copy, Clone)]
 pub struct lwtunnel_state { pub data: *mut c_void }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct dst_entry {
+    pub dev: *mut c_void,
+    _private: [u8; 0],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net {
+    _private: [u8; 0],
+}
+
 // Function implementations
 
 #[no_mangle]
@@ -91,7 +104,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
         return EINVAL;
     }
 
-    let net = dev_net((*dst).dev);
+    let net = dev_net((*dst).dev as *mut net_device);
     if net.is_null() {
         return EINVAL;
     }
@@ -111,7 +124,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
     }
 
     let inner_hdr = &*inner_hdr_ptr;
-    let flowlabel = seg6_make_flowlabel(net, skb, inner_hdr as *const ipv6hdr);
+    let flowlabel = seg6_make_flowlabel(net, skb, inner_hdr_ptr);
 
     skb_push(skb, tot_len as c_int);
     skb_reset_network_header(skb);
@@ -123,7 +136,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
     }
 
     if (*skb).protocol == htons(ETH_P_IPV6 as u16) {
-        ip6_flow_hdr(hdr, ip6_tclass(ip6_flowinfo(inner_hdr as *const ipv6hdr)), flowlabel);
+        ip6_flow_hdr(hdr, ip6_tclass(ip6_flowinfo(inner_hdr_ptr)), flowlabel);
         (*hdr).hop_limit = inner_hdr.hop_limit;
     } else {
         ip6_flow_hdr(hdr, 0, flowlabel);
@@ -132,7 +145,7 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
             return EINVAL;
         }
         (*hdr).hop_limit = ip6_dst_hoplimit(ndst);
-        memset(IP6CB(skb), 0, mem::size_of::<*mut c_void>() as size_t);
+        memset(IP6CB(skb), 0, mem::size_of::<*mut c_void>() as c_int);
     }
 
     (*hdr).nexthdr = NEXTHDR_ROUTING;
@@ -144,9 +157,9 @@ pub unsafe extern "C" fn seg6_do_srh_encap(
 
     let daddr = &mut (*hdr).daddr;
     let saddr = &mut (*hdr).saddr;
-    set_tun_src(net, (*dst).dev, daddr, saddr);
+    set_tun_src(net, (*dst).dev as *mut net_device, daddr, saddr);
 
-    skb_postpush_rcsum(skb, hdr, tot_len as c_int);
+    skb_postpush_rcsum(skb, hdr as *mut u8, tot_len as c_int);
 
     0
 }
@@ -190,7 +203,7 @@ pub unsafe extern "C" fn seg6_do_srh_inline(skb: *mut sk_buff, osrh: *mut ipv6_s
     skb_mac_header_rebuild(skb);
 
     let hdr = ipv6_hdr(skb);
-    let oldhdr = &*oldhdr;
+    let oldhdr_ref = &*oldhdr;
 
     memmove(
         hdr as *mut c_void,
@@ -207,13 +220,13 @@ pub unsafe extern "C" fn seg6_do_srh_inline(skb: *mut sk_buff, osrh: *mut ipv6_s
     (*isrh).segments[0] = (*hdr).daddr;
     (*hdr).daddr = (*isrh).segments[(*isrh).first_segment as usize];
 
-    skb_postpush_rcsum(skb, hdr, (mem::size_of::<ipv6hdr>() + hdrlen) as c_int);
+    skb_postpush_rcsum(skb, hdr as *mut u8, (mem::size_of::<ipv6hdr>() + hdrlen) as c_int);
 
     0
 }
 
 // Internal functions
-fn seg6_encap_lwtunnel(lwt: *mut lwtunnel_state) -> *mut seg6_iptunnel_encap {
+unsafe fn seg6_encap_lwtunnel(lwt: *mut lwtunnel_state) -> *mut seg6_iptunnel_encap {
     if lwt.is_null() {
         return ptr::null_mut();
     }
@@ -290,6 +303,12 @@ pub unsafe extern "C" fn dev_net(dev: *mut net_device) -> *mut net {
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+    // Simplified implementation for FFI compatibility
+    ptr::null_mut()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn skb_network_header(skb: *mut sk_buff) -> *mut u8 {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }

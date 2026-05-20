@@ -379,15 +379,12 @@ pub unsafe extern "C" fn fou6_fini() {
 }
 
 // Module metadata
-#[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_AUTHOR: [u8; 34] = *b"Tom Herbert <therbert@google.com>\0";
 
-#[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_LICENSE: [u8; 4] = *b"GPL\0";
 
-#[link_section = ".modinfo"]
 #[no_mangle]
 pub static MOD_DESCRIPTION: [u8; 20] = *b"Foo over UDP (IPv6)\0";
 #[cfg(not(test))]

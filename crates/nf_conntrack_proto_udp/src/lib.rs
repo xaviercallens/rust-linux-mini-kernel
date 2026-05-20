@@ -308,7 +308,7 @@ fn jiffies() -> c_int {
 }
 
 #[inline]
-fn HZ() -> c_int { 100 // Assuming 100 HZ }
+fn HZ() -> c_int { 100 }
 
 #[inline]
 fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {

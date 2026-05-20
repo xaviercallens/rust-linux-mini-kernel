@@ -93,11 +93,12 @@ static SCTP_CONNTRACK_NAMES: [&str; SCTP_CONNTRACK_MAX as usize + 1] = [
     "MAX",
 ];
 
-static SCTP_TIMEOUTS: [u32; SCTP_CONNTRACK_MAX as usize] = [
+static SCTP_TIMEOUTS: [c_uint; SCTP_CONNTRACK_MAX as usize] = [
+    0,      // SCTP_CONNTRACK_NONE
     10,     // SCTP_CONNTRACK_CLOSED
     3,      // SCTP_CONNTRACK_COOKIE_WAIT
     3,      // SCTP_CONNTRACK_COOKIE_ECHOED
-    432000, // 5 DAYS in seconds (5*24*3600)
+    432000, // SCTP_CONNTRACK_ESTABLISHED - 5 DAYS in seconds (5*24*3600)
     3,      // SCTP_CONNTRACK_SHUTDOWN_SENT
     3,      // SCTP_CONNTRACK_SHUTDOWN_RECD
     3,      // SCTP_CONNTRACK_SHUTDOWN_ACK_SENT
@@ -239,7 +240,6 @@ pub unsafe extern "C" fn sctp_packet(
     let mut offset: u32 = 0;
     let mut count: u32 = 0;
     let mut flag = 0;
-    let mut sch: *mut sctp_chunkhdr = ptr::null_mut();
     let mut _sch: sctp_chunkhdr = sctp_chunkhdr {
         type_: 0,
         flags: 0,
@@ -250,12 +250,12 @@ pub unsafe extern "C" fn sctp_packet(
     // with bounds checking and pointer validation
     offset = dataoff + (core::mem::size_of::<sctphdr>() as u32);
     while offset < (*skb).len {
-        sch = skb_header_pointer(
+        let sch = skb_header_pointer(
             skb,
             offset,
             core::mem::size_of::<sctp_chunkhdr>() as size_t,
             &mut _sch as *mut sctp_chunkhdr as *mut c_void,
-        );
+        ) as *mut sctp_chunkhdr;
         if sch.is_null() {
             break;
         }
@@ -280,7 +280,7 @@ pub unsafe extern "C" fn sctp_packet(
 
         if !map.is_null() {
             // SAFETY: Bit manipulation is safe with valid pointer
-            set_bit((*sch).type_ as usize, map);
+            set_bit((*sch).type_ as c_ulong, map as *mut c_ulong);
         }
 
         offset += ((*sch).length as u32 + 3) & !3;
@@ -323,10 +323,10 @@ pub unsafe extern "C" fn sctp_new(
     sh: *mut sctphdr,
     dataoff: c_uint,
 ) -> c_int {
-    let mut new_state: u8 = SCTP_CONNTRACK_MAX;
+    let mut new_state_val: u8 = SCTP_CONNTRACK_MAX;
     let mut offset: u32 = 0;
     let mut count: u32 = 0;
-    let mut sch: *mut sctp_chunkhdr = ptr::null_mut();
+    let mut last_chunk_type: u8 = 0;
     let mut _sch: sctp_chunkhdr = sctp_chunkhdr {
         type_: 0,
         flags: 0,
@@ -337,41 +337,44 @@ pub unsafe extern "C" fn sctp_new(
     (*ct).proto.sctp = sctp_conntrack {
         state: 0,
         vtag: [0, 0],
+        init: [[0, 0], [0, 0]],
     };
 
     // Process each chunk
     offset = dataoff + (core::mem::size_of::<sctphdr>() as u32);
     while offset < (*skb).len {
-        sch = skb_header_pointer(
+        let sch = skb_header_pointer(
             skb,
             offset,
             core::mem::size_of::<sctp_chunkhdr>() as size_t,
             &mut _sch as *mut sctp_chunkhdr as *mut c_void,
-        );
+        ) as *mut sctp_chunkhdr;
         if sch.is_null() {
             break;
         }
 
-        new_state = sctp_new_state(0, SCTP_CONNTRACK_NONE, (*sch).type_);
+        new_state_val = sctp_new_state(0, SCTP_CONNTRACK_NONE, (*sch).type_);
 
-        if new_state == SCTP_CONNTRACK_NONE || new_state == SCTP_CONNTRACK_MAX {
+        if new_state_val == SCTP_CONNTRACK_NONE || new_state_val == SCTP_CONNTRACK_MAX {
             return 0; // false
         }
 
+        last_chunk_type = (*sch).type_;
+
         if (*sch).type_ == SCTP_CID_INIT {
-            let mut _inithdr: [u8; 16] = [0; 16]; // Assuming sctp_inithdr size
+            let mut _inithdr: [u32; 4] = [0; 4]; // SCTP init header with u32 fields
             let ih = skb_header_pointer(
                 skb,
                 offset + (core::mem::size_of::<sctp_chunkhdr>() as u32),
                 16,
-                &mut _inithdr as *mut [u8; 16] as *mut c_void,
-            );
+                &mut _inithdr as *mut [u32; 4] as *mut c_void,
+            ) as *mut u32;
             if ih.is_null() {
                 return 0;
             }
 
-            // Set vtag
-            (*ct).proto.sctp.vtag[1] = (*ih as *mut u8).read_unaligned();
+            // Set vtag from init tag field (first u32 in init header)
+            (*ct).proto.sctp.vtag[1] = (*ih);
         }
 
         offset += ((*sch).length as u32 + 3) & !3;
@@ -382,8 +385,8 @@ pub unsafe extern "C" fn sctp_new(
         return 0;
     }
     // Update state based on last seen chunk
-    if !sch.is_null() {
-        let _ = new_state(ct, dir, (*sch).type_);
+    if last_chunk_type != 0 {
+        let _ = new_state(ct, 0, last_chunk_type);
     }
     1
 }
