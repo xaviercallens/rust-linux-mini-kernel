@@ -9,8 +9,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_void;
-use core::panic::PanicInfo;
+use core::{ffi::c_void, panic::PanicInfo};
 use kernel_types::*;
 
 pub const NF_DROP: c_int = 0x01;
@@ -24,33 +23,23 @@ pub const EBUSY: c_int = 16;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_port {
-    pub port: u16,
-}
+pub struct nf_ct_port { pub port: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    pub tcp: nf_ct_port,
-}
+pub struct nf_conntrack_l4proto { pub tcp: nf_ct_port }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_man_proto {
-    pub u: nf_conntrack_l4proto,
-}
+pub struct nf_conntrack_man_proto { pub u: nf_conntrack_l4proto }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub dst: nf_conntrack_man_proto,
-}
+pub struct nf_conntrack_tuple { pub dst: nf_conntrack_man_proto }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tuplehash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -62,16 +51,11 @@ pub struct nf_conn_tuplehash {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_nat_helper {
-    pub name: *const c_char,
-}
+pub struct nf_nat_helper { pub name: *const c_char }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_inet_addr {
-    pub ip: u32,
-    pub ip6: [u32; 4],
-}
+pub struct nf_inet_addr { pub ip: u32, pub ip6: [u32; 4] }
 
 unsafe extern "C" {
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_uint) -> c_int;
@@ -95,19 +79,13 @@ unsafe extern "C" {
 }
 
 #[inline]
-fn htons(v: u16) -> u16 {
-    v.to_be()
-}
+fn htons(v: u16) -> u16 { v.to_be() }
 
 #[inline]
-fn ntohs(v: u16) -> u16 {
-    u16::from_be(v)
-}
+fn ntohs(v: u16) -> u16 { u16::from_be(v) }
 
 #[inline]
-fn CTINFO2DIR(ctinfo: c_int) -> c_int {
-    ctinfo & 1
-}
+fn CTINFO2DIR(ctinfo: c_int) -> c_int { ctinfo & 1 }
 
 unsafe extern "C" fn nf_nat_follow_master(_exp: *mut nf_conntrack_expect) {}
 
@@ -411,10 +389,7 @@ unsafe fn write(buffer: *mut u8, buflen: size_t, args: &core::fmt::Arguments) ->
 }
 
 #[repr(C)]
-struct BufferWriter {
-    buffer: *mut u8,
-    pos: usize,
-}
+struct BufferWriter { buffer: *mut u8, pos: usize }
 
 impl core::fmt::Write for BufferWriter {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {

@@ -15,21 +15,15 @@ pub const EMSGSIZE: c_int = -90;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_state_props {
-    pub mode: c_int,
-}
+pub struct xfrm_state_props { pub mode: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_state {
-    pub props: xfrm_state_props,
-}
+pub struct xfrm_state { pub props: xfrm_state_props }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_skb_cb {
-    flags: c_ulong,
-}
+pub struct ip6_skb_cb { flags: c_ulong }
 
 const ETH_P_IPV6: c_int = 0x86DD;
 const XFRM_MODE_TUNNEL: c_int = 2;
@@ -162,9 +156,7 @@ pub unsafe extern "C" fn xfrm6_output(net: *mut net, sk: *mut sock, skb: *mut sk
 
 // Helper functions (assumed to exist in C)
 #[inline(always)]
-unsafe fn htons(x: c_int) -> c_int {
-    ((x >> 8) & 0xff) | ((x & 0xff) << 8)
-}
+unsafe fn htons(x: c_int) -> c_int { ((x >> 8) & 0xff) | ((x & 0xff) << 8) }
 
 #[inline(always)]
 unsafe fn inet_sk(sk: *mut sock) -> *mut inet_sock {

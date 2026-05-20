@@ -37,9 +37,7 @@ pub struct frag_hdr {
 }
 
 #[repr(C)]
-pub struct net_offload {
-    pub callbacks: net_offload_callbacks,
-}
+pub struct net_offload { pub callbacks: net_offload_callbacks }
 
 #[repr(C)]
 pub struct net_offload_callbacks {
@@ -277,14 +275,10 @@ static udpv6_offload: net_offload = net_offload {
 
 // Placeholder statics - use zero-sized types
 #[repr(transparent)]
-struct UdpTable {
-    _private: [u8; 0],
-}
+struct UdpTable { _private: [u8; 0] }
 
 #[repr(transparent)]
-struct EncapKey {
-    _private: [u8; 0],
-}
+struct EncapKey { _private: [u8; 0] }
 
 #[allow(non_upper_case_globals)]
 static udp_table: UdpTable = UdpTable { _private: [] };

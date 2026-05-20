@@ -3,9 +3,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_void, c_int, c_uint, c_ulong};
-use core::mem;
-use core::ptr;
+use core::{mem, ptr, ffi::{c_void, c_int, c_uint, c_ulong}};
 use kernel_types::{sk_buff, nf_conn};
 
 pub const IPPROTO_ICMPV6: c_int = 58;
@@ -55,22 +53,15 @@ static VALID_NEW: [u8; 256] = [
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_src,
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_src { pub u: nf_conntrack_tuple_u }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_dst { pub u: nf_conntrack_tuple_u }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -88,9 +79,7 @@ pub struct nf_conntrack_tuple_icmp {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tuplehash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -102,9 +91,7 @@ pub struct nf_hook_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_icmp_net {
-    pub timeout: c_ulong,
-}
+pub struct nf_icmp_net { pub timeout: c_ulong }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -247,9 +234,7 @@ unsafe fn nf_ct_timeout_lookup(ct: *mut nf_conn) -> *mut c_ulong {
     ptr::null_mut()
 }
 
-unsafe fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {
-    false
-}
+unsafe fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool { false }
 
 unsafe fn nf_ct_refresh_acct(
     ct: *mut nf_conn,
@@ -294,17 +279,11 @@ pub unsafe extern "C" fn icmpv6_tuple_to_nlattr(
     0
 }
 
-const CTA_PROTO_ICMPV6_ID: c_int = 1;
-const CTA_PROTO_ICMPV6_TYPE: c_int = 2;
-const CTA_PROTO_ICMPV6_CODE: c_int = 3;
+const CTA_PROTO_ICMPV6_ID: c_int = 1; const CTA_PROTO_ICMPV6_TYPE: c_int = 2; const CTA_PROTO_ICMPV6_CODE: c_int = 3;
 
-unsafe fn nla_put_be16(_skb: *mut c_void, _type: c_int, _data: u16) -> c_int {
-    0
-}
+unsafe fn nla_put_be16(_skb: *mut c_void, _type: c_int, _data: u16) -> c_int { 0 }
 
-unsafe fn nla_put_u8(_skb: *mut c_void, _type: c_int, _data: u8) -> c_int {
-    0
-}
+unsafe fn nla_put_u8(_skb: *mut c_void, _type: c_int, _data: u8) -> c_int { 0 }
 
 #[no_mangle]
 pub static nf_conntrack_l4proto_icmpv6: nf_conntrack_l4proto = nf_conntrack_l4proto {
@@ -361,16 +340,11 @@ pub unsafe extern "C" fn icmpv6_timeout_obj_to_nlattr(
     0
 }
 
-const CTA_TIMEOUT_ICMPV6_TIMEOUT: c_int = 1;
-const CTA_TIMEOUT_ICMP_MAX: c_int = 2;
+const CTA_TIMEOUT_ICMPV6_TIMEOUT: c_int = 1; const CTA_TIMEOUT_ICMP_MAX: c_int = 2;
 
-unsafe fn nla_get_be32(_tb: *mut c_void) -> u32 {
-    0
-}
+unsafe fn nla_get_be32(_tb: *mut c_void) -> u32 { 0 }
 
-unsafe fn htonl(_val: c_ulong) -> u32 {
-    0
-}
+unsafe fn htonl(_val: c_ulong) -> u32 { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_icmpv6_init_net(

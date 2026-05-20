@@ -4,9 +4,7 @@
 use core::ptr;
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -32,10 +30,7 @@ struct seg6_action_desc {
 }
 
 #[repr(C)]
-struct bpf_lwt_prog {
-    prog: *mut c_void,
-    name: *mut c_char,
-}
+struct bpf_lwt_prog { prog: *mut c_void, name: *mut c_char }
 
 #[repr(C)]
 enum seg6_end_dt_mode {
@@ -56,20 +51,14 @@ struct seg6_end_dt_info {
 }
 
 #[repr(C)]
-struct u64_stats_sync {
-    _priv: [u8; 0],
-}
+struct u64_stats_sync { _priv: [u8; 0] }
 
 #[repr(C)]
-struct in_addr {
-    s_addr: u32,
-}
+struct in_addr { s_addr: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct in6_addr {
-    s6_addr: [u8; 16],
-}
+struct in6_addr { s6_addr: [u8; 16] }
 
 #[repr(C)]
 struct pcpu_seg6_local_counters {
@@ -103,9 +92,7 @@ struct seg6_local_lwt {
 }
 
 #[repr(C)]
-struct lwtunnel_state {
-    data: *mut c_void,
-}
+struct lwtunnel_state { data: *mut c_void }
 
 // Function implementations
 #[no_mangle]

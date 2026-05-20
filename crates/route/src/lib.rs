@@ -6,11 +6,7 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
-use core::alloc::{GlobalAlloc, Layout};
-use core::ffi::{c_int, c_void};
-use core::panic::PanicInfo;
-use core::ptr;
-use core::sync::atomic::AtomicI32;
+use core::{ptr, alloc::{GlobalAlloc, Layout}, ffi::{c_int, c_void}, panic::PanicInfo, sync::atomic::AtomicI32};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -48,23 +44,15 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
 }
 
 #[repr(C)]
-pub struct net_device {
-    pub flags: c_int,
-}
+pub struct net_device { pub flags: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    next: *mut list_head,
-    prev: *mut list_head,
-}
+pub struct list_head { next: *mut list_head, prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct uncached_list {
-    lock: *mut c_void, // spinlock_t
-    head: list_head,
-}
+pub struct uncached_list { lock: *mut c_void, // spinlock_t, head: list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -98,14 +86,10 @@ pub struct fib6_info {
 }
 
 #[repr(C)]
-pub struct inet6_dev {
-    dev: *mut net_device,
-}
+pub struct inet6_dev { dev: *mut net_device }
 
 #[repr(C)]
-struct per_cpu_data {
-    list: uncached_list,
-}
+struct per_cpu_data { list: uncached_list }
 
 // Function implementations
 #[no_mangle]

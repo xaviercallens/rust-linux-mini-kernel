@@ -5,18 +5,14 @@
 use core::panic::PanicInfo;
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 pub const HZ: c_int = 100;
 pub const IGMP_QUERY_INTERVAL: c_int = 125 * HZ;
 pub const IGMP_QUERY_RESPONSE_INTERVAL: c_int = 10 * HZ;
 pub const IGMP_INITIAL_REPORT_DELAY: c_int = 1;
 
-pub const IGMP_V1: c_int = 1;
-pub const IGMP_V2: c_int = 2;
-pub const IGMP_V3: c_int = 3;
+pub const IGMP_V1: c_int = 1; pub const IGMP_V2: c_int = 2; pub const IGMP_V3: c_int = 3;
 
 pub const IGMPV2_UNSOLICITED_REPORT_INTERVAL: c_int = 10_000;
 pub const IGMPV3_UNSOLICITED_REPORT_INTERVAL: c_int = 1_000;
@@ -24,21 +20,15 @@ pub const FORCE_IGMP_VERSION: c_int = 0;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct atomic_t {
-    pub counter: c_int,
-}
+pub struct atomic_t { pub counter: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    pub raw_lock: c_uint,
-}
+pub struct spinlock_t { pub raw_lock: c_uint }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct timer_list {
-    pub _opaque: *mut c_void,
-}
+pub struct timer_list { pub _opaque: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -110,14 +100,10 @@ unsafe fn IGMP_V2_SEEN(in_dev: *mut in_device) -> bool {
 }
 
 #[inline]
-fn msecs_to_jiffies(msecs: c_int) -> c_int {
-    (msecs.saturating_mul(HZ)) / 1000
-}
+fn msecs_to_jiffies(msecs: c_int) -> c_int { (msecs.saturating_mul(HZ)) / 1000 }
 
 #[inline]
-unsafe fn jiffies() -> c_ulong {
-    0
-}
+unsafe fn jiffies() -> c_ulong { 0 }
 
 #[inline]
 unsafe fn time_before(a: c_ulong, b: c_ulong) -> bool {
@@ -130,14 +116,10 @@ unsafe fn get_dev_net(_in_dev: *mut in_device) -> *mut c_void {
 }
 
 #[inline]
-unsafe fn IN_DEV_CONF_GET(_in_dev: *mut in_device, conf: c_int) -> c_int {
-    conf
-}
+unsafe fn IN_DEV_CONF_GET(_in_dev: *mut in_device, conf: c_int) -> c_int { conf }
 
 #[inline]
-unsafe fn IPV4_DEVCONF_ALL(_net: *mut c_void, _conf: c_int) -> c_int {
-    0
-}
+unsafe fn IPV4_DEVCONF_ALL(_net: *mut c_void, _conf: c_int) -> c_int { 0 }
 
 #[cfg(not(test))]
 #[panic_handler]

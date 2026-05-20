@@ -37,16 +37,11 @@ pub const NFPROTO_IPV4: u8 = 2;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct icmp_echo {
-    pub id: u16,
-    pub sequence: u16,
-}
+pub struct icmp_echo { pub id: u16, pub sequence: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct icmp_ipv4 {
-    pub gateway: u32,
-}
+pub struct icmp_ipv4 { pub gateway: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -74,9 +69,7 @@ pub struct nf_conntrack_tuple_icmp {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_u3 {
-    pub ip: u32,
-}
+pub struct nf_conntrack_tuple_u3 { pub ip: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -87,33 +80,22 @@ pub union nf_conntrack_tuple_u {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_src { pub u: nf_conntrack_tuple_u }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_dst { pub u: nf_conntrack_tuple_u }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_src,
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conntrack_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conntrack_tuple_hash; 2],
-}
+pub struct nf_conn { pub tuplehash: [nf_conntrack_tuple_hash; 2] }
 
 // Static data
 pub static INV_MAP: [u8; 256] = {

@@ -9,9 +9,7 @@
 #![allow(dead_code)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_char, c_int, c_uchar};
-use core::mem;
-use core::ptr;
+use core::{mem, ptr, ffi::{c_char, c_int, c_uchar}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -24,15 +22,11 @@ pub const SIP_TIMEOUT: u32 = 1200;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect {
-    pub _private: [u8; 0],
-}
+pub struct nf_conntrack_expect { pub _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_nat_sip_hooks {
-    pub _private: [u8; 0],
-}
+pub struct nf_nat_sip_hooks { pub _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -214,9 +208,7 @@ pub unsafe extern "C" fn media_len(
     len
 }
 
-unsafe fn nf_ct_l3num(_ct: *const nf_conn) -> c_int {
-    AF_INET
-}
+unsafe fn nf_ct_l3num(_ct: *const nf_conn) -> c_int { AF_INET }
 
 unsafe fn in4_pton(
     src: *const c_uchar,

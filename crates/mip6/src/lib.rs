@@ -2,8 +2,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::{mem, ptr};
+use core::{{mem, ptr}, ffi::{c_char, c_int, c_uint, c_void}};
 use kernel_types::*;
 
 pub const IPPROTO_DSTOPTS: c_int = 60;
@@ -34,15 +33,11 @@ pub const XFRM_TYPE_LOCAL_COADDR: c_int = 0x0002;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    _priv: u32,
-}
+pub struct spinlock_t { _priv: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct module {
-    _priv: u32,
-}
+pub struct module { _priv: u32 }
 
 unsafe extern "C" {
     static THIS_MODULE: module;
@@ -59,10 +54,7 @@ pub struct ip6_mh {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_destopt_hdr {
-    pub nexthdr: u8,
-    pub hdrlen: u8,
-}
+pub struct ipv6_destopt_hdr { pub nexthdr: u8, pub hdrlen: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -83,16 +75,11 @@ pub struct rt2_hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_id {
-    pub spi: u32,
-}
+pub struct xfrm_id { pub spi: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_props {
-    pub mode: c_int,
-    pub header_len: c_int,
-}
+pub struct xfrm_props { pub mode: c_int, pub header_len: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

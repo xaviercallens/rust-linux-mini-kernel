@@ -128,10 +128,7 @@ pub struct udphdr {
 /// ESP header
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_esp_hdr {
-    pub spi: __be32,
-    pub seq_no: __be32,
-}
+pub struct ip_esp_hdr { pub spi: __be32, pub seq_no: __be32 }
 
 // ============================================================================
 // Socket Structures
@@ -140,18 +137,12 @@ pub struct ip_esp_hdr {
 /// Generic socket address
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sockaddr {
-    pub sa_family: c_ushort,
-    pub sa_data: [c_char; 14],
-}
+pub struct sockaddr { pub sa_family: c_ushort, pub sa_data: [c_char; 14] }
 
 /// I/O vector for scatter-gather operations
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct iovec {
-    pub iov_base: *mut c_void,
-    pub iov_len: size_t,
-}
+pub struct iovec { pub iov_base: *mut c_void, pub iov_len: size_t }
 
 /// Socket message header
 #[repr(C)]
@@ -341,10 +332,7 @@ pub struct rt6_info {
 /// IPv6 configuration
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_devconf {
-    pub disable_ipv6: c_int,
-    _padding: [u8; 0],
-}
+pub struct ipv6_devconf { pub disable_ipv6: c_int, _padding: [u8; 0] }
 
 /// IPv6 interface device info
 #[repr(C)]
@@ -479,42 +467,48 @@ pub struct nf_conntrack_zone {
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
     pub list: *mut c_void,
+    pub hnode: *mut c_void,
     pub name: [c_char; 16],
+    pub tuple: nf_conntrack_tuple,
     pub module: *mut c_void,
+    pub me: *mut c_void,
+    pub refcnt: c_uint,
     pub max_expected: c_uint,
     pub timeout: c_uint,
     pub flags: c_uint,
+    pub help: *mut c_void,
+    pub from_nlattr: *mut c_void,
 }
 
 /// Netfilter connection tracking tuple hash
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tuplehash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 
 /// Netfilter connection tracking tuple
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_src,
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst }
 
 /// Netfilter connection tracking tuple source
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_src { pub u: nf_conntrack_tuple_u }
 
 /// Netfilter connection tracking tuple destination
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub u: nf_conntrack_tuple_u,
-    pub protonum: __u8,
-}
+pub struct nf_conntrack_tuple_dst { pub u: nf_conntrack_tuple_u, pub protonum: __u8 }
+
+/// Netfilter connection tracking manipulation structure
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_man { pub u: nf_conntrack_tuple_u, pub l3num: u16 }
+
+/// Netfilter connection tracking tuple hash
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_hash { pub node: *mut c_void, pub tuple: nf_conntrack_tuple }
 
 /// Netfilter connection tracking tuple union
 #[repr(C)]
@@ -581,9 +575,7 @@ pub struct xfrm_mode_skb_cb {
 /// U64 statistics synchronization
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct u64_stats_sync {
-    pub seq: c_uint,
-}
+pub struct u64_stats_sync { pub seq: c_uint }
 
 // ============================================================================
 // Auto-generated Mock Stubs (Alternative to AI Fixer)
@@ -636,8 +628,7 @@ extern "C" {
 pub type gfp_t = c_uint;
 
 /// Common GFP flags
-pub const GFP_KERNEL: gfp_t = 0xCC0;
-pub const GFP_ATOMIC: gfp_t = 0x20;
+pub const GFP_KERNEL: gfp_t = 0xCC0; pub const GFP_ATOMIC: gfp_t = 0x20;
 
 // ============================================================================
 // Formal Verification Contracts (v7.0.0 Experimental Symbolic Execution)
@@ -730,18 +721,12 @@ pub type list_head = ListHead;
 /// List head for linked lists
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ListHead {
-    pub next: *mut ListHead,
-    pub prev: *mut ListHead,
-}
+pub struct ListHead { pub next: *mut ListHead, pub prev: *mut ListHead }
 
 /// IPv6 option header
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct Ipv6OptHdr {
-    pub nexthdr: u8,
-    pub hdrlen: u8,
-}
+pub struct Ipv6OptHdr { pub nexthdr: u8, pub hdrlen: u8 }
 
 /// Network namespace type alias
 pub type NF_CONN = nf_conn;
@@ -752,7 +737,4 @@ pub type NF_INET_ADDR = nf_inet_addr;
 /// Network device (opaque type)
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_device {
-    pub ifindex: c_int,
-    _private: [u8; 0],
-}
+pub struct net_device { pub ifindex: c_int, _private: [u8; 0] }

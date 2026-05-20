@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_uint, c_void}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -30,27 +29,16 @@ pub struct nf_hook_entry {
 }
 
 #[repr(C)]
-pub struct nf_hook_entries_rcu_head {
-    allocation: *mut c_void,
-    head: c_void,
-}
+pub struct nf_hook_entries_rcu_head { allocation: *mut c_void, head: c_void }
 
 #[repr(C)]
-pub struct nf_hook_entries {
-    num_hook_entries: c_uint,
-    hooks: [nf_hook_entry; 0],
-}
+pub struct nf_hook_entries { num_hook_entries: c_uint, hooks: [nf_hook_entry; 0] }
 
 #[repr(C)]
-pub struct nf_hook_state {
-    // Opaque structure - actual fields would be defined in the kernel headers
-    _private: [u8; 0],
-}
+pub struct nf_hook_state { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct net {
-    nf: nf_net,
-}
+pub struct net { nf: nf_net }
 
 #[repr(C)]
 pub struct nf_net {
@@ -62,25 +50,19 @@ pub struct nf_net {
 }
 
 #[repr(C)]
-pub struct net_device {
-    nf_hooks_ingress: *mut nf_hook_entries,
-}
+pub struct net_device { nf_hooks_ingress: *mut nf_hook_entries }
 
 // Function pointer types
 type HookFn = extern "C" fn(priv_data: *mut c_void, skb: *mut c_void, state: *const nf_hook_state) -> c_uint;
 
 // Static mutex implementation (simplified for FFI compatibility)
 #[repr(C)]
-pub struct mutex {
-    _private: [u8; 0],
-}
+pub struct mutex { _private: [u8; 0] }
 
 // Static key implementation (simplified for FFI compatibility)
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct static_key {
-    _private: [u8; 0],
-}
+pub struct static_key { _private: [u8; 0] }
 
 // Global variables
 #[no_mangle]
@@ -107,14 +89,11 @@ pub const NFPROTO_IPV4: c_int = 2;
 pub const NFPROTO_IPV6: c_int = 10;
 pub const NFPROTO_INET: c_int = 14;
 
-
 unsafe impl Sync for static_key {}
 unsafe impl Sync for mutex {}
 
 #[repr(C)]
-pub struct hook_ops_ptr {
-    pub ptr: *const nf_hook_ops,
-}
+pub struct hook_ops_ptr { pub ptr: *const nf_hook_ops }
 
 unsafe impl Sync for hook_ops_ptr {}
 
@@ -245,7 +224,6 @@ unsafe extern "C" fn accept_all(
 ) -> c_uint {
     1 // NF_ACCEPT
 }
-
 
 // Tests (conditional compilation)
 #[cfg(test)]

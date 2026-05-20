@@ -4,23 +4,17 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_int, c_void};
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::{ffi::{c_int, c_void}, sync::atomic::{AtomicUsize, Ordering}};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct NetDevice(pub *mut c_void);
 
 #[repr(C)]
-pub struct fib_prop {
-    pub error: c_int,
-    pub scope: c_int,
-}
+pub struct fib_prop { pub error: c_int, pub scope: c_int }
 
 #[repr(C)]
 pub struct rcu_head {
@@ -173,8 +167,7 @@ static fib_info_hash_size: AtomicUsize = AtomicUsize::new(0);
 static mut fib_info_devhash: [*mut c_void; 256] = [core::ptr::null_mut(); 256];
 
 // Constants
-const DEVINDEX_HASHBITS: c_int = 8;
-const DEVINDEX_HASHSIZE: c_int = 1 << DEVINDEX_HASHBITS;
+const DEVINDEX_HASHBITS: c_int = 8; const DEVINDEX_HASHSIZE: c_int = 1 << DEVINDEX_HASHBITS;
 
 // Hash functions
 fn fib_devindex_hashfn(val: c_int) -> c_int {
@@ -268,9 +261,7 @@ pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) ->
 }
 
 // Placeholder for net_eq function
-unsafe fn net_eq(a: *mut c_void, b: *mut c_void) -> c_int {
-    if a == b { 1 } else { 0 }
-}
+unsafe fn net_eq(a: *mut c_void, b: *mut c_void) -> c_int { if a == b { 1 } else { 0 } }
 
 // Placeholder for RTNH_COMPARE_MASK
 const RTNH_COMPARE_MASK: c_int = 0;

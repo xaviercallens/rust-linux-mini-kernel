@@ -7,8 +7,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, panic::PanicInfo};
 use kernel_types::*;
 
 pub const IP6_VTI_HASH_SIZE_SHIFT: c_int = 5;
@@ -18,8 +17,7 @@ pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
 // Constants from kernel headers
-pub const IFNAMSIZ: usize = 16;
-pub const IFF_UP: c_int = 1 << 0;
+pub const IFNAMSIZ: usize = 16; pub const IFF_UP: c_int = 1 << 0;
 
 // Type definitions
 #[repr(C)]
@@ -61,10 +59,7 @@ pub struct vti6_net {
     pub tnls: [*mut ip6_tnl; 2],
 }
 
-unsafe fn hash(_remote: *const in6_addr, _local: *const in6_addr) -> c_int {
-    0
-}
-
+unsafe fn hash(_remote: *const in6_addr, _local: *const in6_addr) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn vti6_tnl_lookup(

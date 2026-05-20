@@ -19,17 +19,13 @@ pub const IPPROTO_UDP: c_int = 17;
 pub const NFPROTO_IPV4: c_int = 2;
 pub const IPS_NAT_DONE_MASK: c_int = 0x0000_000F;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12;
 
 // Type definitions for FFI compatibility
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct NF_CONNTRACK_EXPECT {
-    pub dir: c_int,
-    pub saved_proto: c_int,
-}
+pub struct NF_CONNTRACK_EXPECT { pub dir: c_int, pub saved_proto: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

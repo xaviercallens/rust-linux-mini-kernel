@@ -38,17 +38,12 @@ pub struct udplite_sock {
 /// UDPLite options
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udpliteopt {
-    pub cscov: c_int,
-    pub clen: c_int,
-}
+pub struct udpliteopt { pub cscov: c_int, pub clen: c_int }
 
 /// UDPLite control block
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udplite_cb {
-    pub partial_cov: c_int,
-}
+pub struct udplite_cb { pub partial_cov: c_int }
 
 /// UDPLite socket operations
 #[repr(C)]
@@ -104,16 +99,13 @@ pub struct udplite_protocol {
 }
 
 /// UDPLite socket options
-pub const UDPLITE_SEND_CSCOV: c_int = 1;
-pub const UDPLITE_RECV_CSCOV: c_int = 2;
+pub const UDPLITE_SEND_CSCOV: c_int = 1; pub const UDPLITE_RECV_CSCOV: c_int = 2;
 
 /// UDPLite checksum coverage
-pub const UDPLITE_MIN_CSCOV: c_int = 0;
-pub const UDPLITE_MAX_CSCOV: c_int = 65535;
+pub const UDPLITE_MIN_CSCOV: c_int = 0; pub const UDPLITE_MAX_CSCOV: c_int = 65535;
 
 /// UDPLite error codes
-pub const UDPLITE_ERR_CSCOV: c_int = -1000;
-pub const UDPLITE_ERR_PARTIAL: c_int = -1001;
+pub const UDPLITE_ERR_CSCOV: c_int = -1000; pub const UDPLITE_ERR_PARTIAL: c_int = -1001;
 
 /// UDPLite protocol number
 pub const IPPROTO_UDPLITE: c_int = 136;

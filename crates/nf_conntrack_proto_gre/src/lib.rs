@@ -3,9 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::mem;
-use core::ptr;
+use core::{mem, ptr, ffi::{c_int, c_uint, c_void}};
 use kernel_types::*;
 
 #[cfg(not(test))]
@@ -31,16 +29,11 @@ pub const IPPROTO_GRE: u8 = 47;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_inet_addr {
-    pub all: [u32; 4],
-}
+pub struct nf_inet_addr { pub all: [u32; 4] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_ipv4 {
-    pub u3: nf_inet_addr,
-    pub protonum: u8,
-}
+pub struct nf_conntrack_tuple_ipv4 { pub u3: nf_inet_addr, pub protonum: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -51,16 +44,11 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_gre {
-    pub key: u16,
-}
+pub struct nf_conntrack_tuple_gre { pub key: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -79,33 +67,22 @@ pub struct nf_ct_gre_keymap {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_gre_net {
-    pub keymap_list: list_head,
-    pub timeouts: [c_uint; GRE_CT_MAX],
-}
+pub struct nf_gre_net { pub keymap_list: list_head, pub timeouts: [c_uint; GRE_CT_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_gre {
-    pub timeout: c_uint,
-}
+pub struct nf_conn_gre { pub timeout: c_uint }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_pptp_master {
-    pub keymap: [*mut nf_ct_gre_keymap; IP_CT_DIR_MAX],
-}
+pub struct nf_ct_pptp_master { pub keymap: [*mut nf_ct_gre_keymap; IP_CT_DIR_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    pub l4proto: u8,
-}
+pub struct nf_conntrack_l4proto { pub l4proto: u8 }
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 unsafe extern "C" {
     fn nf_ct_net(ct: *const nf_conn) -> *mut c_void;
@@ -135,7 +112,6 @@ fn spin_lock_bh(lock: *mut c_int) {
 fn spin_unlock_bh(lock: *mut c_int) {
     unsafe { *lock = 0 }
 }
-
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn nf_ct_gre_keymap_add(
@@ -348,15 +324,10 @@ unsafe fn gre_key_cmpfn(km: *const nf_ct_gre_keymap, t: *const nf_conntrack_tupl
 
 // Extern types for external dependencies
 #[repr(C)]
-struct gre_base_hdr {
-    flags: u16,
-    protocol: u16,
-}
+struct gre_base_hdr { flags: u16, protocol: u16 }
 
 #[repr(C)]
-struct pptp_gre_header {
-    call_id: u16,
-}
+struct pptp_gre_header { call_id: u16 }
 
 // Constants for protocol
 const GRE_VERSION_1: u16 = 0x2000;

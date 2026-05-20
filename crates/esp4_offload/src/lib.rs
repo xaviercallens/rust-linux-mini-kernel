@@ -1,9 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_int, c_void};
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
 type size_t = usize;
@@ -19,15 +17,10 @@ pub const ENOSYS: c_int = -38;
 pub const EAGAIN: c_int = -35;
 
 #[repr(C)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
-pub struct net_device {
-    _private: [u8; 0],
-}
+pub struct net_device { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct sk_buff {
@@ -38,16 +31,10 @@ pub struct sk_buff {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct skb_shared_info {
-    pub gso_type: u16,
-    _private: [u8; 0],
-}
+pub struct skb_shared_info { pub gso_type: u16, _private: [u8; 0] }
 
 #[repr(C)]
-pub struct xfrm_offload {
-    pub flags: u32,
-    _private: [u8; 0],
-}
+pub struct xfrm_offload { pub flags: u32, _private: [u8; 0] }
 
 #[repr(C)]
 pub struct sec_path {
@@ -57,9 +44,7 @@ pub struct sec_path {
 }
 
 #[repr(C)]
-pub struct xfrm_state {
-    _private: [u8; 0],
-}
+pub struct xfrm_state { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct iphdr {
@@ -70,19 +55,13 @@ pub struct iphdr {
 }
 
 #[repr(C)]
-pub struct ip_esp_hdr {
-    _private: [u8; 0],
-}
+pub struct ip_esp_hdr { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct net_offload {
-    _private: [u8; 0],
-}
+pub struct net_offload { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct xfrm_type_offload {
-    _private: [u8; 0],
-}
+pub struct xfrm_type_offload { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct napi_gro_cb {
@@ -92,14 +71,10 @@ pub struct napi_gro_cb {
 }
 
 #[repr(C)]
-pub struct xfrm_tunnel_skb_cb_tunnel {
-    pub ip4: *mut c_void,
-}
+pub struct xfrm_tunnel_skb_cb_tunnel { pub ip4: *mut c_void }
 
 #[repr(C)]
-pub struct xfrm_tunnel_skb_cb {
-    pub tunnel: xfrm_tunnel_skb_cb_tunnel,
-}
+pub struct xfrm_tunnel_skb_cb { pub tunnel: xfrm_tunnel_skb_cb_tunnel }
 
 #[repr(C)]
 pub struct xfrm_spi_skb_cb {

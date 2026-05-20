@@ -18,9 +18,7 @@ pub const CIPSO_V4_CACHE_REORDERLIMIT: c_int = 10;
 pub const CIPSO_V4_CACHE_ENABLED_DEFAULT: c_int = 1;
 pub const CIPSO_V4_CACHE_BUCKETS_SIZE_DEFAULT: c_int = 10;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOENT: c_int = -2;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOENT: c_int = -2;
 
 type size_t = usize;
 

@@ -26,9 +26,7 @@ pub struct NF_NAT_RANGE {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct NF_NAT_MULTI_RANGE_COMPAT {
-    pub range: [u32; 2],
-}
+pub struct NF_NAT_MULTI_RANGE_COMPAT { pub range: [u32; 2] }
 
 #[no_mangle]
 pub extern "C" fn NF_NAT_MASQUERADE_IPV4(
@@ -37,18 +35,9 @@ pub extern "C" fn NF_NAT_MASQUERADE_IPV4(
     max: *mut NF_NAT_RANGE,
 ) -> c_int {
     unsafe {
-        let ct = match ct.as_ref() {
-            Some(ct) => ct,
-            None => return -EINVAL,
-        };
-        let min = match min.as_ref() {
-            Some(min) => min,
-            None => return -EINVAL,
-        };
-        let max = match max.as_ref() {
-            Some(max) => max,
-            None => return -EINVAL,
-        };
+        let ct = match ct.as_ref() { Some(ct) => ct, None => return -EINVAL };
+        let min = match min.as_ref() { Some(min) => min, None => return -EINVAL };
+        let max = match max.as_ref() { Some(max) => max, None => return -EINVAL };
 
         if ct.proto.protocol != IPPROTO_TCP && ct.proto.protocol != IPPROTO_UDP {
             return -EINVAL;
@@ -76,18 +65,12 @@ pub extern "C" fn NF_NAT_MASQUERADE_IPV4(
 
         if ct.proto.protocol == IPPROTO_TCP {
             let tcp = ct as *const NF_CONN as *const TCP_SOCK;
-            let tcp = match tcp.as_ref() {
-                Some(tcp) => tcp,
-                None => return -EINVAL,
-            };
+            let tcp = match tcp.as_ref() { Some(tcp) => tcp, None => return -EINVAL };
             masq.masq.min_proto.range[0] = tcp.inet.inet_sport;
             masq.masq.max_proto.range[0] = tcp.inet.inet_sport;
         } else if ct.proto.protocol == IPPROTO_UDP {
             let udp = ct as *const NF_CONN as *const UDP_SOCK;
-            let udp = match udp.as_ref() {
-                Some(udp) => udp,
-                None => return -EINVAL,
-            };
+            let udp = match udp.as_ref() { Some(udp) => udp, None => return -EINVAL };
             masq.masq.min_proto.range[0] = udp.inet.inet_sport;
             masq.masq.max_proto.range[0] = udp.inet.inet_sport;
         }
@@ -111,18 +94,9 @@ pub extern "C" fn NF_NAT_MASQUERADE_IPV6(
     max: *mut NF_NAT_RANGE,
 ) -> c_int {
     unsafe {
-        let ct = match ct.as_ref() {
-            Some(ct) => ct,
-            None => return -EINVAL,
-        };
-        let min = match min.as_ref() {
-            Some(min) => min,
-            None => return -EINVAL,
-        };
-        let max = match max.as_ref() {
-            Some(max) => max,
-            None => return -EINVAL,
-        };
+        let ct = match ct.as_ref() { Some(ct) => ct, None => return -EINVAL };
+        let min = match min.as_ref() { Some(min) => min, None => return -EINVAL };
+        let max = match max.as_ref() { Some(max) => max, None => return -EINVAL };
 
         if ct.proto.protocol != IPPROTO_TCP && ct.proto.protocol != IPPROTO_UDP {
             return -EINVAL;
@@ -150,18 +124,12 @@ pub extern "C" fn NF_NAT_MASQUERADE_IPV6(
 
         if ct.proto.protocol == IPPROTO_TCP {
             let tcp = ct as *const NF_CONN as *const TCP_SOCK;
-            let tcp = match tcp.as_ref() {
-                Some(tcp) => tcp,
-                None => return -EINVAL,
-            };
+            let tcp = match tcp.as_ref() { Some(tcp) => tcp, None => return -EINVAL };
             masq.masq.min_proto.range[0] = tcp.inet.inet_sport;
             masq.masq.max_proto.range[0] = tcp.inet.inet_sport;
         } else if ct.proto.protocol == IPPROTO_UDP {
             let udp = ct as *const NF_CONN as *const UDP_SOCK;
-            let udp = match udp.as_ref() {
-                Some(udp) => udp,
-                None => return -EINVAL,
-            };
+            let udp = match udp.as_ref() { Some(udp) => udp, None => return -EINVAL };
             masq.masq.min_proto.range[0] = udp.inet.inet_sport;
             masq.masq.max_proto.range[0] = udp.inet.inet_sport;
         }
@@ -185,10 +153,7 @@ pub extern "C" fn NF_NAT_MASQUERADE_INET(
     max: *mut NF_NAT_RANGE,
 ) -> c_int {
     unsafe {
-        let ct = match ct.as_ref() {
-            Some(ct) => ct,
-            None => return -EINVAL,
-        };
+        let ct = match ct.as_ref() { Some(ct) => ct, None => return -EINVAL };
 
         if ct.src.l3num == AF_INET {
             NF_NAT_MASQUERADE_IPV4(ct, min, max)

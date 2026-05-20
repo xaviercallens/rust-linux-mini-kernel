@@ -27,15 +27,11 @@ pub const EEXIST: c_int = -17;
 // Type definitions
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_nf {
-    pub nf_loggers: [*mut nf_logger; NFPROTO_NUMPROTO],
-}
+pub struct net_nf { pub nf_loggers: [*mut nf_logger; NFPROTO_NUMPROTO] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub nf: net_nf,
-}
+pub struct net { pub nf: net_nf }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -59,10 +55,7 @@ pub struct nf_logger {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_log_buf {
-    pub count: c_uint,
-    pub buf: [u8; 1024],
-}
+pub struct nf_log_buf { pub count: c_uint, pub buf: [u8; 1024] }
 
 // Function pointer types
 pub type nf_log_fn = extern "C" fn(
@@ -78,9 +71,7 @@ pub type nf_log_fn = extern "C" fn(
 
 // Mutex implementation (simplified for FFI compatibility)
 #[repr(C)]
-pub struct Mutex {
-    lock: AtomicI32,
-}
+pub struct Mutex { lock: AtomicI32 }
 
 impl Mutex {
     const fn new() -> Self {

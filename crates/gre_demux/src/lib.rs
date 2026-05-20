@@ -3,14 +3,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::panic::PanicInfo;
-use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::{ptr, panic::PanicInfo, sync::atomic::{AtomicPtr, Ordering}};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const EBUSY: c_int = -16;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const EBUSY: c_int = -16; pub const ENOSYS: c_int = -38;
 
 pub const GRE_VERSION: u16 = 0x7000;
 pub const GRE_ROUTING: u16 = 0x4000;
@@ -20,9 +16,7 @@ pub const GRE_SEQ: u16 = 0x1000;
 
 pub const IPPROTO_GRE: c_int = 47;
 
-pub const ETH_P_WCCP: u16 = 0x883E;
-pub const ETH_P_ERSPAN: u16 = 0x88BE;
-pub const ETH_P_ERSPAN2: u16 = 0x22EB;
+pub const ETH_P_WCCP: u16 = 0x883E; pub const ETH_P_ERSPAN: u16 = 0x88BE; pub const ETH_P_ERSPAN2: u16 = 0x22EB;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -34,10 +28,7 @@ pub struct gre_protocol {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct gre_base_hdr {
-    pub flags: u16,
-    pub protocol: u16,
-}
+pub struct gre_base_hdr { pub flags: u16, pub protocol: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

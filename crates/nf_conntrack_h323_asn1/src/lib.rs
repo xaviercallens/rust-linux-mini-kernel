@@ -13,8 +13,7 @@
 use core::panic::PanicInfo;
 use kernel_types::*;
 
-pub const H323_ERROR_NONE: c_int = 0;
-pub const H323_ERROR_BOUND: c_int = 1;
+pub const H323_ERROR_NONE: c_int = 0; pub const H323_ERROR_BOUND: c_int = 1;
 
 #[cfg(not(test))]
 #[panic_handler]

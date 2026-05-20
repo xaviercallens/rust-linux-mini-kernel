@@ -7,25 +7,18 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::c_void;
-use core::panic::PanicInfo;
+use core::{ffi::c_void, panic::PanicInfo};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct flowi6 {
-    _unused: [u8; 0],
-}
+pub struct flowi6 { _unused: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct Inet6SkbParm {
-    _unused: [u8; 0],
-}
+pub struct Inet6SkbParm { _unused: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -6,9 +6,7 @@ use kernel_types::*;
 pub type socklen_t = u32;
 pub type size_t = usize;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -19,10 +17,7 @@ pub struct tlvtype_proc {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_destopt_hao {
-    pub length: u8,
-    pub addr: [u8; 16],
-}
+pub struct ipv6_destopt_hao { pub length: u8, pub addr: [u8; 16] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -45,15 +40,11 @@ pub struct inet6_skb_parm {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet6_dev {
-    pub cnf: *mut c_void,
-}
+pub struct inet6_dev { pub cnf: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub ipv6: *mut c_void,
-}
+pub struct net { pub ipv6: *mut c_void }
 
 // Function declarations for external C functions
 extern "C" {
@@ -93,9 +84,7 @@ unsafe fn skb_transport_header_ptr(skb: *mut sk_buff) -> *mut u8 {
 }
 
 #[inline]
-unsafe fn skb_headlen(skb: *mut sk_buff) -> usize {
-    (*skb).len as usize
-}
+unsafe fn skb_headlen(skb: *mut sk_buff) -> usize { (*skb).len as usize }
 
 #[inline]
 unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
@@ -108,9 +97,7 @@ unsafe fn ip6cb(skb: *mut sk_buff) -> *mut inet6_skb_parm {
 }
 
 #[inline]
-fn ipv6_addr_is_multicast(addr: *const u8) -> bool {
-    unsafe { (*addr & 0xFF) == 0xFF }
-}
+fn ipv6_addr_is_multicast(addr: *const u8) -> bool { unsafe { (*addr & 0xFF) == 0xFF } }
 
 fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
     unsafe {

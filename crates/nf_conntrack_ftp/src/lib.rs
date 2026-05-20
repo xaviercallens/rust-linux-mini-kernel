@@ -15,9 +15,7 @@ use kernel_types::*;
 
 pub type size_t = usize;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -27,9 +25,7 @@ fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tcp {
-    pub port: __be16,
-}
+pub struct nf_conntrack_tcp { pub port: __be16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -40,47 +36,31 @@ pub union nf_conntrack_union {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_man {
-    pub u3: nf_conntrack_union,
-    pub u: nf_conntrack_tcp,
-}
+pub struct nf_conntrack_man { pub u3: nf_conntrack_union, pub u: nf_conntrack_tcp }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_ftp_master {
-    pub seq_aft_nl: [[__u32; 2]; 2],
-    pub seq_aft_nl_num: [c_uint; 2],
-}
+pub struct nf_ct_ftp_master { pub seq_aft_nl: [[__u32; 2]; 2], pub seq_aft_nl_num: [c_uint; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_ftp_type {
-    _priv: [u8; 0],
-}
+pub struct nf_ct_ftp_type { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_ftp {
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_ftp { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_conntrack_info {
-    _priv: [u8; 0],
-}
+pub struct ip_conntrack_info { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    _priv: [u8; 0],
-}
+pub struct spinlock_t { _priv: [u8; 0] }
 
 pub type getnum_fn =
     Option<unsafe extern "C" fn(*const u8, size_t, *mut nf_conntrack_man, u8, *mut c_uint) -> c_int>;

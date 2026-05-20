@@ -3,13 +3,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::mem;
-use core::panic::PanicInfo;
+use core::{mem, panic::PanicInfo};
 use kernel_types::*;
 
-const COOKIEBITS: u32 = 24;
-const COOKIEMASK: u32 = (1 << COOKIEBITS) - 1;
-const MAX_SYNCOOKIE_AGE: u32 = 3;
+const COOKIEBITS: u32 = 24; const COOKIEMASK: u32 = (1 << COOKIEBITS) - 1; const MAX_SYNCOOKIE_AGE: u32 = 3;
 
 #[repr(C)]
 struct Combined {
@@ -22,9 +19,7 @@ struct Combined {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct siphash_key_t {
-    key: [u64; 2],
-}
+struct siphash_key_t { key: [u64; 2] }
 
 #[repr(C)]
 pub struct tcphdr {
@@ -171,17 +166,11 @@ pub unsafe extern "C" fn __cookie_v6_check(iph: *const ipv6hdr, th: *const tcphd
 
 unsafe fn net_get_random_once(_ptr: *mut c_void, _len: size_t) {}
 
-unsafe fn siphash(_data: *const c_void, _len: size_t, _key: *const siphash_key_t) -> u32 {
-    0
-}
+unsafe fn siphash(_data: *const c_void, _len: size_t, _key: *const siphash_key_t) -> u32 { 0 }
 
-fn tcp_cookie_time() -> u32 {
-    0
-}
+fn tcp_cookie_time() -> u32 { 0 }
 
-fn ntohl(n: u32) -> u32 {
-    u32::from_be(n)
-}
+fn ntohl(n: u32) -> u32 { u32::from_be(n) }
 
 #[cfg(not(test))]
 #[panic_handler]

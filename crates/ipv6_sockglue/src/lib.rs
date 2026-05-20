@@ -4,9 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::c_void;
-use core::mem;
-use core::ptr;
+use core::{mem, ptr, ffi::c_void};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -16,16 +14,12 @@ pub const ENOBUFS: c_int = -105;
 pub const EADDRINUSE: c_int = -98;
 pub const EFAULT: c_int = -14;
 
-pub const SOCK_RAW: c_int = 3;
-pub const IPPROTO_RAW: c_int = 255;
-pub const GFP_KERNEL: u32 = 0x20;
+pub const SOCK_RAW: c_int = 3; pub const IPPROTO_RAW: c_int = 255; pub const GFP_KERNEL: u32 = 0x20;
 
 pub type socklen_t = u32;
 
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
+pub struct in6_addr { pub s6_addr: [u8; 16] }
 
 #[repr(C)]
 pub struct sockaddr_in6 {
@@ -37,10 +31,7 @@ pub struct sockaddr_in6 {
 }
 
 #[repr(C)]
-pub struct ipv6_txoptions {
-    pub opt_nflen: u32,
-    pub opt_flen: u32,
-}
+pub struct ipv6_txoptions { pub opt_nflen: u32, pub opt_flen: u32 }
 
 #[repr(C)]
 pub struct group_source_req {
@@ -59,21 +50,13 @@ pub struct group_filter {
 }
 
 #[repr(C)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
-pub struct rwlock_t {
-    pub raw_lock: u64,
-}
+pub struct rwlock_t { pub raw_lock: u64 }
 
 #[repr(C)]
-pub struct sock {
-    pub sk_type: u16,
-    pub _pad: [u8; 6],
-}
+pub struct sock { pub sk_type: u16, pub _pad: [u8; 6] }
 
 #[repr(C)]
 pub struct inet_sock {

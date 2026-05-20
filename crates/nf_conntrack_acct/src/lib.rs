@@ -3,8 +3,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ptr;
-use core::ffi::{c_int, c_char, c_void};
+use core::{ptr, ffi::{c_int, c_char, c_void}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -13,9 +12,7 @@ pub const ENOSYS: c_int = -38;
 pub const NF_CT_EXT_ACCT: u32 = 1;
 
 #[repr(C)]
-struct nf_conn_acct {
-    _priv: [u8; 0],
-}
+struct nf_conn_acct { _priv: [u8; 0] }
 
 #[repr(C)]
 struct nf_ct_ext_type {
@@ -25,14 +22,10 @@ struct nf_ct_ext_type {
 }
 
 #[repr(C)]
-struct net {
-    ct: net_ct,
-}
+struct net { ct: net_ct }
 
 #[repr(C)]
-struct net_ct {
-    sysctl_acct: u8,
-}
+struct net_ct { sysctl_acct: u8 }
 
 static mut NF_CT_ACCT: u8 = 0;
 

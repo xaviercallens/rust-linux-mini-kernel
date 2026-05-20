@@ -3,14 +3,10 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use core::ffi::c_int;
-use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::{ptr, ffi::c_int, sync::atomic::{AtomicPtr, Ordering}};
 use kernel_types::*;
 
-pub const IPPROTO_ESP: u8 = 50;
-pub const IPPROTO_AH: u8 = 51;
-pub const IPPROTO_COMP: u8 = 108;
+pub const IPPROTO_ESP: u8 = 50; pub const IPPROTO_AH: u8 = 51; pub const IPPROTO_COMP: u8 = 108;
 
 pub const INET6_PROTO_NOPOLICY: c_int = 1 << 0;
 pub const ICMPV6_DEST_UNREACH: c_int = 1;

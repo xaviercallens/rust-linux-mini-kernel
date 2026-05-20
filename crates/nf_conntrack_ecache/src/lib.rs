@@ -15,16 +15,11 @@ use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 use kernel_types::*;
 
-const ECACHE_RETRY_WAIT: u32 = 1;
-const ECACHE_STACK_ALLOC: usize = 256 / mem::size_of::<*mut c_void>();
+const ECACHE_RETRY_WAIT: u32 = 1; const ECACHE_STACK_ALLOC: usize = 256 / mem::size_of::<*mut c_void>();
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const EBUSY: c_int = -16;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const EBUSY: c_int = -16;
 
-const NFCT_ECACHE_DESTROY_FAIL: u32 = 1;
-const NFCT_ECACHE_DESTROY_SENT: u32 = 2;
-const IPCT_DESTROY: u32 = 4;
+const NFCT_ECACHE_DESTROY_FAIL: u32 = 1; const NFCT_ECACHE_DESTROY_SENT: u32 = 2; const IPCT_DESTROY: u32 = 4;
 
 // Global mutex for ecache operations
 static mut NF_CT_ECACHE_MUTEX: c_void = unsafe { core::mem::zeroed() };
@@ -37,19 +32,13 @@ enum retry_state {
 }
 
 #[repr(C)]
-struct nf_conntrack_tuple_hash {
-    _unused: [u8; 0],
-}
+struct nf_conntrack_tuple_hash { _unused: [u8; 0] }
 
 #[repr(C)]
-struct hlist_nulls_node {
-    next: *mut hlist_nulls_node,
-}
+struct hlist_nulls_node { next: *mut hlist_nulls_node }
 
 #[repr(C)]
-struct nf_conn {
-    _unused: [u8; 0],
-}
+struct nf_conn { _unused: [u8; 0] }
 
 #[repr(C)]
 struct nf_ct_event {
@@ -59,9 +48,7 @@ struct nf_ct_event {
 }
 
 #[repr(C)]
-struct nf_ct_event_notifier {
-    fcn: extern "C" fn(c_uint, *mut nf_ct_event),
-}
+struct nf_ct_event_notifier { fcn: extern "C" fn(c_uint, *mut nf_ct_event) }
 
 #[repr(C)]
 struct nf_conntrack_ecache {
@@ -74,15 +61,10 @@ struct nf_conntrack_ecache {
 }
 
 #[repr(C)]
-struct ct_pcpu {
-    lock: *mut c_void,
-    dying: *mut hlist_nulls_node,
-}
+struct ct_pcpu { lock: *mut c_void, dying: *mut hlist_nulls_node }
 
 #[repr(C)]
-struct delayed_work {
-    _unused: [u8; 0],
-}
+struct delayed_work { _unused: [u8; 0] }
 
 #[repr(C)]
 struct netns_ct {
@@ -94,15 +76,10 @@ struct netns_ct {
 }
 
 #[repr(C)]
-struct nf_ct_net_events {
-    nf_conntrack_event_cb: *mut nf_ct_event_notifier,
-}
+struct nf_ct_net_events { nf_conntrack_event_cb: *mut nf_ct_event_notifier }
 
 #[repr(C)]
-struct nf_conntrack_net {
-    ecache_dwork: delayed_work,
-    ct_net: *mut netns_ct,
-}
+struct nf_conntrack_net { ecache_dwork: delayed_work, ct_net: *mut netns_ct }
 
 unsafe extern "C" {
     fn nf_ct_tuplehash_to_ctrack(h: *mut nf_conntrack_tuple_hash) -> *mut nf_conn;

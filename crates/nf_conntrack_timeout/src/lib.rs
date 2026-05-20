@@ -7,13 +7,9 @@ use core::ffi::{c_char, c_void};
 use kernel_types::*;
 
 #[repr(C)]
-pub struct nf_conn {
-    _priv: [u8; 0],
-}
+pub struct nf_conn { _priv: [u8; 0] }
 #[repr(C)]
-pub struct nf_conntrack_helper {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_helper { _priv: [u8; 0] }
 #[repr(C)]
 pub struct nf_conntrack_timeout {
     pub name: *const c_char,
@@ -25,9 +21,7 @@ pub struct nf_conntrack_timeout {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_inet_addr {
-    pub all: [u32; 4],
-}
+pub struct nf_inet_addr { pub all: [u32; 4] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -39,10 +33,7 @@ pub struct nf_conntrack_man_tcp {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_man_udp {
-    pub port: u16,
-    pub _pad: u16,
-}
+pub struct nf_conntrack_man_udp { pub port: u16, pub _pad: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -225,7 +216,6 @@ pub extern "C" fn nf_ct_timeout_put(timeout: *mut nf_conntrack_timeout) {
         }
     }
 }
-
 
 #[no_mangle]
 pub extern "C" fn nf_ct_timeout_list_del(timeout: *mut nf_conntrack_timeout) {

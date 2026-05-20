@@ -1,5 +1,4 @@
-use core::ffi::{c_int, c_void};
-use core::mem::size_of;
+use core::{ffi::{c_int, c_void}, mem::size_of};
 use kernel_types::*;
 
 // Error codes from errno.h

@@ -9,9 +9,7 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_void};
-use core::mem::{self, size_of};
-use core::ptr;
+use core::{ffi::{c_char, c_int, c_void}, mem::{self, size_of}, ptr};
 use kernel_types::*;
 
 pub const IPPROTO_UDP: c_int = 17;
@@ -19,9 +17,7 @@ pub const IPPROTO_UDPLITE: c_int = 136;
 pub const NF_ACCEPT: c_int = 1;
 pub const NF_INET_PRE_ROUTING: c_int = 0;
 
-pub const UDP_CT_UNREPLIED: usize = 0;
-pub const UDP_CT_REPLIED: usize = 1;
-pub const UDP_CT_MAX: usize = 2;
+pub const UDP_CT_UNREPLIED: usize = 0; pub const UDP_CT_REPLIED: usize = 1; pub const UDP_CT_MAX: usize = 2;
 
 pub const IPS_SEEN_REPLY_BIT: c_int = 1;
 pub const IPS_ASSURED_BIT: c_int = 2;
@@ -41,33 +37,22 @@ pub struct nf_hook_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_proto {
-    pub udp: nf_conn_udp,
-}
+pub struct nf_conn_proto { pub udp: nf_conn_udp }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_udp {
-    pub stream_ts: c_int,
-}
+pub struct nf_conn_udp { pub stream_ts: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_udp_net {
-    pub timeouts: [c_int; UDP_CT_MAX],
-}
+pub struct nf_udp_net { pub timeouts: [c_int; UDP_CT_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    pub l4proto: c_int,
-    pub allow_clash: bool,
-}
+pub struct nf_conntrack_l4proto { pub l4proto: c_int, pub allow_clash: bool }
 
 #[repr(C)]
-pub struct net_t {
-    _priv: [u8; 0],
-}
+pub struct net_t { _priv: [u8; 0] }
 
 // Static data
 static UDP_TIMEOUTS: [c_int; UDP_CT_MAX as usize] = [30, 120]; // *HZ
@@ -107,9 +92,7 @@ unsafe extern "C" {
 }
 
 #[inline(always)]
-unsafe fn ntohs(v: u16) -> u16 {
-    u16::from_be(v)
-}
+unsafe fn ntohs(v: u16) -> u16 { u16::from_be(v) }
 
 fn udp_error_log(skb: *mut sk_buff, state: *mut nf_hook_state, msg: *const c_char) {
     unsafe {
@@ -306,9 +289,7 @@ pub unsafe extern "C" fn udp_timeout(ct: *mut nf_conn) -> c_int {
 }
 
 #[inline]
-unsafe fn test_bit(ct: *mut nf_conn, bit: c_int) -> bool {
-    (*ct).status & (1 << bit) != 0
-}
+unsafe fn test_bit(ct: *mut nf_conn, bit: c_int) -> bool { (*ct).status & (1 << bit) != 0 }
 
 #[inline]
 unsafe fn test_and_set_bit(ct: *mut nf_conn, bit: c_int) -> bool {
@@ -318,9 +299,7 @@ unsafe fn test_and_set_bit(ct: *mut nf_conn, bit: c_int) -> bool {
 }
 
 #[inline]
-fn time_after(x: c_int, y: c_int) -> bool {
-    (x - y) > 0
-}
+fn time_after(x: c_int, y: c_int) -> bool { (x - y) > 0 }
 
 #[inline]
 fn jiffies() -> c_int {
@@ -329,9 +308,7 @@ fn jiffies() -> c_int {
 }
 
 #[inline]
-fn HZ() -> c_int {
-    100 // Assuming 100 HZ
-}
+fn HZ() -> c_int { 100 // Assuming 100 HZ }
 
 #[inline]
 fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {

@@ -4,14 +4,10 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::mem;
-use core::panic::PanicInfo;
+use core::{mem, ffi::{c_char, c_int, c_uint, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOTSUPP: c_int = -95;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOTSUPP: c_int = -95;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -24,10 +20,7 @@ pub struct ipv6_sr_hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sr6_tlv {
-    pub type_: u8,
-    pub len: u8,
-}
+pub struct sr6_tlv { pub type_: u8, pub len: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

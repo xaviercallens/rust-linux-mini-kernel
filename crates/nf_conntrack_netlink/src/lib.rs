@@ -9,17 +9,14 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::c_int;
-use core::panic::PanicInfo;
+use core::{ffi::c_int, panic::PanicInfo};
 use kernel_types::*;
 
 pub type size_t = usize;
 pub type c_size_t = usize;
 pub type socklen_t = u32;
 
-pub const ENOMEM: c_int = 12;
-pub const EINVAL: c_int = 22;
-pub const EMSGSIZE: c_int = 90;
+pub const ENOMEM: c_int = 12; pub const EINVAL: c_int = 22; pub const EMSGSIZE: c_int = 90;
 
 pub const CTA_TUPLE_PROTO: c_int = 1;
 pub const CTA_PROTO_NUM: c_int = 1;
@@ -30,29 +27,19 @@ pub const CTA_IP_V6_DST: c_int = 4;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nlattr {
-    pub nla_len: u16,
-    pub nla_type: u16,
-}
+pub struct nlattr { pub nla_len: u16, pub nla_type: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_inet_addr {
-    pub all: [u32; 4],
-}
+pub struct nf_inet_addr { pub all: [u32; 4] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub protonum: u8,
-    pub u3: nf_inet_addr,
-}
+pub struct nf_conntrack_tuple_dst { pub protonum: u8, pub u3: nf_inet_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src {
-    pub u3: nf_inet_addr,
-}
+pub struct nf_conntrack_tuple_src { pub u3: nf_inet_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -71,29 +58,19 @@ pub struct nf_conntrack_l4proto {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_counter {
-    pub packets: [u64; 2],
-    pub bytes: [u64; 2],
-}
+pub struct nf_conn_counter { pub packets: [u64; 2], pub bytes: [u64; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_acct {
-    pub counter: *mut nf_conn_counter,
-}
+pub struct nf_conn_acct { pub counter: *mut nf_conn_counter }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tstamp {
-    pub start: u64,
-    pub stop: u64,
-}
+pub struct nf_conn_tstamp { pub start: u64, pub stop: u64 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_labels {
-    pub bits: [u64; 16],
-}
+pub struct nf_conn_labels { pub bits: [u64; 16] }
 
 unsafe extern "C" {
     fn nla_nest_start(skb: *mut sk_buff, attrtype: c_int) -> *mut nlattr;
@@ -324,15 +301,11 @@ pub const CTA_SECCTX: c_int = 13;
 pub const CTA_LABELS: c_int = 14;
 pub const CTA_TUPLE_MASTER: c_int = 15;
 
-pub const NFPROTO_IPV4: u8 = 2;
-pub const NFPROTO_IPV6: u8 = 10;
-pub const NF_CT_DEFAULT_ZONE_ID: u16 = 0xffff;
+pub const NFPROTO_IPV4: u8 = 2; pub const NFPROTO_IPV6: u8 = 10; pub const NF_CT_DEFAULT_ZONE_ID: u16 = 0xffff;
 
 // htons and htonl implementations for no_std environment
 #[inline]
-fn htons(x: u16) -> u16 {
-    (x >> 8) | (x << 8)
-}
+fn htons(x: u16) -> u16 { (x >> 8) | (x << 8) }
 
 #[inline]
 fn htonl(x: u32) -> u32 {

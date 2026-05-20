@@ -5,10 +5,7 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::mem;
-use core::ptr;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::{ffi::{c_int, c_uint, c_void}, mem, ptr, sync::atomic::{AtomicUsize, Ordering}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -45,36 +42,23 @@ pub struct nf_conntrack_tuple_mask {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-    pub pprev: *mut *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node, pub pprev: *mut *mut hlist_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conn_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: u32,
-    pub tuplehash: [nf_conn_tuple_hash; 2],
-}
+pub struct nf_conn { pub status: u32, pub tuplehash: [nf_conn_tuple_hash; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_help {
-    pub helper: *mut nf_conntrack_helper,
-    pub expectations: hlist_head,
-}
+pub struct nf_conn_help { pub helper: *mut nf_conntrack_helper, pub expectations: hlist_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -93,9 +77,7 @@ pub struct nf_ct_helper_expectfn {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct Mutex {
-    _priv: u8,
-}
+pub struct Mutex { _priv: u8 }
 
 // Global variables
 pub static mut NF_CT_HELPER_COUNT: c_uint = 0;
@@ -104,8 +86,8 @@ pub static mut NF_CT_NAT_HELPERS: list_head = list_head {
     next: ptr::null_mut(),
     prev: ptr::null_mut(),
 };
-pub static mut NF_CT_HELPER_MUTEX: Mutex = Mutex {};
-pub static mut NF_CT_NAT_HELPERS_MUTEX: Mutex = Mutex {};
+pub static mut NF_CT_HELPER_MUTEX: Mutex = Mutex { _priv: 0 };
+pub static mut NF_CT_NAT_HELPERS_MUTEX: Mutex = Mutex { _priv: 0 };
 
 #[inline(always)]
 unsafe fn helper_from_hnode(node: *mut hlist_node) -> *mut nf_conntrack_helper {
