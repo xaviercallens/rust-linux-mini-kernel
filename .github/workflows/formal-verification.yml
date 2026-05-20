@@ -68,6 +68,9 @@ jobs:
           cargo tarpaulin --workspace --out Html || true
 
       - name: Run Full-Scope Benchmarking (99% Code Path Validation)
+        env:
+          WORKSPACE_ROOT: ${{ github.workspace }}
+          BENCHMARK_LOG: ${{ github.workspace }}/benchmark_results.json
         run: |
           echo "Running benchmarking on 99% of kernel modules..."
           chmod +x azure_build/benchmark_suite.sh
