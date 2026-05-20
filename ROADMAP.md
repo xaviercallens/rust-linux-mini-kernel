@@ -31,5 +31,10 @@ This document outlines the strategic roadmap for achieving a fully stable, forma
 - [ ] **Milestone 5.3**: Implement Kernel Address Space Layout Randomization (KASLR) and kCFI exploit mitigations.
 - [ ] **Milestone 5.4**: Privilege De-escalation (Microkernel Design) - Move drivers into Ring-3 userspace to protect core scheduler.
 
+### ⚡ v9.0.0 Performance Optimization Milestones
+- [ ] **Milestone 5.5**: Eliminate FFI entirely by rewriting all remaining hardware stubs in pure Rust `asm!` blocks to resolve the $3.45\times$ FFI boundary overhead.
+- [ ] **Milestone 5.6**: Migrate VFS path resolution to `[u8]` byte slices or `OsStr` to bypass the O(N) UTF-8 verification tax.
+- [ ] **Milestone 5.7**: Implement `unsafe { get_unchecked() }` loop unrolling on network checksum and cryptographic hot paths to manually bypass LLVM bounds-checking.
+
 ---
 *If you are interested in accelerating this roadmap, check out our [CONTRIBUTING.md](./CONTRIBUTING.md) and jump into the codebase!*
