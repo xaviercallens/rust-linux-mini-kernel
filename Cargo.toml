@@ -182,7 +182,7 @@ members = [
 ]
 
 [workspace.package]
-version = "9.2.0"
+version = "9.3.0"
 edition = "2021"
 authors = ["Linux Kernel Contributors", "Socrate AI"]
 license = "GPL-2.0"
