@@ -49,4 +49,11 @@ This document outlines the strategic roadmap for achieving a fully stable, forma
 - [ ] **Milestone 5.7**: Implement `unsafe { get_unchecked() }` loop unrolling on network checksum and cryptographic hot paths to manually bypass LLVM bounds-checking.
 
 ---
+
+## 🔬 Phase 6: MVK v9.3 High-Fidelity Verification & Concurrency Assurance (Proposed Improvement)
+- [ ] **Milestone 6.1**: Close the Formal Verification Gap by completely removing `sorry` tactics from the core Phase 2 memory allocation modules (`PageAlloc.lean` and `Slab.lean`).
+- [ ] **Milestone 6.2**: Integrate **Loom** concurrency permutation testing within the read-copy-update (`RcuPointer`) harnesses to mathematically eliminate data-race UB under weak memory architectures.
+- [ ] **Milestone 6.3**: Refactor CI/CD FFI type helpers (e.g., `toIO'`) out of the dynamically running script and into a dedicated `specs/lean4/MVK/Phase2/Compatibility.lean` module to prevent git tree mutations.
+
+---
 *If you are interested in accelerating this roadmap, check out our [CONTRIBUTING.md](./CONTRIBUTING.md) and jump into the codebase!*
