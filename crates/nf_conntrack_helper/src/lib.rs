@@ -6,7 +6,9 @@
 #![allow(clippy::all)]
 
 use core::{ffi::{c_int, c_uint, c_void}, mem, ptr, sync::atomic::{AtomicUsize, Ordering}};
-use kernel_types::*;
+use kernel_types::{c_int, c_uint, c_uchar, c_char, c_void, size_t, sk_buff, hlist_node};
+use kernel_types::nf_conntrack_helper as kt_nf_conntrack_helper;
+use kernel_types::nf_conntrack_tuple as kt_nf_conntrack_tuple;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -162,10 +164,11 @@ pub unsafe extern "C" fn __nf_ct_helper_find(
 
     while !node.is_null() {
         let helper = helper_from_hnode(node);
-        if nf_ct_tuple_src_mask_cmp(tuple, &(*helper).tuple, &mask) {
+        let helper_tuple_ptr = ptr::addr_of!((*helper).tuple);
+        let mask_ptr = ptr::addr_of!(mask) as *const nf_conntrack_tuple;
+        if nf_ct_tuple_src_mask_cmp(tuple, helper_tuple_ptr, mask_ptr) {
             return helper;
         }
-        node = (*node).next;
         node = (*node).next;
     }
 
@@ -191,7 +194,7 @@ pub unsafe extern "C" fn __nf_conntrack_helper_find(
             if !helper.is_null()
                 && (*helper).tuple.src_l3num == l3num
                 && (*helper).tuple.dst.protonum == protonum
-                && strcmp((*helper).name, name) == 0
+                && strcmp((*helper).name.as_ptr(), name) == 0
             {
                 return helper;
             }
@@ -233,7 +236,7 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
         return ptr::null_mut();
     }
 
-    if !refcount_inc_not_zero(&(*h).refcnt) {
+    if !refcount_inc_not_zero(&*((&(*h).refcnt) as *const c_uint as *const AtomicUsize)) {
         module_put((*h).me);
         return ptr::null_mut();
     }
@@ -249,7 +252,7 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_helper_put(helper: *mut nf_conntrack_helper) {
     if !helper.is_null() {
-        refcount_dec(&(*helper).refcnt);
+        refcount_dec(&*((&(*helper).refcnt) as *const c_uint as *const AtomicUsize));
         module_put((*helper).me);
     }
 }

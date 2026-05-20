@@ -488,7 +488,7 @@ pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
 /// Netfilter connection tracking tuple
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst }
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst, pub src_l3num: u16 }
 
 /// Netfilter connection tracking tuple source
 #[repr(C)]
