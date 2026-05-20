@@ -6,6 +6,7 @@ type c_int = i32;
 
 #[cfg(not(test))]
 mod memory;
+pub mod advanced_perf;
 
 extern "C" {
     fn printk_init() -> c_int;
