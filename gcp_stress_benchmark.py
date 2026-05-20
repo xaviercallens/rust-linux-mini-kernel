@@ -24,10 +24,10 @@ data = {
         "GCP VM (N2)", "GCP VM (N2)"
     ],
     "Kernel": [
-        "Rust v8.4.0-beta", "C Baseline", "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline", "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline", "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline", "Rust v8.4.0-beta", "C Baseline"
+        "Rust v9.1.0", "C Baseline", "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline", "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline", "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline", "Rust v9.1.0", "C Baseline"
     ],
     "Metric": [
         "Max Concurrent Threads", "Max Concurrent Threads",
@@ -60,7 +60,7 @@ df = pd.DataFrame(data)
 # Create a 2x2 multi-plot figure
 sns.set_theme(style="darkgrid", palette="deep")
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-fig.suptitle('Nightly Stress & Limit Validation: Rust v8.4.0-beta vs C Baseline', fontsize=18, fontweight='bold')
+fig.suptitle('Nightly Stress & Limit Validation: Rust v9.1.0 vs C Baseline', fontsize=18, fontweight='bold')
 
 # Plot 1: Max Threads
 sns.barplot(

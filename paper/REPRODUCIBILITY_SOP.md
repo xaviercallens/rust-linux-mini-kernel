@@ -1,6 +1,6 @@
 # Standard Operating Procedure (SOP): MVK Telemetry Reproducibility
 
-**Objective:** This document provides the explicit, step-by-step Standard Operating Procedure (SOP) to reproduce the empirical CPU cycle telemetry published in the MVK `v8.4.0-beta` research paper.
+**Objective:** This document provides the explicit, step-by-step Standard Operating Procedure (SOP) to reproduce the empirical CPU cycle telemetry published in the MVK `v9.1.0` research paper.
 
 ## Prerequisites
 1. **Google Cloud SDK:** Ensure `gcloud` CLI is installed and authenticated.

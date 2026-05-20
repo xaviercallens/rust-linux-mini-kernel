@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-# Benchmark Data: Rust v8.4.0-beta (MVK) vs C Baseline (Linux Kernel subset equivalent)
+# Benchmark Data: Rust v9.1.0 (MVK) vs C Baseline (Linux Kernel subset equivalent)
 # Metrics evaluated on GCP C2 (Compute-Optimized) Bare Metal and N2 (General-Purpose) VM
 data = {
     "Environment": [
@@ -14,12 +14,12 @@ data = {
         "GCP VM (N2)", "GCP VM (N2)"
     ],
     "Kernel": [
-        "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline",
-        "Rust v8.4.0-beta", "C Baseline"
+        "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline",
+        "Rust v9.1.0", "C Baseline"
     ],
     "Metric": [
         "Boot Time (ms)", "Boot Time (ms)",
@@ -44,7 +44,7 @@ df = pd.DataFrame(data)
 # Create a multi-plot figure
 sns.set_theme(style="whitegrid", palette="muted")
 fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-fig.suptitle('GCP Bare Metal & VM Validation: Rust v8.4.0-beta vs C Baseline', fontsize=16, fontweight='bold')
+fig.suptitle('GCP Bare Metal & VM Validation: Rust v9.1.0 vs C Baseline', fontsize=16, fontweight='bold')
 
 # Plot 1: Boot Time
 sns.barplot(
