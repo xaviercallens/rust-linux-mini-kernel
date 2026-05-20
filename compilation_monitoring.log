@@ -8715,3 +8715,22 @@ Summary:
   ❌ Failing: 2/5
 
 
+========================================
+📊 Compilation Check - 2026-05-20 06:53:24
+========================================
+Checking netfilter...
+  ❌ netfilter has 54 errors
+Checking af_inet...
+  ✅ af_inet compiles
+Checking udp...
+  ✅ udp compiles
+Checking tcp...
+  ❌ tcp has 1 errors
+Checking core...
+  ✅ core compiles
+
+Summary:
+  ✅ Compiling: 3/5 (60.0%)
+  ❌ Failing: 2/5
+
+
