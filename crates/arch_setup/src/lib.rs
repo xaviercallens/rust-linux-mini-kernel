@@ -15,7 +15,7 @@ type c_int = i32;
 /// - Assumes x86_64 architecture
 #[no_mangle]
 pub unsafe extern "C" fn arch_setup_init() -> c_int {
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), not(miri)))]
     core::arch::asm!("cli", options(nomem, nostack));
     0
 }
