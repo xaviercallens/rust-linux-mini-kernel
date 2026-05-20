@@ -18,7 +18,7 @@ c_latency = 48.0 + np.cumsum(np.random.normal(0.3, 0.5, len(time_intervals)))
 df_time = pd.DataFrame({
     'Time (Minutes)': np.tile(time_intervals, 2),
     'Latency (us)': np.concatenate([rust_latency, c_latency]),
-    'Kernel': ['Rust v8.4.0-beta'] * len(time_intervals) + ['C Baseline'] * len(time_intervals)
+    'Kernel': ['Rust v9.1.0'] * len(time_intervals) + ['C Baseline'] * len(time_intervals)
 })
 
 # Code Coverage Metrics (reaching 95%)

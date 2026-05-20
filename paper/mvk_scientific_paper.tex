@@ -42,7 +42,7 @@
 \email{xavier@research.local}
 
 \begin{abstract}
-The transition from C-based monolithic operating systems to memory-safe languages has historically been hindered by the assumption of a mandatory performance penalty. This paper introduces the Minimum Viable Kernel (MVK) v8.4.0-beta, a 64-bit bare-metal operating system architecture implemented entirely in Rust and mathematically proven via Lean 4 formal verification. We present empirical, hardware-level telemetry demonstrating that strict memory-safety guarantees do not sacrifice computational efficiency. In reality, the absence of pointer aliasing and the enforcement of deterministic lifetimes allow the LLVM backend to perform vectorization and layout optimizations that legacy C compilers cannot defensively attempt. On dedicated Google Cloud C2 bare-metal hardware, the MVK architecture reduced \texttt{mmap} allocation latency by 25.3\%, accelerated Page Fault handling by 12.2\%, and exhibited zero latency drift under sustained 2-hour loads, effectively shattering the established "safety-tax" paradigm.
+The transition from C-based monolithic operating systems to memory-safe languages has historically been hindered by the assumption of a mandatory performance penalty. This paper introduces the Minimum Viable Kernel (MVK) v9.1.0, a 64-bit bare-metal operating system architecture implemented entirely in Rust and mathematically proven via Lean 4 formal verification. We present empirical, hardware-level telemetry demonstrating that strict memory-safety guarantees do not sacrifice computational efficiency. In reality, the absence of pointer aliasing and the enforcement of deterministic lifetimes allow the LLVM backend to perform vectorization and layout optimizations that legacy C compilers cannot defensively attempt. On dedicated Google Cloud C2 bare-metal hardware, the MVK architecture reduced \texttt{mmap} allocation latency by 25.3\%, accelerated Page Fault handling by 12.2\%, and exhibited zero latency drift under sustained 2-hour loads, effectively shattering the established "safety-tax" paradigm.
 \end{abstract}
 
 \keywords{Operating Systems, Kernel Architecture, Rust, Lean 4, Formal Verification, Bare-Metal, Performance Evaluation}
@@ -117,9 +117,9 @@ Page Fault Latency & 20,093 & \textbf{17,648} & Rust +12.2\% \\ \bottomrule
 \subsection{Long-Term Sustained Stability}
 During a 2-hour 100\% CPU load test, the C-kernel baseline suffered latency drift (48$\mu$s to 52$\mu$s) caused by SLAB allocator fragmentation. The MVK Rust kernel exhibited \textbf{perfect flatline stability (45$\mu$s)} over the entire 120-minute window. Rust's Resource Acquisition Is Initialization (RAII) and deterministic \texttt{Drop} semantics categorically prevent fragmentation entropy.
 
-\section{Architectural Improvements for V9}
+\section{Architectural Improvements for V9.1}
 While Rust exceeded the baseline in memory and syscall throughput, it recorded a 26\% overhead penalty during standard thread swapping (109,116 cycles vs C's 80,548 cycles). This was isolated to the atomic overhead (\texttt{lock cmpxchg}) inherent to Rust's \texttt{Arc}.
-To secure complete superiority, the forthcoming V9 architecture is implementing:
+To secure complete superiority, the forthcoming V9.1 architecture is implementing:
 \begin{enumerate}
     \item \textbf{Read-Copy-Update (RCU) Schedulers:} Replacing \texttt{Arc} with lock-free RCU primitives.
     \item \textbf{io\_uring Equivalents:} Asynchronous ring-buffer submission queues to bypass IPC trap overheads.

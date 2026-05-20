@@ -19,7 +19,7 @@ For over five decades, the foundational security of operating systems has been c
 ## 1. Introduction
 The monolithic C-kernel architecture is the Achilles' heel of global computing infrastructure. Despite billions of dollars invested in reactive security measures—including fuzzing, static analysis, and runtime mitigations (e.g., KASLR, Stack Canaries)—the rate of memory-corruption zero-day discoveries remains constant. These vulnerabilities are not anomalies; they are the deterministic output of an architecture built upon a language that assumes human infallibility in memory management.
 
-The Minimum Viable Kernel (MVK) v8.4.0 abandons reactive security. By leveraging the Rust programming language's affine type system and the Lean 4 mathematical prover, MVK guarantees memory and thread safety by construction.
+The Minimum Viable Kernel (MVK) v9.1.0 abandons reactive security. By leveraging the Rust programming language's affine type system and the Lean 4 mathematical prover, MVK guarantees memory and thread safety by construction.
 
 This paper makes the following contributions:
 1. We formalize the elimination of Use-After-Free (UAF) and Buffer Overflow vulnerabilities in a bare-metal scheduling environment.
@@ -77,8 +77,8 @@ Through the integration of `cargo-audit`, the MVK pipeline cryptographically ver
 
 ---
 
-## 5. Future Mitigations (v9.0)
-While spatial and temporal memory safety is guaranteed, logical and architectural attacks remain. MVK v9.0 will introduce:
+## 5. Future Mitigations (v9.1)
+While spatial and temporal memory safety is guaranteed, logical and architectural attacks remain. MVK v9.1 will introduce:
 1. **kCFI and KASLR:** Kernel Control-Flow Integrity to prevent function pointer overwriting, and Kernel Address Space Layout Randomization to blind Return-Oriented Programming (ROP) payloads.
 2. **Microkernel De-escalation:** Moving device drivers (e.g., NIC, NVMe) into Ring-3 userspace. A compromised driver will merely crash its isolated process rather than exposing Ring-0 scheduler memory.
 3. **Hardware-Boundary Fuzzing:** Continuous libFuzzer bombardment of the `unsafe` hardware-abstraction APIs.

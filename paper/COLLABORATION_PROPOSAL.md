@@ -4,7 +4,7 @@
 
 The Minimum Viable Kernel (MVK) project has successfully demonstrated that it is possible to mathematically eliminate spatial and temporal memory vulnerabilities in a bare-metal architecture using Rust and Lean 4 formal verification. 
 
-As we prepare for the **v9.0 Security Hardening Release**, we are officially opening the repository for community collaboration, peer review, and academic reproduction.
+As we prepare for the **v9.1 Security Hardening Release**, we are officially opening the repository for community collaboration, peer review, and academic reproduction.
 
 ---
 
@@ -47,9 +47,9 @@ We strongly encourage independent security researchers and systems engineers to 
 
 ---
 
-## 2. Proposed Improvements & Next Steps (v9.0)
+## 2. Proposed Improvements & Next Steps (v9.1)
 
-The foundation built on Rust's Ownership Model provides absolute temporal and spatial safety. However, the architectural design must evolve to mitigate logical flaws and hardware-level exploitation. We propose the following advancements for the v9.0 release:
+The foundation built on Rust's Ownership Model provides absolute temporal and spatial safety. However, the architectural design must evolve to mitigate logical flaws and hardware-level exploitation. We propose the following advancements for the v9.1 release:
 
 ### A. Hardware-Boundary Fuzzing (`libFuzzer` / `syzkaller`)
 While the safe Rust subset is memory-safe, the hardware interaction boundaries (e.g., `asm!` blocks, Memory-Mapped I/O) require `unsafe` blocks. 
