@@ -40,6 +40,8 @@ import MVK.Phase3.ConntrackCore
 
 namespace MVK.Phase4.IPv4IPv6.AfInet
 
+abbrev Ptr := MVK.Phase2.Common.Pointer Unit
+
 -- Constants from Linux kernel
 def EINVAL : Int := -22
 def ENOMEM : Int := -12
@@ -67,8 +69,8 @@ def SS_DISCONNECTING : UInt32 := 4
 -- TCP states
 def TCP_CLOSE : UInt32 := 7
 def TCP_LISTEN : UInt32 := 10
-def TCPF_CLOSE : UInt32 := 1 << TCP_CLOSE.toNat
-def TCPF_LISTEN : UInt32 := 1 << TCP_LISTEN.toNat
+def TCPF_CLOSE : UInt32 := (1 : UInt32) <<< TCP_CLOSE
+def TCPF_LISTEN : UInt32 := (1 : UInt32) <<< TCP_LISTEN
 
 -- Protocol numbers
 def IPPROTO_IP : UInt32 := 0
@@ -111,7 +113,6 @@ structure Proto where
   close : Option (Ptr → IO Unit)
   connect : Option (Ptr → Ptr → Int → IO Int)
   disconnect : Option (Ptr → Int → IO Int)
-  deriving Repr
 
 /-- Socket operations structure -/
 structure SocketOps where
@@ -122,7 +123,6 @@ structure SocketOps where
   accept : Option (Ptr → Ptr → Int → Bool → IO Int)
   listen : Option (Ptr → Int → IO Int)
   shutdown : Option (Ptr → Int → IO Unit)
-  deriving Repr
 
 /-- Protocol switch entry for inet protocols -/
 structure InetProtosw where
@@ -131,7 +131,6 @@ structure InetProtosw where
   prot : Proto                -- Protocol operations
   ops : SocketOps             -- Socket operations
   flags : UInt32              -- INET_PROTOSW_* flags
-  deriving Repr
 
 /-- Linger structure for SO_LINGER socket option -/
 structure Linger where
@@ -185,7 +184,6 @@ structure Socket where
   type_field : UInt32         -- SOCK_STREAM, etc.
   sk : InetSock               -- Associated inet_sock
   ops : SocketOps             -- Socket operations
-  deriving Repr
 
 /-- Network namespace structure (simplified) -/
 structure Net where
@@ -277,7 +275,7 @@ def inet_listen
   let old_state := sock.sk.sk_state
 
   -- Check if already in valid state
-  if ((1 <<< old_state.toNat) &&& (TCPF_CLOSE ||| TCPF_LISTEN).toNat) = 0 then
+  if (((1 : UInt32) <<< old_state) &&& (TCPF_CLOSE ||| TCPF_LISTEN)) = 0 then
     return (EINVAL, sock)
 
   -- Update backlog
@@ -287,9 +285,9 @@ def inet_listen
   -- If transitioning from CLOSE to LISTEN
   if old_state ≠ TCP_LISTEN then
     -- Configure TCP Fast Open if enabled
-    let tcp_fastopen := net.ipv4_sysctl_tcp_fastopen
-    if (tcp_fastopen &&& TFO_SERVER_WO_SOCKOPT.toNat) ≠ 0 &&
-       (tcp_fastopen &&& TFO_SERVER_ENABLE.toNat) ≠ 0 then
+    let tcp_fastopen := UInt32.ofNat net.ipv4_sysctl_tcp_fastopen.natAbs
+    if (tcp_fastopen &&& TFO_SERVER_WO_SOCKOPT) ≠ 0 &&
+       (tcp_fastopen &&& TFO_SERVER_ENABLE) ≠ 0 then
       -- Would configure fastopen queue
       pure ()
 
@@ -322,7 +320,7 @@ def inet_listen
 def inet_sock_destruct
     (sk : InetSock) : IO InetSock := do
   -- Verify socket is ready for destruction
-  if (sk.sk_flags &&& SOCK_DEAD.toNat) = 0 then
+  if (sk.sk_flags &&& SOCK_DEAD.toUInt64) = 0 then
     -- Error: attempting to destroy alive socket
     return sk
 
@@ -431,7 +429,7 @@ axiom destruct_requires_dead :
   ∀ (sk : InetSock),
     ∀ (result : IO InetSock),
       result = inet_sock_destruct sk →
-      (sk.sk_flags &&& SOCK_DEAD.toNat) ≠ 0
+      (sk.sk_flags &&& SOCK_DEAD.toUInt64) ≠ 0
 
 /-- Safety: TCP sockets must be closed before destruction -/
 axiom tcp_destruct_requires_close :
@@ -506,11 +504,11 @@ theorem protocol_validation_sound (proto : UInt32) :
   · -- Forward direction
     intro h
     unfold is_valid_protocol at h
-    exact h
+    exact of_decide_eq_true h
   · -- Backward direction
     intro h
     unfold is_valid_protocol
-    exact h
+    exact decide_eq_true h
 
 /-- Correctness: Socket type validation is complete -/
 theorem sock_type_validation_complete (type_field : UInt32) :
@@ -659,15 +657,15 @@ axiom protosw_ops_valid (p : InetProtosw) :
 /-- Concurrency: Socket creation is thread-safe -/
 axiom create_thread_safe :
   ∀ (net : Net) (s1 s2 : Socket) (p1 p2 : Int) (k1 k2 : Bool),
-    (inet_create net s1 p1 k1 >> inet_create net s2 p2 k2).toIO' () =
-    (inet_create net s2 p2 k2 >> inet_create net s1 p1 k1).toIO' ()
+    (inet_create net s1 p1 k1 >>= fun _ => inet_create net s2 p2 k2).toIO' () =
+    (inet_create net s2 p2 k2 >>= fun _ => inet_create net s1 p1 k1).toIO' ()
 
 /-- Concurrency: Listen is protected by socket lock -/
 axiom listen_locked :
   ∀ (sock : Socket) (backlog : Int) (net : Net),
     ∃ (lock : Unit → IO Unit) (unlock : Unit → IO Unit),
       (inet_listen sock backlog net).toIO' () =
-      (lock () >> inet_listen sock backlog net >>= fun r => unlock () >> pure r).toIO' ()
+      (lock () >>= fun _ => inet_listen sock backlog net >>= fun r => unlock () >>= fun _ => pure r).toIO' ()
 
 --------------------------------------------------
 -- Performance Properties

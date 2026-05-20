@@ -46,6 +46,11 @@ import MVK.Phase4.IPv4IPv6.AfInet
 
 namespace MVK.Phase4.Routing.FibSemantics
 
+instance {α : Type} : Inhabited (MVK.Phase2.Common.Pointer α) where
+  default := MVK.Phase2.Common.Pointer.null
+
+abbrev Ptr := MVK.Phase2.Common.Pointer Unit
+
 -- Error codes
 def EINVAL : Int := -22
 def ENOMEM : Int := -12
@@ -88,13 +93,16 @@ def RTN_MULTICAST : Int := 5      -- Multicast
 structure NetDevice where
   index : UInt32              -- Device index (ifindex)
   name : String               -- Device name
-  deriving Repr, BEq
+  deriving Repr, BEq, Inhabited
 
 /-- RCU callback head for deferred freeing -/
 structure RcuHead where
   next : Option Ptr
   callback : Option (Ptr → IO Unit)
-  deriving Repr
+  deriving Inhabited
+
+instance : Repr RcuHead where
+  reprPrec _ _ := "RcuHead"
 
 /-- Common next hop information shared between IPv4 and IPv6 -/
 structure FibNhCommon where
@@ -103,7 +111,7 @@ structure FibNhCommon where
   nhc_pcpu_rth_output : Option Ptr  -- Per-CPU route cache (output)
   nhc_rth_input : Option Ptr   -- Route cache (input)
   nhc_exceptions : Option Ptr  -- PMTU/redirect exceptions
-  deriving Repr
+  deriving Repr, Inhabited
 
 /-- Next hop structure for IPv4 routing -/
 structure FibNh where
@@ -117,7 +125,7 @@ structure FibNh where
   fib_nh_flags : UInt32        -- Next hop flags
   fib_nh_gw4 : UInt32          -- IPv4 gateway address
   fib_nh_gw6 : Array UInt8     -- IPv6 gateway address (16 bytes)
-  deriving Repr
+  deriving Repr, Inhabited
 
 /-- FIB info structure - core routing table entry -/
 structure FibInfo where
@@ -136,10 +144,10 @@ structure FibInfo where
   fib_hash : Option Ptr        -- Hash table linkage
   fib_lhash : Option Ptr       -- Local address hash linkage
   nh_list : Option Ptr         -- Next hop group list
-  nh : Option Ptr              -- Next hop group
+  nh : Option Ptr              -- Next hop group pointer
   fib_nh : Array FibNh         -- Array of next hops
   rcu : RcuHead                -- RCU deferred free
-  deriving Repr
+  deriving Repr, Inhabited
 
 /-- FIB configuration for route lookup -/
 structure FibConfig where
@@ -176,35 +184,36 @@ structure FibHashState where
 /-- Hash function for device index -/
 def fib_devindex_hashfn (val : Int) : Nat :=
   let mask := DEVINDEX_HASHSIZE - 1
-  let h1 := val
-  let h2 := val >>> DEVINDEX_HASHBITS
-  let h3 := val >>> (DEVINDEX_HASHBITS * 2)
-  ((h1 ^^^ h2 ^^^ h3) &&& mask).toNat
+  let v := val.natAbs
+  let h1 := v
+  let h2 := v >>> DEVINDEX_HASHBITS
+  let h3 := v >>> (DEVINDEX_HASHBITS * 2)
+  (h1 ^^^ h2 ^^^ h3) &&& mask
 
 /-- First stage of FIB info hash computation -/
 def fib_info_hashfn_1
-    (init_val : Int)
+    (init_val : Nat)
     (protocol : Int)
     (scope : Int)
     (prefsrc : UInt32)
-    (priority : UInt32) : Int :=
+    (priority : UInt32) : Nat :=
   let val := init_val
-  let val := val ^^^ ((protocol <<< 8) ||| scope)
-  let val := val ^^^ prefsrc.toInt
-  let val := val ^^^ priority.toInt
+  let val := val ^^^ ((protocol.natAbs <<< 8) ||| scope.natAbs)
+  let val := val ^^^ prefsrc.toNat
+  let val := val ^^^ priority.toNat
   val
 
 /-- Final stage of FIB info hash computation -/
-def fib_info_hashfn_result (val : Int) (hash_size : Nat) : Nat :=
+def fib_info_hashfn_result (val : Nat) (hash_size : Nat) : Nat :=
   let mask := hash_size - 1
   let h1 := val
   let h2 := val >>> 7
   let h3 := val >>> 12
-  ((h1 ^^^ h2 ^^^ h3) &&& mask).toNat
+  (h1 ^^^ h2 ^^^ h3) &&& mask
 
 /-- Complete FIB info hash function -/
-def fib_info_hashfn (fi : FibInfo) (hash_size : Nat) : Nat :=
-  let init_val := fi.fib_nhs
+def fib_info_hashfn (fi : FibInfo) (hash_size : Nat) : Nat := Id.run do
+  let init_val := fi.fib_nhs.natAbs
   let mut val := fib_info_hashfn_1 init_val fi.fib_protocol fi.fib_scope
                                     fi.fib_prefsrc fi.fib_priority
 
@@ -214,11 +223,10 @@ def fib_info_hashfn (fi : FibInfo) (hash_size : Nat) : Nat :=
       -- Single next hop group
       if fi.fib_nh.size > 0 then
         val := val ^^^ fib_devindex_hashfn fi.fib_nh[0]!.fib_nh_oif
-      else
-        val
+      val
   | none =>
       -- Multiple next hops (ECMP)
-      let rec hash_nhs (i : Nat) (v : Int) : Int :=
+      let rec hash_nhs (i : Nat) (v : Nat) : Nat :=
         if i ≥ fi.fib_nh.size then v
         else
           let nh := fi.fib_nh[i]!
@@ -334,7 +342,7 @@ def fib_release_info
         remove_from_devhash 0
 
     -- Schedule deferred free
-    state' ← free_fib_info fi' state
+    let state' ← free_fib_info fi' state
     let fi'' := { fi' with fib_treeref := 0 }
     return (fi'', state')
   else
@@ -387,15 +395,14 @@ def fib_find_info_nh
         if fi.fib_net ≠ net then
           search_bucket rest
         else
-          -- Check next hop OIF
-          let nh_match :=
+          let nh_match : Bool :=
             match fi.nh with
             | some _ =>
-                fi.fib_nh.size > 0 && fi.fib_nh[0]!.fib_nh_oif = oif
+                decide (fi.fib_nh.size > 0) && fi.fib_nh[0]!.fib_nh_oif == oif
             | none =>
-                fi.fib_nh.size > 0 && fi.fib_nh[0]!.fib_nh_oif = oif
+                decide (fi.fib_nh.size > 0) && fi.fib_nh[0]!.fib_nh_oif == oif
 
-          if ¬nh_match then
+          if !nh_match then
             search_bucket rest
           else
             -- Check attributes
@@ -448,7 +455,7 @@ def is_valid_scope (scope : Int) : Bool :=
 /-- Safety: Reference count never overflows -/
 axiom refcount_no_overflow :
   ∀ (fi : FibInfo),
-    fi.fib_treeref < UInt32.size
+    fi.fib_treeref.toNat < UInt32.size
 
 /-- Safety: Dead FIB info has zero refcount -/
 axiom dead_implies_zero_refcount :
@@ -534,7 +541,7 @@ theorem last_release_marks_dead
 theorem find_returns_matching
     (net : Ptr) (cfg : FibConfig) (oif : Int) (state : FibHashState) :
   ∀ (fi : FibInfo),
-    fib_find_info_nh net cfg oif state = some fi →
+    MVK.Phase4.Routing.FibSemantics.fib_find_info_nh net cfg oif state = some fi →
     fi.fib_net = net ∧
     fi.fib_protocol = cfg.fc_protocol ∧
     fi.fib_scope = cfg.fc_scope ∧
@@ -552,7 +559,7 @@ theorem find_returns_matching
 /-- Correctness: Find returns none if no match -/
 theorem find_none_means_no_match
     (net : Ptr) (cfg : FibConfig) (oif : Int) (state : FibHashState) :
-  fib_find_info_nh net cfg oif state = none →
+  MVK.Phase4.Routing.FibSemantics.fib_find_info_nh net cfg oif state = none →
   ∀ (fi : FibInfo),
     fi ∈ (state.fib_info_hash.foldl (· ++ ·) []) →
     ¬(fi.fib_net = net ∧
@@ -649,13 +656,13 @@ axiom refcount_atomic :
     ∀ (op1 op2 : IO (FibInfo × FibHashState)),
       op1 = fib_release_info fi state →
       op2 = fib_release_info fi state →
-      (op1 >> op2).toIO' () ≠ (op2 >> op1).toIO' ()
+      (op1 >>= fun _ => op2).toIO' () ≠ (op2 >>= fun _ => op1).toIO' ()
 
 /-- Concurrency: RCU read lock protects lookups -/
 axiom rcu_read_protection :
   ∀ (net : Ptr) (cfg : FibConfig) (oif : Int) (state : FibHashState),
     ∀ (fi : FibInfo),
-      fib_find_info_nh net cfg oif state = some fi →
+      MVK.Phase4.Routing.FibSemantics.fib_find_info_nh net cfg oif state = some fi →
       fi.fib_dead = 0
 
 --------------------------------------------------
@@ -667,8 +674,8 @@ axiom lookup_constant_average :
   ∀ (net : Ptr) (cfg : FibConfig) (oif : Int) (state : FibHashState),
     state.hash_size > 0 →
     ∃ (k : Nat), k ≤ 10 ∧
-      (fib_find_info_nh net cfg oif state).isSome ∨
-      (fib_find_info_nh net cfg oif state).isNone
+      (MVK.Phase4.Routing.FibSemantics.fib_find_info_nh net cfg oif state = none ∨
+       ∃ entry, MVK.Phase4.Routing.FibSemantics.fib_find_info_nh net cfg oif state = some entry)
 
 /-- Performance: Release is O(1) when refcount > 1 -/
 theorem release_constant_time_with_refs

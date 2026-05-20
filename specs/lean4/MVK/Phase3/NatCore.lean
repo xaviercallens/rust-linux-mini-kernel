@@ -54,7 +54,7 @@ def ENOSPC : Int := -28
 inductive NatManipType where
   | Source : NatManipType      -- SNAT (masquerade, source rewrite)
   | Destination : NatManipType -- DNAT (port forwarding, destination rewrite)
-  deriving Repr, BEq
+  deriving Repr, BEq, Hashable
 
 -- NAT Range for address/port selection
 structure NfNatRange where
@@ -89,7 +89,6 @@ structure NfNatCore where
   hooknum : UInt8
   out : Ptr
   okfn : Option (Ptr → IO Int)
-  deriving Repr
 
 --------------------------------------------------
 -- Function Specifications
@@ -279,8 +278,9 @@ axiom nat_mapping_bijective :
 /-- Safety: Allocated ports are unique per IP address -/
 axiom nat_port_unique :
   ∀ (ip : UInt32) (port : UInt16),
-  ∃! (mapping : NfNatMapping),
-  mapping.new_addr = ip ∧ mapping.new_port = port
+  ∃ (mapping : NfNatMapping),
+    mapping.new_addr = ip ∧ mapping.new_port = port ∧
+    ∀ (m2 : NfNatMapping), m2.new_addr = ip ∧ m2.new_port = port → m2 = mapping
 
 /-- Safety: NAT range bounds are validated -/
 axiom nat_range_bounds_checked :
@@ -301,7 +301,7 @@ axiom nat_port_exhaustion_safe :
 /-- Safety: NAT done flag prevents double-NAT -/
 axiom nat_done_flag_enforced :
   ∀ (ct : Ptr) (status : UInt64),
-  status & IPS_NAT_DONE_MASK ≠ 0 →
+  status &&& IPS_NAT_DONE_MASK ≠ 0 →
   ∃ (skip_nat : Bool), skip_nat = true
 
 /-- Safety: NAT preserves connection tracking integrity -/
@@ -383,7 +383,7 @@ theorem nat_port_collision_free
 /-- NAT done flag prevents double-NAT -/
 theorem nat_double_nat_prevented
     (ct : Ptr) (status : UInt64) :
-    status & IPS_NAT_DONE_MASK ≠ 0 →
+    status &&& IPS_NAT_DONE_MASK ≠ 0 →
     ∃ (result : Int), result = 0 := by
   -- Proof strategy:
   -- 1. Check IPS_NAT_DONE_MASK at line 83-85
@@ -456,8 +456,8 @@ theorem nat_preserves_protocol
 /-- NAT cleanup reverses NAT state changes -/
 theorem nat_cleanup_reverses_state
     (ct : Ptr) (status_before : UInt64) (status_after : UInt64) :
-    status_before & IPS_NAT_DONE_MASK ≠ 0 →
-    status_after & IPS_NAT_DONE_MASK = 0 →
+    status_before &&& IPS_NAT_DONE_MASK ≠ 0 →
+    status_after &&& IPS_NAT_DONE_MASK = 0 →
     True := by
   -- Proof strategy:
   -- 1. nf_nat_core_cleanup clears NAT done flag (line 141)

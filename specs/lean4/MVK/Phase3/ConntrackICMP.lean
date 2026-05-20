@@ -128,7 +128,7 @@ structure IcmpConntrack where
 -- ICMP inversion map (Source: lib.rs:101-112)
 -- Maps request types to reply types (stored as +1 to distinguish 0 from empty)
 def INV_MAP : Array UInt8 := Id.run do
-  let mut arr := Array.mkArray 256 0
+  let mut arr := List.toArray (List.replicate 256 0)
   arr := arr.set! ICMP_ECHO.toNat (ICMP_ECHOREPLY + 1)
   arr := arr.set! ICMP_ECHOREPLY.toNat (ICMP_ECHO + 1)
   arr := arr.set! ICMP_TIMESTAMP.toNat (ICMP_TIMESTAMPREPLY + 1)
@@ -141,7 +141,7 @@ def INV_MAP : Array UInt8 := Id.run do
 
 -- Valid types for starting new connections (Source: lib.rs:258-265)
 def VALID_NEW : Array UInt8 := Id.run do
-  let mut arr := Array.mkArray 256 0
+  let mut arr := List.toArray (List.replicate 256 0)
   arr := arr.set! ICMP_ECHO.toNat 1
   arr := arr.set! ICMP_TIMESTAMP.toNat 1
   arr := arr.set! ICMP_INFO_REQUEST.toNat 1

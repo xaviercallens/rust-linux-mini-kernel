@@ -1,5 +1,6 @@
-#![no_std]
 use core::sync::atomic::{AtomicPtr, Ordering};
+
+#[cfg(all(target_arch = "x86_64", not(miri)))]
 use core::arch::x86_64::{_mm256_store_si256, _mm256_setzero_si256};
 
 // ==========================================
@@ -31,6 +32,7 @@ impl<T> RcuPointer<T> {
 // ==========================================
 /// Clears a 4KB memory page instantly using AVX2/AVX-512 256-bit stores
 /// SAFETY: The pointer must be 32-byte aligned.
+#[cfg(all(target_arch = "x86_64", not(miri)))]
 #[target_feature(enable = "avx2")]
 pub unsafe fn clear_page_simd(page: *mut u8) {
     let zero = _mm256_setzero_si256();
@@ -39,6 +41,12 @@ pub unsafe fn clear_page_simd(page: *mut u8) {
         _mm256_store_si256((page.add(offset)) as *mut _, zero);
         offset += 32;
     }
+}
+
+/// Fallback for non-x86_64, Miri, or standard systems
+#[cfg(any(not(target_arch = "x86_64"), miri))]
+pub unsafe fn clear_page_simd(page: *mut u8) {
+    core::ptr::write_bytes(page, 0, 4096);
 }
 
 // ==========================================

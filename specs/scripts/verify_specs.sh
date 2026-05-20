@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verify Lean 4 specifications for MVK v8.4.0
+# Verify Lean 4 specifications for MVK v9.2.0-gamma
 # Usage: ./verify_specs.sh [--verbose]
 
 set -e
@@ -10,7 +10,7 @@ if [[ "$1" == "--verbose" ]]; then
 fi
 
 echo "========================================"
-echo "  MVK v8.4.0 Formal Verification"
+echo "  MVK v9.2.0-gamma Formal Verification"
 echo "========================================"
 echo ""
 
@@ -81,7 +81,7 @@ echo ""
 
 # Step 2: Type check specifications
 log_info "Step 2/5: Type checking specifications..."
-if lake env lean MVK > /dev/null 2>&1; then
+if lake env lean MVK.lean > /dev/null 2>&1; then
     log_success "Type checking passed"
 else
     log_error "Type checking failed"
@@ -93,9 +93,25 @@ echo ""
 log_info "Step 3/5: Checking individual modules..."
 
 MODULES=(
-    "phase1/Printk.lean"
-    "phase1/ArchSetup.lean"
-    "phase1/InitMain.lean"
+    "MVK/Phase1/Printk.lean"
+    "MVK/Phase1/ArchSetup.lean"
+    "MVK/Phase1/InitMain.lean"
+    "MVK/Phase2/Common.lean"
+    "MVK/Phase2/PageAlloc.lean"
+    "MVK/Phase2/Slab.lean"
+    "MVK/Phase3/ConntrackCore.lean"
+    "MVK/Phase3/ConntrackGeneric.lean"
+    "MVK/Phase3/ConntrackUDP.lean"
+    "MVK/Phase3/ConntrackTCP.lean"
+    "MVK/Phase3/ConntrackICMP.lean"
+    "MVK/Phase3/ConntrackICMPv6.lean"
+    "MVK/Phase3/ConntrackSCTP.lean"
+    "MVK/Phase3/ConntrackDCCP.lean"
+    "MVK/Phase3/NatCore.lean"
+    "MVK/Phase3/NatProto.lean"
+    "MVK/Phase4/IPv4IPv6/AfInet.lean"
+    "MVK/Phase4/IPv4IPv6/AfInet6.lean"
+    "MVK/Phase4/Routing/FibSemantics.lean"
 )
 
 PASSED=0
@@ -187,7 +203,7 @@ log_info "Step 5/5: Generating reports..."
 REPORT_FILE="$SPECS_DIR/../PROOF_STATUS_REPORT.md"
 
 cat > "$REPORT_FILE" << EOF
-# MVK v8.4.0 Proof Status Report
+# MVK v9.1.0 Proof Status Report
 
 **Generated:** $(date)
 **Lean Version:** $(lean --version)

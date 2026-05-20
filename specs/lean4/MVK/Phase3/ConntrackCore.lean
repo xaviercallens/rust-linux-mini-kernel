@@ -28,9 +28,11 @@ import MVK.Phase1.InitMain
 
 namespace MVK.Phase3.ConntrackCore
 
+abbrev Ptr := MVK.Phase2.Common.Pointer Unit
+
 -- Constants
 def CONNTRACK_MAX : Nat := 65536
-def CONNTRACK_TIMEOUT : Nat := 600
+def CONNTRACK_TIMEOUT : UInt32 := 600
 def HASH_SIZE : Nat := 4096
 
 -- Connection tracking tuple structure
@@ -40,13 +42,13 @@ structure NfConntrackTuple where
   src_port : UInt16
   dst_port : UInt16
   protocol : UInt8
-  deriving Repr, BEq, Hashable
+  deriving Repr, BEq, Hashable, Inhabited
 
 -- Tuple hash structure
 structure NfConntrackTupleHash where
   tuple : NfConntrackTuple
   hash_value : UInt32
-  deriving Repr, BEq
+  deriving Repr, BEq, Inhabited
 
 -- Connection tracking entry
 structure NfConn where
@@ -230,12 +232,12 @@ axiom refcount_prevents_uaf :
 /-- Safety: Zone pointer validity -/
 axiom zone_pointer_valid :
   ∀ (ct : NfConn),
-    ct.zone = Ptr.null ∨ ct.zone ≠ Ptr.null
+    ct.zone = MVK.Phase2.Common.Pointer.null ∨ ct.zone ≠ MVK.Phase2.Common.Pointer.null
 
 /-- Safety: Connection status is valid -/
 axiom connection_status_valid :
   ∀ (ct : NfConn),
-    ct.status ≤ UInt64.size
+    ct.status.toNat ≤ UInt64.size
 
 /-- Safety: Timeout is positive -/
 axiom timeout_positive :
@@ -266,7 +268,7 @@ theorem alloc_produces_valid_connection
 theorem find_returns_matching_connection
     (zone : Ptr) (tuple : NfConntrackTuple) (ct : NfConn) :
   (nf_conntrack_find_get zone tuple).toIO' () = pure (some ct) →
-  ∃ (i : Fin 2), ct.tuplehash[i].tuple = tuple := by
+  ∃ (i : Fin 2), ct.tuplehash[i]!.tuple = tuple := by
   -- Proof strategy:
   -- 1. Assume find succeeded
   -- 2. Extract tuple from result
@@ -344,7 +346,7 @@ theorem hash_insert_succeeds
 /-- Correctness: Event generation is idempotent -/
 theorem event_idempotent (ct : NfConn) (mask : EventMask) :
   (nf_conntrack_event ct mask).toIO' () =
-  (nf_conntrack_event ct mask >> nf_conntrack_event ct mask).toIO' () := by
+  (nf_conntrack_event ct mask >>= fun _ => nf_conntrack_event ct mask).toIO' () := by
   -- Proof strategy:
   -- 1. Unfold event generation
   -- 2. Show sequential calls produce same result
@@ -373,7 +375,7 @@ theorem active_connection_positive_refcount (ct : NfConn) :
 
 /-- Invariant: Timeout is bounded -/
 theorem timeout_bounded (ct : NfConn) :
-  ct.timeout ≤ UInt32.size := by
+  ct.timeout.toNat ≤ UInt32.size := by
   -- Proof strategy:
   -- 1. UInt32 type ensures bound
   sorry
@@ -414,9 +416,9 @@ axiom refcount_thread_safe :
   ∀ (ct : NfConn),
     ∀ (n : Nat),
       (List.replicate n (nf_conntrack_get ct)).foldl
-        (· >>= fun _ => nf_conntrack_get ct)
+        (fun acc _ => acc >>= fun _ => nf_conntrack_get ct)
         (pure ct) =
-      pure { ct with use_count := ct.use_count + n }
+      pure { ct with use_count := ct.use_count + n.toUInt32 }
 
 --------------------------------------------------
 -- Performance Properties
@@ -441,7 +443,7 @@ theorem hash_computation_fast (tuple : NfConntrackTuple) :
 /-- Liveness: Connections eventually timeout -/
 axiom connection_eventually_times_out :
   ∀ (ct : NfConn) (time : Nat),
-    time > ct.timeout →
+    time > ct.timeout.toNat →
     ∃ (result : IO Unit), result = nf_conntrack_destroy ct
 
 /-- Liveness: Events are eventually delivered -/

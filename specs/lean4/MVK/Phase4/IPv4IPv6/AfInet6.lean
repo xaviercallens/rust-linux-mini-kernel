@@ -45,6 +45,8 @@ import MVK.Phase4.IPv4IPv6.AfInet
 
 namespace MVK.Phase4.IPv4IPv6.AfInet6
 
+abbrev Ptr := MVK.Phase2.Common.Pointer Unit
+
 -- Constants
 def EINVAL : Int := -22
 def ENOBUFS : Int := -105
@@ -203,8 +205,8 @@ def ipv6_mod_enabled : IO Bool := do
     - Returns null if socket is null
 
     Safety: Pointer arithmetic must respect structure layout -/
-def inet6_sk_generic (sk : Inet6Sock) : Option Ipv6Pinfo := do
-  return some sk.ipv6_pinfo
+def inet6_sk_generic (sk : Inet6Sock) : Option Ipv6Pinfo :=
+  some sk.ipv6_pinfo
 
 /-- Create an IPv6 socket
     Source: crates/af_inet6/src/lib.rs:97-199
@@ -243,7 +245,7 @@ def inet6_create
     return (EINVAL, none)
 
   -- Initialize IPv6-specific protocol info
-  let zero_addr : In6Addr := { u6_addr8 := Array.mkArray 16 0 }
+  let zero_addr : In6Addr := { u6_addr8 := List.toArray (List.replicate 16 0) }
 
   let ipv6_pinfo : Ipv6Pinfo := {
     hop_limit := -1,                      -- Use system default
@@ -251,7 +253,7 @@ def inet6_create
     mc_loop := 1,                          -- Enable multicast loopback
     mc_all := 1,                           -- Receive all multicast
     pmtudisc := IPV6_PMTUDISC_WANT,       -- Enable PMTU discovery
-    repflow := net.ipv6.sysctl.flowlabel_reflect &&& FLOWLABEL_REFLECT_ESTABLISHED,
+    repflow := Int.ofNat (net.ipv6.sysctl.flowlabel_reflect.toNat &&& FLOWLABEL_REFLECT_ESTABLISHED.toNat),
     saddr := zero_addr,
     daddr := zero_addr,
     flow_label := 0
@@ -440,7 +442,7 @@ theorem create_initializes_defaults
 /-- Correctness: Unspecified address detection -/
 theorem unspecified_correct (addr : In6Addr) :
   is_unspecified addr = true ↔
-  ∀ (i : Fin 16), addr.u6_addr8[i] = 0 := by
+  ∀ (i : Fin 16), addr.u6_addr8[i.val]! = 0 := by
   constructor
   · -- Forward direction
     intro h
@@ -456,7 +458,7 @@ theorem unspecified_correct (addr : In6Addr) :
 /-- Correctness: Loopback address detection -/
 theorem loopback_correct (addr : In6Addr) :
   is_loopback addr = true ↔
-  (∀ (i : Fin 15), addr.u6_addr8[i] = 0) ∧
+  (∀ (i : Fin 15), addr.u6_addr8[i.val]! = 0) ∧
   addr.u6_addr8[15]! = 1 := by
   constructor
   · -- Forward direction
@@ -494,7 +496,7 @@ theorem multicast_correct (addr : In6Addr) :
 /-- Correctness: IPv4-mapped address detection -/
 theorem ipv4_mapped_correct (addr : In6Addr) :
   is_ipv4_mapped addr = true ↔
-  (∀ (i : Fin 10), addr.u6_addr8[i] = 0) ∧
+  (∀ (i : Fin 10), addr.u6_addr8[i.val]! = 0) ∧
   addr.u6_addr8[10]! = 0xff ∧
   addr.u6_addr8[11]! = 0xff := by
   constructor
@@ -618,14 +620,14 @@ theorem ipv4_mapped_structure (addr : In6Addr) :
 axiom ipv6_enabled_read_only :
   ∀ (op : IO Unit),
     (ipv6_mod_enabled >>= fun b1 =>
-      op >> ipv6_mod_enabled >>= fun b2 =>
+      (op >>= fun _ => ipv6_mod_enabled) >>= fun b2 =>
       pure (b1 = b2)).toIO' () = pure true
 
 /-- Concurrency: Socket creation is thread-safe -/
 axiom create_thread_safe :
   ∀ (net : NetNs) (s1 s2 : AfInet.Socket) (p1 p2 : Int) (k1 k2 : Bool),
-    (inet6_create net s1 p1 k1 >> inet6_create net s2 p2 k2).toIO' () =
-    (inet6_create net s2 p2 k2 >> inet6_create net s1 p1 k1).toIO' ()
+    (inet6_create net s1 p1 k1 >>= fun _ => inet6_create net s2 p2 k2).toIO' () =
+    (inet6_create net s2 p2 k2 >>= fun _ => inet6_create net s1 p1 k1).toIO' ()
 
 --------------------------------------------------
 -- Module Lifecycle
@@ -634,7 +636,7 @@ axiom create_thread_safe :
 /-- Lifecycle: Init followed by exit is safe -/
 theorem init_exit_safe :
   (af_inet6_init >>= fun r =>
-    if r = 0 then af_inet6_exit >> pure 0
+    if r = 0 then af_inet6_exit >>= fun _ => pure 0
     else pure r).toIO' () = pure 0 := by
   -- Proof strategy:
   -- 1. Init succeeds (returns 0)
