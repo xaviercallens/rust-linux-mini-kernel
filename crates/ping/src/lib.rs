@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use core::ffi::{c_int, c_void};
-use core::panic::PanicInfo;
+use core::{ffi::{c_int, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
 pub type size_t = usize;
@@ -31,10 +30,7 @@ pub struct sockaddr_in6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct icmp6_echo {
-    pub id: u16,
-    pub sequence: u16,
-}
+pub struct icmp6_echo { pub id: u16, pub sequence: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -86,19 +82,13 @@ pub struct inet_protosw {
 }
 
 #[repr(C)]
-pub struct msghdr {
-    _priv: [u8; 0],
-}
+pub struct msghdr { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct net_device {
-    _priv: [u8; 0],
-}
+pub struct net_device { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
+pub struct net { _priv: [u8; 0] }
 
 #[no_mangle]
 pub unsafe extern "C" fn dummy_ipv6_recv_error(

@@ -24,24 +24,16 @@ pub const XFRM_MODE_TUNNEL: c_int = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_comp_hdr {
-    pub cpi: __be16,
-}
+pub struct ip_comp_hdr { pub cpi: __be16 }
 
 #[repr(C)]
-pub struct inet6_skb_parm {
-    _priv: [u8; 0],
-}
+pub struct inet6_skb_parm { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct xfrm_state {
-    _priv: [u8; 0],
-}
+pub struct xfrm_state { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -164,9 +156,7 @@ pub unsafe extern "C" fn ipcomp6_init_state(x: *mut xfrm_state) -> c_int {
 /// # Returns
 /// 0
 #[no_mangle]
-pub unsafe extern "C" fn ipcomp6_rcv_cb(skb: *mut sk_buff, err: c_int) -> c_int {
-    0
-}
+pub unsafe extern "C" fn ipcomp6_rcv_cb(skb: *mut sk_buff, err: c_int) -> c_int { 0 }
 
 // Module initialization and cleanup
 #[no_mangle]
@@ -211,14 +201,10 @@ pub unsafe extern "C" fn ipcomp6_get_mtu(_x: *mut xfrm_state, mtu: u32) -> u32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipcomp6_input(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int {
-    0
-}
+pub unsafe extern "C" fn ipcomp6_input(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int { 0 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipcomp6_output(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int {
-    0
-}
+pub unsafe extern "C" fn ipcomp6_output(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_output_tail(

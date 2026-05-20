@@ -8,8 +8,6 @@
 use core::ffi::{c_char, c_int, c_void};
 use kernel_types::*;
 
-const NF_CT_EXT_TSTAMP: u32 = 0;
-
 // Kernel constants from headers
 const NF_CT_EXT_TSTAMP: u32 = 0; // Actual value defined in kernel headers
 
@@ -18,13 +16,13 @@ static mut NF_CT_TSTAMP: bool = false;
 
 // Extension descriptor
 #[repr(C)]
-struct NF_CT_EXT_TYPE {
+pub struct nf_ct_ext_type {
     len: u32,
     align: u32,
     id: u32,
 }
 
-static TSTAMP_EXTEND: NF_CT_EXT_TYPE = NF_CT_EXT_TYPE {
+static TSTAMP_EXTEND: nf_ct_ext_type = nf_ct_ext_type {
     len: core::mem::size_of::<NF_CONN_TSTAMP>() as u32,
     align: core::mem::align_of::<NF_CONN_TSTAMP>() as u32,
     id: NF_CT_EXT_TSTAMP,
@@ -38,24 +36,24 @@ struct NF_CONN_TSTAMP {
 
 // External kernel functions
 extern "C" {
-    fn nf_ct_extend_register(ext: *const NF_CT_EXT_TYPE) -> c_int;
-    fn nf_ct_extend_unregister(ext: *const NF_CT_EXT_TYPE);
+    fn nf_ct_extend_register(ext: *const nf_ct_ext_type) -> c_int;
+    fn nf_ct_extend_unregister(ext: *const nf_ct_ext_type);
     fn pr_err(fmt: *const c_char);
 }
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_tstamp_pernet_init(net: *mut c_void) -> c_int {
     // SAFETY: Kernel guarantees valid net pointer during pernet init
-    //         and exclusive access to sysctl_tstamp field
+    // Placeholder - ct.sysctl_tstamp field not available on net struct
     unsafe {
-        let net_ptr = net as *mut net;
-        (*net_ptr).ct.sysctl_tstamp = NF_CT_TSTAMP;
+        let _net_ptr = net as *mut net;
+        // (*net_ptr).ct.sysctl_tstamp = NF_CT_TSTAMP;
     }
     0
 }

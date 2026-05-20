@@ -37,16 +37,11 @@ pub const NFPROTO_IPV4: u8 = 2;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct icmp_echo {
-    pub id: u16,
-    pub sequence: u16,
-}
+pub struct icmp_echo { pub id: u16, pub sequence: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct icmp_ipv4 {
-    pub gateway: u32,
-}
+pub struct icmp_ipv4 { pub gateway: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -74,9 +69,7 @@ pub struct nf_conntrack_tuple_icmp {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_u3 {
-    pub ip: u32,
-}
+pub struct nf_conntrack_tuple_u3 { pub ip: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -87,33 +80,22 @@ pub union nf_conntrack_tuple_u {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_src { pub u: nf_conntrack_tuple_u }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub u: nf_conntrack_tuple_u,
-}
+pub struct nf_conntrack_tuple_dst { pub u: nf_conntrack_tuple_u }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_src,
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conntrack_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conntrack_tuple_hash; 2],
-}
+pub struct nf_conn { pub tuplehash: [nf_conntrack_tuple_hash; 2] }
 
 // Static data
 pub static INV_MAP: [u8; 256] = {
@@ -127,10 +109,7 @@ pub static INV_MAP: [u8; 256] = {
     arr[ICMP_ADDRESS as usize] = ICMP_ADDRESSREPLY + 1;
     arr[ICMP_ADDRESSREPLY as usize] = ICMP_ADDRESS + 1;
     arr
-}
-
-static INVMAP: [u8; 256] = build_invmap();
-static VALID_NEW: [bool; 256] = [true; 256];
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn icmp_pkt_to_tuple(
@@ -229,7 +208,13 @@ pub unsafe extern "C" fn nf_conntrack_icmpv4_error(
     outer_daddr.ip = (*ip_hdr(skb)).daddr;
 
     let new_dataoff = dataoff + core::mem::size_of::<icmphdr>() as c_uint;
-    nf_conntrack_inet_error(_tmpl, skb, new_dataoff, state, IPPROTO_ICMP, &outer_daddr as *const _)
+
+    extern "C" {
+        fn nf_conntrack_inet_error(_tmpl: *mut nf_conn, skb: *const sk_buff, dataoff: c_uint,
+                                   state: *const nf_hook_state, proto: c_int,
+                                   outer_daddr: *const nf_inet_addr) -> c_int;
+    }
+    nf_conntrack_inet_error(_tmpl, skb, new_dataoff, state, IPPROTO_ICMP as c_int, &outer_daddr as *const _)
 }
 
 // Helper functions (these would be implemented in the kernel)
@@ -259,7 +244,7 @@ pub unsafe extern "C" fn icmp_error_log(
     state: *const nf_hook_state,
     msg: *const c_char,
 ) {
-    nf_l4proto_log_invalid(skb, (*state).net, (*state).pf, IPPROTO_ICMP, msg);
+    nf_l4proto_log_invalid(skb as *mut _, (*state).net, (*state).pf as c_int, IPPROTO_ICMP, msg);
 }
 
 // Constants
@@ -267,7 +252,6 @@ pub const IPPROTO_ICMP: c_int = 1;
 pub const IP_CT_DIR_REPLY: c_int = 1;
 pub const IP_CT_IS_REPLY: c_int = 1;
 pub const IP_CT_RELATED: c_int = 2;
-pub const NFPROTO_IPV4: c_int = 2;
 pub const NF_INET_PRE_ROUTING: c_int = 0;
 
 // Static data

@@ -34,8 +34,7 @@ pub const DCCP_PKT_RESET: c_int = 7;
 pub const DCCP_PKT_SYNC: c_int = 8;
 pub const DCCP_PKT_SYNCACK: c_int = 9;
 
-pub const CT_DCCP_ROLE_CLIENT: c_int = 0;
-pub const CT_DCCP_ROLE_SERVER: c_int = 1;
+pub const CT_DCCP_ROLE_CLIENT: c_int = 0; pub const CT_DCCP_ROLE_SERVER: c_int = 1;
 
 const DCCP_ROLE_MAX: usize = (CT_DCCP_ROLE_SERVER as usize) + 1;
 const DCCP_PKT_MAX: usize = (DCCP_PKT_SYNCACK as usize) + 1;
@@ -43,39 +42,30 @@ const DCCP_STATE_MAX: usize = (CT_DCCP_INVALID as usize) + 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct DccpStateNames {
-    pub names: [*const c_char; DCCP_STATE_MAX],
-}
+pub struct DccpStateNames { pub names: [*const c_char; DCCP_STATE_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct DccpStateTable {
-    pub table: [[[c_int; DCCP_STATE_MAX]; DCCP_PKT_MAX]; DCCP_ROLE_MAX],
-}
+pub struct DccpStateTable { pub table: [[[c_int; DCCP_STATE_MAX]; DCCP_PKT_MAX]; DCCP_ROLE_MAX] }
 
 static DCCP_STATE_TABLE: DccpStateTable = DccpStateTable {
     table: [[[CT_DCCP_INVALID; DCCP_STATE_MAX]; DCCP_PKT_MAX]; DCCP_ROLE_MAX],
 };
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_conn {
-    _priv: [u8; 0],
-}
+pub struct nf_conn { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_conntrack_tuple {
-    _priv: [u8; 0],
-}
+pub struct nf_conntrack_tuple { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
+pub struct net { _priv: [u8; 0] }
+
+#[repr(C)]
+pub struct dccp_hdr { _priv: [u8; 0] }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_dccp_packet(
@@ -129,9 +119,7 @@ pub unsafe extern "C" fn dccp_new(ct: *mut nf_conn, skb: *const sk_buff, dh: *co
 }
 
 // Error codes
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[cfg(test)]
 mod tests {

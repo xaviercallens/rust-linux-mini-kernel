@@ -3,8 +3,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ptr;
-use core::ffi::{c_int, c_char, c_void};
+use core::{ptr, ffi::{c_int, c_char, c_void}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -13,9 +12,7 @@ pub const ENOSYS: c_int = -38;
 pub const NF_CT_EXT_ACCT: u32 = 1;
 
 #[repr(C)]
-struct nf_conn_acct {
-    _priv: [u8; 0],
-}
+struct nf_conn_acct { _priv: [u8; 0] }
 
 #[repr(C)]
 struct nf_ct_ext_type {
@@ -25,23 +22,26 @@ struct nf_ct_ext_type {
 }
 
 #[repr(C)]
-struct net {
-    ct: net_ct,
-}
+struct net { ct: net_ct }
 
 #[repr(C)]
-struct net_ct {
-    sysctl_acct: u8,
-}
+struct net_ct { sysctl_acct: u8 }
 
 static mut NF_CT_ACCT: u8 = 0;
 
-// FFI-compatible static variables
-pub static mut __UDP_DISCONNECT: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
-pub static mut ICMPV6_ERR_CONVERT: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
-pub static mut INET6_SOCKRAW_OPS: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
-pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: extern "C" fn(*mut c_void) -> c_int = unsafe { core::mem::zeroed() };
+// FFI-compatible static variables (pointers to avoid zeroed function type issue)
+pub static mut __UDP_DISCONNECT: *mut c_void = ptr::null_mut();
+pub static mut ICMPV6_ERR_CONVERT: *mut c_void = ptr::null_mut();
+pub static mut INET6_SOCKRAW_OPS: *mut c_void = ptr::null_mut();
+pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut c_void = ptr::null_mut();
+pub static mut IP6_DATAGRAM_RECV_COMMON_CTL: *mut c_void = ptr::null_mut();
+
+// Extern declarations
+extern "C" {
+    fn nf_ct_extend_register(ext: *const nf_ct_ext_type) -> c_int;
+    fn nf_ct_extend_unregister(ext: *const nf_ct_ext_type);
+    fn pr_err(msg: *const c_char);
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_acct_pernet_init(net: *mut net) {
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn nf_conntrack_acct_fini() {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {
         core::hint::spin_loop();
     }

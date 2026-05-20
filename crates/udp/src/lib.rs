@@ -3,28 +3,27 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::mem;
-use core::panic::PanicInfo;
+use core::{{mem, ptr}, ffi::c_int, panic::PanicInfo};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const AF_INET6: c_int = 10;
+pub const IPPROTO_UDP: u8 = 17;
+pub const TCP_ESTABLISHED: c_int = 1;
+pub const MSG_ERRQUEUE: c_int = 0x2000;
+pub const MSG_TRUNC: c_int = 0x0020;
+pub const MSG_PEEK: c_int = 0x0002;
+pub const ETH_P_IP: u16 = 0x0800;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct refcount_t {
-    pub counter: c_int,
-}
+pub struct refcount_t { pub counter: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -34,43 +33,65 @@ pub union in6_addr_kcompat {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub in6_u: in6_addr_kcompat,
-}
+pub struct in6_addr { pub in6_u: in6_addr_kcompat }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udp_hslot {
-    pub head: list_head,
-}
+pub struct udp_hslot { pub head: list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udp_table {
-    pub mask: c_int,
-    pub hash2: *mut udp_hslot,
-}
+pub struct udp_table { pub mask: u32, pub hash2: *mut udp_hslot }
+
+// Global UDP table (stub)
+static mut UDP_TABLE: udp_table = udp_table {
+    mask: 0,
+    hash2: ptr::null_mut(),
+};
 
 #[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
+pub struct net { _priv: [u8; 0] }
 
 #[repr(C)]
 pub struct sk_buff {
+    pub dev: *mut c_void,
+    pub protocol: u16,
+    pub len: c_int,
     _priv: [u8; 0],
 }
 
 #[repr(C)]
 pub struct ipv6hdr {
+    pub saddr: in6_addr,
+    pub daddr: in6_addr,
     _priv: [u8; 0],
 }
 
 #[repr(C)]
+pub struct udp_mib { _priv: [u8; 0] }
+
+#[repr(C)]
+pub struct ipv6_pinfo { pub rxpmtu: c_int, pub rxopt: ipv6_rxopt }
+
+#[repr(C)]
+pub struct ipv6_rxopt { pub bits: ipv6_rxopt_bits }
+
+#[repr(C)]
+pub struct ipv6_rxopt_bits { pub rxpmtu: c_int }
+
+#[repr(C)]
+pub struct udp_skb_cb { pub partial_cov: c_int }
+
+#[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_sock {
-    pub inet_dport: u16,
-}
+pub struct msg_iter { _priv: [u8; 0] }
+
+#[repr(C)]
+pub struct msghdr { pub msg_flags: c_int, pub msg_iter: msg_iter }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_sock { pub inet_dport: u16 }
 
 #[repr(C)]
 pub struct sock {
@@ -83,6 +104,10 @@ pub struct sock {
     pub sk_bound_dev_if: c_int,
     pub sk_incoming_cpu: c_int,
     pub inet_sk: inet_sock,
+    pub sk_state: c_int,
+    pub sk_reuseport: c_int,
+    pub ipv6_pinfo: ipv6_pinfo,
+    pub sk_refcnt: refcount_t,
 }
 
 unsafe extern "C" {
@@ -100,7 +125,35 @@ unsafe extern "C" {
     fn ipv6_addr_any(a: *const in6_addr) -> bool;
     fn udp_sk_bound_dev_eq(net: *const net, bound_dev_if: c_int, dif: c_int, sdif: c_int) -> bool;
     fn raw_smp_processor_id() -> c_int;
+    fn reuseport_has_conns(sk: *const sock, closed: bool) -> bool;
+    fn bpf_sk_lookup_run_v6(net: *const net, protocol: c_int, saddr: *const in6_addr,
+                            sport: u16, daddr: *const in6_addr, dport: u16,
+                            ifindex: c_int, skptr: *mut *mut sock) -> c_int;
+    fn ntohs(val: u16) -> u16;
+    fn htons(val: u16) -> u16;
+    fn static_branch_unlikely(key: *const c_int) -> c_int;
+    fn ipv6_hdr(skb: *const sk_buff) -> *const ipv6hdr;
+    fn dev_net(dev: *const c_void) -> *const net;
+    fn inet6_iif(skb: *const sk_buff) -> c_int;
+    fn inet6_sdif(skb: *const sk_buff) -> c_int;
+    fn udp_skb_csum_unnecessary(skb: *const sk_buff) -> c_int;
+    fn ipv6_recv_error(sk: *mut sock, msg: *mut c_void, len: usize, addr_len: *mut c_int) -> c_int;
+    fn ipv6_recv_rxpmtu(sk: *mut sock, msg: *mut c_void, len: usize, addr_len: *mut c_int) -> c_int;
+    fn sk_peek_offset(sk: *mut sock, flags: c_int) -> c_int;
+    fn __skb_recv_udp(sk: *mut sock, flags: c_int, noblock: c_int, off: *mut c_int, err: *mut c_int) -> *mut sk_buff;
+    fn __UDPX_MIB(sk: *mut sock, is_udp4: c_int) -> *mut udp_mib;
+    fn UDP_SKB_CB(skb: *mut sk_buff) -> *mut udp_skb_cb;
+    fn __udp_lib_checksum_complete(skb: *mut sk_buff) -> c_int;
+    fn udp_skb_is_linear(skb: *mut sk_buff) -> c_int;
+    fn copy_linear_skb(skb: *mut sk_buff, len: usize, off: c_int, iter: msg_iter) -> c_int;
+    fn skb_copy_datagram(skb: *mut sk_buff, off: c_int, iter: msg_iter, len: usize) -> c_int;
+    fn inet6_is_jumbogram(skb: *mut sk_buff) -> c_int;
+    fn udp_skb_len(skb: *mut sk_buff) -> c_int;
+    fn refcount_inc_not_zero(refcnt: *const refcount_t) -> c_int;
 }
+
+// BPF lookup enabled flag (stub)
+static BPF_SK_LOOKUP_ENABLED: c_int = 0;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -209,11 +262,12 @@ pub unsafe extern "C" fn lookup_reuseport(
     _net: *const net,
     _sk: *mut sock,
     _skb: *mut sk_buff,
+    _saddr: *const in6_addr,
+    _sport: u16,
+    _daddr: *const in6_addr,
+    _hnum: u16,
 ) -> *mut sock {
-    if (*sk).sk_reuseport != 0 && (*sk).sk_state != TCP_ESTABLISHED {
-        let hash = udp6_ehashfn(net, daddr, hnum, saddr, sport);
-        return reuseport_select_sock(sk, hash, skb, mem::size_of::<udphdr>());
-    }
+    // Stub implementation - reuseport not fully supported
     ptr::null_mut()
 }
 
@@ -260,12 +314,12 @@ pub unsafe extern "C" fn udp6_lookup_run_bpf(
     daddr: *const in6_addr,
     hnum: u16,
 ) -> *mut sock {
-    if udptable != &udp_table as *const _ as *mut _ {
+    if udptable != &raw mut UDP_TABLE as *mut _ {
         return ptr::null_mut();
     }
 
     let mut sk: *mut sock = ptr::null_mut();
-    let no_reuseport = bpf_sk_lookup_run_v6(net, IPPROTO_UDP, saddr, sport, daddr, hnum, &mut sk);
+    let no_reuseport = bpf_sk_lookup_run_v6(net, IPPROTO_UDP as c_int, saddr, sport, daddr, hnum, 0, &mut sk);
 
     if no_reuseport != 0 || sk.is_null() {
         return sk;
@@ -293,14 +347,14 @@ pub unsafe extern "C" fn __udp6_lib_lookup(
     let hnum = ntohs(dport);
     let hash2 = ipv6_portaddr_hash(net, daddr, hnum);
     let slot2 = hash2 & (*udptable).mask;
-    let hslot2 = &(*udptable).hash2[slot2 as usize];
+    let hslot2 = (*udptable).hash2.add(slot2 as usize);
 
     let mut result = udp6_lib_lookup2(net, saddr, sport, daddr, hnum, dif, sdif, hslot2, skb);
     if !result.is_null() && (*result).sk_state == TCP_ESTABLISHED {
         return result;
     }
 
-    if static_branch_unlikely(&bpf_sk_lookup_enabled) != 0 {
+    if static_branch_unlikely(&BPF_SK_LOOKUP_ENABLED) != 0 {
         let sk = udp6_lookup_run_bpf(net, udptable, skb, saddr, sport, daddr, hnum);
         if !sk.is_null() {
             return sk;
@@ -310,7 +364,7 @@ pub unsafe extern "C" fn __udp6_lib_lookup(
     if result.is_null() {
         let hash2 = ipv6_portaddr_hash(net, &in6addr_any, hnum);
         let slot2 = hash2 & (*udptable).mask;
-        let hslot2 = &(*udptable).hash2[slot2 as usize];
+        let hslot2 = (*udptable).hash2.add(slot2 as usize);
         result = udp6_lib_lookup2(net, saddr, sport, &in6addr_any, hnum, dif, sdif, hslot2, skb);
     }
 
@@ -335,7 +389,7 @@ pub unsafe extern "C" fn udp6_lib_lookup_skb(
     dport: u16,
 ) -> *mut sock {
     let iph = ipv6_hdr(skb as *mut sk_buff);
-    __udp6_lib_lookup(dev_net((*skb).dev), &(*iph).saddr, sport, &(*iph).daddr, dport, inet6_iif(skb as *mut sk_buff), inet6_sdif(skb as *mut sk_buff), &udp_table as *const _ as *mut _, ptr::null_mut())
+    __udp6_lib_lookup(dev_net((*skb).dev), &(*iph).saddr, sport, &(*iph).daddr, dport, inet6_iif(skb as *mut sk_buff), inet6_sdif(skb as *mut sk_buff), &raw mut UDP_TABLE as *mut _, ptr::null_mut())
 }
 
 #[no_mangle]
@@ -347,7 +401,7 @@ pub unsafe extern "C" fn udp6_lib_lookup(
     dport: u16,
     dif: c_int,
 ) -> *mut sock {
-    let sk = __udp6_lib_lookup(net, saddr, sport, daddr, dport, dif, 0, &udp_table as *const _ as *mut _, ptr::null_mut());
+    let sk = __udp6_lib_lookup(net, saddr, sport, daddr, dport, dif, 0, &raw mut UDP_TABLE as *mut _, ptr::null_mut());
     if !sk.is_null() && refcount_inc_not_zero(&(*sk).sk_refcnt) != 0 {
         sk
     } else {
@@ -369,7 +423,7 @@ pub unsafe extern "C" fn udp6_skb_len(
 #[no_mangle]
 pub unsafe extern "C" fn udpv6_recvmsg(
     sk: *mut sock,
-    msg: *mut c_void,
+    msg: *mut msghdr,
     len: usize,
     noblock: c_int,
     flags: c_int,
@@ -386,11 +440,11 @@ pub unsafe extern "C" fn udpv6_recvmsg(
     let mut mib: *mut udp_mib = ptr::null_mut();
 
     if flags & MSG_ERRQUEUE != 0 {
-        return ipv6_recv_error(sk, msg, len, addr_len);
+        return ipv6_recv_error(sk, msg as *mut c_void, len, addr_len);
     }
 
     if np.rxpmtu != 0 && np.rxopt.bits.rxpmtu != 0 {
-        return ipv6_recv_rxpmtu(sk, msg, len, addr_len);
+        return ipv6_recv_rxpmtu(sk, msg as *mut c_void, len, addr_len);
     }
 
     let mut off = sk_peek_offset(sk, flags);
@@ -409,12 +463,15 @@ pub unsafe extern "C" fn udpv6_recvmsg(
     is_udp4 = if (*skb).protocol == htons(ETH_P_IP) { 1 } else { 0 };
     mib = __UDPX_MIB(sk, is_udp4);
 
-    if copied < ulen as usize || (flags & MSG_PEEK) != 0 || (is_udplite != 0 && UDP_SKB_CB(skb).partial_cov != 0) {
-        let checksum_valid = udp_skb_csum_unnecessary(skb) != 0 || __udp_lib_checksum_complete(skb) == 0;
-        if !checksum_valid {
+    let checksum_valid = if copied < ulen as usize || (flags & MSG_PEEK) != 0 || (is_udplite != 0 && (*UDP_SKB_CB(skb)).partial_cov != 0) {
+        let valid = udp_skb_csum_unnecessary(skb) != 0 || __udp_lib_checksum_complete(skb) == 0;
+        if !valid {
             return -EINVAL;
         }
-    }
+        valid
+    } else {
+        true
+    };
 
     if checksum_valid || udp_skb_csum_unnecessary(skb) != 0 {
         if udp_skb_is_linear(skb) != 0 {
@@ -424,37 +481,6 @@ pub unsafe extern "C" fn udpv6_recvmsg(
         }
     }
 
-    0
-}
-
-// Helper functions
-unsafe fn sock_net(sk: *mut sock) -> *mut net {
-    // Implementation depends on kernel structure
-    ptr::null_mut()
-}
-
-unsafe fn net_eq(net1: *const net, net2: *const net) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn ipv6_addr_equal(addr1: *const in6_addr, addr2: *const in6_addr) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn ipv6_addr_any(addr: *const in6_addr) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn udp_sk_bound_dev_eq(net: *const net, bound_dev_if: c_int, dif: c_int, sdif: c_int) -> c_int {
-    // Implementation depends on kernel structure
-    1
-}
-
-unsafe fn raw_smp_processor_id() -> c_int {
-    // Implementation depends on kernel structure
     0
 }
 

@@ -22,10 +22,7 @@ pub struct nf_nat_ipv6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_nat_extend {
-    pub nat_ipv4: nf_nat_ipv4,
-    pub nat_ipv6: nf_nat_ipv6,
-}
+pub struct nf_nat_extend { pub nat_ipv4: nf_nat_ipv4, pub nat_ipv6: nf_nat_ipv6 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -59,8 +56,14 @@ pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_co
                 max_proto: 0,
             },
             nat_ipv6: nf_nat_ipv6 {
-                min_addr: in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } },
-                max_addr: in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] } },
+                min_addr: in6_addr {
+                    in6_u: in6_addr_union { u6_addr32: [0; 4] },
+                    s6_addr: core::ptr::null_mut()
+                },
+                max_addr: in6_addr {
+                    in6_u: in6_addr_union { u6_addr32: [0; 4] },
+                    s6_addr: core::ptr::null_mut()
+                },
                 min_proto: 0,
                 max_proto: 0,
             },
@@ -68,7 +71,7 @@ pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_co
         timeout_data: [0; 4],
     }));
 
-    extend_uninit.as_mut_ptr()
+    extend
 }
 
 #[no_mangle]

@@ -1,7 +1,5 @@
 use kernel_types::*;
-use core::ffi::{c_int, c_void};
-
-type socklen_t = u32;
+use core::ffi::c_void;
 
 #[repr(C)]
 pub struct sk_buff_compat {
@@ -63,9 +61,7 @@ pub unsafe extern "C" fn ip6_udp_checksum(
     csum = csum.wrapping_add((udp_len as socklen_t) as u32);
 
     // Add UDP header and data
-    let udp_data = skb.data as *const u8;
-    let udp_data = unsafe { core::slice::from_raw_parts(udp_data, udp_len as usize) };
-
+    let data_ptr = (*skb).data as *const u8;
     let udp_data = core::slice::from_raw_parts(data_ptr, udp_len);
 
     let mut i = 0usize;
@@ -86,12 +82,7 @@ pub unsafe extern "C" fn ip6_udp_checksum(
     let check = !(csum as u16);
 
     // Store checksum in UDP header
-    let udp_header = (skb.data as *mut udphdr).add(udp_offset);
-    unsafe {
-        (*udp_header).check = csum;
-    }
-
-    let udp_header = (skb_compat.data as *mut udphdr).add(udp_offset);
+    let udp_header = ((*skb).data as *mut udphdr).add(udp_offset);
     (*udp_header).check = check;
 
     0
@@ -128,5 +119,3 @@ extern "C" {
     // ... other necessary functions and types
 }
 
-// Module integration
-use kernel_types::{sock, sockaddr, socklen_t, msghdr, c_int};

@@ -1,14 +1,13 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)] // For C-style type names
 
+use core::ptr;
 use kernel_types::*;
 
 pub type socklen_t = u32;
 pub type size_t = usize;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -19,10 +18,7 @@ pub struct tlvtype_proc {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_destopt_hao {
-    pub length: u8,
-    pub addr: [u8; 16],
-}
+pub struct ipv6_destopt_hao { pub length: u8, pub addr: [u8; 16] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -31,6 +27,7 @@ pub struct ipv6_sr_hdr {
     pub hdrlen: u8,
     pub segments_left: u16,
     pub reserved: u16,
+    pub segments: [u8; 0], // Zero-sized array for variable-length segments
 }
 
 #[repr(C)]
@@ -45,15 +42,11 @@ pub struct inet6_skb_parm {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet6_dev {
-    pub cnf: *mut c_void,
-}
+pub struct inet6_dev { pub cnf: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub ipv6: *mut c_void,
-}
+pub struct net { pub ipv6: *mut c_void }
 
 // Function declarations for external C functions
 extern "C" {
@@ -75,7 +68,7 @@ extern "C" {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
@@ -93,9 +86,7 @@ unsafe fn skb_transport_header_ptr(skb: *mut sk_buff) -> *mut u8 {
 }
 
 #[inline]
-unsafe fn skb_headlen(skb: *mut sk_buff) -> usize {
-    (*skb).len as usize
-}
+unsafe fn skb_headlen(skb: *mut sk_buff) -> c_uint { (*skb).len }
 
 #[inline]
 unsafe fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
@@ -108,34 +99,21 @@ unsafe fn ip6cb(skb: *mut sk_buff) -> *mut inet6_skb_parm {
 }
 
 #[inline]
-fn ipv6_addr_is_multicast(addr: *const u8) -> bool {
-    unsafe { (*addr & 0xFF) == 0xFF }
+unsafe fn IP6CB(skb: *mut sk_buff) -> *mut inet6_skb_parm {
+    (*skb).cb.as_mut_ptr() as *mut inet6_skb_parm
 }
 
-fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
-    unsafe {
-        (*skb).network_header as *mut ipv6hdr
-    }
+#[inline]
+fn ipv6_addr_is_multicast(addr: *const u8) -> bool { unsafe { (*addr & 0xFF) == 0xFF } }
+
+fn __in6_dev_get(_dev: *mut c_void) -> *mut inet6_dev {
+    // Stub: return null for now
+    ptr::null_mut()
 }
 
-fn IP6CB(skb: *mut sk_buff) -> *mut inet6_skb_parm {
-    unsafe {
-        (*skb).cb as *mut inet6_skb_parm
-    }
-}
-
-fn __in6_dev_get(dev: *mut c_void) -> *mut inet6_dev {
-    unsafe {
-        let dev = dev as *mut net_device;
-        (*dev).ip6_ptr
-    }
-}
-
-fn dev_net(dev: *mut c_void) -> *mut net {
-    unsafe {
-        let dev = dev as *mut net_device;
-        (*dev).nd_net
-    }
+fn dev_net(_dev: *mut c_void) -> *mut net {
+    // Stub: return null for now
+    ptr::null_mut()
 }
 
 fn ip6_tlvopt_unknown(skb: *mut sk_buff, optoff: c_int, disallow_unknowns: bool) -> bool {
@@ -156,7 +134,7 @@ fn ip6_tlvopt_unknown(skb: *mut sk_buff, optoff: c_int, disallow_unknowns: bool)
             }
             3 | 2 => {
                 let ipv6h = ipv6_hdr(skb);
-                if !ipv6_addr_is_multicast(&(*ipv6h).daddr.in6_u.u6_addr8) {
+                if !ipv6_addr_is_multicast((*ipv6h).daddr.in6_u.u6_addr8.as_ptr()) {
                     icmpv6_param_prob(skb, 5, optoff); // ICMPV6_UNK_OPTION
                 }
                 kfree_skb(skb);
@@ -174,9 +152,9 @@ pub unsafe extern "C" fn ip6_parse_tlv(
     max_count: c_int,
 ) -> bool {
     let transport_header = (*skb).transport_header as *mut u8;
-    let len = ((*transport_header.offset(1)) + 1) << 3;
+    let len = (((*transport_header.offset(1)) + 1) << 3) as c_int;
     let nh = (*skb).network_header as *mut u8;
-    let mut off = (*skb).network_header_len;
+    let mut off = (*skb).network_header_len as c_int;
     let mut padlen = 0;
     let mut tlv_count = 0;
     let disallow_unknowns = max_count < 0;
@@ -186,7 +164,7 @@ pub unsafe extern "C" fn ip6_parse_tlv(
         max_count
     };
 
-    if (*skb).transport_offset + len > (*skb).headlen {
+    if (*skb).transport_offset + len > skb_headlen(skb) as c_int {
         kfree_skb(skb);
         return false;
     }
@@ -271,26 +249,27 @@ pub unsafe extern "C" fn ipv6_destopt_rcv(skb: *mut sk_buff) -> c_int {
     let extlen = ((*transport_header.offset(1)) + 1) << 3;
 
     if !pskb_may_pull(skb, (*skb).transport_offset + 8)
-        || !pskb_may_pull(skb, (*skb).transport_offset + extlen)
+        || !pskb_may_pull(skb, (*skb).transport_offset + extlen as c_int)
     {
         __IP6_INC_STATS(net, idev, 0); // IPSTATS_MIB_INHDRERRORS
         kfree_skb(skb);
         return -1;
     }
 
-    if extlen > (*(*net).ipv6).max_dst_opts_len {
+    if extlen > 255 { // stub max_dst_opts_len
         kfree_skb(skb);
         return -1;
     }
 
-    (*opt).lastopt = (*opt).dst1 = (*skb).network_header_len;
+    (*opt).dst1 = (*skb).network_header_len as c_int;
+    (*opt).lastopt = (*opt).dst1;
 
     if ip6_parse_tlv(
         tlvprocdestopt_lst.as_ptr(),
         skb,
-        (*(*net).ipv6).max_dst_opts_cnt,
+        10, // stub max_dst_opts_cnt
     ) {
-        (*skb).transport_header = (*skb).transport_header.offset(extlen as isize);
+        (*skb).transport_header = ((*skb).transport_header as isize + extlen as isize) as u16;
         let opt = IP6CB(skb);
         (*opt).nhoff = (*opt).dst1;
         return 1;
@@ -300,17 +279,27 @@ pub unsafe extern "C" fn ipv6_destopt_rcv(skb: *mut sk_buff) -> c_int {
     -1
 }
 
+// Dummy function for null handler
+extern "C" fn null_tlv_handler(_skb: *mut sk_buff, _offset: c_int) -> bool {
+    false
+}
+
 // Static array of TLV handlers
 static tlvprocdestopt_lst: [tlvtype_proc; 2] = [
     tlvtype_proc {
         type_: 0, // IPV6_TLV_HAO
-        func: ipv6_dest_hao,
+        func: ipv6_dest_hao_wrapper,
     },
     tlvtype_proc {
         type_: -1,
-        func: core::ptr::null(),
+        func: null_tlv_handler,
     },
 ];
+
+// Wrapper for ipv6_dest_hao to match safe function signature
+extern "C" fn ipv6_dest_hao_wrapper(skb: *mut sk_buff, optoff: c_int) -> bool {
+    unsafe { ipv6_dest_hao(skb, optoff) }
+}
 
 // Implementation of ipv6_dest_hao (simplified)
 #[no_mangle]

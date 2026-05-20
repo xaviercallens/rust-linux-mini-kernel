@@ -15,16 +15,11 @@ pub const NEXTHDR_AUTH: u8 = 51;
 pub const NEXTHDR_NONE: u8 = 59;
 pub const NEXTHDR_DEST: u8 = 60;
 
-pub const EBADMSG: c_int = -74;
-pub const ENOENT: c_int = -2;
-pub const ENOMEM: c_int = -12;
+pub const EBADMSG: c_int = -74; pub const ENOENT: c_int = -2; pub const ENOMEM: c_int = -12;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_opt_hdr {
-    pub nexthdr: u8,
-    pub hdrlen: u8,
-}
+pub struct ipv6_opt_hdr { pub nexthdr: u8, pub hdrlen: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -53,8 +48,6 @@ pub struct ipv6hdr {
     pub saddr: [u8; 16],
     pub daddr: [u8; 16],
 }
-
-
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_eh_personality() {}
@@ -119,7 +112,6 @@ pub unsafe extern "C" fn ipv6_skip_exthdr(
             if fhp.is_null() {
                 return -1;
             }
-
 
             *frag_offp = (*fhp).frag_off;
 
@@ -342,9 +334,7 @@ pub unsafe extern "C" fn skb_network_header(skb: *const c_void) -> *const c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_network_offset(skb: *const c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn skb_network_offset(skb: *const c_void) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn skb_tail_pointer(skb: *const c_void) -> *const c_void {

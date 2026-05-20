@@ -21,30 +21,19 @@ pub const CALIPSO_CACHE_BUCKETS: c_int = 1 << CALIPSO_CACHE_BUCKETBITS;
 pub const CALIPSO_CACHE_REORDERLIMIT: c_int = 10;
 
 // Error codes (kernel-style negative errno)
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOENT: c_int = -2;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOENT: c_int = -2;
 
 #[repr(C)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
-pub struct spinlock_t {
-    _priv: [u8; 0],
-}
+pub struct spinlock_t { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct refcount_t {
-    pub refs: c_int,
-}
+pub struct refcount_t { pub refs: c_int }
 
 #[repr(C)]
-pub struct netlbl_lsm_cache {
-    pub refcount: refcount_t,
-}
+pub struct netlbl_lsm_cache { pub refcount: refcount_t }
 
 #[repr(C)]
 pub struct calipso_map_cache_bkt {
@@ -70,19 +59,11 @@ pub struct netlbl_lsm_secattr {
     pub type_: c_uint,
 }
 
-pub struct CacheKey {
-    pub ptr: *const u8,
-    pub len: usize,
-}
+pub struct CacheKey { pub ptr: *const u8, pub len: usize }
 
-pub struct CacheManager {
-    pub buckets: *mut calipso_map_cache_bkt,
-}
+pub struct CacheManager { pub buckets: *mut calipso_map_cache_bkt }
 
-pub struct CacheStatistics {
-    pub buckets: c_uint,
-    pub entries: c_uint,
-}
+pub struct CacheStatistics { pub buckets: c_uint, pub entries: c_uint }
 
 unsafe extern "C" {
     fn netlbl_secattr_cache_free(ptr: *mut netlbl_lsm_cache);
@@ -153,14 +134,11 @@ pub unsafe extern "C" fn calipso_cache_init() -> c_int {
     }
 
     for i in 0..CALIPSO_CACHE_BUCKETS {
-        spin_lock_init(&(*cache).lock);
+        let cache = base.add(i as usize);
+        spin_lock_init(&mut (*cache).lock);
         (*cache).size = 0;
         (*cache).list.next = &mut (*cache).list;
         (*cache).list.prev = &mut (*cache).list;
-        let cache_ptr = cache.offset(1);
-        if i < CALIPSO_CACHE_BUCKETS - 1 {
-            cache = cache_ptr;
-        }
     }
 
     calipso_cache = base;

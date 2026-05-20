@@ -4,13 +4,10 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
-use core::mem;
+use core::{mem, ffi::{c_char, c_int, c_uint, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOTSUPP: c_int = -95;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOTSUPP: c_int = -95;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -23,10 +20,7 @@ pub struct ipv6_sr_hdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sr6_tlv {
-    pub type_: u8,
-    pub len: u8,
-}
+pub struct sr6_tlv { pub type_: u8, pub len: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -123,27 +117,19 @@ pub unsafe extern "C" fn seg6_genl_sethmac(_skb: *mut c_void, _info: *mut c_void
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_genl_set_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_genl_set_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int { 0 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_genl_get_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_genl_get_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int { 0 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_net_init(_net: *mut c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_net_init(_net: *mut c_void) -> c_int { 0 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn seg6_net_exit(_net: *mut c_void) {}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_init() -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_init() -> c_int { 0 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn seg6_exit() {}
@@ -153,4 +139,3 @@ pub unsafe extern "C" fn seg6_exit() {}
 fn panic(_info: &PanicInfo<'_>) -> ! {
     loop {}
 }
-```

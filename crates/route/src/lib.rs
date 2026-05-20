@@ -6,11 +6,7 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
-use core::alloc::{GlobalAlloc, Layout};
-use core::ffi::{c_int, c_void};
-use core::panic::PanicInfo;
-use core::ptr;
-use core::sync::atomic::AtomicI32;
+use core::{ptr, alloc::{GlobalAlloc, Layout}, ffi::{c_int, c_void}, panic::PanicInfo, sync::atomic::AtomicI32};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -48,23 +44,15 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
 }
 
 #[repr(C)]
-pub struct net_device {
-    pub flags: c_int,
-}
+pub struct net_device { pub flags: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    next: *mut list_head,
-    prev: *mut list_head,
-}
+pub struct list_head { next: *mut list_head, prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct uncached_list {
-    lock: *mut c_void, // spinlock_t
-    head: list_head,
-}
+pub struct uncached_list { lock: *mut c_void, head: list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -98,59 +86,12 @@ pub struct fib6_info {
 }
 
 #[repr(C)]
-pub struct inet6_dev {
-    dev: *mut net_device,
-}
+pub struct inet6_dev { dev: *mut net_device }
 
 #[repr(C)]
-struct per_cpu_data {
-    list: uncached_list,
-}
+struct per_cpu_data { list: uncached_list }
 
 // Function implementations
-#[no_mangle]
-pub unsafe extern "C" fn ip6_dst_alloc(
-    net: *mut c_void,
-    dev: *mut net_device,
-    flags: c_int,
-) -> *mut rt6_info {
-    // Allocate memory for rt6_info
-    let size = core::mem::size_of::<rt6_info>() as size_t;
-    let ptr = libc::malloc(size);
-    if ptr.is_null() {
-        return ptr as *mut rt6_info;
-    }
-
-    // Initialize rt6_info
-    let rt = ptr as *mut rt6_info;
-    (*rt).rt6i_idev = ptr::null_mut();
-    (*rt).rt6i_flags = 0;
-    (*rt).rt6i_uncached.next = &mut (*rt).rt6i_uncached;
-    (*rt).rt6i_uncached.prev = &mut (*rt).rt6i_uncached;
-
-    // Initialize dst_entry
-    (*rt).dst.__refcnt = AtomicI32::new(1);
-    (*rt).dst.__use = 1;
-    (*rt).dst.obsolete = 1; // DST_OBSOLETE_FORCE_CHK
-    (*rt).dst.error = -ENETUNREACH;
-    (*rt).dst.input = ip6_pkt_discard;
-    (*rt).dst.output = ip6_pkt_discard_out;
-    (*rt).dst.dev = dev;
-
-    // Increment allocation counter
-    let stats = (*net).cast::<struct {
-        ipv6: struct {
-            rt6_stats: *mut c_void,
-        },
-    }>();
-    let counter = (*stats).ipv6.rt6_stats;
-    // SAFETY: Assuming atomic increment is available
-    unsafe {
-        (*list).next = list;
-        (*list).prev = list;
-    }
-}
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ip6_dst_alloc(
     _net: *mut c_void,
@@ -159,24 +100,32 @@ pub unsafe extern "C" fn ip6_dst_alloc(
 ) -> *mut rt6_info {
     let rt = Box::into_raw(Box::new(rt6_info {
         dst: dst_entry {
-            __refcnt: AtomicI32::new(1),
-            __use: 1,
+            dev: dev as *mut c_void,
+            ops: ptr::null_mut(),
+            _rcuhead: ptr::null_mut(),
+            _metrics: [0; 17],
+            _mtu: 0,
+            flags: 0,
             obsolete: 1,
-            error: ENETUNREACH,
-            input: ip6_pkt_discard,
-            output: ip6_pkt_discard_out,
-            dev,
+            header_len: 0,
+            trailer_len: 0,
+            error: ptr::null_mut(),
+            xfrm: ptr::null_mut(),
         },
-        rt6i_flags: 0,
+        rt6_next: ptr::null_mut(),
         rt6i_idev: ptr::null_mut(),
-        rt6i_uncached: list_head {
+        rt6i_flags: 0,
+        rt6i_uncached: ListHead {
             next: ptr::null_mut(),
             prev: ptr::null_mut(),
         },
-        rt6i_uncached_list: ptr::null_mut(),
+        rt6i_src: ptr::null_mut(),
+        rt6i_gateway: ptr::null_mut(),
+        rt6i_dst: ptr::null_mut(),
     }));
 
-    unsafe { init_list_head(&mut (*rt).rt6i_uncached as *mut list_head) };
+    // Initialize uncached list - ListHead is kernel_types::ListHead
+    // Initialized inline in struct
     rt
 }
 

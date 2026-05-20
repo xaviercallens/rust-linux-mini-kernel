@@ -3,14 +3,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::panic::PanicInfo;
-use core::ptr;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::{ptr, panic::PanicInfo, sync::atomic::{AtomicPtr, Ordering}};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const EBUSY: c_int = -16;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const EBUSY: c_int = -16; pub const ENOSYS: c_int = -38;
 
 pub const GRE_VERSION: u16 = 0x7000;
 pub const GRE_ROUTING: u16 = 0x4000;
@@ -20,9 +16,40 @@ pub const GRE_SEQ: u16 = 0x1000;
 
 pub const IPPROTO_GRE: c_int = 47;
 
-pub const ETH_P_WCCP: u16 = 0x883E;
-pub const ETH_P_ERSPAN: u16 = 0x88BE;
-pub const ETH_P_ERSPAN2: u16 = 0x22EB;
+pub const ETH_P_WCCP: u16 = 0x883E; pub const ETH_P_ERSPAN: u16 = 0x88BE; pub const ETH_P_ERSPAN2: u16 = 0x22EB;
+
+// Network byte order conversion
+#[inline]
+fn htons(val: u16) -> u16 {
+    val.to_be()
+}
+
+#[inline]
+fn cpu_to_be32(val: u32) -> u32 {
+    val.to_be()
+}
+
+// Helper functions for ERSPAN
+#[inline]
+unsafe fn get_session_id(hdr: *const erspan_base_hdr) -> u32 {
+    (*hdr).session_id
+}
+
+// RCU helper stubs (simplified for FFI)
+#[inline]
+unsafe fn rcu_read_lock() {}
+
+#[inline]
+unsafe fn rcu_read_unlock() {}
+
+#[inline]
+unsafe fn rcu_dereference<T>(ptr: *const AtomicPtr<T>) -> *const T {
+    (*ptr).load(Ordering::Acquire)
+}
+
+// Error handling helper
+#[inline]
+unsafe fn goto_drop(_skb: *mut c_void) {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -34,10 +61,7 @@ pub struct gre_protocol {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct gre_base_hdr {
-    pub flags: u16,
-    pub protocol: u16,
-}
+pub struct gre_base_hdr { pub flags: u16, pub protocol: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -75,6 +99,7 @@ unsafe extern "C" {
     fn null_compute_pseudo(skb: *mut c_void) -> c_int;
     fn gre_flags_to_tnl_flags(flags: u16) -> u16;
     fn gre_calc_hlen(flags: u16) -> u16;
+    fn skb_header_pointer(skb: *mut c_void, offset: c_int, len: c_int, buffer: *mut c_void) -> *mut c_void;
 }
 
 #[cfg(not(test))]
@@ -137,7 +162,7 @@ pub unsafe extern "C" fn gre_parse_header(
         return EINVAL;
     }
 
-    let greh = (skb.add(nhs)) as *const gre_base_hdr;
+    let greh = (skb.add(nhs as usize)) as *const gre_base_hdr;
     if (*greh).flags & (GRE_VERSION | GRE_ROUTING) != 0 {
         return EINVAL;
     }
@@ -146,11 +171,11 @@ pub unsafe extern "C" fn gre_parse_header(
     (*tpi).flags = gre_flags_to_tnl_flags((*greh).flags);
     let mut hdr_len = gre_calc_hlen((*tpi).flags);
 
-    if !pskb_may_pull(skb, (nhs + hdr_len) as usize) {
+    if !pskb_may_pull(skb, (nhs + hdr_len as c_int) as usize) {
         return EINVAL;
     }
 
-    let greh = (skb.add(nhs)) as *const gre_base_hdr;
+    let greh = (skb.add(nhs as usize)) as *const gre_base_hdr;
     (*tpi).proto = (*greh).protocol;
 
     let mut options = (greh as *const u8).add(core::mem::size_of::<gre_base_hdr>()) as *const u32;
@@ -184,11 +209,11 @@ pub unsafe extern "C" fn gre_parse_header(
 
     // WCCP version handling
     if (*greh).flags == 0 && (*tpi).proto == htons(ETH_P_WCCP) {
-        let val = skb_header_pointer(skb, nhs + hdr_len, 1, ptr::null_mut()) as *const u8;
+        let val = skb_header_pointer(skb, nhs + hdr_len as c_int, 1, ptr::null_mut()) as *const u8;
         if val.is_null() {
             return EINVAL;
         }
-        (*tpi).proto = proto;
+        (*tpi).proto = _proto;
         if (*val as u8 & 0xF0) != 0x40 {
             hdr_len += 4;
         }
@@ -202,12 +227,12 @@ pub unsafe extern "C" fn gre_parse_header(
     {
         if !pskb_may_pull(
             skb,
-            (nhs + hdr_len + core::mem::size_of::<erspan_base_hdr>()) as usize,
+            (nhs as usize + hdr_len as usize + core::mem::size_of::<erspan_base_hdr>()),
         ) {
             return EINVAL;
         }
 
-        let ershdr = (skb.add(nhs + hdr_len)) as *const erspan_base_hdr;
+        let ershdr = (skb.add((nhs + hdr_len as c_int) as usize)) as *const erspan_base_hdr;
         (*tpi).key = cpu_to_be32(get_session_id(ershdr));
     }
 
@@ -216,12 +241,12 @@ pub unsafe extern "C" fn gre_parse_header(
 
 #[no_mangle]
 pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
-    if !pskb_may_pull(skb as *mut u8, 12) {
+    if !pskb_may_pull(skb, 12) {
         goto_drop(skb);
         return -1;
     }
 
-    let ver = (*(skb as *mut u8).add(1)).read_volatile() & 0x7f;
+    let ver = ptr::read_volatile((skb as *mut u8).add(1)) & 0x7f;
     if ver as usize >= GREPROTO_MAX {
         goto_drop(skb);
         return -1;
@@ -229,7 +254,7 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
 
     rcu_read_lock();
     let proto = rcu_dereference(&gre_proto[ver as usize]);
-    if proto.is_null() || (*proto).handler.is_null() {
+    if proto.is_null() {
         rcu_read_unlock();
         goto_drop(skb);
         return -1;
@@ -242,47 +267,61 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn gre_err(skb: *mut c_void, info: u32) -> c_int {
-    let iph = skb as *const u8;
-    let ver = (*iph.add((*iph as *const u16 as *const u16) << 2) + 1).read_volatile() & 0x7f;
-    if ver as usize >= GREPROTO_MAX {
+    if skb.is_null() {
         return EINVAL;
     }
 
-    let base = unsafe { (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr };
-    let gre_flags = unsafe { (*base).flags };
+    // Get IP header size to find GRE header
+    let iph = skb as *const u8;
+    let ihl = (*iph & 0x0F) as usize * 4;
+    let nhs_usize = ihl;
+
+    // Allocate tunnel info on stack
+    let mut tpi_val = tnl_ptk_info {
+        flags: 0,
+        proto: 0,
+        key: 0,
+        seq: 0,
+        hdr_len: 0,
+    };
+    let tpi = &mut tpi_val as *mut tnl_ptk_info;
+    let mut csum_err_val = false;
+    let csum_err = &mut csum_err_val as *mut bool;
+
+    let base = (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr;
+    let gre_flags = (*base).flags;
 
     if (gre_flags & (GRE_VERSION | GRE_ROUTING)) != 0 {
         return EINVAL;
     }
 
-    unsafe {
-        (*tpi).flags = gre_flags_to_tnl_flags(gre_flags);
-        (*tpi).hdr_len = gre_calc_hlen((*tpi).flags);
-    }
+    (*tpi).flags = gre_flags_to_tnl_flags(gre_flags);
+    (*tpi).hdr_len = gre_calc_hlen((*tpi).flags);
 
-    let hdr_len = unsafe { (*tpi).hdr_len as usize };
-    if unsafe { !pskb_may_pull(skb, (nhs_usize + hdr_len) as size_t) } {
+    let hdr_len = (*tpi).hdr_len as usize;
+    if !pskb_may_pull(skb, (nhs_usize + hdr_len) as size_t) {
         return EINVAL;
     }
 
-    let greh = unsafe { (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr };
+    let greh = (skb as *mut u8).add(nhs_usize) as *const gre_base_hdr;
 
-    unsafe {
-        (*tpi).proto = (*greh).protocol;
-        (*tpi).key = 0;
-        (*tpi).seq = 0;
-        *csum_err = false;
-    }
+    (*tpi).proto = (*greh).protocol;
+    (*tpi).key = 0;
+    (*tpi).seq = 0;
+    *csum_err = false;
 
     if (gre_flags & GRE_CSUM) != 0 {
-        let ok = unsafe { skb_checksum_simple_validate(skb) };
+        let ok = skb_checksum_simple_validate(skb);
         if !ok {
-            let r = unsafe { skb_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo) };
+            let r = skb_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo);
             if r != 0 {
-                unsafe { *csum_err = true };
+                *csum_err = true;
             }
         }
     }
+
+    0
+}
 
 // Module metadata
 #[cfg(feature = "kernel_module")]

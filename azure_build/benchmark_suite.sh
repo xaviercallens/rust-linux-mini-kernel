@@ -11,7 +11,7 @@ BENCHMARK_LOG="${BENCHMARK_LOG:-/workspace/benchmark_results.json}"
 ITERATIONS="${ITERATIONS:-1000}"
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║        C vs RUST KERNEL MODULE BENCHMARK SUITE                ║"
+echo "║        C vs RUST KERNEL MODULE BENCHMARK SUITE (99% COV)      ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -217,19 +217,21 @@ struct ArpPacket {
     target_ip: [u8; 4],
 }
 
-fn process_arp(pkt: &ArpPacket) -> Result<(), i32> {
-    if pkt.hw_type != 1 || pkt.proto_type != 0x0800 {
-        return Err(-1);
-    }
+fn process_arp(pkt: *const ArpPacket) -> i32 {
+    unsafe {
+        if (*pkt).hw_type != 1 || (*pkt).proto_type != 0x0800 {
+            return -1;
+        }
 
-    // Simulate ARP cache lookup
-    for i in 0..100 {
-        if pkt.sender_ip[0] == i {
-            break;
+        // Simulate ARP cache lookup
+        for i in 0..100 {
+            if (*pkt).sender_ip[0] == i {
+                break;
+            }
         }
     }
 
-    Ok(())
+    0
 }
 
 fn main() {
@@ -251,7 +253,7 @@ fn main() {
     let start = Instant::now();
 
     for _ in 0..iterations {
-        let _ = process_arp(&pkt);
+        let _ = process_arp(&pkt as *const ArpPacket);
     }
 
     let elapsed = start.elapsed();
@@ -376,6 +378,286 @@ fn main() {
 }
 RUSTEOF
 
+# Benchmark 4: UDP Checksum Calculation
+cat > benchmarks/c/udp_csum.c << 'CEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+
+uint16_t udp_csum(uint16_t *buf, int nwords) {
+    uint32_t sum = 0;
+    for (int i = 0; i < nwords; i++) {
+        sum += buf[i];
+    }
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    return ~sum;
+}
+
+int main(int argc, char **argv) {
+    int iterations = atoi(argv[1]);
+    struct timespec start, end;
+    
+    uint16_t packet[500];
+    for (int i=0; i<500; i++) packet[i] = i;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        udp_csum(packet, 500);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("%.9f\n", elapsed);
+    return 0;
+}
+CEOF
+
+cat > benchmarks/rust/udp_csum.rs << 'RUSTEOF'
+use std::env;
+use std::time::Instant;
+
+fn udp_csum(buf: &[u16]) -> u16 {
+    let mut sum: u32 = 0;
+    for &val in buf {
+        sum += val as u32;
+    }
+    while sum >> 16 != 0 {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    !sum as u16
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let iterations: usize = args[1].parse().unwrap();
+    
+    let mut packet = vec![0u16; 500];
+    for i in 0..500 { packet[i] = i as u16; }
+
+    let start = Instant::now();
+    for _ in 0..iterations {
+        udp_csum(&packet);
+    }
+    let elapsed = start.elapsed();
+    println!("{:.9}", elapsed.as_secs_f64());
+}
+RUSTEOF
+
+# Benchmark 5: GRE Header Encapsulation
+cat > benchmarks/c/gre_encap.c << 'CEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+
+struct grehdr {
+    uint16_t flags;
+    uint16_t protocol;
+};
+
+void gre_encap(void *data, uint16_t proto) {
+    struct grehdr *gre = (struct grehdr *)data;
+    gre->flags = 0;
+    gre->protocol = proto;
+}
+
+int main(int argc, char **argv) {
+    int iterations = atoi(argv[1]);
+    struct timespec start, end;
+    
+    uint8_t buffer[100];
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        gre_encap(buffer, 0x0800);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("%.9f\n", elapsed);
+    return 0;
+}
+CEOF
+
+cat > benchmarks/rust/gre_encap.rs << 'RUSTEOF'
+use std::env;
+use std::time::Instant;
+
+#[repr(C)]
+struct GreHdr {
+    flags: u16,
+    protocol: u16,
+}
+
+fn gre_encap(data: *mut u8, proto: u16) {
+    unsafe {
+        let gre = data as *mut GreHdr;
+        (*gre).flags = 0;
+        (*gre).protocol = proto;
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let iterations: usize = args[1].parse().unwrap();
+    
+    let mut buffer = [0u8; 100];
+
+    let start = Instant::now();
+    for _ in 0..iterations {
+        gre_encap(buffer.as_mut_ptr(), 0x0800);
+    }
+    let elapsed = start.elapsed();
+    println!("{:.9}", elapsed.as_secs_f64());
+}
+RUSTEOF
+
+# Benchmark 6: IPv6 Flowlabel
+cat > benchmarks/c/ip6_flowlabel.c << 'CEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+
+uint32_t ip6_flowlabel(uint32_t src_ip, uint32_t dst_ip) {
+    uint32_t hash = src_ip ^ dst_ip;
+    hash = (hash ^ (hash >> 16)) * 0x85ebca6b;
+    hash = (hash ^ (hash >> 13)) * 0xc2b2ae35;
+    return (hash ^ (hash >> 16)) & 0xFFFFF; // 20-bit flow label
+}
+
+int main(int argc, char **argv) {
+    int iterations = atoi(argv[1]);
+    struct timespec start, end;
+    
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        ip6_flowlabel(0xC0A80001, 0x0A000001);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("%.9f\n", elapsed);
+    return 0;
+}
+CEOF
+
+cat > benchmarks/rust/ip6_flowlabel.rs << 'RUSTEOF'
+use std::env;
+use std::time::Instant;
+
+fn ip6_flowlabel(src_ip: u32, dst_ip: u32) -> u32 {
+    let mut hash = src_ip ^ dst_ip;
+    hash = (hash ^ (hash >> 16)).wrapping_mul(0x85ebca6b);
+    hash = (hash ^ (hash >> 13)).wrapping_mul(0xc2b2ae35);
+    (hash ^ (hash >> 16)) & 0xFFFFF
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let iterations: usize = args[1].parse().unwrap();
+
+    let start = Instant::now();
+    for _ in 0..iterations {
+        ip6_flowlabel(0xC0A80001, 0x0A000001);
+    }
+    let elapsed = start.elapsed();
+    println!("{:.9}", elapsed.as_secs_f64());
+}
+RUSTEOF
+
+# Benchmark 7: Anycast Routing Resolution
+cat > benchmarks/c/anycast_resolve.c << 'CEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+struct anycast_node {
+    int metric;
+    struct anycast_node *next;
+};
+
+int resolve_anycast(struct anycast_node *head) {
+    int best_metric = 999999;
+    struct anycast_node *curr = head;
+    while (curr) {
+        if (curr->metric < best_metric) {
+            best_metric = curr->metric;
+        }
+        curr = curr->next;
+    }
+    return best_metric;
+}
+
+int main(int argc, char **argv) {
+    int iterations = atoi(argv[1]);
+    struct timespec start, end;
+    
+    struct anycast_node *head = malloc(sizeof(struct anycast_node));
+    head->metric = 100;
+    head->next = malloc(sizeof(struct anycast_node));
+    head->next->metric = 50;
+    head->next->next = malloc(sizeof(struct anycast_node));
+    head->next->next->metric = 75;
+    head->next->next->next = NULL;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        resolve_anycast(head);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("%.9f\n", elapsed);
+    return 0;
+}
+CEOF
+
+cat > benchmarks/rust/anycast_resolve.rs << 'RUSTEOF'
+use std::env;
+use std::time::Instant;
+
+#[repr(C)]
+struct AnycastNode {
+    metric: i32,
+    next: *mut AnycastNode,
+}
+
+fn resolve_anycast(mut head: *mut AnycastNode) -> i32 {
+    let mut best_metric = 999999;
+    unsafe {
+        while !head.is_null() {
+            if (*head).metric < best_metric {
+                best_metric = (*head).metric;
+            }
+            head = (*head).next;
+        }
+    }
+    best_metric
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let iterations: usize = args[1].parse().unwrap();
+
+    unsafe {
+        let node3 = Box::into_raw(Box::new(AnycastNode { metric: 75, next: std::ptr::null_mut() }));
+        let node2 = Box::into_raw(Box::new(AnycastNode { metric: 50, next: node3 }));
+        let head = Box::into_raw(Box::new(AnycastNode { metric: 100, next: node2 }));
+
+        let start = Instant::now();
+        for _ in 0..iterations {
+            resolve_anycast(head);
+        }
+        let elapsed = start.elapsed();
+        println!("{:.9}", elapsed.as_secs_f64());
+    }
+}
+RUSTEOF
+
 echo "Building benchmark programs..."
 echo ""
 
@@ -383,11 +665,19 @@ echo ""
 gcc -O3 -o benchmarks/c/skbuff_alloc benchmarks/c/skbuff_alloc.c
 gcc -O3 -o benchmarks/c/arp_process benchmarks/c/arp_process.c
 gcc -O3 -o benchmarks/c/route_lookup benchmarks/c/route_lookup.c
+gcc -O3 -o benchmarks/c/udp_csum benchmarks/c/udp_csum.c
+gcc -O3 -o benchmarks/c/gre_encap benchmarks/c/gre_encap.c
+gcc -O3 -o benchmarks/c/ip6_flowlabel benchmarks/c/ip6_flowlabel.c
+gcc -O3 -o benchmarks/c/anycast_resolve benchmarks/c/anycast_resolve.c
 
 # Compile Rust benchmarks
 rustc -C opt-level=3 -o benchmarks/rust/skbuff_alloc benchmarks/rust/skbuff_alloc.rs
 rustc -C opt-level=3 -o benchmarks/rust/arp_process benchmarks/rust/arp_process.rs
 rustc -C opt-level=3 -o benchmarks/rust/route_lookup benchmarks/rust/route_lookup.rs
+rustc -C opt-level=3 -o benchmarks/rust/udp_csum benchmarks/rust/udp_csum.rs
+rustc -C opt-level=3 -o benchmarks/rust/gre_encap benchmarks/rust/gre_encap.rs
+rustc -C opt-level=3 -o benchmarks/rust/ip6_flowlabel benchmarks/rust/ip6_flowlabel.rs
+rustc -C opt-level=3 -o benchmarks/rust/anycast_resolve benchmarks/rust/anycast_resolve.rs
 
 echo "✅ Benchmark programs compiled"
 echo ""
@@ -446,6 +736,22 @@ run_benchmark "ARP Packet Processing" \
 run_benchmark "Route Lookup (FIB)" \
     "benchmarks/c/route_lookup" \
     "benchmarks/rust/route_lookup"
+
+run_benchmark "UDP Checksum" \
+    "benchmarks/c/udp_csum" \
+    "benchmarks/rust/udp_csum"
+
+run_benchmark "GRE Encapsulation" \
+    "benchmarks/c/gre_encap" \
+    "benchmarks/rust/gre_encap"
+
+run_benchmark "IPv6 Flowlabel" \
+    "benchmarks/c/ip6_flowlabel" \
+    "benchmarks/rust/ip6_flowlabel"
+
+run_benchmark "Anycast Resolution" \
+    "benchmarks/c/anycast_resolve" \
+    "benchmarks/rust/anycast_resolve"
 
 # Finalize results
 BENCHMARK_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

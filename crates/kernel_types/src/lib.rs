@@ -69,6 +69,7 @@ pub union nf_inet_addr {
     pub ip6: [__be32; 4],
     pub in_addr: in_addr,
     pub in6: in6_addr,
+    pub s_addr: __be32,
 }
 
 // ============================================================================
@@ -128,10 +129,7 @@ pub struct udphdr {
 /// ESP header
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_esp_hdr {
-    pub spi: __be32,
-    pub seq_no: __be32,
-}
+pub struct ip_esp_hdr { pub spi: __be32, pub seq_no: __be32 }
 
 // ============================================================================
 // Socket Structures
@@ -140,9 +138,24 @@ pub struct ip_esp_hdr {
 /// Generic socket address
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sockaddr {
-    pub sa_family: c_ushort,
-    pub sa_data: [c_char; 14],
+pub struct sockaddr { pub sa_family: c_ushort, pub sa_data: [c_char; 14] }
+
+/// I/O vector for scatter-gather operations
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct iovec { pub iov_base: *mut c_void, pub iov_len: size_t }
+
+/// Socket message header
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct msghdr {
+    pub msg_name: *mut c_void,
+    pub msg_namelen: socklen_t,
+    pub msg_iov: *mut iovec,
+    pub msg_iovlen: size_t,
+    pub msg_control: *mut c_void,
+    pub msg_controllen: size_t,
+    pub msg_flags: c_int,
 }
 
 /// Base socket structure
@@ -261,16 +274,29 @@ pub struct flowi {
     pub u: *mut core::ffi::c_void, // Auto-generated mock field
 }
 
+/// IPv6 flow identifier
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct flowi6 {
-    pub oif: core::ffi::c_int,
-    pub iif: core::ffi::c_int,
-    pub flowi6_mark: __u32,
-    pub flowi6_tos: __u8,
-    pub saddr: in6_addr,
+    pub flowi6_oif: c_int,
+    pub flowi6_flags: c_int,
+    pub flowi6_mark: u32,
     pub daddr: in6_addr,
-    pub fl6_iifname: [core::ffi::c_char; 16],
+    pub saddr: in6_addr,
+}
+
+/// Destination operations
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct dst_ops {
+    pub family: c_int,
+    pub update_pmtu: Option<unsafe extern "C" fn(*mut dst_entry, *mut c_void, *mut c_void, u32, bool)>,
+    pub redirect: Option<unsafe extern "C" fn(*mut dst_entry, *mut c_void, *mut c_void)>,
+    pub cow_metrics: Option<unsafe extern "C" fn(*mut dst_entry, *mut c_void) -> *mut dst_entry>,
+    pub destroy: Option<unsafe extern "C" fn(*mut dst_entry)>,
+    pub ifdown: Option<unsafe extern "C" fn(*mut dst_entry, *mut net_device, c_int)>,
+    pub local_out: Option<unsafe extern "C" fn(*mut c_void) -> c_int>,
+    pub gc_thresh: c_int,
 }
 
 /// Destination entry (routing cache)
@@ -278,7 +304,7 @@ pub struct flowi6 {
 #[derive(Copy, Clone)]
 pub struct dst_entry {
     pub dev: *mut c_void, // struct net_device *
-    pub ops: *mut c_void, // struct dst_ops *
+    pub ops: *mut dst_ops,
     pub _rcuhead: *mut c_void,
     pub _metrics: [c_int; 17],
     pub _mtu: c_ulong,
@@ -296,12 +322,36 @@ pub struct dst_entry {
 pub struct rt6_info {
     pub dst: dst_entry,
     pub rt6_next: *mut rt6_info,
-    pub rt6i_idev: *mut c_void, // struct inet6_dev *
+    pub rt6i_idev: *mut inet6_dev,
     pub rt6i_flags: c_uint,
-    pub rt6i_uncached: *mut core::ffi::c_void, // Force injected mock field
+    pub rt6i_uncached: ListHead,
     pub rt6i_src: *mut core::ffi::c_void, // Force injected mock field
     pub rt6i_gateway: *mut core::ffi::c_void, // Force injected mock field
     pub rt6i_dst: *mut core::ffi::c_void, // Force injected mock field
+}
+
+/// IPv6 configuration
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ipv6_devconf { pub disable_ipv6: c_int, _padding: [u8; 0] }
+
+/// IPv6 interface device info
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet6_dev {
+    pub dev: *mut net_device,
+    pub early_demux: Option<extern "C" fn(*mut sk_buff)>,
+    pub cnf: ipv6_devconf,
+    _padding: [u8; 0],
+}
+
+/// Network namespace
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net {
+    pub loopback_dev: *mut net_device,
+    pub ct: *mut c_void,
+    _padding: [u8; 0],
 }
 
 /// Routing table link operations
@@ -350,11 +400,22 @@ pub struct sk_buff {
     pub csum: __u32,
     pub priority: __u32,
     pub protocol: __be16,
+    pub flags: __u32,
     pub cb: [__u8; 48],
+    pub ip_summed: __u8,      // Checksum status
+    pub csum_level: __u8,     // Checksum level
+    pub csum_valid: __u8,     // Checksum valid flag
+    pub csum_complete_sw: __u8, // Software checksum complete
     pub remcsum_offload: *mut core::ffi::c_void, // Auto-generated mock field
     pub mark: *mut core::ffi::c_void, // Auto-generated mock field
     pub data: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk: *mut core::ffi::c_void, // Force injected mock field
+    pub dst: *mut core::ffi::c_void, // Force injected mock field
+    pub head: *mut __u8,
+    pub network_header: __u16,
+    pub transport_header: __u16,
+    pub transport_offset: c_int,
+    pub network_header_len: c_uint,
 }
 
 /// IPv6 control block (in sk_buff->cb)
@@ -407,11 +468,66 @@ pub struct nf_conntrack_zone {
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_helper {
     pub list: *mut c_void,
+    pub hnode: *mut c_void,
     pub name: [c_char; 16],
+    pub tuple: nf_conntrack_tuple,
     pub module: *mut c_void,
+    pub me: *mut c_void,
+    pub refcnt: c_uint,
     pub max_expected: c_uint,
     pub timeout: c_uint,
     pub flags: c_uint,
+    pub help: *mut c_void,
+    pub from_nlattr: *mut c_void,
+}
+
+unsafe impl Sync for nf_conntrack_helper {}
+
+/// Netfilter connection tracking tuple hash
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_tuplehash { pub tuple: nf_conntrack_tuple }
+
+/// Netfilter connection tracking tuple
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst, pub src_l3num: u16 }
+
+/// Netfilter connection tracking tuple source
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_src { pub u: nf_conntrack_tuple_u }
+
+/// Netfilter connection tracking tuple destination
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_dst { pub u: nf_conntrack_tuple_u, pub protonum: __u8 }
+
+/// Netfilter connection tracking manipulation structure
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_man { pub u: nf_conntrack_tuple_u, pub l3num: u16 }
+
+/// Netfilter connection tracking tuple hash
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_hash { pub node: *mut c_void, pub tuple: nf_conntrack_tuple }
+
+/// Netfilter connection tracking tuple union
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_conntrack_tuple_u {
+    pub icmp: nf_conntrack_tuple_icmp,
+    pub all: u16,
+}
+
+/// Netfilter connection tracking ICMP tuple
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conntrack_tuple_icmp {
+    pub id: u16,
+    pub type_: u8,
+    pub code: u8,
 }
 
 /// Netfilter connection
@@ -419,7 +535,7 @@ pub struct nf_conntrack_helper {
 #[derive(Copy, Clone)]
 pub struct nf_conn {
     pub ct_general: *mut c_void,
-    pub tuplehash: [*mut c_void; 2],
+    pub tuplehash: [nf_conn_tuplehash; 2],
     pub timeout: c_ulong,
     pub status: c_ulong,
     pub sk: *mut core::ffi::c_void, // Auto-generated mock field
@@ -462,9 +578,7 @@ pub struct xfrm_mode_skb_cb {
 /// U64 statistics synchronization
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct u64_stats_sync {
-    pub seq: c_uint,
-}
+pub struct u64_stats_sync { pub seq: c_uint }
 
 // ============================================================================
 // Auto-generated Mock Stubs (Alternative to AI Fixer)
@@ -504,141 +618,126 @@ macro_rules! inet6_unregister_protosw {
 macro_rules! inet_proto_csum_replace4 {
     ($($arg:tt)*) => { 0 }
 }
-<<<<<<< HEAD
-
-#[macro_export]
-macro_rules! inet_sk {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ip6_append_data {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ip6_flush_pending_frames {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ip6_make_flowinfo {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ip6_sk_dst_hoplimit {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ip6_sk_dst_lookup_flow {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ipcm6_init_sk {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ipv6_addr_is_multicast {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ipv6_addr_needs_scope_id {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ipv6_addr_type {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! lock_sock {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! ping_common_sendmsg {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! release_sock {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! security_sk_classify_flow {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! skb_gro_header_slow {
-    ($($arg:tt)*) => { 0 }
-}
-
-#[macro_export]
-macro_rules! sock_net {
-    ($($arg:tt)*) => { 0 }
-}
-
-pub static mut EBUSY: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ICMP6_MIB_OUTERRORS: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut INET_PROTOSW_REUSE: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut SANE_NET_START: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut SANE_STATUS_SUCCESS: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut __udp_disconnect: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut icmpv6_err_convert: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut inet6_sockraw_ops: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ip6_datagram_connect_v6_only: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ip6_datagram_recv_common_ctl: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ip6_datagram_recv_specific_ctl: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ipv6_chk_addr: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ipv6_getsockopt: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ipv6_icmp_error: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ipv6_recv_error: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ipv6_setsockopt: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut nf_nat_follow_master: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_bind: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_close: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_get_port: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_getfrag: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_hash: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_init_sock: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_queue_rcv_skb: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_recvmsg: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut ping_unhash: *mut core::ffi::c_void = core::ptr::null_mut();
-pub static mut pingv6_ops: *mut core::ffi::c_void = core::ptr::null_mut();
-
-// Additional auto-generated stubs
-#[macro_export]
-macro_rules! inet_request_sock {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! sockaddr_in6 {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! skb_dst_set_noref {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! skbuff {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! offset {
-    ($($arg:tt)*) => { 0 }
-}
-#[macro_export]
-macro_rules! request_sock {
-    ($($arg:tt)*) => { 0 }
-}
 extern "C" {
     pub fn udplite_get_port(sk: *mut core::ffi::c_void, snum: u16, recycling: i32) -> i32;
+
+    // Kernel memory allocators
+    pub fn kmalloc(size: usize, flags: c_uint) -> *mut c_void;
+    pub fn kfree(ptr: *mut c_void);
+    pub fn kzalloc(size: usize, flags: c_uint) -> *mut c_void;
 }
+
+/// GFP allocation flags type
+pub type gfp_t = c_uint;
+
+/// Common GFP flags
+pub const GFP_KERNEL: gfp_t = 0xCC0; pub const GFP_ATOMIC: gfp_t = 0x20;
+
+// ============================================================================
+// Formal Verification Contracts (v7.0.0 Experimental Symbolic Execution)
+// ============================================================================
+
+#[cfg(feature = "verus")]
+pub extern crate builtin;
+#[cfg(feature = "verus")]
+pub extern crate builtin_macros;
+
+/// Represents a precondition that must be mathematically satisfied (maps to Lean 4 axioms).
+#[cfg(not(feature = "verus"))]
+#[macro_export]
+macro_rules! requires {
+    ($cond:expr, $msg:expr) => {
+        // In a true symbolic execution engine (like Verus/Creusot), this is parsed at compile-time.
+        // For runtime evaluation, we enforce the mathematical invariant via a kernel panic.
+        if !($cond) {
+            panic!("Formal Verification Precondition Failed: {}", $msg);
+        }
+    };
+}
+
+#[cfg(feature = "verus")]
+#[macro_export]
+macro_rules! requires {
+    ($cond:expr, $msg:expr) => {
+        $crate::builtin::requires($cond);
+    };
+}
+
+/// Represents a postcondition that the function mathematically guarantees.
+#[cfg(not(feature = "verus"))]
+#[macro_export]
+macro_rules! ensures {
+    ($cond:expr, $msg:expr) => {
+        if !($cond) {
+            panic!("Formal Verification Postcondition Failed: {}", $msg);
+        }
+    };
+}
+
+#[cfg(feature = "verus")]
+#[macro_export]
+macro_rules! ensures {
+    ($cond:expr, $msg:expr) => {
+        $crate::builtin::ensures($cond);
+    };
+}
+
+// ============================================================================
+// Netfilter Hook State
+// ============================================================================
+
+/// Netfilter hook state - contains context for hook execution
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_hook_state {
+    pub hook: u8,
+    pub pf: u8,
+    pub in_dev: *mut c_void,  // net_device
+    pub out_dev: *mut c_void, // net_device
+    pub sk: *mut c_void,      // sock
+    pub net: *mut c_void,
+    pub okfn: Option<extern "C" fn(*mut c_void, *mut c_void, *mut nf_hook_state) -> c_int>,
+}
+
+// ============================================================================
+// Common Type Aliases (CamelCase variants for C-style structs)
+// ============================================================================
+
+/// Socket buffer type alias (CamelCase variant)
+pub type SkBuff = sk_buff;
+
+/// Socket type alias (CamelCase variant)
+pub type Sock = sock;
+
+/// TCP socket type alias (CamelCase variant)
+pub type TCP_SOCK = tcp_sock;
+
+/// UDP socket type alias (CamelCase variant)
+pub type UDP_SOCK = udp_sock;
+
+/// Network device features type
+pub type NetdevFeaturesT = u64;
+
+/// List head for linked lists (lowercase alias for C compatibility)
+pub type list_head = ListHead;
+
+/// List head for linked lists
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ListHead { pub next: *mut ListHead, pub prev: *mut ListHead }
+
+/// IPv6 option header
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct Ipv6OptHdr { pub nexthdr: u8, pub hdrlen: u8 }
+
+/// Network namespace type alias
+pub type NF_CONN = nf_conn;
+
+/// Network address union type alias (CamelCase variant)
+pub type NF_INET_ADDR = nf_inet_addr;
+
+/// Network device (opaque type)
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net_device { pub ifindex: c_int, _private: [u8; 0] }

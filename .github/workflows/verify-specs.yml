@@ -1,0 +1,215 @@
+name: Formal Verification
+
+on:
+  push:
+    branches: [ main, mvk-alpha ]
+    paths:
+      - 'specs/**'
+      - 'crates/printk/**'
+      - 'crates/init_main/**'
+      - 'crates/arch_setup/**'
+      - '.github/workflows/verify-specs.yml'
+  pull_request:
+    branches: [ main, mvk-alpha ]
+    paths:
+      - 'specs/**'
+      - 'crates/printk/**'
+      - 'crates/init_main/**'
+      - 'crates/arch_setup/**'
+
+jobs:
+  verify-specifications:
+    name: Verify Lean 4 Specifications
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Lean 4
+        run: |
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Verify elan installation
+        run: |
+          elan --version
+          lean --version
+
+      - name: Build specifications
+        run: |
+          cd specs/lean4
+          lake build
+
+      - name: Type check specifications
+        run: |
+          cd specs/lean4
+          lake env lean MVK.lean
+
+      - name: Run verification script
+        run: |
+          cd specs
+          ./scripts/verify_specs.sh
+
+      - name: Check for proof regressions
+        run: |
+          cd specs/lean4
+          # Count 'sorry' in specifications
+          SORRY_COUNT=$(grep -r "sorry" MVK/ | wc -l || echo "0")
+          echo "Outstanding proofs (sorry): $SORRY_COUNT"
+
+          # Fail if sorry count increases beyond baseline
+          BASELINE=270
+          if [ "$SORRY_COUNT" -gt "$BASELINE" ]; then
+            echo "ERROR: Proof regressions detected!"
+            echo "Current sorry count ($SORRY_COUNT) exceeds baseline ($BASELINE)"
+            exit 1
+          fi
+
+      - name: Generate proof status report
+        run: |
+          cd specs/lean4
+
+          # Count statistics
+          THEOREMS=$(grep -r "^theorem" MVK/ | wc -l || echo "0")
+          AXIOMS=$(grep -r "^axiom" MVK/ | wc -l || echo "0")
+          SORRY=$(grep -r "sorry" MVK/ | wc -l || echo "0")
+
+          echo "## Proof Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Theorems | $THEOREMS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Axioms | $AXIOMS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Outstanding (sorry) | $SORRY |" >> $GITHUB_STEP_SUMMARY
+
+          TOTAL=$((THEOREMS + AXIOMS))
+          COMPLETE=$((THEOREMS - SORRY))
+          if [ "$TOTAL" -gt 0 ]; then
+            PERCENT=$((COMPLETE * 100 / TOTAL))
+            echo "| Completion | ${PERCENT}% |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload proof obligations report
+        uses: actions/upload-artifact@v4
+        with:
+          name: proof-obligations-report
+          path: specs/PROOF_STATUS_REPORT.md
+
+      - name: Check specification consistency
+        run: |
+          cd specs/lean4
+          # Verify all imports are valid
+          lake env lean MVK.lean
+
+  validate-implementation:
+    name: Validate Implementation Against Specs
+    runs-on: ubuntu-latest
+    needs: verify-specifications
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: Run unit tests
+        run: |
+          # Test modules that have formal specifications
+          cargo test --package printk
+          cargo test --package init_main
+          cargo test --package arch_setup
+
+      - name: Check for specification violations
+        run: |
+          # Verify function signatures match specifications
+          # This is a basic check - more sophisticated tools would extract
+          # contracts from Lean and validate against Rust
+
+          echo "Checking printk module..."
+          grep -q "pub unsafe extern \"C\" fn printk_str" crates/printk/src/lib.rs
+          grep -q "pub unsafe extern \"C\" fn printk_init" crates/printk/src/lib.rs
+
+          echo "Checking init_main module..."
+          grep -q "pub unsafe extern \"C\" fn start_kernel" crates/init_main/src/lib.rs
+
+          echo "Checking arch_setup module..."
+          grep -q "pub unsafe extern \"C\" fn arch_setup_init" crates/arch_setup/src/lib.rs
+
+          echo "✓ All function signatures present"
+
+  track-proof-progress:
+    name: Track Proof Completion
+    runs-on: ubuntu-latest
+    needs: verify-specifications
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Calculate proof metrics
+        id: metrics
+        run: |
+          cd specs/lean4
+
+          THEOREMS=$(grep -r "^theorem" phase1/*.lean | wc -l || echo "0")
+          AXIOMS=$(grep -r "^axiom" phase1/*.lean | wc -l || echo "0")
+          SORRY=$(grep -r "sorry" phase1/*.lean | wc -l || echo "0")
+
+          TOTAL=$((THEOREMS + AXIOMS))
+          COMPLETE=$((THEOREMS - SORRY))
+
+          if [ "$TOTAL" -gt 0 ]; then
+            PERCENT=$((COMPLETE * 100 / TOTAL))
+          else
+            PERCENT=0
+          fi
+
+          echo "theorems=$THEOREMS" >> $GITHUB_OUTPUT
+          echo "axioms=$AXIOMS" >> $GITHUB_OUTPUT
+          echo "sorry=$SORRY" >> $GITHUB_OUTPUT
+          echo "completion=$PERCENT" >> $GITHUB_OUTPUT
+
+      - name: Create progress badge
+        run: |
+          COMPLETION=${{ steps.metrics.outputs.completion }}
+
+          # Create badge JSON for shields.io
+          mkdir -p .github/badges
+          cat > .github/badges/proof-completion.json << EOF
+          {
+            "schemaVersion": 1,
+            "label": "proofs",
+            "message": "${COMPLETION}%",
+            "color": "blue"
+          }
+          EOF
+
+      - name: Comment on PR with proof status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const completion = ${{ steps.metrics.outputs.completion }};
+            const theorems = ${{ steps.metrics.outputs.theorems }};
+            const sorry = ${{ steps.metrics.outputs.sorry }};
+
+            const body = `## Formal Verification Status
+
+            📊 **Proof Completion:** ${completion}%
+            📝 **Theorems:** ${theorems}
+            ⏳ **Outstanding:** ${sorry}
+
+            See [PROOF_OBLIGATIONS.md](../blob/main/specs/PROOF_OBLIGATIONS.md) for details.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

@@ -2416,3 +2416,622 @@
 - **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
 - **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
 - **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 09:08:58
+- **Git Status**: No new commits.
+### Compilation Statistics
+- **Total Compiler Errors**: 2
+- Missing Types/Values: 0
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 0
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+---
+## Run at 2026-05-19 09:28:59
+- **Git Status**: No new commits.
+### Compilation Statistics
+- **Total Compiler Errors**: 2118
+- Missing Types/Values: 313
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 234
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 09:49:02
+- **Git Status**: No new commits.
+### Compilation Statistics
+- **Total Compiler Errors**: 2071
+- Missing Types/Values: 311
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 226
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 10:09:04
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1948
+- Missing Types/Values: 262
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 214
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 10:29:07
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1934
+- Missing Types/Values: 261
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 214
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 10:49:11
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1921
+- Missing Types/Values: 257
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 214
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 11:09:14
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1921
+- Missing Types/Values: 257
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 214
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 11:29:17
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1846
+- Missing Types/Values: 218
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 211
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 11:49:21
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1745
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 200
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 12:09:24
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 12:29:28
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 12:49:31
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 13:09:34
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 13:29:37
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 13:49:40
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 14:09:43
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 14:29:46
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 14:49:50
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1681
+- Missing Types/Values: 138
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 177
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 20:30:39
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 1363
+- Missing Types/Values: 126
+- Missing Macros (vec! etc.): 1
+- No_std Panic Handler Missing: 1
+- Duplicate Definitions: 138
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Macro Usage:** The LLM is trying to use `vec!` in a `#![no_std]` environment. *Improvement: Add a rule to the Codex prompt to prohibit heap allocations and use fixed arrays or custom allocators.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+- **Panic Handlers:** *Improvement: Ensure a central `#[panic_handler]` is provided in the root lib and `panic = "abort"` is in Cargo.toml profiles.*
+---
+## Run at 2026-05-19 23:31:08
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-19 23:51:14
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 00:11:17
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 00:31:19
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 00:51:22
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 01:11:25
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 01:31:27
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 01:51:30
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 02:11:32
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 02:31:35
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 02:51:37
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 03:11:40
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 03:31:43
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 03:51:45
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 04:11:48
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 04:31:50
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 04:51:53
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 05:11:56
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 05:31:58
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 05:52:01
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 06:12:03
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 06:32:06
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 06:52:08
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 07:12:11
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 955
+- Missing Types/Values: 63
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 66
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 15:10:43
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 200
+- Missing Types/Values: 23
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 1
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*
+---
+## Run at 2026-05-20 15:30:46
+- **Git Status**: Pulled new updates from remote.
+### Compilation Statistics
+- **Total Compiler Errors**: 200
+- Missing Types/Values: 23
+- Missing Macros (vec! etc.): 0
+- No_std Panic Handler Missing: 0
+- Duplicate Definitions: 1
+### Automated Analysis & Proposed Improvements
+⚠️ **ISSUES DETECTED. Proposed Fixes for the Codex Pipeline:**
+- **Type Resolution:** The LLM is failing to map C types to Rust. *Improvement: Update the Codex prompt to explicitly import `libc::{c_int, c_char, size_t}` in every module.*
+- **Namespace Conflicts:** The AI is repeatedly defining identical structs. *Improvement: Have the pipeline check for global definitions and import them from a shared `core` crate rather than duplicating them.*

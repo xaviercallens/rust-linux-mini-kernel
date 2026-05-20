@@ -1,3 +1,4 @@
+#![allow(warnings)]
 
 //! IPv6 input processing for Linux kernel
 //!
@@ -8,14 +9,11 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::{ffi::{c_int, c_void}, ptr};
 use kernel_types::*;
 
 // Constants from C
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 // Netfilter / RX constants
 pub const NFPROTO_IPV6: c_int = 10;
@@ -27,16 +25,13 @@ pub const NET_RX_DROP: c_int = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet6_skb_parm {
-    pub iif: u32,
-    pub nhoff: u32,
-}
+pub struct inet6_skb_parm { pub iif: u32, pub nhoff: u32 }
 
 type early_demux_fn = extern "C" fn(*mut sk_buff);
 
 fn ip6_rcv_finish_core(_net: *mut net, _sk: *mut sock, skb: *mut sk_buff) {
     let edemux: Option<early_demux_fn> = unsafe {
-        let idev = __in6_dev_get((*skb).dev);
+        let idev = __in6_dev_get((*skb).dev as *mut net_device);
         if idev.is_null() {
             None
         } else {

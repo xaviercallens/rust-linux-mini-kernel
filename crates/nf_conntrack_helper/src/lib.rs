@@ -5,15 +5,18 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::mem;
-use core::ptr;
-use kernel_types::*;
+use core::{ffi::{c_int, c_uint, c_void, c_char, c_uchar}, mem, ptr, sync::atomic::{AtomicUsize, Ordering}};
+use kernel_types::{size_t, sk_buff};
+use kernel_types::nf_conntrack_helper as kt_nf_conntrack_helper;
+use kernel_types::nf_conntrack_tuple as kt_nf_conntrack_tuple;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 pub const ENOENT: c_int = -2;
+
+// Hash table size for connection tracking helpers
+static mut nf_ct_helper_hsize: c_uint = 256;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -26,49 +29,56 @@ pub struct nf_conntrack_tuple_address {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_tuple {
+    pub src_l3num: u8,
     pub src: nf_conntrack_tuple_address,
     pub dst: nf_conntrack_tuple_address,
-    pub src_l3num: u16,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_address {
-    pub all: u16,
+pub struct nf_conntrack_tuple_mask {
+    pub src_l3num: u8,
+    pub src: nf_conntrack_tuple_address,
+    pub dst: nf_conntrack_tuple_address,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-    pub pprev: *mut *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node, pub pprev: *mut *mut hlist_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_tuple_hash {
+pub struct nf_conntrack_helper {
+    pub hnode: hlist_node,
+    pub name: [c_char; 16],
     pub tuple: nf_conntrack_tuple,
+    pub expect_policy: *const c_void,
+    pub expect_class_max: u32,
+    pub help: *const c_void,
+    pub from_nlattr: *const c_void,
+    pub me: *const c_void,
+    pub refcnt: c_uint,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn {
-    pub status: u32,
-    pub tuplehash: [nf_conn_tuple_hash; 2],
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_help {
-    pub helper: *mut nf_conntrack_helper,
-    pub expectations: hlist_head,
-}
+pub struct nf_conn_tuple_hash { pub tuple: nf_conntrack_tuple }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn { pub status: u32, pub tuplehash: [nf_conn_tuple_hash; 2] }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct nf_conn_help { pub helper: *mut nf_conntrack_helper, pub expectations: hlist_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -87,9 +97,7 @@ pub struct nf_ct_helper_expectfn {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct Mutex {
-    _priv: u8,
-}
+pub struct Mutex { _priv: u8 }
 
 // Global variables
 pub static mut NF_CT_HELPER_COUNT: c_uint = 0;
@@ -98,8 +106,8 @@ pub static mut NF_CT_NAT_HELPERS: list_head = list_head {
     next: ptr::null_mut(),
     prev: ptr::null_mut(),
 };
-pub static mut NF_CT_HELPER_MUTEX: Mutex = Mutex {};
-pub static mut NF_CT_NAT_HELPERS_MUTEX: Mutex = Mutex {};
+pub static mut NF_CT_HELPER_MUTEX: Mutex = Mutex { _priv: 0 };
+pub static mut NF_CT_NAT_HELPERS_MUTEX: Mutex = Mutex { _priv: 0 };
 
 #[inline(always)]
 unsafe fn helper_from_hnode(node: *mut hlist_node) -> *mut nf_conntrack_helper {
@@ -165,9 +173,18 @@ pub unsafe extern "C" fn __nf_ct_helper_find(
     let h = helper_hash(tuple);
     let head = &mut *NF_CT_HELPER_HASH.offset(h as isize);
 
+    let mut node = (*head).first;
+    let mask = nf_conntrack_tuple_mask {
+        src_l3num: 0xFF,
+        src: nf_conntrack_tuple_address { all: 0xFFFF, protonum: 0xFF, _pad: 0 },
+        dst: nf_conntrack_tuple_address { all: 0xFFFF, protonum: 0xFF, _pad: 0 },
+    };
+
     while !node.is_null() {
         let helper = helper_from_hnode(node);
-        if nf_ct_tuple_src_mask_cmp(tuple, &(*helper).tuple, &mask) {
+        let helper_tuple_ptr = ptr::addr_of!((*helper).tuple);
+        let mask_ptr = ptr::addr_of!(mask) as *const nf_conntrack_tuple;
+        if nf_ct_tuple_src_mask_cmp(tuple, helper_tuple_ptr, mask_ptr) {
             return helper;
         }
         node = (*node).next;
@@ -179,10 +196,10 @@ pub unsafe extern "C" fn __nf_ct_helper_find(
 #[no_mangle]
 pub unsafe extern "C" fn __nf_conntrack_helper_find(
     name: *const c_char,
-    l3num: u16,
+    l3num: u8,
     protonum: u8,
 ) -> *mut nf_conntrack_helper {
-    if name.is_null() || nf_ct_helper_count == 0 || nf_ct_helper_hash.is_null() {
+    if name.is_null() || NF_CT_HELPER_COUNT == 0 || NF_CT_HELPER_HASH.is_null() {
         return ptr::null_mut();
     }
 
@@ -195,7 +212,7 @@ pub unsafe extern "C" fn __nf_conntrack_helper_find(
             if !helper.is_null()
                 && (*helper).tuple.src_l3num == l3num
                 && (*helper).tuple.dst.protonum == protonum
-                && strcmp((*helper).name, name) == 0
+                && strcmp((*helper).name.as_ptr(), name) == 0
             {
                 return helper;
             }
@@ -215,7 +232,7 @@ pub unsafe extern "C" fn __nf_conntrack_helper_find(
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
     name: *const u8,
-    l3num: u16,
+    l3num: u8,
     protonum: u8,
 ) -> *mut nf_conntrack_helper {
     if name.is_null() {
@@ -224,7 +241,7 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
 
     rcu_read_lock();
 
-    let h = __nf_conntrack_helper_find(name, l3num, protonum);
+    let h = __nf_conntrack_helper_find(name as *const c_char, l3num, protonum);
 
     // Module loading logic
     if h.is_null() {
@@ -233,12 +250,12 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
         return ptr::null_mut();
     }
 
-    if !try_module_get((*h).me) {
+    if !try_module_get((*h).me as *mut c_void) {
         return ptr::null_mut();
     }
 
-    if !refcount_inc_not_zero(&(*h).refcnt) {
-        module_put((*h).me);
+    if !refcount_inc_not_zero(&*((&(*h).refcnt) as *const c_uint as *const AtomicUsize)) {
+        module_put((*h).me as *mut c_void);
         return ptr::null_mut();
     }
 
@@ -253,8 +270,8 @@ pub unsafe extern "C" fn nf_conntrack_helper_try_module_get(
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_helper_put(helper: *mut nf_conntrack_helper) {
     if !helper.is_null() {
-        refcount_dec(&(*helper).refcnt);
-        module_put((*helper).me);
+        refcount_dec(&*((&(*helper).refcnt) as *const c_uint as *const AtomicUsize));
+        module_put((*helper).me as *mut c_void);
     }
 }
 
@@ -288,21 +305,6 @@ unsafe fn refcount_inc_not_zero(refcnt: &AtomicUsize) -> bool {
 
 unsafe fn refcount_dec(refcnt: &AtomicUsize) {
     refcnt.fetch_sub(1, Ordering::Relaxed);
-}
-
-unsafe fn container_of<T, U>(ptr: *const T, container: U, member: core::ptr::addr_of!()) -> *mut U {
-    (ptr as *const u8).offset(-(member as isize)) as *mut U
-}
-
-unsafe fn strcmp(a: *const u8, b: *const u8) -> c_int {
-    let mut i = 0;
-    while *a.offset(i) != 0 || *b.offset(i) != 0 {
-        if *a.offset(i) != *b.offset(i) {
-            return *a.offset(i) as c_int - *b.offset(i) as c_int;
-        }
-        i += 1;
-    }
-    0
 }
 
 // Exports

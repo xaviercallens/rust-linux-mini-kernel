@@ -5,16 +5,7 @@
 
 use core::ffi::{c_int, c_void};
 use core::ptr;
-use kernel_types::*;
-
-mod kernel_types {
-    pub use core::ffi::{
-        c_char, c_int, c_long, c_short, c_uchar, c_uint, c_ulong, c_ushort, c_void,
-    };
-    pub type size_t = usize;
-    pub type c_size_t = usize;
-    pub type socklen_t = u32;
-}
+use core::mem;
 use kernel_types::*;
 
 pub const IPPROTO_UDP: c_int = 17;
@@ -46,15 +37,13 @@ pub struct frag_hdr {
 }
 
 #[repr(C)]
-pub struct net_offload {
-    pub callbacks: net_offload_callbacks,
-}
+pub struct net_offload { pub callbacks: net_offload_callbacks }
 
 #[repr(C)]
 pub struct net_offload_callbacks {
-    pub gso_segment: extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
-    pub gro_receive: extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
-    pub gro_complete: extern "C" fn(skb: *mut sk_buff, nhoff: c_int) -> c_int,
+    pub gso_segment: unsafe extern "C" fn(skb: *mut sk_buff, features: u32) -> *mut sk_buff,
+    pub gro_receive: unsafe extern "C" fn(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff,
+    pub gro_complete: unsafe extern "C" fn(skb: *mut sk_buff, nhoff: c_int) -> c_int,
 }
 
 #[repr(C)]
@@ -68,28 +57,26 @@ pub struct NapiGroCb {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, features: u32) -> *mut sk_buff {
+pub unsafe extern "C" fn udp6_ufo_fragment(skb: *mut sk_buff, _features: u32) -> *mut sk_buff {
     let shinfo = skb_shinfo(skb);
     if shinfo.is_null() {
         return ptr::null_mut();
     }
 
-    let mss = (*shinfo).gso_size;
-    let unfrag_ip6hlen = 0; // Placeholder
-    let unfrag_len = 0; // Placeholder
-    let packet_start = ptr::null_mut();
-    let prevhdr = ptr::null_mut();
-    let nexthdr = 0; // Placeholder
-    let frag_hdr_sz = mem::size_of::<frag_hdr>() as isize;
-    let tnl_hlen = 0; // Placeholder
-    let err = 0; // Placeholder
+    let _mss = (*shinfo).gso_size;
+    let _unfrag_ip6hlen = 0; // Placeholder
+    let _unfrag_len = 0; // Placeholder
+    let _packet_start: *mut u8 = ptr::null_mut();
+    let _prevhdr: *mut u8 = ptr::null_mut();
+    let _nexthdr = 0; // Placeholder
+    let _frag_hdr_sz = mem::size_of::<frag_hdr>() as isize;
+    let _tnl_hlen = 0; // Placeholder
+    let _err = 0; // Placeholder
 
     // SAFETY: Assume all pointers are valid and memory is properly aligned
-    unsafe {
-        // ... (actual implementation would go here)
-        // This is a simplified skeleton due to the complexity of the original code
-        ptr::null_mut()
-    }
+    // ... (actual implementation would go here)
+    // This is a simplified skeleton due to the complexity of the original code
+    ptr::null_mut()
 }
 
 #[no_mangle]
@@ -110,13 +97,13 @@ pub unsafe extern "C" fn udp6_gro_lookup_skb(
 
         __udp6_lib_lookup(
             dev_net(ptr::null_mut()),
-            &(*iph).saddr,
+            &(*iph).saddr as *const in6_addr as *const [u8; 16],
             sport,
-            &(*iph).daddr,
+            &(*iph).daddr as *const in6_addr as *const [u8; 16],
             dport,
             inet6_iif(skb),
-            inet6_sdif(skb),
-            &mut udp_table,
+            inet6_sdif(skb as *mut c_void),
+            &udp_table as *const UdpTable as *mut c_void,
             ptr::null_mut(),
         )
     }
@@ -150,8 +137,8 @@ pub unsafe extern "C" fn udp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) 
     (*napi_cb).is_ipv6 = 1;
     rcu_read_lock();
 
-    if static_branch_unlikely(&udpv6_encap_needed_key) != 0 {
-        let sk = udp6_gro_lookup_skb(skb, (*uh).source, (*uh).dest);
+    if static_branch_unlikely(&udpv6_encap_needed_key as *const EncapKey as *mut c_void) != 0 {
+        let _sk = udp6_gro_lookup_skb(skb, (*uh).source, (*uh).dest);
         // ... (rest of implementation)
     }
 
@@ -170,14 +157,14 @@ pub unsafe extern "C" fn udp6_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c
         return EINVAL;
     }
 
-    let uh = (skb.offset(nhoff as isize) as *mut udphdr);
+    let uh = skb.offset(nhoff as isize) as *mut udphdr;
     if uh.is_null() {
         return EINVAL;
     }
 
     let napi_cb = NAPI_GRO_CB(skb);
     if (*napi_cb).is_flist != 0 && (*napi_cb).encap_mark == 0 {
-        (*uh).len = ((*skb).len - nhoff as usize) as u16;
+        (*uh).len = ((*skb).len - nhoff as u32) as u16;
 
         let shinfo = skb_shinfo(skb);
         if shinfo.is_null() {
@@ -203,9 +190,9 @@ pub unsafe extern "C" fn udp6_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c
 
     if (*uh).check != 0 {
         (*uh).check = !udp_v6_check(
-            ((*skb).len - nhoff as usize) as u16,
-            &(*ipv6h).saddr,
-            &(*ipv6h).daddr,
+            ((*skb).len - nhoff as u32) as u16,
+            &(*ipv6h).saddr as *const in6_addr as *const [u8; 16],
+            &(*ipv6h).daddr as *const in6_addr as *const [u8; 16],
             0,
         );
     }
@@ -247,12 +234,12 @@ extern "C" {
         skb: *mut sk_buff,
         protocol: c_int,
         expected: u16,
-        compute_pseudo: extern "C" fn(...) -> u32,
+        compute_pseudo: unsafe extern "C" fn(...) -> u32,
     ) -> c_int;
     fn skb_gro_checksum_try_convert(
         skb: *mut sk_buff,
         protocol: c_int,
-        compute_pseudo: extern "C" fn(...) -> u32,
+        compute_pseudo: unsafe extern "C" fn(...) -> u32,
     );
     fn rcu_read_lock();
     fn rcu_read_unlock();
@@ -267,7 +254,7 @@ extern "C" {
     fn udp_gro_complete(
         skb: *mut sk_buff,
         nhoff: c_int,
-        lookup: extern "C" fn(...) -> *mut c_void,
+        lookup: unsafe extern "C" fn(...) -> *mut c_void,
     ) -> c_int;
     fn udp6_lib_lookup_skb(...) -> *mut c_void;
     fn inet6_add_offload(offload: *const net_offload, protocol: c_int) -> c_int;
@@ -277,6 +264,7 @@ extern "C" {
 }
 
 // Static data
+#[allow(non_upper_case_globals)]
 static udpv6_offload: net_offload = net_offload {
     callbacks: net_offload_callbacks {
         gso_segment: udp6_ufo_fragment,
@@ -285,8 +273,17 @@ static udpv6_offload: net_offload = net_offload {
     },
 };
 
-static udp_table: c_void = 0 as _;
-static udpv6_encap_needed_key: c_void = 0 as _;
+// Placeholder statics - use zero-sized types
+#[repr(transparent)]
+struct UdpTable { _private: [u8; 0] }
+
+#[repr(transparent)]
+struct EncapKey { _private: [u8; 0] }
+
+#[allow(non_upper_case_globals)]
+static udp_table: UdpTable = UdpTable { _private: [] };
+#[allow(non_upper_case_globals)]
+static udpv6_encap_needed_key: EncapKey = EncapKey { _private: [] };
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {

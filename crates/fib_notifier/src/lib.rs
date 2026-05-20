@@ -3,35 +3,24 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::ptr;
+use core::{ffi::{c_int, c_uint, c_void}, ptr};
 use kernel_types::*;
 
 // Constants from C
-pub const AF_INET: c_int = 2;
-pub const EINVAL: c_int = -22;
+pub const AF_INET: c_int = 2; pub const EINVAL: c_int = -22;
 
 // Type definitions
 #[repr(C)]
-pub struct NotifierBlock {
-    _private: [u8; 0],
-}
+pub struct NotifierBlock { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct FIBNotifierInfo {
-    family: c_int,
-}
+pub struct FIBNotifierInfo { family: c_int }
 
 #[repr(C)]
-pub struct Net {
-    ipv4: *mut NetIPv4,
-}
+pub struct Net { ipv4: *mut NetIPv4 }
 
 #[repr(C)]
-pub struct NetIPv4 {
-    fib_seq: c_uint,
-    notifier_ops: *mut FIBNotifierOps,
-}
+pub struct NetIPv4 { fib_seq: c_uint, notifier_ops: *mut FIBNotifierOps }
 
 #[repr(C)]
 pub struct FIBNotifierOps {
@@ -46,9 +35,7 @@ pub struct FIBNotifierOps {
 unsafe impl Sync for FIBNotifierOps {}
 
 #[repr(C)]
-pub struct NetlinkExtAck {
-    _private: [u8; 0],
-}
+pub struct NetlinkExtAck { _private: [u8; 0] }
 
 // External function declarations
 unsafe extern "C" {

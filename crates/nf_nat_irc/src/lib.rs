@@ -12,80 +12,44 @@ pub const EBUSY: c_int = 16;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_tcp {
-    pub port: __be16,
-}
+pub struct nf_ct_tcp { pub port: __be16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_expect {
-    master: *mut nf_conn,
-    saved_proto: nf_ct_proto,
-    dir: c_int,
-    expectfn: *const c_void,
-    tuple: nf_conntrack_tuple,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    dst: nf_conntrack_address,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_conntrack_address {
-    u: nf_conntrack_address_union,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union nf_conntrack_address_union {
-    ip: __be32,
-    tcp: nf_ct_tcp,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct nf_ct_proto {
-    pub tcp: nf_ct_tcp,
-}
+pub struct nf_conntrack_address { pub u3: nf_conntrack_address_union }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union nf_conntrack_address_union {
     pub ip: __be32,
+    pub tcp: nf_ct_tcp,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_address {
-    pub u3: nf_conntrack_address_union,
+pub struct nf_ct_proto { pub tcp: nf_ct_tcp }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union nf_conntrack_man_proto {
+    pub tcp: nf_ct_tcp,
+    pub all: __be16,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub u3: nf_conntrack_address,
-    pub u: nf_conntrack_man_proto,
-}
+pub struct nf_conntrack_tuple_dst { pub u3: nf_conntrack_address, pub u: nf_conntrack_man_proto }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conntrack_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conntrack_tuple_hash; 2],
-}
+pub struct nf_conn { pub tuplehash: [nf_conntrack_tuple_hash; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -99,9 +63,7 @@ pub struct nf_conntrack_expect {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_nat_helper {
-    pub name: *const c_char,
-}
+pub struct nf_conntrack_nat_helper { pub name: *const c_char }
 
 unsafe extern "C" {
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_int) -> c_int;
@@ -127,8 +89,6 @@ static NAT_HELPER_NAME: &[u8] = b"irc\0";
 static mut NAT_HELPER_IRC: nf_conntrack_nat_helper = nf_conntrack_nat_helper {
     name: NAT_HELPER_NAME.as_ptr() as *const c_char,
 };
-static mut NF_NAT_IRC_HOOK: *const c_void = ptr::null();
-
 static mut NF_NAT_IRC_HOOK: *const c_void = ptr::null();
 
 #[no_mangle]
@@ -163,7 +123,9 @@ pub unsafe extern "C" fn help(
     let mut buffer = [0u8; 32];
 
     let master = (*exp).master;
-    let newaddr = (*master).tuplehash[0].tuple.dst.u3.u3.ip;
+    // Access union field safely
+    let addr_union = &(*master).tuplehash[0].tuple.dst.u3.u3;
+    let newaddr = addr_union.ip;
     let mut port: u16 = ntohs((*exp).saved_proto.tcp.port);
 
     (*exp).saved_proto.tcp.port = htons(port);
@@ -172,25 +134,20 @@ pub unsafe extern "C" fn help(
 
     // Try to find an available port
     let mut current_port = port;
+    let mut found = false;
     while current_port <= 65535 {
         (*exp).tuple.dst.u.tcp.port = htons(current_port);
 
-        match nf_ct_expect_related(exp, 0) {
-            0 => {
-                port = current_port;
-                break;
-            },
-            -EBUSY => {
-                current_port += 1;
-                continue;
-            },
-            _ => {
-                port = 0;
-                break;
-            }
-            current = current.wrapping_add(1);
+        let result = nf_ct_expect_related(exp, 0);
+        if result == 0 {
+            port = current_port;
+            found = true;
+            break;
+        } else if result == -(EBUSY as c_int) {
+            current_port += 1;
             continue;
         } else {
+            port = 0;
             break;
         }
     }
@@ -201,7 +158,7 @@ pub unsafe extern "C" fn help(
     }
 
     let new_ip = ntohl(newaddr);
-    let new_port = port as u32;
+    let new_port = port;
 
     let n = snprintf(
         buffer.as_mut_ptr() as *mut c_char,
@@ -261,21 +218,55 @@ pub unsafe extern "C" fn snprintf(
     arg1: u32,
     arg2: u16,
 ) -> c_int {
-    let fmt_str = CStr::from_ptr(fmt);
-    let mut result = 0;
-
-    // SAFETY: This is a simplified implementation for demonstration purposes
-    // In a real kernel module, this would use the actual snprintf implementation
-    let formatted = format!("{} {}", arg1, arg2);
-    let bytes = formatted.as_bytes_with_nul();
-
-    if !buf.is_null() && size > 0 {
-        let copy_len = (size - 1).min(bytes.len());
-        ptr::copy_nonoverlapping(bytes.as_ptr(), buf as *mut u8, copy_len);
-        result = copy_len as c_int;
+    if buf.is_null() || size == 0 {
+        return 0;
     }
 
-    result
+    // Simple implementation: format as "IP PORT"
+    // Convert arg1 (IP) to string
+    let mut temp = [0u8; 32];
+    let mut pos = 0;
+
+    // Format IP address
+    let mut ip = arg1;
+    let mut divisor = 1000000000u32;
+    let mut started = false;
+    while divisor > 0 {
+        let digit = ip / divisor;
+        if digit > 0 || started || divisor == 1 {
+            temp[pos] = b'0' + (digit as u8);
+            pos += 1;
+            started = true;
+        }
+        ip %= divisor;
+        divisor /= 10;
+    }
+
+    // Add space
+    temp[pos] = b' ';
+    pos += 1;
+
+    // Format port
+    let mut port = arg2;
+    let mut pdivisor = 10000u16;
+    let mut pstarted = false;
+    while pdivisor > 0 {
+        let pdigit = port / pdivisor;
+        if pdigit > 0 || pstarted || pdivisor == 1 {
+            temp[pos] = b'0' + (pdigit as u8);
+            pos += 1;
+            pstarted = true;
+        }
+        port %= pdivisor;
+        pdivisor /= 10;
+    }
+
+    // Copy to buffer
+    let copy_len = if pos < size { pos } else { size - 1 };
+    ptr::copy_nonoverlapping(temp.as_ptr(), buf as *mut u8, copy_len);
+    *(buf.add(copy_len) as *mut u8) = 0; // null terminate
+
+    copy_len as c_int
 }
 
 // Helper functions for network byte order conversion

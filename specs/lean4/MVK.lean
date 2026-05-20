@@ -1,0 +1,29 @@
+-- MVK v9.2.0-gamma Formal Specifications Root Module
+-- Auto-generated module index
+
+-- Phase 1: Boot Subsystem
+import MVK.Phase1.Printk
+import MVK.Phase1.ArchSetup
+import MVK.Phase1.InitMain
+
+-- Phase 2: Memory Management
+import MVK.Phase2.Common
+import MVK.Phase2.PageAlloc
+import MVK.Phase2.Slab
+
+-- Phase 3: Netfilter Core
+import MVK.Phase3.ConntrackCore
+import MVK.Phase3.ConntrackTCP
+import MVK.Phase3.ConntrackUDP
+import MVK.Phase3.ConntrackICMP
+import MVK.Phase3.ConntrackICMPv6
+import MVK.Phase3.ConntrackGeneric
+import MVK.Phase3.ConntrackSCTP
+import MVK.Phase3.ConntrackDCCP
+import MVK.Phase3.NatCore
+import MVK.Phase3.NatProto
+
+-- Phase 4: Network Stack - IPv4/IPv6 Core & Routing
+import MVK.Phase4.IPv4IPv6.AfInet
+import MVK.Phase4.IPv4IPv6.AfInet6
+import MVK.Phase4.Routing.FibSemantics

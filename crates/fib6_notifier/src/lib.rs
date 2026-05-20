@@ -1,4 +1,3 @@
-```rust
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
@@ -11,19 +10,13 @@ use kernel_types::*;
 pub const AF_INET6: c_int = 10;
 
 #[repr(C)]
-struct ipv6_net {
-    notifier_ops: *mut fib_notifier_ops,
-}
+struct ipv6_net { notifier_ops: *mut fib_notifier_ops }
 
 #[repr(C)]
-struct notifier_block {
-    _private: [u8; 0],
-}
+struct notifier_block { _private: [u8; 0] }
 
 #[repr(C)]
-struct fib_notifier_info {
-    family: c_int,
-}
+struct fib_notifier_info { family: c_int }
 
 #[repr(C)]
 struct fib_notifier_ops {
@@ -155,4 +148,3 @@ pub unsafe extern "C" fn fib6_notifier_exit(net: *mut c_void) {
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
-```

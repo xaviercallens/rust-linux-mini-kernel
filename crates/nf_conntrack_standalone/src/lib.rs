@@ -11,14 +11,14 @@
 #![allow(clippy::all)]
 
 use core::ffi::{c_char, c_int, c_uint, c_ulong, c_ulonglong, c_void};
+use core::panic::PanicInfo;
 use kernel_types::*;
 
 pub type size_t = usize;
 pub type c_size_t = usize;
 pub type socklen_t = u32;
 
-pub const NFPROTO_IPV4: u16 = 2;
-pub const NFPROTO_IPV6: u16 = 10;
+pub const NFPROTO_IPV4: u16 = 2; pub const NFPROTO_IPV6: u16 = 10;
 
 pub const IPPROTO_ICMP: u8 = 1;
 pub const IPPROTO_TCP: u8 = 6;
@@ -31,9 +31,7 @@ pub const IPPROTO_UDPLITE: u8 = 136;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct seq_file {
-    _private: [u8; 0],
-}
+pub struct seq_file { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -45,21 +43,15 @@ pub union nf_inet_addr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src_icmp {
-    pub id: u16,
-}
+pub struct nf_conntrack_tuple_src_icmp { pub id: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src_port {
-    pub port: u16,
-}
+pub struct nf_conntrack_tuple_src_port { pub port: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_src_gre {
-    pub key: u16,
-}
+pub struct nf_conntrack_tuple_src_gre { pub key: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -82,22 +74,15 @@ pub struct nf_conntrack_tuple_src {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst_icmp {
-    pub type_: u8,
-    pub code: u8,
-}
+pub struct nf_conntrack_tuple_dst_icmp { pub type_: u8, pub code: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst_port {
-    pub port: u16,
-}
+pub struct nf_conntrack_tuple_dst_port { pub port: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst_gre {
-    pub key: u16,
-}
+pub struct nf_conntrack_tuple_dst_gre { pub key: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -121,17 +106,11 @@ pub struct nf_conntrack_tuple_dst {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub src: nf_conntrack_tuple_src,
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub src: nf_conntrack_tuple_src, pub dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    pub l4proto: u8,
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_l4proto { pub l4proto: u8, _private: [u8; 0] }
 
 unsafe extern "C" {
     pub fn seq_printf(s: *mut seq_file, fmt: *const c_char, ...) -> c_int;
@@ -146,7 +125,7 @@ pub unsafe extern "C" fn print_tuple(
     // SAFETY: Function is called with valid pointers as per contract
     let tuple_ref = &*tuple;
     let l4proto_ref = &*l4proto;
-    let l3num = tuple_ref.src_l3num;
+    let l3num = tuple_ref.src.l3num;
 
     match l3num {
         NFPROTO_IPV4 => {

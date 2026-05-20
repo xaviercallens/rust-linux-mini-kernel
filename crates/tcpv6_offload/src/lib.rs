@@ -1,47 +1,48 @@
+#![allow(warnings)]
 use kernel_types::*;
-use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}};
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const CHECKSUM_PARTIAL: u8 = 1;
 
 type netdev_features_t = u64;
 type socklen_t = u32;
 type c_size_t = usize;
 
-#[repr(C)]
-pub struct tcphdr {
-    pub check: u16,
-}
+
 
 #[repr(C)]
-struct NapiGroCb {
-    flush: u8,
-}
+pub struct tcphdr { pub check: u16 }
 
 #[repr(C)]
-struct NetOffload {
-    callbacks: NetOffloadCallbacks,
-}
+struct NapiGroCb { flush: u8 }
+
+#[repr(C)]
+struct NetOffload { callbacks: NetOffloadCallbacks }
 
 #[repr(C)]
 struct NetOffloadCallbacks {
-    gso_segment: extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
-    gro_receive: extern "C" fn(*mut core::ffi::c_void, *mut sk_buff) -> *mut sk_buff,
-    gro_complete: extern "C" fn(*mut sk_buff, c_int) -> c_int,
+    gso_segment: unsafe extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff,
+    gro_receive: unsafe extern "C" fn(*mut core::ffi::c_void, *mut sk_buff) -> *mut sk_buff,
+    gro_complete: unsafe extern "C" fn(*mut sk_buff, c_int) -> c_int,
 }
 
 #[repr(C)]
-struct skb_shared_info {
-    gso_type: netdev_features_t,
+struct skb_shared_info { gso_type: netdev_features_t }
+
+const IPPROTO_TCP: c_int = 6; const SKB_GSO_TCPV6: netdev_features_t = 0x0000_0800;
+
+fn napi_gro_cb_ptr(_skb: *mut sk_buff) -> *mut NapiGroCb {
+    ptr::null_mut()
 }
 
-const IPPROTO_TCP: c_int = 6;
-const SKB_GSO_TCPV6: netdev_features_t = 0x0000_0800;
+fn err_ptr(_errno: c_int) -> *mut sk_buff {
+    ptr::null_mut()
+}
 
 #[no_mangle]
-pub unsafe extern "C" fn tcp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
-    let cb = napi_gro_cb_ptr(skb);
+pub extern "C" fn tcp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) -> *mut sk_buff {
+    unsafe {
+    let cb = NAPI_GRO_CB(skb);
 
     if (*cb).flush == 0 && skb_gro_checksum_validate(skb, IPPROTO_TCP, ip6_gro_compute_pseudo) != 0 {
         (*cb).flush = 1;
@@ -49,10 +50,12 @@ pub unsafe extern "C" fn tcp6_gro_receive(head: *mut c_void, skb: *mut sk_buff) 
     }
 
     tcp_gro_receive(head, skb)
+    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn tcp6_gro_complete(skb: *mut sk_buff, _thoff: c_int) -> c_int {
+pub extern "C" fn tcp6_gro_complete(skb: *mut sk_buff, _thoff: c_int) -> c_int {
+    unsafe {
     let iph = ipv6_hdr(skb);
     let th = tcp_hdr(skb);
 
@@ -60,13 +63,15 @@ pub unsafe extern "C" fn tcp6_gro_complete(skb: *mut sk_buff, _thoff: c_int) -> 
     (*skb_shinfo(skb)).gso_type |= SKB_GSO_TCPV6;
 
     tcp_gro_complete(skb)
+    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn tcp6_gso_segment(
+pub extern "C" fn tcp6_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
+    unsafe {
     let shinfo = skb_shinfo(skb);
 
     if ((*shinfo).gso_type & SKB_GSO_TCPV6) == 0 {
@@ -77,17 +82,18 @@ pub unsafe extern "C" fn tcp6_gso_segment(
         return err_ptr(EINVAL);
     }
 
-    if (*skb).csum != CHECKSUM_PARTIAL {
+    if (*skb).ip_summed != CHECKSUM_PARTIAL {
         let ipv6h = ipv6_hdr(skb);
-        let _th = tcp_hdr(skb);
+        let th = tcp_hdr(skb);
 
         // Set up pseudo header
         (*th).check = 0;
-        (*skb).csum = CHECKSUM_PARTIAL;
+        (*skb).ip_summed = CHECKSUM_PARTIAL;
         __tcp_v6_send_check(skb, &(*ipv6h).saddr, &(*ipv6h).daddr);
     }
 
     tcp_gso_segment(skb, features)
+    }
 }
 
 #[no_mangle]
@@ -134,14 +140,10 @@ unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut SkbSharedInfo {
 }
 
 #[repr(C)]
-struct SkbSharedInfo {
-    gso_type: netdev_features_t,
-}
+struct SkbSharedInfo { gso_type: netdev_features_t }
 
 #[inline]
-unsafe fn pskb_may_pull(_skb: *mut sk_buff, _len: usize) -> bool {
-    true
-}
+unsafe fn pskb_may_pull(_skb: *mut sk_buff, _len: usize) -> bool { true }
 
 #[inline]
 unsafe fn __tcp_v6_send_check(_skb: *mut sk_buff, _saddr: *const in6_addr, _daddr: *const in6_addr) {}
@@ -157,9 +159,7 @@ unsafe fn tcp_v6_check(
 }
 
 #[inline]
-unsafe extern "C" fn ip6_gro_compute_pseudo(_skb: *mut sk_buff) -> c_int {
-    0
-}
+unsafe extern "C" fn ip6_gro_compute_pseudo(_skb: *mut sk_buff) -> c_int { 0 }
 
 #[inline]
 unsafe fn skb_network_header(_skb: *mut sk_buff) -> *mut c_void {
@@ -172,37 +172,13 @@ unsafe fn skb_transport_header(_skb: *mut sk_buff) -> *mut c_void {
 }
 
 #[inline]
-unsafe fn skb_is_checksum_partial(_skb: *mut sk_buff) -> bool {
-    true
-}
+unsafe fn skb_is_checksum_partial(_skb: *mut sk_buff) -> bool { true }
 
 #[inline]
 unsafe fn skb_set_checksum_partial(_skb: *mut sk_buff) {}
 
 #[inline]
-unsafe fn skb_len(_skb: *mut sk_buff) -> u32 {
-    0
-}
-
-#[inline]
-unsafe extern "C" fn tcp_gro_receive(_head: *mut c_void, _skb: *mut sk_buff) -> *mut sk_buff {
-    ptr::null_mut()
-}
-
-#[inline]
-unsafe extern "C" fn tcp_gro_complete(_skb: *mut sk_buff) -> c_int {
-    0
-}
-
-#[inline]
-unsafe extern "C" fn tcp_gso_segment(_skb: *mut sk_buff, _features: netdev_features_t) -> *mut sk_buff {
-    ptr::null_mut()
-}
-
-#[inline]
-unsafe fn inet6_add_offload(_offload: *const net_offload, _protocol: c_int) -> c_int {
-    0
-}
+unsafe fn skb_len(_skb: *mut sk_buff) -> u32 { 0 }
 
 #[no_mangle]
 static TCPV6_OFFLOAD: NetOffload = NetOffload {

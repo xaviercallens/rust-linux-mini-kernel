@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use core::ffi::c_int;
-use core::ptr;
+use core::{ptr, ffi::c_int};
 use kernel_types::*;
 
 pub const RT_TABLE_MAIN: u32 = 254;
@@ -12,34 +11,22 @@ pub const RT_TABLE_LOCAL: u32 = 253;
 pub const RT_TABLE_DEFAULT: u32 = 252;
 pub const FIB_TABLE_HASHSZ: u32 = 255;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12;
 
 #[repr(C)]
-pub struct fib_info {
-    _priv: [u8; 0],
-}
+pub struct fib_info { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct net_device {
-    _priv: [u8; 0],
-}
+pub struct net_device { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node }
 
 #[repr(C)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
-pub struct fib_table {
-    pub tb_id: u32,
-    pub tb_hlist: hlist_node,
-}
+pub struct fib_table { pub tb_id: u32, pub tb_hlist: hlist_node }
 
 #[repr(C)]
 pub struct ipv4_net {
@@ -50,15 +37,10 @@ pub struct ipv4_net {
 }
 
 #[repr(C)]
-pub struct net {
-    pub ipv4: ipv4_net,
-}
+pub struct net { pub ipv4: ipv4_net }
 
 #[repr(C)]
-pub struct fib_result {
-    pub type_: u8,
-    pub fi: *mut fib_info,
-}
+pub struct fib_result { pub type_: u8, pub fi: *mut fib_info }
 
 unsafe fn hlist_add_head_rcu(n: *mut hlist_node, h: *mut hlist_head) {
     unsafe {
@@ -81,7 +63,7 @@ unsafe extern "C" {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
 }
 

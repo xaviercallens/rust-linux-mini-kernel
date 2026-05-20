@@ -4,13 +4,8 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::implicit_return_in_non_void_function)]
 
-use core::alloc::{GlobalAlloc, Layout};
-use core::ffi::{c_int, c_void};
-use core::{mem, ptr};
+use core::{alloc::{GlobalAlloc, Layout}, ffi::{c_int, c_uint, c_ulong, c_void}, mem, ptr};
 use kernel_types::*;
-use core::ptr;
-use core::mem;
-use core::ffi::{c_void, c_int, c_uint, c_ulong};
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -42,68 +37,45 @@ pub extern "C" fn rust_eh_personality() {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct page {
-    _private: [u8; 0],
-}
+pub struct page { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    _private: [u8; 0],
-}
+pub struct net { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sock {
-    _private: [u8; 0],
-}
+pub struct sock { _private: [u8; 0] }
 
 pub type __be16 = u16;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_skb_cb {
-    pub xfrm: xfrm_skb_cb_inner,
-}
+pub struct xfrm_skb_cb { pub xfrm: xfrm_skb_cb_inner }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_skb_cb_inner {
-    _private: [u8; 0],
-}
+pub struct xfrm_skb_cb_inner { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct esp_skb_cb {
-    pub xfrm: xfrm_skb_cb,
-    pub tmp: *mut c_void,
-}
+pub struct esp_skb_cb { pub xfrm: xfrm_skb_cb, pub tmp: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct esp_output_extra {
-    pub seqhi: u32,
-    pub esphoff: u32,
-}
+pub struct esp_output_extra { pub seqhi: u32, pub esphoff: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct aead_request {
-    pub src: *mut scatterlist,
-    pub dst: *mut scatterlist,
-}
+pub struct aead_request { pub src: *mut scatterlist, pub dst: *mut scatterlist }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct crypto_aead {
-    _private: [u8; 0],
-}
+pub struct crypto_aead { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct scatterlist {
-    _private: [u8; 0],
-}
+pub struct scatterlist { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -118,22 +90,15 @@ pub struct xfrm_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_id {
-    pub daddr: xfrm_address,
-}
+pub struct xfrm_id { pub daddr: xfrm_address }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_address {
-    pub a4: __be32,
-}
+pub struct xfrm_address { pub a4: __be32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_state_props {
-    pub flags: u32,
-    pub saddr: xfrm_address,
-}
+pub struct xfrm_state_props { pub flags: u32, pub saddr: xfrm_address }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -145,51 +110,27 @@ pub struct xfrm_encap_tmpl {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    _private: [u8; 0],
-}
+pub struct spinlock_t { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_state {
-    pub data: *mut crypto_aead,
-    pub props: xfrm_state_props,
-    pub encap: *mut xfrm_encap_tmpl,
-    pub lock: spinlock_t,
-}
+pub struct rcu_head { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rcu_head {
-    _private: [u8; 0],
-}
+pub struct esp_tcp_sk { pub sk: *mut sock, pub rcu: rcu_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct esp_tcp_sk {
-    pub sk: *mut sock,
-    pub rcu: rcu_head,
-}
+pub struct xfrm_offload_seq { pub hi: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_offload_seq {
-    pub hi: u32,
-}
+pub struct xfrm_offload { pub flags: u32, pub seq: xfrm_offload_seq }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_offload {
-    pub flags: u32,
-    pub seq: xfrm_offload_seq,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct sec_path {
-    pub len: u8,
-    pub xvec: [*mut xfrm_state; 0],
-}
+pub struct sec_path { pub len: u8, pub xvec: [*mut xfrm_state; 0] }
 
 #[inline]
 fn align_up(v: usize, a: usize) -> usize {
@@ -271,8 +212,8 @@ pub unsafe extern "C" fn esp_tmp_iv(
         return (tmp as *mut u8).add(extralen as usize);
     }
 
-    let align_mask = crypto_aead_alignmask(aead) + 1;
-    let offset = extralen as usize + (align_mask - 1) & !(align_mask - 1);
+    let align_mask = (crypto_aead_alignmask(aead) + 1) as usize;
+    let offset = (extralen as usize + align_mask - 1) & !(align_mask - 1);
 
     (tmp as *mut u8).add(offset)
 }
@@ -286,10 +227,11 @@ pub unsafe extern "C" fn esp_tmp_req(
         return ptr::null_mut();
     }
 
-    let ivsize = crypto_aead_ivsize(aead);
-    let offset = ivsize + (crypto_tfm_ctx_alignment() - 1) & !(crypto_tfm_ctx_alignment() - 1);
+    let ivsize = crypto_aead_ivsize(aead) as usize;
+    let align = crypto_tfm_ctx_alignment() as usize;
+    let offset = (ivsize + align - 1) & !(align - 1);
 
-    let req = (iv as *mut u8).add(offset) as *mut aead_request;
+    let req = (iv as *mut u8).add(offset as usize) as *mut aead_request;
     aead_request_set_tfm(req, aead);
     req
 }
@@ -421,11 +363,6 @@ pub unsafe extern "C" fn esp_find_tcp_sk(x: *mut xfrm_state) -> *mut sock {
 
 // Helper functions (declared as extern in C)
 extern "C" {
-    fn crypto_aead_ivsize(aead: *mut crypto_aead) -> c_int;
-    fn crypto_aead_alignmask(aead: *mut crypto_aead) -> c_int;
-    fn crypto_tfm_ctx_alignment() -> c_int;
-    fn crypto_aead_reqsize(aead: *mut crypto_aead) -> c_int;
-    fn aead_request_set_tfm(req: *mut aead_request, aead: *mut crypto_aead);
     fn sg_next(sg: *mut scatterlist) -> *mut scatterlist;
     fn sg_page(sg: *mut scatterlist) -> *mut page;
     fn put_page(page: *mut page);
@@ -464,9 +401,7 @@ extern "C" {
 
 // Helper macros
 #[inline]
-fn ALIGN(mut val: usize, align: usize) -> usize {
-    (val + align - 1) & !(align - 1)
-}
+fn ALIGN(mut val: usize, align: usize) -> usize { (val + align - 1) & !(align - 1) }
 
 #[inline]
 fn PTR_ALIGN(ptr: *mut c_void, align: usize) -> *mut c_void {
@@ -475,8 +410,7 @@ fn PTR_ALIGN(ptr: *mut c_void, align: usize) -> *mut c_void {
 }
 
 // Constants
-pub const XFRM_DEV_RESUME: u32 = 1 << 0;
-pub const TCP_ENCAP_ESPINTCP: u16 = 5;
+pub const XFRM_DEV_RESUME: u32 = 1 << 0; pub const TCP_ENCAP_ESPINTCP: u16 = 5;
 
 // Tests (conditional compilation)
 #[cfg(test)]

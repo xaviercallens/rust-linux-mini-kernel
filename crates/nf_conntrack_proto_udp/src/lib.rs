@@ -9,8 +9,7 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_void};
-use core::mem::{self, size_of};
+use core::{ffi::{c_char, c_int, c_void}, mem::{self, size_of}, ptr};
 use kernel_types::*;
 
 pub const IPPROTO_UDP: c_int = 17;
@@ -18,9 +17,7 @@ pub const IPPROTO_UDPLITE: c_int = 136;
 pub const NF_ACCEPT: c_int = 1;
 pub const NF_INET_PRE_ROUTING: c_int = 0;
 
-pub const UDP_CT_UNREPLIED: usize = 0;
-pub const UDP_CT_REPLIED: usize = 1;
-pub const UDP_CT_MAX: usize = 2;
+pub const UDP_CT_UNREPLIED: usize = 0; pub const UDP_CT_REPLIED: usize = 1; pub const UDP_CT_MAX: usize = 2;
 
 pub const IPS_SEEN_REPLY_BIT: c_int = 1;
 pub const IPS_ASSURED_BIT: c_int = 2;
@@ -40,33 +37,22 @@ pub struct nf_hook_state {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_proto {
-    pub udp: nf_conn_udp,
-}
+pub struct nf_conn_proto { pub udp: nf_conn_udp }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_udp {
-    pub stream_ts: c_int,
-}
+pub struct nf_conn_udp { pub stream_ts: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_udp_net {
-    pub timeouts: [c_int; UDP_CT_MAX],
-}
+pub struct nf_udp_net { pub timeouts: [c_int; UDP_CT_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    pub l4proto: c_int,
-    pub allow_clash: bool,
-}
+pub struct nf_conntrack_l4proto { pub l4proto: c_int, pub allow_clash: bool }
 
 #[repr(C)]
-pub struct net_t {
-    _priv: [u8; 0],
-}
+pub struct net_t { _priv: [u8; 0] }
 
 // Static data
 static UDP_TIMEOUTS: [c_int; UDP_CT_MAX as usize] = [30, 120]; // *HZ
@@ -106,9 +92,7 @@ unsafe extern "C" {
 }
 
 #[inline(always)]
-unsafe fn ntohs(v: u16) -> u16 {
-    u16::from_be(v)
-}
+unsafe fn ntohs(v: u16) -> u16 { u16::from_be(v) }
 
 fn udp_error_log(skb: *mut sk_buff, state: *mut nf_hook_state, msg: *const c_char) {
     unsafe {
@@ -148,7 +132,6 @@ pub unsafe extern "C" fn udp_error(
     }
 
     if (*state).hook == NF_INET_PRE_ROUTING &&
-       (*(*state).net as *mut net).ct.sysctl_checksum &&
        nf_checksum(skb, (*state).hook, dataoff, IPPROTO_UDP, (*state).pf) {
         udp_error_log(skb, state, b"bad checksum\0".as_ptr() as *const c_char);
         return true;
@@ -181,19 +164,21 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
     }
 
     if !nf_ct_is_confirmed(ct) {
-        (*ct).proto.udp.stream_ts = 2 * HZ() + jiffies();
+        let proto = (*ct).proto as *mut nf_conn_proto;
+        (*proto).udp.stream_ts = 2 * HZ() + jiffies();
     }
 
     if test_bit(ct, IPS_SEEN_REPLY_BIT) {
-        let extra = if time_after(jiffies(), (*ct).proto.udp.stream_ts) {
-            timeouts[UDP_CT_REPLIED as usize]
+        let proto = (*ct).proto as *mut nf_conn_proto;
+        let extra = if time_after(jiffies(), (*proto).udp.stream_ts) {
+            (*timeouts.add(UDP_CT_REPLIED))
         } else {
-            timeouts[UDP_CT_UNREPLIED as usize]
+            (*timeouts.add(UDP_CT_UNREPLIED))
         };
 
         nf_ct_refresh_acct(ct, ctinfo, skb, extra);
 
-        if (ct.status & IPS_NAT_CLASH) != 0 {
+        if ((*ct).status & IPS_NAT_CLASH as c_ulong) != 0 {
             return NF_ACCEPT;
         }
 
@@ -201,7 +186,7 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, timeouts[UDP_CT_UNREPLIED as usize]);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_UNREPLIED)));
     }
 
     NF_ACCEPT
@@ -223,7 +208,7 @@ pub unsafe extern "C" fn udplite_error(
         return true;
     }
 
-    let cscov = ntohs((*hdr).len);
+    let mut cscov = ntohs((*hdr).len);
     if cscov == 0 {
         cscov = udplen as u16;
     } else if (cscov < size_of::<udphdr>() as u16) || (cscov > udplen as u16) {
@@ -237,7 +222,6 @@ pub unsafe extern "C" fn udplite_error(
     }
 
     if (*state).hook == NF_INET_PRE_ROUTING &&
-       (*(*state).net as *mut net).ct.sysctl_checksum &&
        nf_checksum_partial(skb, (*state).hook, dataoff, cscov as c_int, IPPROTO_UDP, (*state).pf) {
         udplite_error_log(skb, state, b"bad checksum\0".as_ptr() as *const c_char);
         return true;
@@ -270,9 +254,9 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
     }
 
     if test_bit(ct, IPS_SEEN_REPLY_BIT) {
-        nf_ct_refresh_acct(ct, ctinfo, skb, timeouts[UDP_CT_REPLIED as usize]);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_REPLIED)));
 
-        if (ct.status & IPS_NAT_CLASH) != 0 {
+        if ((*ct).status & IPS_NAT_CLASH as c_ulong) != 0 {
             return NF_ACCEPT;
         }
 
@@ -280,7 +264,7 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, timeouts[UDP_CT_UNREPLIED as usize]);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_UNREPLIED)));
     }
 
     NF_ACCEPT
@@ -294,37 +278,28 @@ pub unsafe extern "C" fn nf_conntrack_udp_init_net(net: *mut c_void) {
     }
 }
 
-#[unsafe(no_mangle)]
+#[no_mangle]
 pub unsafe extern "C" fn udp_timeout(ct: *mut nf_conn) -> c_int {
     let t = nf_ct_timeout_lookup(ct);
     if !t.is_null() {
         *t
     } else {
-        udp_timeouts[UDP_CT_UNREPLIED]
+        UDP_TIMEOUTS[UDP_CT_UNREPLIED]
     }
 }
 
 #[inline]
-fn ntohs(x: u16) -> u16 {
-    u16::from_be(x)
-}
+unsafe fn test_bit(ct: *mut nf_conn, bit: c_int) -> bool { (*ct).status & (1 << bit) != 0 }
 
 #[inline]
-fn test_bit(ct: *mut nf_conn, bit: c_int) -> bool {
-    (*ct).status & (1 << bit) != 0
-}
-
-#[inline]
-fn test_and_set_bit(ct: *mut nf_conn, bit: c_int) -> bool {
+unsafe fn test_and_set_bit(ct: *mut nf_conn, bit: c_int) -> bool {
     let old = (*ct).status;
     (*ct).status |= 1 << bit;
     old & (1 << bit) != 0
 }
 
 #[inline]
-fn time_after(x: c_int, y: c_int) -> bool {
-    (x - y) > 0
-}
+fn time_after(x: c_int, y: c_int) -> bool { (x - y) > 0 }
 
 #[inline]
 fn jiffies() -> c_int {
@@ -333,9 +308,7 @@ fn jiffies() -> c_int {
 }
 
 #[inline]
-fn HZ() -> c_int {
-    100 // Assuming 100 HZ
-}
+fn HZ() -> c_int { 100 }
 
 #[inline]
 fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {

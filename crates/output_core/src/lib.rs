@@ -4,6 +4,34 @@
 
 use kernel_types::*;
 
+// Missing types from kernel headers
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct tun_key {
+    pub tun_id: u64,
+    pub iif: c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct flowi4 {
+    pub flowi4_iif: c_int,
+    pub flowi4_oif: c_int,
+    pub flowi4_tos: u8,
+    pub flowi4_scope: u8,
+    pub flowi4_proto: u8,
+    pub flowi4_flags: u8,
+    pub flowi4_tun_key: tun_key,
+    pub flowi4_mark: u32,
+    pub flowi4_secid: u32,
+    pub flowi4_tun_flags: u8,
+    pub flowi4_uid: u32,
+    pub flowi4_saddr: in_addr,
+    pub flowi4_daddr: in_addr,
+    pub flowi4_fwmark: u32,
+    pub flowi4_secmark: u32,
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct output_core {
@@ -54,8 +82,8 @@ pub unsafe extern "C" fn output_core_init(oc: *mut output_core) {
         flowi4_secid: 0,
         flowi4_tun_flags: 0,
         flowi4_uid: 0,
-        flowi4_saddr: in_addr { s_addr: 0 },
-        flowi4_daddr: in_addr { s_addr: 0 },
+        flowi4_saddr: in_addr { s_addr: 0, ip: core::ptr::null_mut() },
+        flowi4_daddr: in_addr { s_addr: 0, ip: core::ptr::null_mut() },
         flowi4_fwmark: 0,
         flowi4_secmark: 0,
     };

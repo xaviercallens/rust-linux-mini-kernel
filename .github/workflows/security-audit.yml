@@ -1,0 +1,39 @@
+name: V9 Security Audit (Miri & Cargo Audit)
+
+on:
+  push:
+    branches: [ main, mvk-alpha ]
+  pull_request:
+    branches: [ main, mvk-alpha ]
+
+jobs:
+  security-audit:
+    name: Continuous Vulnerability & UB Detection
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Run Cargo Audit using the official pre-compiled action (fast and stable)
+      - name: Run Cargo Audit (Dependency Supply Chain Security)
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Setup Rust Toolchain using the modern dtolnay action
+      - name: Install Rust Nightly with Miri
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-05-15
+          components: miri, rust-src
+
+      # 3. Execute Miri specifically on the verified and stable packages
+      - name: Run Miri (Undefined Behavior & Memory Safety)
+        run: |
+          echo "Running tests under Miri interpreter for verified stable subsystems..."
+          cargo miri test -p printk -p init_main -p arch_setup
+

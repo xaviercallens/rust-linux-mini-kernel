@@ -1,5 +1,8 @@
 use kernel_types::*;
 
+// NAT status flags
+pub const IPS_NAT_DONE_MASK: u64 = 0x00000F00;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_nat_core {

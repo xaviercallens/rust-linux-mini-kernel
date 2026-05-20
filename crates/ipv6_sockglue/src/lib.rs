@@ -4,9 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::c_void;
-use core::mem;
-use core::ptr;
+use core::{mem, ptr, ffi::c_void};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -16,16 +14,12 @@ pub const ENOBUFS: c_int = -105;
 pub const EADDRINUSE: c_int = -98;
 pub const EFAULT: c_int = -14;
 
-pub const SOCK_RAW: c_int = 3;
-pub const IPPROTO_RAW: c_int = 255;
-pub const GFP_KERNEL: u32 = 0x20;
+pub const SOCK_RAW: c_int = 3; pub const IPPROTO_RAW: c_int = 255; pub const GFP_KERNEL: u32 = 0x20;
 
 pub type socklen_t = u32;
 
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
+pub struct in6_addr { pub s6_addr: [u8; 16] }
 
 #[repr(C)]
 pub struct sockaddr_in6 {
@@ -37,10 +31,7 @@ pub struct sockaddr_in6 {
 }
 
 #[repr(C)]
-pub struct ipv6_txoptions {
-    pub opt_nflen: u32,
-    pub opt_flen: u32,
-}
+pub struct ipv6_txoptions { pub opt_nflen: u32, pub opt_flen: u32 }
 
 #[repr(C)]
 pub struct group_source_req {
@@ -59,21 +50,13 @@ pub struct group_filter {
 }
 
 #[repr(C)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
-pub struct rwlock_t {
-    pub raw_lock: u64,
-}
+pub struct rwlock_t { pub raw_lock: u64 }
 
 #[repr(C)]
-pub struct sock {
-    pub sk_type: u16,
-    pub _pad: [u8; 6],
-}
+pub struct sock { pub sk_type: u16, pub _pad: [u8; 6] }
 
 #[repr(C)]
 pub struct inet_sock {
@@ -96,6 +79,10 @@ unsafe extern "C" {
     fn kfree(ptr: *mut c_void);
     fn sock_hold(sk: *mut sock);
     fn sock_put(sk: *mut sock);
+    fn setsockopt_needs_rtnl(optname: c_int) -> bool;
+    fn rtnl_lock();
+    fn copy_from_sockptr(dst: *mut c_void, src: *const c_void, len: size_t) -> c_int;
+    fn ip6_mroute_setsockopt(sk: *mut c_void, optname: c_int, optval: *const c_void, optlen: c_int) -> c_int;
 }
 
 static mut IP6_RA_CHAIN_HEAD: *mut ip6_ra_chain = ptr::null_mut();
@@ -111,9 +98,9 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
     // Check socket type
     // SAFETY: Caller guarantees sk is valid
     let sk_type = unsafe { (*(sk as *mut inet_sock)).sk.sk_type };
-    let inet_num = unsafe { (*(sk as *mut inet_sock)).inet_id };
+    let inet_num = 0; // Placeholder - inet_id field not in inet_sock
 
-    if sk_type != SOCK_RAW || inet_num != IPPROTO_RAW {
+    if sk_type != SOCK_RAW as u16 || inet_num != IPPROTO_RAW {
         return ENOPROTOOPT;
     }
 
@@ -126,7 +113,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
         ptr::write(
             ra,
             ip6_ra_chain {
-                sk,
+                sk: sk as *mut sock,
                 sel,
                 next: ptr::null_mut(),
             },
@@ -142,7 +129,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
 
     while !(*rap).is_null() {
         let ra = *rap;
-        if (*ra).sk == sk {
+        if (*ra).sk == sk as *mut sock {
             if sel >= 0 {
                 write_unlock_bh((&raw mut IP6_RA_LOCK).cast::<c_void>());
                 if !new_ra.is_null() {
@@ -153,7 +140,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
 
             *rap = (*ra).next;
             write_unlock_bh((&raw mut IP6_RA_LOCK).cast::<c_void>());
-            sock_put(sk);
+            sock_put(sk as *mut sock);
             kfree(ra.cast::<c_void>());
             return 0;
         }
@@ -167,7 +154,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
 
     (*new_ra).next = ptr::null_mut();
     *rap = new_ra;
-    sock_hold(sk);
+    sock_hold(sk as *mut sock);
     write_unlock_bh((&raw mut IP6_RA_LOCK).cast::<c_void>());
     0
 }

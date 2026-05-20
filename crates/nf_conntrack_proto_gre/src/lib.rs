@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_int, c_uint, c_void};
-use core::ptr;
+use core::{mem, ptr, ffi::{c_int, c_uint, c_void}};
 use kernel_types::*;
 
 #[cfg(not(test))]
@@ -30,16 +29,11 @@ pub const IPPROTO_GRE: u8 = 47;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_inet_addr {
-    pub all: [u32; 4],
-}
+pub struct nf_inet_addr { pub all: [u32; 4] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_ipv4 {
-    pub u3: nf_inet_addr,
-    pub protonum: u8,
-}
+pub struct nf_conntrack_tuple_ipv4 { pub u3: nf_inet_addr, pub protonum: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -50,16 +44,11 @@ pub struct nf_conntrack_tuple {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_gre {
-    pub key: u16,
-}
+pub struct nf_conntrack_tuple_gre { pub key: u16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -78,33 +67,22 @@ pub struct nf_ct_gre_keymap {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_gre_net {
-    pub keymap_list: list_head,
-    pub timeouts: [c_uint; GRE_CT_MAX],
-}
+pub struct nf_gre_net { pub keymap_list: list_head, pub timeouts: [c_uint; GRE_CT_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conn_gre {
-    pub timeout: c_uint,
-}
+pub struct nf_conn_gre { pub timeout: c_uint }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_pptp_master {
-    pub keymap: [*mut nf_ct_gre_keymap; IP_CT_DIR_MAX],
-}
+pub struct nf_ct_pptp_master { pub keymap: [*mut nf_ct_gre_keymap; IP_CT_DIR_MAX] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_l4proto {
-    pub l4proto: u8,
-}
+pub struct nf_conntrack_l4proto { pub l4proto: u8 }
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 unsafe extern "C" {
     fn nf_ct_net(ct: *const nf_conn) -> *mut c_void;
@@ -119,10 +97,9 @@ unsafe extern "C" {
         ptr: *mut c_void,
     ) -> *mut c_void;
     fn nf_ct_dump_tuple(tuple: *const nf_conntrack_tuple);
-
-    fn gre_pernet(net: *mut c_void) -> *mut nf_gre_net;
     fn kmalloc(size: usize) -> *mut c_void;
     fn kfree(ptr: *mut c_void);
+    fn list_add_tail(list: *mut list_head, entry: *mut list_head);
 }
 
 // Module-level statics
@@ -134,10 +111,6 @@ fn spin_lock_bh(lock: *mut c_int) {
 
 fn spin_unlock_bh(lock: *mut c_int) {
     unsafe { *lock = 0 }
-}
-
-fn gre_key_cmpfn(a: *const nf_ct_gre_keymap, t: *const nf_conntrack_tuple) -> bool {
-    unsafe { ptr::eq(&(*a).tuple, t) }
 }
 
 #[unsafe(no_mangle)]
@@ -173,7 +146,7 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
     let kmp = unsafe { &mut (*ct_pptp_info).keymap[dir_idx] };
     if !(*kmp).is_null() {
         let km = *kmp;
-        if gre_key_cmpfn(km as *const nf_ct_gre_keymap, t as *const nf_conntrack_tuple) {
+        if gre_key_cmpfn(km as *const nf_ct_gre_keymap, t as *const nf_conntrack_tuple) != 0 {
             return 0;
         }
         return EEXIST;
@@ -191,9 +164,10 @@ pub unsafe extern "C" fn nf_ct_gre_keymap_add(
         (*km).rcu.next = ptr::null_mut();
         (*km).rcu.func = None;
 
-    spin_lock_bh(&mut KEYMAP_LOCK);
-    list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
-    spin_unlock_bh(&mut KEYMAP_LOCK);
+        spin_lock_bh(&mut KEYMAP_LOCK);
+        list_add_tail(&mut (*net_gre).keymap_list, &mut (*km).list);
+        spin_unlock_bh(&mut KEYMAP_LOCK);
+    }
 
     0
 }
@@ -260,10 +234,10 @@ pub unsafe extern "C" fn gre_pkt_to_tuple(
     }
 
     (*tuple).dst.u3.all = [0; 4];
-    (*tuple).dst.u3.ip = (*pgrehdr).call_id as __be32;
+    (*tuple).dst.u3.all[0] = (*pgrehdr).call_id as u32;
     let srckey = gre_keymap_lookup(net, tuple);
     (*tuple).src.u3.all = [0; 4];
-    (*tuple).src.u3.ip = srckey as __be32;
+    (*tuple).src.u3.all[0] = srckey as u32;
 
     1
 }
@@ -280,46 +254,53 @@ pub unsafe extern "C" fn nf_conntrack_gre_packet(
         return EINVAL;
     }
 
-    if !(*ct).status & IPS_SEEN_REPLY {
+    if ((*ct).status & IPS_SEEN_REPLY as u64) == 0 {
         let timeouts = nf_ct_timeout_lookup(ct);
         if timeouts.is_null() {
             let net = nf_ct_net(ct);
             let net_gre = gre_pernet(net);
-            (*ct).timeout = (*net_gre).timeouts[GRE_CT_UNREPLIED];
+            (*ct).timeout = (*net_gre).timeouts[GRE_CT_UNREPLIED] as u64;
         } else {
-            (*ct).timeout = *timeouts.offset(GRE_CT_UNREPLIED as isize);
+            (*ct).timeout = *timeouts.offset(GRE_CT_UNREPLIED as isize) as u64;
         }
     }
 
-    if (*ct).status & IPS_SEEN_REPLY != 0 {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout);
-        if !(*ct).status & IPS_ASSURED_BIT {
+    if ((*ct).status & IPS_SEEN_REPLY as u64) != 0 {
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout as c_uint);
+        if ((*ct).status & IPS_ASSURED_BIT as u64) == 0 {
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout);
+        nf_ct_refresh_acct(ct, ctinfo, skb, (*ct).timeout as c_uint);
     }
 
     0 // NF_ACCEPT
 }
 
 // Helper functions
-unsafe fn gre_pernet(net: *mut c_void) -> *mut nf_gre_net {
+unsafe fn gre_pernet(_net: *mut c_void) -> *mut nf_gre_net {
     // Simplified version - in real implementation this would access the net struct
-    ptr::null_mut()
+    static mut GRE_NET: nf_gre_net = nf_gre_net {
+        keymap_list: list_head {
+            next: ptr::null_mut(),
+            prev: ptr::null_mut(),
+        },
+        timeouts: [0; GRE_CT_MAX],
+    };
+    ptr::addr_of_mut!(GRE_NET)
 }
 
 unsafe fn gre_keymap_lookup(net: *mut c_void, t: *mut nf_conntrack_tuple) -> u16 {
     let net_gre = gre_pernet(net);
     let mut key = 0u16;
 
-    let mut km = (*net_gre).keymap_list.next;
-    while !km.is_null() && km != &(*net_gre).keymap_list {
-        if gre_key_cmpfn(km as *const _, t) {
-            key = (*km).tuple.src.u3.ip as u16;
+    let mut km = (*net_gre).keymap_list.next as *mut nf_ct_gre_keymap;
+    while !km.is_null() && (km as *mut list_head) != ptr::addr_of_mut!((*net_gre).keymap_list) {
+        if gre_key_cmpfn(km as *const _, t) != 0 {
+            key = (*km).tuple.src.u3.all[0] as u16;
             break;
         }
-        km = (*km).list.next;
+        km = (*km).list.next as *mut nf_ct_gre_keymap;
     }
 
     key
@@ -343,15 +324,10 @@ unsafe fn gre_key_cmpfn(km: *const nf_ct_gre_keymap, t: *const nf_conntrack_tupl
 
 // Extern types for external dependencies
 #[repr(C)]
-struct gre_base_hdr {
-    flags: u16,
-    protocol: u16,
-}
+struct gre_base_hdr { flags: u16, protocol: u16 }
 
 #[repr(C)]
-struct pptp_gre_header {
-    call_id: u16,
-}
+struct pptp_gre_header { call_id: u16 }
 
 // Constants for protocol
 const GRE_VERSION_1: u16 = 0x2000;

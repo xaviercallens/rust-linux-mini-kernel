@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software or architecture in your research, please cite the associated scientific paper below."
+type: software
+title: "Minimum Viable Kernel (MVK) - Formally Verified Rust Architecture"
+abstract: "A 64-bit bare-metal operating system architecture implemented entirely in Rust and mathematically proven via Lean 4 formal verification, shattering the legacy C-kernel 'safety-tax' paradigm."
+authors:
+  - family-names: "Callens"
+    given-names: "Xavier"
+    affiliation: "Independent Researcher, SocrateAI Lab non profit organization (French loi 1901)"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/xaviercallens/rust-linux-mini-kernel"
+url: "https://github.com/xaviercallens/rust-linux-mini-kernel"
+license: MIT
+version: "8.4.0-beta"
+date-released: "2026-05-20"
+keywords:
+  - rust
+  - linux-kernel
+  - formal-verification
+  - operating-systems
+  - bare-metal
+  - lean-4
+  - mvk
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Callens"
+      given-names: "Xavier"
+      affiliation: "Independent Researcher, SocrateAI Lab non profit organization (French loi 1901)"
+  title: "Beyond Legacy Abstractions: A Formally Verified, High-Performance Bare-Metal Rust Architecture (MVK)"
+  journal: "ACM Symposium on Operating Systems Principles (SOSP)"
+  year: 2026
+  month: 5
+  url: "https://github.com/xaviercallens/rust-linux-mini-kernel/tree/main/paper"
