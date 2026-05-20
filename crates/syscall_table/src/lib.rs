@@ -10,14 +10,12 @@ use libc::{c_int, c_uint, c_void, c_ulong, size_t};
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn syscall_table_init() -> c_int {
-    // TODO: Initialize syscall_table subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn syscall_table_exit() {
-    // TODO: Cleanup syscall_table subsystem
 }
 
 #[no_mangle]

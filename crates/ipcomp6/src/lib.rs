@@ -164,9 +164,7 @@ pub unsafe extern "C" fn ipcomp6_init_state(x: *mut xfrm_state) -> c_int {
 /// # Returns
 /// 0
 #[no_mangle]
-pub unsafe extern "C" fn ipcomp6_rcv_cb(skb: *mut sk_buff, err: c_int) -> c_int {
-    0
-}
+pub unsafe extern "C" fn ipcomp6_rcv_cb(skb: *mut sk_buff, err: c_int) -> c_int { 0 }
 
 // Module initialization and cleanup
 #[no_mangle]
@@ -211,14 +209,10 @@ pub unsafe extern "C" fn ipcomp6_get_mtu(_x: *mut xfrm_state, mtu: u32) -> u32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipcomp6_input(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int {
-    0
-}
+pub unsafe extern "C" fn ipcomp6_input(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int { 0 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipcomp6_output(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int {
-    0
-}
+pub unsafe extern "C" fn ipcomp6_output(_x: *mut xfrm_state, _skb: *mut sk_buff) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_output_tail(

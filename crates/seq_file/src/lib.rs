@@ -10,14 +10,12 @@ use libc::{c_int, c_uint, c_void, c_ulong, size_t};
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn seq_file_init() -> c_int {
-    // TODO: Initialize seq_file subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn seq_file_exit() {
-    // TODO: Cleanup seq_file subsystem
 }
 
 #[no_mangle]

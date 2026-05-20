@@ -54,8 +54,6 @@ pub struct ipv6hdr {
     pub daddr: [u8; 16],
 }
 
-
-
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_eh_personality() {}
 
@@ -342,9 +340,7 @@ pub unsafe extern "C" fn skb_network_header(skb: *const c_void) -> *const c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_network_offset(skb: *const c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn skb_network_offset(skb: *const c_void) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn skb_tail_pointer(skb: *const c_void) -> *const c_void {

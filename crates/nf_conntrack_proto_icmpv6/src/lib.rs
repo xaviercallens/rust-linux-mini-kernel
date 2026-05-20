@@ -381,9 +381,7 @@ pub unsafe extern "C" fn nf_conntrack_icmpv6_init_net(
 }
 
 #[cfg(feature = "nf_ct_netlink")]
-unsafe extern "C" fn icmpv6_nlattr_tuple_size() -> c_int {
-    0
-}
+unsafe extern "C" fn icmpv6_nlattr_tuple_size() -> c_int { 0 }
 
 #[cfg(feature = "nf_ct_netlink")]
 unsafe extern "C" fn icmpv6_nlattr_to_tuple(

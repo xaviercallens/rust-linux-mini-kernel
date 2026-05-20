@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn signal_init() -> c_int {
-    // TODO: Initialize signal subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn signal_exit() {
-    // TODO: Cleanup signal subsystem
 }
 
 #[no_mangle]

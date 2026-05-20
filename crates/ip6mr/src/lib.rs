@@ -36,42 +36,6 @@ pub struct fib_rules_ops {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct mfc6_cache {
-    mf6c_origin: in6_addr,
-    mf6c_mcastgrp: in6_addr,
-    cmparg: mfc6_cache_cmp_arg,
-    // ... other fields
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct mfc6_cache_cmp_arg {
-    mf6c_origin: in6_addr,
-    mf6c_mcastgrp: in6_addr,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct mr_table_ops {
-    rht_params: *const rhashtable_params,
-    cmparg_any: *const mfc6_cache_cmp_arg,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct rhashtable_params {
-    head_offset: usize,
-    key_offset: usize,
-    key_len: usize,
-    nelem_hint: usize,
-    obj_cmpfn: Option<
-        unsafe extern "C" fn(arg: *const rhashtable_compare_arg, ptr: *const c_void) -> c_int,
-    >,
-    automatic_shrinking: bool,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
 pub struct rhashtable_compare_arg {
     pub key: *const c_void,
 }
@@ -142,23 +106,6 @@ pub struct flowi6 {
     pub saddr: in6_addr,
 }
 
-unsafe extern "C" {
-    fn ip6mr_get_table(net: *const net, id: u32) -> *mut mr_table;
-    fn mr_table_alloc(
-        net: *const net,
-        id: u32,
-        ops: *const mr_table_ops,
-        expire_cb: Option<unsafe extern "C" fn(*mut timer_list)>,
-        new_table_set: Option<unsafe extern "C" fn(*mut net, *mut mr_table)>,
-    ) -> *mut mr_table;
-    fn ipmr_expire_process(t: *mut timer_list);
-    fn ip6mr_new_table_set(net: *mut net, mrt: *mut mr_table);
-
-    fn del_timer_sync(timer: *mut timer_list) -> c_int;
-    fn mroute_clean_tables(mrt: *mut mr_table, flags: u32);
-    fn rhltable_destroy(ht: *mut rhltable);
-    fn free(p: *mut c_void);
-}
 
 pub const MRT6_FLUSH_MIFS: u32 = 0x0001;
 pub const MRT6_FLUSH_MIFS_STATIC: u32 = 0x0002;
@@ -171,9 +118,11 @@ static mut mrt_cachep: *mut c_void = ptr::null_mut();
 static mut IP6MR_CMPARG_ANY: mfc6_cache_cmp_arg = mfc6_cache_cmp_arg {
     mf6c_origin: in6_addr {
         in6_u: in6_addr_union { u6_addr8: [0; 16] },
+        s6_addr: ptr::null_mut(),
     },
     mf6c_mcastgrp: in6_addr {
         in6_u: in6_addr_union { u6_addr8: [0; 16] },
+        s6_addr: ptr::null_mut(),
     },
 };
 
@@ -369,10 +318,6 @@ pub unsafe extern "C" fn free(ptr: *mut c_void) {
 
 // Constants
 pub const RT6_TABLE_DFLT: u32 = 254;
-pub const MRT6_FLUSH_MIFS: c_int = 1;
-pub const MRT6_FLUSH_MIFS_STATIC: c_int = 2;
-pub const MRT6_FLUSH_MFC: c_int = 4;
-pub const MRT6_FLUSH_MFC_STATIC: c_int = 8;
 
 // Configuration macros (simplified)
 #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]

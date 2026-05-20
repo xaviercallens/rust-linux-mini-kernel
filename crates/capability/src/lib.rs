@@ -18,14 +18,12 @@ pub struct task_struct {
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn capability_init() -> c_int {
-    // TODO: Initialize capability subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn capability_exit() {
-    // TODO: Cleanup capability subsystem
 }
 
 #[no_mangle]

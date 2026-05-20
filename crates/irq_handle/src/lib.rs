@@ -10,14 +10,12 @@ use libc::{c_int, c_uint, c_void, c_ulong, size_t};
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn irq_handle_init() -> c_int {
-    // TODO: Initialize irq_handle subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn irq_handle_exit() {
-    // TODO: Cleanup irq_handle subsystem
 }
 
 #[no_mangle]

@@ -369,14 +369,10 @@ pub unsafe extern "C" fn fl6_merge_options(
 
 // Helper functions (assumed to be available in kernel)
 #[no_mangle]
-unsafe extern "C" fn jiffies() -> c_ulong {
-    0
-}
+unsafe extern "C" fn jiffies() -> c_ulong { 0 }
 
 #[no_mangle]
-unsafe extern "C" fn prandom_u32() -> u32 {
-    0
-}
+unsafe extern "C" fn prandom_u32() -> u32 { 0 }
 
 #[no_mangle]
 unsafe extern "C" fn net_eq(a: *mut Net, b: *mut Net) -> bool {
@@ -451,16 +447,12 @@ unsafe extern "C" fn inet6_sk(sk: *mut Sock) -> *mut ipv6_pinfo {
 }
 
 #[no_mangle]
-unsafe extern "C" fn timer_pending(timer: *mut TimerList) -> bool {
-    false
-}
+unsafe extern "C" fn timer_pending(timer: *mut TimerList) -> bool { false }
 
 #[no_mangle]
 unsafe extern "C" fn time_after(a: c_ulong, b: c_ulong) -> bool {
     a > b
 }
-
-
 
 #[no_mangle]
 unsafe extern "C" fn static_branch_slow_dec_deferred(branch: *mut AtomicUsize) {

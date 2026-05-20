@@ -124,27 +124,19 @@ pub unsafe extern "C" fn seg6_genl_sethmac(_skb: *mut c_void, _info: *mut c_void
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_genl_set_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_genl_set_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int { 0 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_genl_get_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_genl_get_tunsrc(_skb: *mut c_void, _info: *mut c_void) -> c_int { 0 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_net_init(_net: *mut c_void) -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_net_init(_net: *mut c_void) -> c_int { 0 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn seg6_net_exit(_net: *mut c_void) {}
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn seg6_init() -> c_int {
-    0
-}
+pub unsafe extern "C" fn seg6_init() -> c_int { 0 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn seg6_exit() {}

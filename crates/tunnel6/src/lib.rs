@@ -103,9 +103,7 @@ static tunnel6_input_afinfo: xfrm_input_afinfo = xfrm_input_afinfo {
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm6_tunnel_mpls_supported() -> c_int {
-    1
-}
+pub unsafe extern "C" fn xfrm6_tunnel_mpls_supported() -> c_int { 1 }
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_register(handler: *mut xfrm6_tunnel, family: c_int) -> c_int {

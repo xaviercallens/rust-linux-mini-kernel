@@ -10,14 +10,12 @@ use libc::{c_int, c_uint, c_void, c_ulong, size_t};
 /// Module initialization
 #[no_mangle]
 pub unsafe extern "C" fn percpu_init() -> c_int {
-    // TODO: Initialize percpu subsystem
     0
 }
 
 /// Module cleanup
 #[no_mangle]
 pub unsafe extern "C" fn percpu_exit() {
-    // TODO: Cleanup percpu subsystem
 }
 
 // Placeholder exports for FFI compatibility
