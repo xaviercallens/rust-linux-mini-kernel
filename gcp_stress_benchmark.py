@@ -95,6 +95,8 @@ sns.barplot(
 axes[1, 1].set_title('Memory Pressure Faults (Lower is Better)')
 axes[1, 1].set_ylabel('Faults per Hour')
 
-plt.tight_layout()
-plt.savefig('/Users/xcallens/.gemini/antigravity/brain/8b1eff3f-b7e1-4d44-ae83-4b8f6e50eec8/gcp_stress_benchmark_plot.png', dpi=300)
-print("Stress benchmark plot saved to artifacts: gcp_stress_benchmark_plot.png")
+import os
+save_dir = '/Users/xcallens/.gemini/antigravity/brain/8b1eff3f-b7e1-4d44-ae83-4b8f6e50eec8'
+save_path = os.path.join(save_dir, 'gcp_stress_benchmark_plot.png') if os.path.exists(save_dir) else 'gcp_stress_benchmark_plot.png'
+plt.savefig(save_path, dpi=300)
+print(f"Stress benchmark plot saved to: {save_path}")
