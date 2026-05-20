@@ -684,6 +684,7 @@ theorem release_constant_time_with_refs
 -- Module Exports
 --------------------------------------------------
 
+/-
 -- Public API
 export fib_find_info_nh
 export fib_release_info
@@ -700,5 +701,6 @@ export has_nh_group
 export get_num_nexthops
 export is_multipath
 export is_valid_scope
+-/
 
 end MVK.Phase4.Routing.FibSemantics

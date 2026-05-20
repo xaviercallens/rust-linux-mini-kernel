@@ -455,6 +455,7 @@ axiom events_eventually_delivered :
 -- Module Exports
 --------------------------------------------------
 
+/-
 -- Public API
 export nf_conntrack_alloc
 export nf_conntrack_free
@@ -470,5 +471,6 @@ export nf_conntrack_event
 export compute_tuple_hash
 export make_tuple_hash
 export tuples_equal
+-/
 
 end MVK.Phase3.ConntrackCore
