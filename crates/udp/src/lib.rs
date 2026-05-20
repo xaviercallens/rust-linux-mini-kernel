@@ -3,9 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_int;
-use core::{mem, ptr};
-use core::panic::PanicInfo;
+use core::{{mem, ptr}, ffi::c_int, panic::PanicInfo};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -21,16 +19,11 @@ pub const ETH_P_IP: u16 = 0x0800;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct refcount_t {
-    pub counter: c_int,
-}
+pub struct refcount_t { pub counter: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -40,22 +33,15 @@ pub union in6_addr_kcompat {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub in6_u: in6_addr_kcompat,
-}
+pub struct in6_addr { pub in6_u: in6_addr_kcompat }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udp_hslot {
-    pub head: list_head,
-}
+pub struct udp_hslot { pub head: list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct udp_table {
-    pub mask: u32,
-    pub hash2: *mut udp_hslot,
-}
+pub struct udp_table { pub mask: u32, pub hash2: *mut udp_hslot }
 
 // Global UDP table (stub)
 static mut UDP_TABLE: udp_table = udp_table {
@@ -64,9 +50,7 @@ static mut UDP_TABLE: udp_table = udp_table {
 };
 
 #[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
+pub struct net { _priv: [u8; 0] }
 
 #[repr(C)]
 pub struct sk_buff {
@@ -84,48 +68,30 @@ pub struct ipv6hdr {
 }
 
 #[repr(C)]
-pub struct udp_mib {
-    _priv: [u8; 0],
-}
+pub struct udp_mib { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct ipv6_pinfo {
-    pub rxpmtu: c_int,
-    pub rxopt: ipv6_rxopt,
-}
+pub struct ipv6_pinfo { pub rxpmtu: c_int, pub rxopt: ipv6_rxopt }
 
 #[repr(C)]
-pub struct ipv6_rxopt {
-    pub bits: ipv6_rxopt_bits,
-}
+pub struct ipv6_rxopt { pub bits: ipv6_rxopt_bits }
 
 #[repr(C)]
-pub struct ipv6_rxopt_bits {
-    pub rxpmtu: c_int,
-}
+pub struct ipv6_rxopt_bits { pub rxpmtu: c_int }
 
 #[repr(C)]
-pub struct udp_skb_cb {
-    pub partial_cov: c_int,
-}
+pub struct udp_skb_cb { pub partial_cov: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct msg_iter {
-    _priv: [u8; 0],
-}
+pub struct msg_iter { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct msghdr {
-    pub msg_flags: c_int,
-    pub msg_iter: msg_iter,
-}
+pub struct msghdr { pub msg_flags: c_int, pub msg_iter: msg_iter }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_sock {
-    pub inet_dport: u16,
-}
+pub struct inet_sock { pub inet_dport: u16 }
 
 #[repr(C)]
 pub struct sock {

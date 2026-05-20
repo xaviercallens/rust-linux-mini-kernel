@@ -1,11 +1,8 @@
 #![allow(warnings)]
 use kernel_types::*;
-use core::ffi::{c_int, c_void};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}};
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const CHECKSUM_PARTIAL: u8 = 1;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const CHECKSUM_PARTIAL: u8 = 1;
 
 type netdev_features_t = u64;
 type socklen_t = u32;
@@ -14,19 +11,13 @@ type c_size_t = usize;
 
 
 #[repr(C)]
-pub struct tcphdr {
-    pub check: u16,
-}
+pub struct tcphdr { pub check: u16 }
 
 #[repr(C)]
-struct NapiGroCb {
-    flush: u8,
-}
+struct NapiGroCb { flush: u8 }
 
 #[repr(C)]
-struct NetOffload {
-    callbacks: NetOffloadCallbacks,
-}
+struct NetOffload { callbacks: NetOffloadCallbacks }
 
 #[repr(C)]
 struct NetOffloadCallbacks {
@@ -36,12 +27,9 @@ struct NetOffloadCallbacks {
 }
 
 #[repr(C)]
-struct skb_shared_info {
-    gso_type: netdev_features_t,
-}
+struct skb_shared_info { gso_type: netdev_features_t }
 
-const IPPROTO_TCP: c_int = 6;
-const SKB_GSO_TCPV6: netdev_features_t = 0x0000_0800;
+const IPPROTO_TCP: c_int = 6; const SKB_GSO_TCPV6: netdev_features_t = 0x0000_0800;
 
 fn napi_gro_cb_ptr(_skb: *mut sk_buff) -> *mut NapiGroCb {
     ptr::null_mut()
@@ -152,14 +140,10 @@ unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut SkbSharedInfo {
 }
 
 #[repr(C)]
-struct SkbSharedInfo {
-    gso_type: netdev_features_t,
-}
+struct SkbSharedInfo { gso_type: netdev_features_t }
 
 #[inline]
-unsafe fn pskb_may_pull(_skb: *mut sk_buff, _len: usize) -> bool {
-    true
-}
+unsafe fn pskb_may_pull(_skb: *mut sk_buff, _len: usize) -> bool { true }
 
 #[inline]
 unsafe fn __tcp_v6_send_check(_skb: *mut sk_buff, _saddr: *const in6_addr, _daddr: *const in6_addr) {}
@@ -188,17 +172,13 @@ unsafe fn skb_transport_header(_skb: *mut sk_buff) -> *mut c_void {
 }
 
 #[inline]
-unsafe fn skb_is_checksum_partial(_skb: *mut sk_buff) -> bool {
-    true
-}
+unsafe fn skb_is_checksum_partial(_skb: *mut sk_buff) -> bool { true }
 
 #[inline]
 unsafe fn skb_set_checksum_partial(_skb: *mut sk_buff) {}
 
 #[inline]
-unsafe fn skb_len(_skb: *mut sk_buff) -> u32 {
-    0
-}
+unsafe fn skb_len(_skb: *mut sk_buff) -> u32 { 0 }
 
 #[no_mangle]
 static TCPV6_OFFLOAD: NetOffload = NetOffload {

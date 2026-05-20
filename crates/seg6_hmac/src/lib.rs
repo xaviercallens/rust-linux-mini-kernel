@@ -54,9 +54,7 @@ pub struct seg6_hmac_algo {
 unsafe impl Sync for seg6_hmac_algo {}
 
 #[repr(C)]
-pub struct shash_desc {
-    pub tfm: *mut c_void,
-}
+pub struct shash_desc { pub tfm: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

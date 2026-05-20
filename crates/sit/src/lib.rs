@@ -2,27 +2,20 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::c_void;
-use core::ptr;
+use core::{ptr, ffi::c_void};
 use kernel_types::*;
 
-pub const EINVAL: c_int = 22;
-pub const ENOMEM: c_int = 12;
-pub const ENOSYS: c_int = 38;
+pub const EINVAL: c_int = 22; pub const ENOMEM: c_int = 12; pub const ENOSYS: c_int = 38;
 
 pub const IP6_SIT_HASH_SIZE: usize = 16;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_device {
-    _priv: [u8; 0],
-}
+pub struct net_device { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct iphdr {
-    _priv: [u8; 0],
-}
+pub struct iphdr { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -34,10 +27,7 @@ pub struct ip_tunnel_parm {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_tunnel_prl {
-    pub addr: __be32,
-    pub datalen: c_int,
-}
+pub struct ip_tunnel_prl { pub addr: __be32, pub datalen: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -12,16 +12,11 @@ pub const EBUSY: c_int = 16;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_tcp {
-    pub port: __be16,
-}
-
+pub struct nf_ct_tcp { pub port: __be16 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_address {
-    pub u3: nf_conntrack_address_union,
-}
+pub struct nf_conntrack_address { pub u3: nf_conntrack_address_union }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -32,9 +27,7 @@ pub union nf_conntrack_address_union {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_ct_proto {
-    pub tcp: nf_ct_tcp,
-}
+pub struct nf_ct_proto { pub tcp: nf_ct_tcp }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -45,27 +38,18 @@ pub union nf_conntrack_man_proto {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_dst {
-    pub u3: nf_conntrack_address,
-    pub u: nf_conntrack_man_proto,
-}
+pub struct nf_conntrack_tuple_dst { pub u3: nf_conntrack_address, pub u: nf_conntrack_man_proto }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    pub dst: nf_conntrack_tuple_dst,
-}
+pub struct nf_conntrack_tuple { pub dst: nf_conntrack_tuple_dst }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_hash {
-    pub tuple: nf_conntrack_tuple,
-}
+pub struct nf_conntrack_tuple_hash { pub tuple: nf_conntrack_tuple }
 
 #[repr(C)]
-pub struct nf_conn {
-    pub tuplehash: [nf_conntrack_tuple_hash; 2],
-}
+pub struct nf_conn { pub tuplehash: [nf_conntrack_tuple_hash; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -79,9 +63,7 @@ pub struct nf_conntrack_expect {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_nat_helper {
-    pub name: *const c_char,
-}
+pub struct nf_conntrack_nat_helper { pub name: *const c_char }
 
 unsafe extern "C" {
     fn nf_ct_expect_related(exp: *mut nf_conntrack_expect, flags: c_int) -> c_int;

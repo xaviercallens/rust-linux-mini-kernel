@@ -9,9 +9,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::c_void;
-use core::ptr;
-use core::sync::atomic::AtomicU32;
+use core::{ffi::c_void, ptr, sync::atomic::AtomicU32};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -21,25 +19,16 @@ pub const INT_MAX: c_int = 2147483647;
 pub const FIB6_TABLE_HASHSZ: usize = 256;
 
 #[repr(C)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node }
 
 #[repr(C)]
-pub struct net {
-    pub ipv6: ipv6_net,
-}
+pub struct net { pub ipv6: ipv6_net }
 
 #[repr(C)]
 pub struct ipv6_net {
@@ -53,14 +42,10 @@ pub struct ipv6_net {
 }
 
 #[repr(C)]
-pub struct rt6_stats {
-    pub fib_nodes: u32,
-}
+pub struct rt6_stats { pub fib_nodes: u32 }
 
 #[repr(C)]
-pub struct spinlock_t {
-    _private: [u8; 0],
-}
+pub struct spinlock_t { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct fib6_table {
@@ -73,9 +58,7 @@ pub struct fib6_table {
 }
 
 #[repr(C)]
-pub struct inetpeer_base {
-    _private: [u8; 0],
-}
+pub struct inetpeer_base { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct fib6_node {
@@ -90,9 +73,7 @@ pub struct fib6_node {
 }
 
 #[repr(C)]
-pub struct rcu_head {
-    _private: [u8; 0],
-}
+pub struct rcu_head { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct fib6_info {
@@ -107,14 +88,10 @@ pub struct fib6_info {
 }
 
 #[repr(C)]
-pub struct fib6_nh {
-    _private: [u8; 0],
-}
+pub struct fib6_nh { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct nexthop {
-    _private: [u8; 0],
-}
+pub struct nexthop { _private: [u8; 0] }
 
 #[repr(C)]
 pub struct fib6_walker {
@@ -288,8 +265,7 @@ pub unsafe extern "C" fn fib6_link_table(net: *mut net, tb: *mut fib6_table) {
 }
 
 // Constants
-pub const FWS_S: u32 = 0;
-pub const FWS_L: u32 = 1;
+pub const FWS_S: u32 = 0; pub const FWS_L: u32 = 1;
 
 // Tests (conditional compilation)
 #[cfg(test)]

@@ -7,8 +7,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, panic::PanicInfo};
 use kernel_types::*;
 
 pub const IP6_VTI_HASH_SIZE_SHIFT: c_int = 5;
@@ -18,8 +17,7 @@ pub const ENOMEM: c_int = -12;
 pub const ENOSYS: c_int = -38;
 
 // Constants from kernel headers
-pub const IFNAMSIZ: usize = 16;
-pub const IFF_UP: c_int = 1 << 0;
+pub const IFNAMSIZ: usize = 16; pub const IFF_UP: c_int = 1 << 0;
 
 // Type definitions
 #[repr(C)]
@@ -61,10 +59,7 @@ pub struct vti6_net {
     pub tnls: [*mut ip6_tnl; 2],
 }
 
-unsafe fn hash(_remote: *const in6_addr, _local: *const in6_addr) -> c_int {
-    0
-}
-
+unsafe fn hash(_remote: *const in6_addr, _local: *const in6_addr) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn vti6_tnl_lookup(
@@ -79,8 +74,8 @@ pub unsafe extern "C" fn vti6_tnl_lookup(
 
     let ip6n = &*ip6n;
     let mut t: *mut ip6_tnl;
-    let mut hash = HASH(remote, local);
-    let any: in6_addr = unsafe { core::mem::zeroed() };
+    let mut hash_val = HASH(remote, local);
+    let any: in6_addr = core::mem::zeroed();
 
     for i in 0..IP6_VTI_HASH_SIZE {
         t = ip6n.tnls_r_l[i as usize];
@@ -333,9 +328,19 @@ unsafe fn free_percpu(ptr: *mut c_void) {
     // Mock implementation
 }
 
-// Mocked global variables
-static vti6_link_ops: rtnl_link_ops = rtnl_link_ops {
-    // ... fields initialized ...
+// Add vti6_tnl_create stub
+#[no_mangle]
+pub unsafe extern "C" fn vti6_tnl_create(net: *mut c_void, p: *mut ip6_tnl_parm) -> *mut ip6_tnl {
+    ptr::null_mut()
+}
+
+// Mocked global variables (using static mut since rtnl_link_ops contains raw pointers)
+#[no_mangle]
+pub static mut vti6_link_ops: rtnl_link_ops = rtnl_link_ops {
+    list: ptr::null_mut(),
+    kind: b"vti6\0".as_ptr() as *const c_char,
+    maxtype: 0,
+    policy: ptr::null(),
 };
 
 // Test module
@@ -347,7 +352,7 @@ mod tests {
     fn test_hash() {
         let a = in6_addr { in6_u: in6_addr_union { u6_addr8: [0; 16] } };
         let b = in6_addr { in6_u: in6_addr_union { u6_addr8: [1; 16] } };
-        let hash = HASH(&a as *const _, &b as *const_);
+        let hash = HASH(&a as *const _, &b as *const _);
         assert!(hash < IP6_VTI_HASH_SIZE as u32);
     }
 }

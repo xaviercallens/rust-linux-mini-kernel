@@ -4,8 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(clang_undefined_intended_behavior)]
 
-use core::ffi::{c_int, c_void};
-use core::{mem, ptr};
+use core::{{mem, ptr}, ffi::{c_int, c_void}};
 use kernel_types::*;
 
 pub type size_t = usize;
@@ -18,8 +17,7 @@ pub const NEXTHDR_ESP: u8 = 50;
 pub const XFRM_MAX_DEPTH: usize = 16;
 pub const AF_INET6: c_int = 10;
 
-pub const SKB_GSO_TCPV6: u32 = 0x00000008;
-pub const SKB_GSO_ESP: u32 = 0x00000400;
+pub const SKB_GSO_TCPV6: u32 = 0x00000008; pub const SKB_GSO_ESP: u32 = 0x00000400;
 
 pub const NETIF_F_HW_ESP: u32 = 0x00000010;
 pub const NETIF_F_HW_ESP_TX_CSUM: u32 = 0x00000020;
@@ -37,27 +35,19 @@ pub const EAGAIN: c_int = -11;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_id {
-    pub spi: u32,
-}
+pub struct xfrm_id { pub spi: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_props {
-    pub header_len: u32,
-}
+pub struct xfrm_props { pub header_len: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_mode {
-    pub encap: u8,
-}
+pub struct xfrm_mode { pub encap: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_offload_state {
-    pub dev: *mut c_void,
-}
+pub struct xfrm_offload_state { pub dev: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -88,22 +78,15 @@ pub struct sec_path {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_opt_hdr {
-    pub nexthdr: u8,
-}
+pub struct ipv6_opt_hdr { pub nexthdr: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_address_t {
-    pub a6: [u32; 4],
-}
+pub struct xfrm_address_t { pub a6: [u32; 4] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -114,9 +97,7 @@ pub struct net_offload_callbacks {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_offload {
-    pub callbacks: net_offload_callbacks,
-}
+pub struct net_offload { pub callbacks: net_offload_callbacks }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -134,22 +115,15 @@ unsafe impl Sync for xfrm_type_offload {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip6_control_block {
-    pub nhoff: c_int,
-    pub flags: u32,
-}
+pub struct ip6_control_block { pub nhoff: c_int, pub flags: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_tunnel_skb_cb {
-    pub tunnel: xfrm_tunnel_info,
-}
+pub struct xfrm_tunnel_skb_cb { pub tunnel: xfrm_tunnel_info }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_tunnel_info {
-    pub ip6: *mut c_void,
-}
+pub struct xfrm_tunnel_info { pub ip6: *mut c_void }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -161,10 +135,7 @@ pub struct xfrm_spi_skb_cb {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct napi_gro_cb {
-    pub same_flow: c_int,
-    pub flush: c_int,
-}
+pub struct napi_gro_cb { pub same_flow: c_int, pub flush: c_int }
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_optlen(hdr: *const ipv6_opt_hdr) -> c_int {

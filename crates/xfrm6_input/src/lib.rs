@@ -16,72 +16,43 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::c_int;
-use core::mem::offset_of;
+use core::{ffi::c_int, mem::offset_of};
 use kernel_types::*;
 
-pub const AF_INET6: c_int = 10;
-pub const NET_RX_DROP: c_int = 1;
-pub const XFRM_MAX_DEPTH: c_int = 16;
+pub const AF_INET6: c_int = 10; pub const NET_RX_DROP: c_int = 1; pub const XFRM_MAX_DEPTH: c_int = 16;
 
 #[repr(C)]
-pub struct xfrm_state {
-    _priv: [u8; 0],
-}
+pub struct xfrm_state { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct sk_buff {
-    pub cb: [u8; 48],
-    _priv: [u8; 0],
-}
+pub struct sk_buff { pub cb: [u8; 48], _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
+pub struct net { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct sock {
-    _priv: [u8; 0],
-}
+pub struct sock { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct ip6_tnl {
-    _priv: [u8; 0],
-}
+pub struct ip6_tnl { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
+pub struct in6_addr { pub s6_addr: [u8; 16] }
 
 #[repr(C)]
-pub struct ipv6hdr {
-    _pad0: [u8; 24],
-    pub daddr: in6_addr,
-}
+pub struct ipv6hdr { _pad0: [u8; 24], pub daddr: in6_addr }
 
 #[repr(C)]
-pub struct xfrm_address_t {
-    pub a6: in6_addr,
-}
+pub struct xfrm_address_t { pub a6: in6_addr }
 
 #[repr(C)]
-pub struct sec_path {
-    pub xvec: [*mut xfrm_state; XFRM_MAX_DEPTH as usize],
-    pub len: c_int,
-}
+pub struct sec_path { pub xvec: [*mut xfrm_state; XFRM_MAX_DEPTH as usize], pub len: c_int }
 
 #[repr(C)]
-pub struct xfrm_spi_info {
-    pub family: c_int,
-    pub daddroff: usize,
-}
+pub struct xfrm_spi_info { pub family: c_int, pub daddroff: usize }
 
 #[repr(C)]
-pub struct xfrm_tunnel_skb_cb {
-    pub ip6: *mut ip6_tnl,
-}
+pub struct xfrm_tunnel_skb_cb { pub ip6: *mut ip6_tnl }
 
 unsafe extern "C" {
     fn xfrm_input(skb: *mut sk_buff, nexthdr: c_int, spi: u32, encap_type: c_int) -> c_int;

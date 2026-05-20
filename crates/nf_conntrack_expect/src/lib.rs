@@ -11,8 +11,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::transmutes)]
 
-use core::ffi::{c_int, c_uint, c_ulong};
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_uint, c_ulong}};
 use kernel_types::*;
 
 #[cfg(not(test))]
@@ -31,45 +30,28 @@ pub const IPEXP_DESTROY: c_int = 1;
 pub const NF_CONNTRACK_NET_ID: c_ulong = 1;
 
 #[repr(C)]
-pub struct net {
-    _private: [u8; 0],
-}
+pub struct net { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_conntrack_zone {
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_zone { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_inet_addr {
-    _private: [u8; 0],
-}
+pub struct nf_inet_addr { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-    pub pprev: *mut *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node, pub pprev: *mut *mut hlist_node }
 
 #[repr(C)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
-pub struct timer_list {
-    _private: [u8; 0],
-}
+pub struct timer_list { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct refcount_t {
-    pub counter: c_int,
-}
+pub struct refcount_t { pub counter: c_int }
 
 #[repr(C)]
-pub struct atomic_t {
-    pub counter: c_int,
-}
+pub struct atomic_t { pub counter: c_int }
 
 #[repr(C)]
 pub struct nf_conntrack_tuple {
@@ -79,19 +61,13 @@ pub struct nf_conntrack_tuple {
 }
 
 #[repr(C)]
-pub struct nf_conn {
-    _private: [u8; 0],
-}
+pub struct nf_conn { _private: [u8; 0] }
 
 #[repr(C)]
-pub struct nf_conn_help {
-    pub expecting: [c_uint; 256],
-}
+pub struct nf_conn_help { pub expecting: [c_uint; 256] }
 
 #[repr(C)]
-pub struct nf_conntrack_net {
-    pub expect_count: c_uint,
-}
+pub struct nf_conntrack_net { pub expect_count: c_uint }
 
 #[repr(C)]
 pub struct nf_conntrack_expect {

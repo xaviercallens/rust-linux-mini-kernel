@@ -22,10 +22,7 @@ pub struct nf_nat_ipv6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_nat_extend {
-    pub nat_ipv4: nf_nat_ipv4,
-    pub nat_ipv6: nf_nat_ipv6,
-}
+pub struct nf_nat_extend { pub nat_ipv4: nf_nat_ipv4, pub nat_ipv6: nf_nat_ipv6 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

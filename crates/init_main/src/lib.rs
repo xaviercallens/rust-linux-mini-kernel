@@ -225,6 +225,162 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_init_main_init_multiple_calls() {
+        unsafe {
+            assert_eq!(init_main_init(), 0);
+            assert_eq!(init_main_init(), 0);
+            assert_eq!(init_main_init(), 0);
+        }
+    }
+
+    #[test]
+    fn test_init_main_exit_multiple_calls() {
+        unsafe {
+            init_main_exit();
+            init_main_exit();
+            init_main_exit();
+        }
+    }
+
+    #[test]
+    fn test_init_sequence() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        state.set_arch_setup_result(0);
+        drop(state);
+
+        unsafe {
+            init_main_init();
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.printk_init_called, false);
+    }
+
+    #[test]
+    fn test_print_helper_with_newlines() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            print(b"line1\nline2\n");
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.printk_str_calls.len(), 1);
+        assert_eq!(state.printk_str_calls[0], b"line1\nline2\n");
+    }
+
+    #[test]
+    fn test_print_helper_special_chars() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            print(b"\t\r\n");
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.printk_str_calls.len(), 1);
+        assert_eq!(state.printk_str_calls[0], b"\t\r\n");
+    }
+
+    #[test]
+    fn test_print_helper_long_message() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        let msg = b"This is a very long message that simulates a kernel boot message";
+        unsafe {
+            print(msg);
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.printk_str_calls.len(), 1);
+        assert_eq!(state.printk_str_calls[0], msg.to_vec());
+    }
+
+    #[test]
+    fn test_print_helper_stress_100_calls() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        for i in 0..100 {
+            unsafe {
+                print(b"msg");
+            }
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.printk_str_calls.len(), 100);
+    }
+
+    #[test]
+    fn test_arch_setup_success_path() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        state.set_arch_setup_result(0);
+        drop(state);
+
+        unsafe {
+            let result = arch_setup_init();
+            assert_eq!(result, 0);
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_failure_path() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        state.set_arch_setup_result(-1);
+        drop(state);
+
+        unsafe {
+            let result = arch_setup_init();
+            assert_eq!(result, -1);
+        }
+    }
+
+    #[test]
+    fn test_init_main_flag_toggle() {
+        unsafe {
+            let initial = INIT_MAIN_INITIALIZED;
+
+            INIT_MAIN_INITIALIZED = false;
+            assert!(!INIT_MAIN_INITIALIZED);
+
+            INIT_MAIN_INITIALIZED = true;
+            assert!(INIT_MAIN_INITIALIZED);
+
+            INIT_MAIN_INITIALIZED = false;
+            assert!(!INIT_MAIN_INITIALIZED);
+
+            INIT_MAIN_INITIALIZED = initial;
+        }
+    }
+
+    #[test]
+    fn test_print_empty_vs_null() {
+        let mut state = MOCK_STATE.lock().unwrap();
+        state.reset();
+        drop(state);
+
+        unsafe {
+            print(b"");
+            print(b"test");
+            print(b"");
+        }
+
+        let state = MOCK_STATE.lock().unwrap();
+        assert_eq!(state.printk_str_calls.len(), 1);
+        assert_eq!(state.printk_str_calls[0], b"test");
+    }
+
     // Note: Cannot directly test start_kernel() as it never returns
     // and enters an infinite loop. Integration tests would be needed.
 }

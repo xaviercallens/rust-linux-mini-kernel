@@ -4,8 +4,7 @@
 #![allow(dead_code)]
 #![allow(clashing_extern_declarations)]
 
-use core::ffi::{c_int, c_uint, c_ulong, c_void};
-use core::panic::PanicInfo;
+use core::{{ptr, slice}, ffi::{c_int, c_uint, c_ulong, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
 pub const CONNCOUNT_SLOTS: usize = 256;
@@ -23,10 +22,7 @@ pub const EOVERFLOW: c_int = -75;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct list_head {
-    pub next: *mut list_head,
-    pub prev: *mut list_head,
-}
+pub struct list_head { pub next: *mut list_head, pub prev: *mut list_head }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -38,21 +34,15 @@ pub struct rb_node {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rb_root {
-    pub rb_node: *mut rb_node,
-}
+pub struct rb_root { pub rb_node: *mut rb_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple {
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_tuple { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nf_conntrack_tuple_hash {
-    _private: [u8; 0],
-}
+pub struct nf_conntrack_tuple_hash { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -103,9 +93,9 @@ unsafe extern "C" {
         zone: *const nf_conntrack_zone,
         tuple: *const nf_conntrack_tuple,
     ) -> *const nf_conntrack_tuple_hash;
-    fn nf_ct_tuple_equal(a: *const nf_conntrack_tuple, b: *const nf_conntrack_tuple) -> c_int;
+    fn nf_ct_tuple_equal(a: *const nf_conntrack_tuple, b: *const nf_conntrack_tuple) -> bool;
     fn nf_ct_zone_id(zone: *const nf_conntrack_zone, dir: c_int) -> c_int;
-    fn nf_ct_zone_equal(a: *const nf_conn, zone: *const nf_conntrack_zone, dir: c_int) -> c_int;
+    fn nf_ct_zone_equal(a: *const nf_conn, zone: *const nf_conntrack_zone, dir: c_int) -> bool;
     fn nf_ct_tuplehash_to_ctrack(h: *const nf_conntrack_tuple_hash) -> *mut nf_conn;
     fn nf_ct_put(ct: *mut nf_conn);
     fn kmem_cache_alloc(cachep: *mut c_void, flags: c_uint) -> *mut c_void;
@@ -114,6 +104,7 @@ unsafe extern "C" {
     fn raw_smp_processor_id() -> c_int;
     fn spin_lock_bh(lock: *mut c_void);
     fn spin_unlock_bh(lock: *mut c_void);
+    fn spin_lock_init(lock: *mut c_void);
     fn spin_trylock(lock: *mut c_void) -> c_int;
     fn spin_unlock(lock: *mut c_void);
     fn list_del(pos: *mut list_head);
@@ -124,10 +115,7 @@ unsafe extern "C" {
     fn set_bit(nr: c_ulong, addr: *mut c_ulong);
 }
 
-#[unsafe(no_mangle)]
-pub static mut conncount_rb_cachep: *mut c_void = core::ptr::null_mut();
-#[unsafe(no_mangle)]
-pub static mut conncount_conn_cachep: *mut c_void = core::ptr::null_mut();
+// Removed - duplicates defined at lines 325-326
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn already_closed(conn: *const nf_conn) -> c_int {

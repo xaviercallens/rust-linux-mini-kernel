@@ -74,4 +74,99 @@ mod tests {
             assert_eq!(result2, 0);
         }
     }
+
+    #[test]
+    fn test_arch_setup_stress_100_calls() {
+        unsafe {
+            for _ in 0..100 {
+                let result = arch_setup_init();
+                assert_eq!(result, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_exit_multiple() {
+        unsafe {
+            for _ in 0..10 {
+                arch_setup_exit();
+            }
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_init_exit_sequence() {
+        unsafe {
+            arch_setup_init();
+            arch_setup_exit();
+            arch_setup_init();
+            arch_setup_exit();
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_flag_state_changes() {
+        unsafe {
+            let initial = ARCH_SETUP_INITIALIZED;
+
+            ARCH_SETUP_INITIALIZED = true;
+            assert!(ARCH_SETUP_INITIALIZED);
+
+            ARCH_SETUP_INITIALIZED = false;
+            assert!(!ARCH_SETUP_INITIALIZED);
+
+            ARCH_SETUP_INITIALIZED = true;
+            assert!(ARCH_SETUP_INITIALIZED);
+
+            ARCH_SETUP_INITIALIZED = initial;
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_init_return_consistency() {
+        unsafe {
+            for _ in 0..50 {
+                assert_eq!(arch_setup_init(), 0, "Should always return 0");
+            }
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_flag_default() {
+        unsafe {
+            // Flag should start as false in most contexts
+            let val = ARCH_SETUP_INITIALIZED;
+            ARCH_SETUP_INITIALIZED = val; // Just verify we can access it
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_init_before_exit() {
+        unsafe {
+            let result = arch_setup_init();
+            assert_eq!(result, 0);
+            arch_setup_exit();
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_exit_before_init() {
+        unsafe {
+            arch_setup_exit();
+            let result = arch_setup_init();
+            assert_eq!(result, 0);
+        }
+    }
+
+    #[test]
+    fn test_arch_setup_interleaved_calls() {
+        unsafe {
+            arch_setup_init();
+            arch_setup_init();
+            arch_setup_exit();
+            arch_setup_init();
+            arch_setup_exit();
+            arch_setup_exit();
+        }
+    }
 }

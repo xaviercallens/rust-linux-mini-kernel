@@ -4,14 +4,10 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_int, c_void};
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}, panic::PanicInfo};
 use kernel_types::*;
 
-pub const EINVAL: c_int = -22;
-pub const ENOMEM: c_int = -12;
-pub const ENOSYS: c_int = -38;
+pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
 pub const IFNAMSIZ: usize = 16;
 pub const IP6_GRE_HASH_SIZE_SHIFT: u32 = 5;
@@ -25,19 +21,13 @@ pub const ETH_P_ERSPAN2: u16 = 0x22f4;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct in6_addr {
-    pub s6_addr: [u8; 16],
-}
+pub struct in6_addr { pub s6_addr: [u8; 16] }
 
 #[repr(C)]
-pub struct net {
-    _priv: [u8; 0],
-}
+pub struct net { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct dst_cache {
-    _priv: [u8; 0],
-}
+pub struct dst_cache { _priv: [u8; 0] }
 
 #[repr(C)]
 pub struct net_device {
@@ -95,17 +85,11 @@ extern "C" {
 }
 
 // Helper functions
-fn htons(x: u16) -> u16 {
-    x.to_be()
-}
+fn htons(x: u16) -> u16 { x.to_be() }
 
-fn HASH_ADDR(_addr: *const in6_addr) -> usize {
-    0 // Placeholder hash
-}
+fn HASH_ADDR(_addr: *const in6_addr) -> usize { 0 }
 
-fn HASH_KEY(_key: u32) -> usize {
-    0 // Placeholder hash
-}
+fn HASH_KEY(_key: u32) -> usize { 0 }
 
 // Function implementations
 #[no_mangle]

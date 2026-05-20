@@ -1,6 +1,5 @@
 use kernel_types::*;
-use core::ptr;
-use core::sync::atomic::AtomicU32;
+use core::{ptr, sync::atomic::AtomicU32};
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -9,14 +8,11 @@ pub const ENOENT: c_int = -2;
 pub const EPERM: c_int = -1;
 pub const EADDRNOTAVAIL: c_int = -99;
 
-pub const CAP_NET_ADMIN: c_int = 12;
-pub const IFA_F_TENTATIVE: c_int = 0x40;
+pub const CAP_NET_ADMIN: c_int = 12; pub const IFA_F_TENTATIVE: c_int = 0x40;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct fib6_info {
-    _priv: [u8; 0],
-}
+pub struct fib6_info { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -27,83 +23,55 @@ pub struct rcu_head {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock_t {
-    _priv: [u8; 0],
-}
+pub struct spinlock_t { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct user_namespace {
-    _priv: [u8; 0],
-}
+pub struct user_namespace { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub ipv6: ipv6_net,
-    pub user_ns: *mut user_namespace,
-}
+pub struct net { pub ipv6: ipv6_net, pub user_ns: *mut user_namespace }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_device {
-    pub ifindex: c_int,
-}
+pub struct net_device { pub ifindex: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_devconf {
-    pub forwarding: c_int,
-}
+pub struct ipv6_devconf { pub forwarding: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet6_dev {
-    pub cnf: ipv6_devconf,
-}
+pub struct inet6_dev { pub cnf: ipv6_devconf }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct dst_entry {
-    pub dev: *mut net_device,
-}
+pub struct dst_entry { pub dev: *mut net_device }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct rt6_info {
-    pub dst: dst_entry,
-}
+pub struct rt6_info { pub dst: dst_entry }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_pinfo {
-    pub ipv6_ac_list: *mut ipv6_ac_socklist,
-}
+pub struct ipv6_pinfo { pub ipv6_ac_list: *mut ipv6_ac_socklist }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sock {
-    _priv: [u8; 0],
-}
+pub struct sock { _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_head {
-    pub first: *mut hlist_node,
-}
+pub struct hlist_head { pub first: *mut hlist_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct hlist_node {
-    pub next: *mut hlist_node,
-    pub pprev: *mut *mut hlist_node,
-}
+pub struct hlist_node { pub next: *mut hlist_node, pub pprev: *mut *mut hlist_node }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct devconf6_config {
-    pub forwarding: c_int,
-}
+pub struct devconf6_config { pub forwarding: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -112,7 +80,6 @@ pub struct ipv6_ac_socklist {
     pub acl_addr: in6_addr,
     pub acl_ifindex: c_int,
 }
-
 
 pub struct ifacaddr6 {
     pub aca_addr: in6_addr,
@@ -128,12 +95,9 @@ pub struct ifacaddr6 {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv6_net {
-    pub devconf_all: *mut devconf6_config,
-}
+pub struct ipv6_net { pub devconf_all: *mut devconf6_config }
 
-const IN6_ADDR_HSIZE_SHIFT: u32 = 8;
-const IN6_ADDR_HSIZE: u32 = 1 << IN6_ADDR_HSIZE_SHIFT;
+const IN6_ADDR_HSIZE_SHIFT: u32 = 8; const IN6_ADDR_HSIZE: u32 = 1 << IN6_ADDR_HSIZE_SHIFT;
 
 #[no_mangle]
 pub static mut inet6_acaddr_lst: [hlist_head; IN6_ADDR_HSIZE as usize] =

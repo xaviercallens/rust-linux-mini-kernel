@@ -2,10 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_int, c_void};
-use core::mem::size_of;
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, ffi::{c_int, c_void}, mem::size_of, panic::PanicInfo};
 use kernel_types::*;
 
 pub type socklen_t = u32;
@@ -33,10 +30,7 @@ pub struct CacheStatistics {
 }
 
 #[repr(C)]
-pub struct CacheManager {
-    pub head: *mut c_void,
-    pub stats: CacheStatistics,
-}
+pub struct CacheManager { pub head: *mut c_void, pub stats: CacheStatistics }
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -49,16 +43,11 @@ pub extern "C" fn rust_eh_personality() {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct work_struct {
-    _private: [u8; 0],
-}
+pub struct work_struct { _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_device {
-    pub ifindex: c_int,
-    _private: [u8; 0],
-}
+pub struct net_device { pub ifindex: c_int, _private: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -107,9 +96,7 @@ pub struct group_source_req {
 }
 
 #[repr(C)]
-pub struct ipv6_pinfo {
-    pub ipv6_mc_list: *mut ipv6_mc_socklist,
-}
+pub struct ipv6_pinfo { pub ipv6_mc_list: *mut ipv6_mc_socklist }
 
 #[repr(C)]
 pub struct mcast_sock {

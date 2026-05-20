@@ -6,26 +6,17 @@ pub const EEXIST: c_int = -17;
 pub const ENOENT: c_int = -2;
 pub const EAGAIN: c_int = -11;
 
-pub const AF_INET6: c_int = 10;
-pub const AF_INET: c_int = 2;
-pub const AF_MPLS: c_int = 25;
+pub const AF_INET6: c_int = 10; pub const AF_INET: c_int = 2; pub const AF_MPLS: c_int = 25;
 
-pub const INET6_PROTO_NOPOLICY: c_int = 1 << 0;
-pub const INET6_PROTO_FINAL: c_int = 1 << 1;
+pub const INET6_PROTO_NOPOLICY: c_int = 1 << 0; pub const INET6_PROTO_FINAL: c_int = 1 << 1;
 
-pub const IPPROTO_IPV6: c_int = 41;
-pub const IPPROTO_IPIP: c_int = 4;
-pub const IPPROTO_MPLS: c_int = 137;
+pub const IPPROTO_IPV6: c_int = 41; pub const IPPROTO_IPIP: c_int = 4; pub const IPPROTO_MPLS: c_int = 137;
 
 #[repr(C)]
-pub struct sk_buff {
-    _priv: [u8; 0],
-}
+pub struct sk_buff { _priv: [u8; 0] }
 
 #[repr(C)]
-pub struct inet6_skb_parm {
-    _priv: [u8; 0],
-}
+pub struct inet6_skb_parm { _priv: [u8; 0] }
 
 pub type handler_func = unsafe extern "C" fn(*mut sk_buff) -> c_int;
 pub type cb_handler_func = unsafe extern "C" fn(*mut sk_buff, c_int) -> c_int;
@@ -76,7 +67,6 @@ unsafe extern "C" {
     fn xfrm_input_register_afinfo(afinfo: *const xfrm_input_afinfo) -> c_int;
     fn xfrm_input_unregister_afinfo(afinfo: *const xfrm_input_afinfo) -> c_int;
 }
-
 
 static tunnel6_protocol: inet6_protocol = inet6_protocol {
     handler: tunnel6_rcv,
@@ -419,5 +409,4 @@ pub unsafe extern "C" fn module_exit() {
 }
 
 // Constants for ICMPv6
-pub const ICMPV6_DEST_UNREACH: c_int = 3;
-pub const ICMPV6_PORT_UNREACH: c_int = 4;
+pub const ICMPV6_DEST_UNREACH: c_int = 3; pub const ICMPV6_PORT_UNREACH: c_int = 4;

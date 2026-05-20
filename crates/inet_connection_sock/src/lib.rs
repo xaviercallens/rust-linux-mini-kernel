@@ -4,9 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
 
-use core::ffi::c_int;
-use core::panic::PanicInfo;
-use core::ptr;
+use core::{ptr, ffi::c_int, panic::PanicInfo};
 use kernel_types::*;
 
 pub const AF_INET6: c_int = 10;
@@ -32,34 +30,23 @@ pub struct inet_bind_bucket {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct inet_hashinfo {
-    pub bhash_size: c_int,
-}
+pub struct inet_hashinfo { pub bhash_size: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net {
-    pub ipv4: ipv4_net,
-}
+pub struct net { pub ipv4: ipv4_net }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ipv4_net {
-    pub ip_local_ports: seqlock,
-}
+pub struct ipv4_net { pub ip_local_ports: seqlock }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct seqlock {
-    pub lock: spinlock,
-    pub range: [c_int; 2],
-}
+pub struct seqlock { pub lock: spinlock, pub range: [c_int; 2] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct spinlock {
-    pub _priv: u8,
-}
+pub struct spinlock { pub _priv: u8 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -87,14 +74,10 @@ fn panic(_info: &PanicInfo<'_>) -> ! {
 }
 
 #[inline]
-fn cbool(v: bool) -> c_uchar {
-    if v { 1 } else { 0 }
-}
+fn cbool(v: bool) -> c_uchar { if v { 1 } else { 0 } }
 
 #[inline]
-fn rbool(v: c_uchar) -> bool {
-    v != 0
-}
+fn rbool(v: c_uchar) -> bool { v != 0 }
 
 #[inline]
 unsafe fn sk_common(sk: *const sock) -> *const sock_common {
@@ -102,14 +85,10 @@ unsafe fn sk_common(sk: *const sock) -> *const sock_common {
 }
 
 #[inline]
-unsafe fn sk_family(sk: *const sock) -> c_int {
-    (*sk_common(sk)).skc_family as c_int
-}
+unsafe fn sk_family(sk: *const sock) -> c_int { (*sk_common(sk)).skc_family as c_int }
 
 #[inline]
-unsafe fn sk_rcv_saddr(sk: *const sock) -> u32 {
-    (*sk_common(sk)).skc_rcv_saddr
-}
+unsafe fn sk_rcv_saddr(sk: *const sock) -> u32 { (*sk_common(sk)).skc_rcv_saddr }
 
 #[inline]
 unsafe fn sk_v6_rcv_saddr(sk: *const sock) -> *const in6_addr {
@@ -315,9 +294,7 @@ unsafe fn rcu_access_pointer<T>(ptr: *mut T) -> Option<*mut T> {
 }
 
 #[inline]
-unsafe fn uid_eq(uid1: u32, uid2: u32) -> bool {
-    uid1 == uid2
-}
+unsafe fn uid_eq(uid1: u32, uid2: u32) -> bool { uid1 == uid2 }
 
 // Exported symbols
 #[no_mangle]

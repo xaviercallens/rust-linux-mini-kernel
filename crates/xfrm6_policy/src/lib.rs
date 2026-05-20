@@ -3,20 +3,14 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
-use core::ffi::{c_int, c_void};
-use core::mem;
-use core::ptr;
-use core::ptr::null_mut;
+use core::{mem, ptr, ffi::{c_int, c_void}, ptr::null_mut};
 use kernel_types::*;
 
-pub const EHOSTUNREACH: c_int = -113;
-pub const ENODEV: c_int = -19;
+pub const EHOSTUNREACH: c_int = -113; pub const ENODEV: c_int = -19;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct xfrm_address_t {
-    pub in6: in6_addr,
-}
+pub struct xfrm_address_t { pub in6: in6_addr }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -14,16 +14,12 @@ use core::ffi::c_void;
 use core::ptr;
 use kernel_types::*;
 
-const NMBD_PORT: u16 = 137;
-const IPPROTO_UDP: u8 = 17;
-const NFPROTO_IPV4: u8 = 2;
+const NMBD_PORT: u16 = 137; const IPPROTO_UDP: u8 = 17; const NFPROTO_IPV4: u8 = 2;
 const HELPER_NAME: &[u8] = b"netbios-ns\0";
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-struct nfct_tuple_src_udp {
-    port: u16,
-}
+struct nfct_tuple_src_udp { port: u16 }
 
 #[repr(C)]
 union nfct_tuple_src_u {
@@ -45,16 +41,10 @@ struct nfct_tuple_dst {
 }
 
 #[repr(C)]
-struct nfct_tuple {
-    src: nfct_tuple_src,
-    dst: nfct_tuple_dst,
-}
+struct nfct_tuple { src: nfct_tuple_src, dst: nfct_tuple_dst }
 
 #[repr(C)]
-struct nf_conntrack_expect_policy {
-    max_expected: u32,
-    timeout: u32,
-}
+struct nf_conntrack_expect_policy { max_expected: u32, timeout: u32 }
 
 #[repr(C)]
 struct nf_conntrack_helper {
@@ -67,7 +57,6 @@ struct nf_conntrack_helper {
 
 // Module parameters
 static mut TIMEOUT: u32 = 3;
-
 
 // Expect policy
 static mut EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {

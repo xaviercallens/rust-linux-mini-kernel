@@ -5,10 +5,7 @@ type ExpectFn = Option<extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> c
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct h323_call_id {
-    pub call_id: [c_char; 128],
-    pub call_id_len: c_int,
-}
+pub struct h323_call_id { pub call_id: [c_char; 128], pub call_id_len: c_int }
 
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -21,16 +21,11 @@ pub const IPS_NAT_MASK: u32 = 0x00000004;
 pub const NF_ACCEPT: c_int = 1;
 
 #[repr(C)]
-pub struct NfConn {
-    pub status: u32,
-    _priv: [u8; 0],
-}
+pub struct NfConn { pub status: u32, _priv: [u8; 0] }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct NfConntrackTupleUdp {
-    pub port: u16,
-}
+pub struct NfConntrackTupleUdp { pub port: u16 }
 
 #[repr(C)]
 pub union NfConntrackTupleSrcUnion {
@@ -38,27 +33,16 @@ pub union NfConntrackTupleSrcUnion {
 }
 
 #[repr(C)]
-pub struct NfConntrackTupleSrc {
-    pub l3num: u8,
-    pub u: NfConntrackTupleSrcUnion,
-}
+pub struct NfConntrackTupleSrc { pub l3num: u8, pub u: NfConntrackTupleSrcUnion }
 
 #[repr(C)]
-pub struct NfConntrackTupleDst {
-    pub protonum: u8,
-}
+pub struct NfConntrackTupleDst { pub protonum: u8 }
 
 #[repr(C)]
-pub struct NfConntrackTuple {
-    pub src: NfConntrackTupleSrc,
-    pub dst: NfConntrackTupleDst,
-}
+pub struct NfConntrackTuple { pub src: NfConntrackTupleSrc, pub dst: NfConntrackTupleDst }
 
 #[repr(C)]
-pub struct NfConntrackExpectPolicy {
-    pub max_expected: c_uint,
-    pub timeout: c_uint,
-}
+pub struct NfConntrackExpectPolicy { pub max_expected: c_uint, pub timeout: c_uint }
 
 pub type NfNatSnmpHook = extern "C" fn(*mut c_void, c_uint, *mut NfConn, c_int) -> c_int;
 
