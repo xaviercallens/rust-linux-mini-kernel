@@ -3,13 +3,13 @@
 
 # Container image
 image:
-  repository: gcr.io/PROJECT_ID/mvk-kernel
+  repository: gcr.io/gen-lang-client-0625573011/mvk-kernel
   tag: "9.4.0"
   pullPolicy: IfNotPresent
 
 # C baseline image (stock Linux kernel for comparison)
 baselineImage:
-  repository: gcr.io/PROJECT_ID/c-baseline
+  repository: gcr.io/gen-lang-client-0625573011/c-baseline
   tag: "5.10"
   pullPolicy: IfNotPresent
 
