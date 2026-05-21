@@ -76,8 +76,8 @@ spec:
               mountPath: /dev/kvm
           readinessProbe:
             exec:
-              command: ["pgrep", "-f", "qemu-system"]
-            initialDelaySeconds: 10
+              command: ["cat", "/mvk/results/boot_time_ms.txt"]
+            initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
         - name: results

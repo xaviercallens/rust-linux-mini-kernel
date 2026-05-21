@@ -14,8 +14,8 @@ PROJECT_ID="${GCP_PROJECT_ID:-gen-lang-client-0625573011}"
 REGION="us-central1"
 ZONE="us-central1-a"
 CLUSTER_NAME="mvk-benchmark"
-BENCHMARK_MACHINE_TYPE="n2d-standard-8"
-CONTROL_MACHINE_TYPE="n2d-standard-4"
+BENCHMARK_MACHINE_TYPE="n2-standard-8"
+CONTROL_MACHINE_TYPE="n2-standard-4"
 BENCHMARK_NODES=3
 USE_SPOT="${USE_SPOT:-true}"
 
@@ -54,13 +54,13 @@ deploy() {
         --subnetwork="${CLUSTER_NAME}-subnet" \
         --cluster-secondary-range-name=pods \
         --services-secondary-range-name=services \
-        --enable-dataplane-v2 \
-        --release-channel=regular \
+        --enable-ip-alias \
+        --release-channel=None \
         --num-nodes=1 \
         --machine-type=e2-small \
         --no-enable-autoupgrade \
         --enable-managed-prometheus \
-        2>/dev/null || log "  Cluster already exists, continuing..."
+        || log "  Cluster already exists, continuing..."
 
     # --- Step 3: Create Benchmark Node Pool ---
     log "Step 3/6: Creating benchmark node pool ($BENCHMARK_NODES × $BENCHMARK_MACHINE_TYPE)..."
