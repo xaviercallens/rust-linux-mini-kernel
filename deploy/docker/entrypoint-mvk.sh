@@ -27,7 +27,6 @@ boot_kernel() {
     timeout 30 qemu-system-i386 \
         -kernel "$KERNEL" \
         -nographic \
-        -serial stdio \
         -no-reboot \
         -m 128M \
         -display none \
@@ -171,6 +170,7 @@ case "$MODE" in
         run_stress_benchmarks
         collect_results
         log "Client benchmarks complete."
+        tail -f /dev/null
         ;;
     idle)
         boot_kernel

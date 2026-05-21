@@ -179,6 +179,7 @@ members = [
     "crates/taskstats",
     "crates/cpuset",
     "crates/cgroup",
+    "crates/kernel_tests",
 ]
 
 [workspace.package]

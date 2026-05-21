@@ -18,9 +18,10 @@ RUN rustup target add i686-unknown-linux-gnu && \
 WORKDIR /build
 COPY . .
 
+WORKDIR /build/examples/demo_kernel
+
 # Build the demo kernel for i686
 RUN cargo build \
-    --manifest-path examples/demo_kernel/Cargo.toml \
     --target i686-unknown-linux-gnu \
     --release
 
@@ -35,7 +36,6 @@ FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     qemu-system-x86 \
     iperf3 \
-    netperf \
     sysbench \
     stress-ng \
     python3 \
@@ -51,7 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /mvk
 
 # Copy the built kernel binary
-COPY --from=builder /build/target/i686-unknown-linux-gnu/release/demo_kernel /mvk/kernel/demo_kernel
+COPY --from=builder /build/examples/demo_kernel/target/i686-unknown-linux-gnu/release/demo_kernel /mvk/kernel/demo_kernel
 
 # Copy benchmark scripts
 COPY benchmarks/c_vs_rust_perf_report.py /mvk/benchmarks/
