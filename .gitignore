@@ -21,3 +21,9 @@ specs/lean4/build_*.log
 *.swo
 cargo_warnings.txt
 clippy_remaining.txt
+
+# Terraform
+deploy/gke/.terraform/
+*.tfstate
+*.tfstate.backup
+
