@@ -1,4 +1,6 @@
 #![allow(warnings)]
+#![allow(non_camel_case_types)]
+#![allow(clippy::all)]
 use kernel_types::*;
 use core::{ptr, ffi::{c_int, c_void}};
 

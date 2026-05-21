@@ -1,7 +1,11 @@
-{"plugins": [],
+{"plugins":
+ ["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase2_Compatibility.dylib",
+  "/Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/lean/libLake_shared.dylib"],
  "package": "mvk_specs",
  "options": {},
  "name": "MVK.Phase2.Common",
  "isModule": false,
- "importArts": {},
+ "importArts":
+ {"MVK.Phase2.Compatibility":
+  ["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/MVK/Phase2/Compatibility.olean"]},
  "dynlibs": []}

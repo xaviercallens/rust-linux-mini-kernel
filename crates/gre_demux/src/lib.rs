@@ -2,6 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(unexpected_cfgs)]
 
 use core::{ptr, panic::PanicInfo, sync::atomic::{AtomicPtr, Ordering}};
 use kernel_types::*;
@@ -83,7 +84,7 @@ pub struct erspan_base_hdr {
 
 pub const GREPROTO_MAX: usize = 256;
 
-static mut gre_proto: [AtomicPtr<gre_protocol>; GREPROTO_MAX] =
+static mut GRE_PROTO: [AtomicPtr<gre_protocol>; GREPROTO_MAX] =
     [const { AtomicPtr::new(ptr::null_mut()) }; GREPROTO_MAX];
 
 unsafe extern "C" {
@@ -117,7 +118,7 @@ pub unsafe extern "C" fn gre_add_protocol(proto: *const gre_protocol, version: u
         return EINVAL;
     }
 
-    let target = unsafe { &gre_proto[version as usize] };
+    let target = unsafe { &GRE_PROTO[version as usize] };
     match target.compare_exchange(
         ptr::null_mut(),
         proto as *mut gre_protocol,
@@ -135,7 +136,7 @@ pub unsafe extern "C" fn gre_del_protocol(proto: *const gre_protocol, version: u
         return EINVAL;
     }
 
-    let target = unsafe { &gre_proto[version as usize] };
+    let target = unsafe { &GRE_PROTO[version as usize] };
     match target.compare_exchange(
         proto as *mut gre_protocol,
         ptr::null_mut(),
@@ -202,7 +203,7 @@ pub unsafe extern "C" fn gre_parse_header(
     if (*greh).flags & GRE_SEQ != 0 {
         (*tpi).seq = *options;
         // SAFETY: options is valid pointer
-        options = options.add(1);
+        // options = options.add(1);
     } else {
         (*tpi).seq = 0;
     }
@@ -219,7 +220,7 @@ pub unsafe extern "C" fn gre_parse_header(
         }
     }
 
-    (*tpi).hdr_len = hdr_len as u16;
+    (*tpi).hdr_len = hdr_len;
 
     // ERSPAN handling
     if ((*greh).protocol == htons(ETH_P_ERSPAN) && hdr_len != 4)
@@ -227,7 +228,7 @@ pub unsafe extern "C" fn gre_parse_header(
     {
         if !pskb_may_pull(
             skb,
-            (nhs as usize + hdr_len as usize + core::mem::size_of::<erspan_base_hdr>()),
+            nhs as usize + hdr_len as usize + core::mem::size_of::<erspan_base_hdr>(),
         ) {
             return EINVAL;
         }
@@ -253,7 +254,7 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
     }
 
     rcu_read_lock();
-    let proto = rcu_dereference(&gre_proto[ver as usize]);
+    let proto = rcu_dereference(&GRE_PROTO[ver as usize]);
     if proto.is_null() {
         rcu_read_unlock();
         goto_drop(skb);
@@ -266,7 +267,7 @@ pub unsafe extern "C" fn gre_rcv(skb: *mut c_void) -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gre_err(skb: *mut c_void, info: u32) -> c_int {
+pub unsafe extern "C" fn gre_err(skb: *mut c_void, _info: u32) -> c_int {
     if skb.is_null() {
         return EINVAL;
     }

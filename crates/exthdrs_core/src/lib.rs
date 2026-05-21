@@ -6,7 +6,6 @@
 use kernel_types::*;
 use core::mem;
 use core::ptr;
-use kernel_types::*;
 
 pub const NEXTHDR_HOP: u8 = 0;
 pub const NEXTHDR_ROUTING: u8 = 43;
@@ -211,7 +210,7 @@ pub unsafe extern "C" fn ipv6_find_hdr(
 ) -> c_int {
     let mut start = skb_network_offset(skb) as c_int + mem::size_of::<ipv6hdr>() as c_int;
     let mut nexthdr = (*ipv6_hdr(skb)).nexthdr;
-    let mut found = 0;
+    let mut found;
 
     if !fragoff.is_null() {
         *fragoff = 0;
@@ -334,7 +333,7 @@ pub unsafe extern "C" fn skb_network_header(skb: *const c_void) -> *const c_void
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_network_offset(skb: *const c_void) -> c_int { 0 }
+pub unsafe extern "C" fn skb_network_offset(_skb: *const c_void) -> c_int { 0 }
 
 #[no_mangle]
 pub unsafe extern "C" fn skb_tail_pointer(skb: *const c_void) -> *const c_void {

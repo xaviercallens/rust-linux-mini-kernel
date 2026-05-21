@@ -6,10 +6,8 @@
 use core::ffi::{c_int, c_void};
 use core::mem;
 use core::ptr;
-use core::slice;
 use kernel_types::*;
 
-use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -203,7 +201,7 @@ pub unsafe extern "C" fn seg6_do_srh_inline(skb: *mut sk_buff, osrh: *mut ipv6_s
     skb_mac_header_rebuild(skb);
 
     let hdr = ipv6_hdr(skb);
-    let oldhdr_ref = &*oldhdr;
+    let _oldhdr_ref = &*oldhdr;
 
     memmove(
         hdr as *mut c_void,
@@ -249,7 +247,7 @@ fn seg6_lwt_lwtunnel(lwt: *mut lwtunnel_state) -> *mut seg6_lwt {
 
 // Helper functions (FFI-compatible signatures)
 #[no_mangle]
-pub unsafe extern "C" fn skb_cow_head(skb: *mut sk_buff, headroom: c_int) -> c_int {
+pub unsafe extern "C" fn skb_cow_head(_skb: *mut sk_buff, headroom: c_int) -> c_int {
     // Simplified implementation for FFI compatibility
     // Actual implementation would handle memory allocation
     if headroom < 0 {
@@ -259,114 +257,114 @@ pub unsafe extern "C" fn skb_cow_head(skb: *mut sk_buff, headroom: c_int) -> c_i
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_push(skb: *mut sk_buff, len: c_int) -> *mut u8 {
+pub unsafe extern "C" fn skb_push(_skb: *mut sk_buff, _len: c_int) -> *mut u8 {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_reset_network_header(skb: *mut sk_buff) {
+pub unsafe extern "C" fn skb_reset_network_header(_skb: *mut sk_buff) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_mac_header_rebuild(skb: *mut sk_buff) {
+pub unsafe extern "C" fn skb_mac_header_rebuild(_skb: *mut sk_buff) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_pull(skb: *mut sk_buff, len: c_int) {
+pub unsafe extern "C" fn skb_pull(_skb: *mut sk_buff, _len: c_int) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_postpull_rcsum(skb: *mut sk_buff, data: *const u8, len: c_int) {
+pub unsafe extern "C" fn skb_postpull_rcsum(_skb: *mut sk_buff, _data: *const u8, _len: c_int) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_postpush_rcsum(skb: *mut sk_buff, data: *mut u8, len: c_int) {
+pub unsafe extern "C" fn skb_postpush_rcsum(_skb: *mut sk_buff, _data: *mut u8, _len: c_int) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_dst(skb: *mut sk_buff) -> *mut dst_entry {
+pub unsafe extern "C" fn skb_dst(_skb: *mut sk_buff) -> *mut dst_entry {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dev_net(dev: *mut net_device) -> *mut net {
+pub unsafe extern "C" fn dev_net(_dev: *mut net_device) -> *mut net {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+pub unsafe extern "C" fn ipv6_hdr(_skb: *mut sk_buff) -> *mut ipv6hdr {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_network_header(skb: *mut sk_buff) -> *mut u8 {
+pub unsafe extern "C" fn skb_network_header(_skb: *mut sk_buff) -> *mut u8 {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6_flowinfo(hdr: *mut ipv6hdr) -> u32 {
+pub unsafe extern "C" fn ip6_flowinfo(_hdr: *mut ipv6hdr) -> u32 {
     // Simplified implementation for FFI compatibility
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6_tclass(flowinfo: u32) -> u8 {
+pub unsafe extern "C" fn ip6_tclass(_flowinfo: u32) -> u8 {
     // Simplified implementation for FFI compatibility
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6_flow_hdr(hdr: *mut ipv6hdr, tclass: u8, flowlabel: u32) {
+pub unsafe extern "C" fn ip6_flow_hdr(_hdr: *mut ipv6hdr, _tclass: u8, _flowlabel: u32) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6_dst_hoplimit(dst: *mut dst_entry) -> u8 {
+pub unsafe extern "C" fn ip6_dst_hoplimit(_dst: *mut dst_entry) -> u8 {
     // Simplified implementation for FFI compatibility
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn IP6CB(skb: *mut sk_buff) -> *mut c_void {
+pub unsafe extern "C" fn IP6CB(_skb: *mut sk_buff) -> *mut c_void {
     // Simplified implementation for FFI compatibility
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn memset(dest: *mut c_void, c: c_int, n: c_int) {
+pub unsafe extern "C" fn memset(_dest: *mut c_void, _c: c_int, _n: c_int) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn memmove(dest: *mut c_void, src: *const c_void, n: usize) {
+pub unsafe extern "C" fn memmove(_dest: *mut c_void, _src: *const c_void, _n: usize) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn set_tun_src(
-    net: *mut net,
-    dev: *mut net_device,
-    daddr: *mut in6_addr,
-    saddr: *mut in6_addr,
+    _net: *mut net,
+    _dev: *mut net_device,
+    _daddr: *mut in6_addr,
+    _saddr: *mut in6_addr,
 ) {
     // No-op for FFI compatibility
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn seg6_make_flowlabel(
-    net: *mut net,
-    skb: *mut sk_buff,
-    inner_hdr: *mut ipv6hdr,
+    _net: *mut net,
+    _skb: *mut sk_buff,
+    _inner_hdr: *mut ipv6hdr,
 ) -> u32 {
     // Simplified implementation for FFI compatibility
     0

@@ -230,33 +230,37 @@ unsafe fn skb_header_pointer(
     buffer
 }
 
-unsafe fn nf_ct_timeout_lookup(ct: *mut nf_conn) -> *mut c_ulong {
+unsafe fn nf_ct_timeout_lookup(_ct: *mut nf_conn) -> *mut c_ulong {
     ptr::null_mut()
 }
 
-unsafe fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool { false }
+unsafe fn nf_ct_is_confirmed(_ct: *mut nf_conn) -> bool { false }
 
 unsafe fn nf_ct_refresh_acct(
-    ct: *mut nf_conn,
-    ctinfo: c_int,
-    skb: *mut sk_buff,
-    timeout: c_ulong,
+    _ct: *mut nf_conn,
+    _ctinfo: c_int,
+    _skb: *mut sk_buff,
+    _timeout: c_ulong,
 ) {
 }
 
-unsafe fn nf_icmpv6_pernet(net: *const c_void) -> *mut nf_icmp_net {
-    static mut dummy: nf_icmp_net = nf_icmp_net { timeout: nf_ct_icmpv6_timeout };
-    &mut dummy
+unsafe fn nf_icmpv6_pernet(_net: *const c_void) -> *mut nf_icmp_net {
+    static mut DUMMY: nf_icmp_net = nf_icmp_net { timeout: nf_ct_icmpv6_timeout };
+    &raw mut DUMMY
 }
 
+#[allow(dead_code)]
 static invmap: [u8; 8] = [
     ICMPV6_ECHO_REPLY + 1,
     ICMPV6_ECHO_REQUEST + 1,
     0, 0, 0, 0, 0, 0,
 ];
 
+#[allow(dead_code)]
 const ICMPV6_ECHO_REQUEST: u8 = 128;
+#[allow(dead_code)]
 const ICMPV6_ECHO_REPLY: u8 = 129;
+
 const ICMPV6_NI_QUERY: u8 = 139;
 const ICMPV6_NI_REPLY: u8 = 140;
 
@@ -279,11 +283,19 @@ pub unsafe extern "C" fn icmpv6_tuple_to_nlattr(
     0
 }
 
-const CTA_PROTO_ICMPV6_ID: c_int = 1; const CTA_PROTO_ICMPV6_TYPE: c_int = 2; const CTA_PROTO_ICMPV6_CODE: c_int = 3;
+#[allow(dead_code)]
+const CTA_PROTO_ICMPV6_ID: c_int = 1;
+#[allow(dead_code)]
+const CTA_PROTO_ICMPV6_TYPE: c_int = 2;
+#[allow(dead_code)]
+const CTA_PROTO_ICMPV6_CODE: c_int = 3;
 
+#[allow(dead_code)]
 unsafe fn nla_put_be16(_skb: *mut c_void, _type: c_int, _data: u16) -> c_int { 0 }
 
+#[allow(dead_code)]
 unsafe fn nla_put_u8(_skb: *mut c_void, _type: c_int, _data: u8) -> c_int { 0 }
+
 
 #[no_mangle]
 pub static nf_conntrack_l4proto_icmpv6: nf_conntrack_l4proto = nf_conntrack_l4proto {
@@ -340,11 +352,17 @@ pub unsafe extern "C" fn icmpv6_timeout_obj_to_nlattr(
     0
 }
 
-const CTA_TIMEOUT_ICMPV6_TIMEOUT: c_int = 1; const CTA_TIMEOUT_ICMP_MAX: c_int = 2;
+#[allow(dead_code)]
+const CTA_TIMEOUT_ICMPV6_TIMEOUT: c_int = 1;
+#[allow(dead_code)]
+const CTA_TIMEOUT_ICMP_MAX: c_int = 2;
 
+#[allow(dead_code)]
 unsafe fn nla_get_be32(_tb: *mut c_void) -> u32 { 0 }
 
+#[allow(dead_code)]
 unsafe fn htonl(_val: c_ulong) -> u32 { 0 }
+
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_icmpv6_init_net(

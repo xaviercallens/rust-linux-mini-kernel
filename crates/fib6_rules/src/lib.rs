@@ -103,10 +103,10 @@ pub struct fib_nh_common {
 }
 
 #[no_mangle]
-pub extern "C" fn fib6_rule_match(
+pub unsafe extern "C" fn fib6_rule_match(
     rule: *const fib6_rule,
     fl6: *const flowi6,
-    flags: u32,
+    _flags: u32,
 ) -> bool {
     unsafe {
         let rule = &*rule;
@@ -160,7 +160,7 @@ pub extern "C" fn fib6_rule_match(
 }
 
 #[no_mangle]
-pub extern "C" fn fib6_rule_action(
+pub unsafe extern "C" fn fib6_rule_action(
     rule: *const fib6_rule,
     fl6: *const flowi6,
     res: *mut fib6_rule_action_result,

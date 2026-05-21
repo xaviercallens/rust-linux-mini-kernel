@@ -4,6 +4,10 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
+#![allow(unused_imports)]
+#![allow(non_upper_case_globals)]
+#![allow(unused_variables)]
+
 
 use core::{ffi::{c_int, c_uint, c_void, c_char, c_uchar}, mem, ptr, sync::atomic::{AtomicUsize, Ordering}};
 use kernel_types::{size_t, sk_buff};

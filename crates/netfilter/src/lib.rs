@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use core::{ptr, ffi::{c_int, c_void}};
 use kernel_types::*;
@@ -254,7 +256,7 @@ pub unsafe extern "C" fn __nf_ip6_route(
     net: *mut c_void,
     dst: *mut *mut c_void,
     fl: *mut c_void,
-    strict: c_int,
+    _strict: c_int,
 ) -> c_int {
     if net.is_null() || dst.is_null() || fl.is_null() {
         return -EINVAL;

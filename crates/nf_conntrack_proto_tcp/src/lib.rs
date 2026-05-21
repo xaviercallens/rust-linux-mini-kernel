@@ -7,8 +7,10 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(unexpected_cfgs)]
 
-use core::ffi::{c_int, c_uint, c_char, c_void};
+use core::ffi::{c_uint, c_void};
 use kernel_types::*;
 
 pub const HZ: c_uint = 100;
@@ -206,6 +208,58 @@ mod tests {
         tcph.ack = 0;
         tcph.rst = 1;
         assert_eq!(unsafe { get_conntrack_index(&tcph as *const tcphdr as *const c_void) }, TcpBitSet::TCP_RST_SET as c_uint);
+    }
+
+    #[test]
+    fn test_iperf3_connection_tracking_flow() {
+        // Simulate a real iperf3 TCP session conntrack transition flow using the static transition tables
+        let mut state = TcpConntrack::TCP_CONNTRACK_NONE as c_uint;
+
+        // 1. Client SYN
+        let syn_pkt = tcphdr {
+            source: u16::to_be(5001), // iperf3 port
+            dest: u16::to_be(5201),
+            seq: u32::to_be(100),
+            ack_seq: 0,
+            doff: 5,
+            res1: 0,
+            urg: 0,
+            ack: 0,
+            psh: 0,
+            rst: 0,
+            syn: 1,
+            fin: 0,
+            window: u16::to_be(1024),
+            check: 0,
+            urg_ptr: 0,
+        };
+        let idx = unsafe { get_conntrack_index(&syn_pkt as *const tcphdr as *const c_void) };
+        assert_eq!(idx, TcpBitSet::TCP_SYN_SET as c_uint);
+        state = TCP_CONNTACKS[state as usize][idx as usize];
+        assert_eq!(state, TcpConntrack::TCP_CONNTRACK_SYN_SENT as c_uint);
+
+        // 2. Server SYN-ACK
+        let synack_pkt = tcphdr {
+            source: u16::to_be(5201),
+            dest: u16::to_be(5001),
+            seq: u32::to_be(1000),
+            ack_seq: u32::to_be(101),
+            doff: 5,
+            res1: 0,
+            urg: 0,
+            ack: 1,
+            psh: 0,
+            rst: 0,
+            syn: 1,
+            fin: 0,
+            window: u16::to_be(1024),
+            check: 0,
+            urg_ptr: 0,
+        };
+        let idx = unsafe { get_conntrack_index(&synack_pkt as *const tcphdr as *const c_void) };
+        assert_eq!(idx, TcpBitSet::TCP_SYNACK_SET as c_uint);
+        state = TCP_CONNTACKS[state as usize][idx as usize];
+        assert_eq!(state, TcpConntrack::TCP_CONNTRACK_SYN_SENT2 as c_uint);
     }
 }
 #[cfg(not(test))]

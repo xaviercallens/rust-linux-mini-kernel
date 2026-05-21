@@ -238,11 +238,11 @@ pub unsafe extern "C" fn inet_csk_bind_conflict(
         return false;
     }
 
-    let reuse = !(*sk).sk_reuse.is_null();
+    let reuse = (*sk).sk_reuse != 0;
     let reuseport = !(*sk).sk_reuseport.is_null();
     let uid = sock_i_uid(sk);
 
-    let mut sk2: *const sock = ptr::null();
+    let sk2: *const sock = ptr::null();
     // Implementation would iterate through (*tb).owners list
     // This is a simplified placeholder
     while !sk2.is_null() {
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn inet_csk_bind_conflict(
                 || (*sk2).sk_bound_dev_if.is_null()
                 || (*sk).sk_bound_dev_if == (*sk2).sk_bound_dev_if)
         {
-            if reuse && !(*sk2).sk_reuse.is_null() && (*sk2).sk_state != TCP_LISTEN as u32 {
+            if reuse && (*sk2).sk_reuse != 0 && (*sk2).sk_state != TCP_LISTEN as u32 {
                 if !relax
                     || (!reuseport_ok
                         && reuseport

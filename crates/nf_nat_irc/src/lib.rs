@@ -94,16 +94,16 @@ static mut NF_NAT_IRC_HOOK: *const c_void = ptr::null();
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_irc_init() -> c_int {
     let hook = help as *const c_void;
-    ptr::write_volatile(&mut NF_NAT_IRC_HOOK as *mut *const c_void, hook);
+    ptr::write_volatile(ptr::addr_of_mut!(NF_NAT_IRC_HOOK), hook);
 
-    nf_nat_helper_register(&mut NAT_HELPER_IRC);
+    nf_nat_helper_register(ptr::addr_of_mut!(NAT_HELPER_IRC));
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_irc_fini() {
-    nf_nat_helper_unregister(&mut NAT_HELPER_IRC);
-    ptr::write_volatile(&mut NF_NAT_IRC_HOOK as *mut *const c_void, ptr::null());
+    nf_nat_helper_unregister(ptr::addr_of_mut!(NAT_HELPER_IRC));
+    ptr::write_volatile(ptr::addr_of_mut!(NF_NAT_IRC_HOOK), ptr::null());
     synchronize_rcu();
 }
 
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn help(
     // Try to find an available port
     let mut current_port = port;
     let mut found = false;
-    while current_port <= 65535 {
+    loop {
         (*exp).tuple.dst.u.tcp.port = htons(current_port);
 
         let result = nf_ct_expect_related(exp, 0);
@@ -144,8 +144,11 @@ pub unsafe extern "C" fn help(
             found = true;
             break;
         } else if result == -(EBUSY as c_int) {
+            if current_port == 65535 {
+                port = 0;
+                break;
+            }
             current_port += 1;
-            continue;
         } else {
             port = 0;
             break;
@@ -214,7 +217,7 @@ pub static LICENSE: &str = "GPL";
 pub unsafe extern "C" fn snprintf(
     buf: *mut c_char,
     size: size_t,
-    fmt: *const c_char,
+    _fmt: *const c_char,
     arg1: u32,
     arg2: u16,
 ) -> c_int {

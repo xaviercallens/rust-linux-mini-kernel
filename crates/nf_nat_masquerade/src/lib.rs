@@ -83,12 +83,11 @@ pub unsafe extern "C" fn NF_CT_TIMEOUT_SET(
 }
 
 #[no_mangle]
-pub extern "C" fn NF_NAT_MASQUERADE_IPV4(
+pub unsafe extern "C" fn NF_NAT_MASQUERADE_IPV4(
     ct: *mut NF_CONN,
     min: *mut NF_NAT_RANGE,
     max: *mut NF_NAT_RANGE,
 ) -> c_int {
-    unsafe {
         let ct_ref = match ct.as_ref() { Some(ct) => ct, None => return -EINVAL };
         let _min = match min.as_ref() { Some(min) => min, None => return -EINVAL };
         let _max = match max.as_ref() { Some(max) => max, None => return -EINVAL };
@@ -142,17 +141,15 @@ pub extern "C" fn NF_NAT_MASQUERADE_IPV4(
             return -EINVAL;
         }
 
-        0
-    }
+    0
 }
 
 #[no_mangle]
-pub extern "C" fn NF_NAT_MASQUERADE_IPV6(
+pub unsafe extern "C" fn NF_NAT_MASQUERADE_IPV6(
     ct: *mut NF_CONN,
     min: *mut NF_NAT_RANGE,
     max: *mut NF_NAT_RANGE,
 ) -> c_int {
-    unsafe {
         let ct_ref = match ct.as_ref() { Some(ct) => ct, None => return -EINVAL };
         let _min = match min.as_ref() { Some(min) => min, None => return -EINVAL };
         let _max = match max.as_ref() { Some(max) => max, None => return -EINVAL };
@@ -206,17 +203,15 @@ pub extern "C" fn NF_NAT_MASQUERADE_IPV6(
             return -EINVAL;
         }
 
-        0
-    }
+    0
 }
 
 #[no_mangle]
-pub extern "C" fn NF_NAT_MASQUERADE_INET(
+pub unsafe extern "C" fn NF_NAT_MASQUERADE_INET(
     ct: *mut NF_CONN,
     min: *mut NF_NAT_RANGE,
     max: *mut NF_NAT_RANGE,
 ) -> c_int {
-    unsafe {
         let ct_ref = match ct.as_ref() { Some(ct) => ct, None => return -EINVAL };
 
         let l3num = get_ct_l3num(ct_ref);
@@ -224,8 +219,7 @@ pub extern "C" fn NF_NAT_MASQUERADE_INET(
             NF_NAT_MASQUERADE_IPV4(ct, min, max)
         } else if l3num == AF_INET6 {
             NF_NAT_MASQUERADE_IPV6(ct, min, max)
-        } else {
-            -EINVAL
-        }
+    } else {
+        -EINVAL
     }
 }

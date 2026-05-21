@@ -1,3 +1,8 @@
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
+#![allow(unreachable_patterns)]
 use kernel_types::*;
 
 // NAT status flags
@@ -87,19 +92,19 @@ unsafe fn nf_nat_core_process(core: &mut nf_nat_core) -> c_int {
     }
 
     match hooknum {
-        NF_INET_PRE_ROUTING => {
+        _NF_INET_PRE_ROUTING => {
             let result = nf_nat_core_pre_routing(skb, ct, ctinfo, out);
             if result != 0 {
                 return result;
             }
         }
-        NF_INET_LOCAL_OUT => {
+        _NF_INET_LOCAL_OUT => {
             let result = nf_nat_core_local_out(skb, ct, ctinfo, out);
             if result != 0 {
                 return result;
             }
         }
-        NF_INET_POST_ROUTING => {
+        _NF_INET_POST_ROUTING => {
             let result = nf_nat_core_post_routing(skb, ct, ctinfo, out);
             if result != 0 {
                 return result;
@@ -132,38 +137,38 @@ unsafe fn nf_nat_core_cleanup_process(core: &mut nf_nat_core) {
     }
 
     match hooknum {
-        NF_INET_PRE_ROUTING => nf_nat_core_cleanup_pre_routing(skb, ct, ctinfo, out),
-        NF_INET_LOCAL_OUT => nf_nat_core_cleanup_local_out(skb, ct, ctinfo, out),
-        NF_INET_POST_ROUTING => nf_nat_core_cleanup_post_routing(skb, ct, ctinfo, out),
+        _NF_INET_PRE_ROUTING => nf_nat_core_cleanup_pre_routing(skb, ct, ctinfo, out),
+        _NF_INET_LOCAL_OUT => nf_nat_core_cleanup_local_out(skb, ct, ctinfo, out),
+        _NF_INET_POST_ROUTING => nf_nat_core_cleanup_post_routing(skb, ct, ctinfo, out),
         _ => (),
     }
 
     ct.status &= !IPS_NAT_DONE_MASK;
 }
 
-unsafe fn nf_nat_core_pre_routing(skb: &mut sk_buff, ct: &mut nf_conn, ctinfo: u8, out: *mut net_device) -> c_int {
+unsafe fn nf_nat_core_pre_routing(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) -> c_int {
     // Implement pre-routing NAT logic here
     0
 }
 
-unsafe fn nf_nat_core_local_out(skb: &mut sk_buff, ct: &mut nf_conn, ctinfo: u8, out: *mut net_device) -> c_int {
+unsafe fn nf_nat_core_local_out(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) -> c_int {
     // Implement local-out NAT logic here
     0
 }
 
-unsafe fn nf_nat_core_post_routing(skb: &mut sk_buff, ct: &mut nf_conn, ctinfo: u8, out: *mut net_device) -> c_int {
+unsafe fn nf_nat_core_post_routing(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) -> c_int {
     // Implement post-routing NAT logic here
     0
 }
 
-unsafe fn nf_nat_core_cleanup_pre_routing(skb: &mut sk_buff, ct: &mut nf_conn, ctinfo: u8, out: *mut net_device) {
+unsafe fn nf_nat_core_cleanup_pre_routing(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) {
     // Implement pre-routing NAT cleanup logic here
 }
 
-unsafe fn nf_nat_core_cleanup_local_out(skb: &mut sk_buff, ct: &mut nf_conn, ctinfo: u8, out: *mut net_device) {
+unsafe fn nf_nat_core_cleanup_local_out(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) {
     // Implement local-out NAT cleanup logic here
 }
 
-unsafe fn nf_nat_core_cleanup_post_routing(skb: &mut sk_buff, ct: &mut nf_conn, ctinfo: u8, out: *mut net_device) {
+unsafe fn nf_nat_core_cleanup_post_routing(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) {
     // Implement post-routing NAT cleanup logic here
 }

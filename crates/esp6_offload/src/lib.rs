@@ -2,7 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-#![allow(clang_undefined_intended_behavior)]
+#![allow(clippy::manual_c_str_literals)]
 
 use core::{{mem, ptr}, ffi::{c_int, c_void}};
 use kernel_types::*;
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn esp6_gro_receive(
         }
     }
 
-    (*xo).flags |= (1 << 1); // XFRM_GRO
+    (*xo).flags |= 1 << 1; // XFRM_GRO
 
     let nhoff = esp6_nexthdr_esp_offset(ipv6_hdr(skb), offset);
     if nhoff == 0 {
@@ -324,7 +324,7 @@ pub unsafe extern "C" fn esp6_gso_segment(
         }
     }
 
-    (*xo).flags |= (1 << 1); // XFRM_GSO
+    (*xo).flags |= 1 << 1; // XFRM_GSO
 
     let nhoff = esp6_nexthdr_esp_offset(ipv6_hdr(skb), offset);
     if nhoff == 0 {
@@ -366,8 +366,8 @@ pub unsafe extern "C" fn esp6_offload_exit() {
 // Helper functions (simplified for brevity)
 #[no_mangle]
 pub unsafe extern "C" fn xfrm_register_type_offload(
-    type_: *const xfrm_type_offload,
-    family: c_int,
+    _type_: *const xfrm_type_offload,
+    _family: c_int,
 ) -> c_int {
     // Implementation would interface with kernel APIs
     0
@@ -375,16 +375,16 @@ pub unsafe extern "C" fn xfrm_register_type_offload(
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm_unregister_type_offload(
-    type_: *const xfrm_type_offload,
-    family: c_int,
+    _type_: *const xfrm_type_offload,
+    _family: c_int,
 ) {
     // Implementation would interface with kernel APIs
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn inet6_add_offload(
-    offload: *const net_offload,
-    proto: c_int,
+    _offload: *const net_offload,
+    _proto: c_int,
 ) -> c_int {
     // Implementation would interface with kernel APIs
     0
@@ -392,8 +392,8 @@ pub unsafe extern "C" fn inet6_add_offload(
 
 #[no_mangle]
 pub unsafe extern "C" fn inet6_del_offload(
-    offload: *const net_offload,
-    proto: c_int,
+    _offload: *const net_offload,
+    _proto: c_int,
 ) {
     // Implementation would interface with kernel APIs
 }
@@ -409,7 +409,7 @@ pub static esp6_offload: net_offload = net_offload {
 
 #[no_mangle]
 pub static esp6_type_offload: xfrm_type_offload = xfrm_type_offload {
-    description: b"ESP6 OFFLOAD\0".as_ptr() as *const u8,
+    description: b"ESP6 OFFLOAD\0".as_ptr(),
     owner: ptr::null(),
     proto: IPPROTO_ESP,
     input_tail: esp6_input_tail,
@@ -423,8 +423,8 @@ pub static esp6_type_offload: xfrm_type_offload = xfrm_type_offload {
 // Helper functions for missing kernel APIs
 #[no_mangle]
 pub unsafe extern "C" fn esp6_input_tail(
-    x: *mut xfrm_state,
-    skb: *mut sk_buff,
+    _x: *mut xfrm_state,
+    _skb: *mut sk_buff,
 ) -> c_int {
     // Implementation would interface with kernel APIs
     0
@@ -432,9 +432,9 @@ pub unsafe extern "C" fn esp6_input_tail(
 
 #[no_mangle]
 pub unsafe extern "C" fn esp6_xmit(
-    x: *mut xfrm_state,
-    skb: *mut sk_buff,
-    features: netdev_features_t,
+    _x: *mut xfrm_state,
+    _skb: *mut sk_buff,
+    _features: netdev_features_t,
 ) -> c_int {
     // Implementation would interface with kernel APIs
     0
@@ -442,74 +442,74 @@ pub unsafe extern "C" fn esp6_xmit(
 
 #[no_mangle]
 pub unsafe extern "C" fn esp6_gso_encap(
-    x: *mut xfrm_state,
-    skb: *mut sk_buff,
+    _x: *mut xfrm_state,
+    _skb: *mut sk_buff,
 ) {
     // Implementation would interface with kernel APIs
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_gro_offset(skb: *mut sk_buff) -> c_int {
+pub unsafe extern "C" fn skb_gro_offset(_skb: *mut sk_buff) -> c_int {
     // Implementation would interface with kernel APIs
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pskb_pull(skb: *mut sk_buff, len: c_int) -> bool {
+pub unsafe extern "C" fn pskb_pull(_skb: *mut sk_buff, _len: c_int) -> bool {
     // Implementation would interface with kernel APIs
     false
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm_parse_spi(
-    skb: *mut sk_buff,
-    proto: u8,
-    spi: *mut u32,
-    seq: *mut u32,
+    _skb: *mut sk_buff,
+    _proto: u8,
+    _spi: *mut u32,
+    _seq: *mut u32,
 ) -> c_int {
     // Implementation would interface with kernel APIs
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn secpath_set(skb: *mut sk_buff) -> *mut sec_path {
+pub unsafe extern "C" fn secpath_set(_skb: *mut sk_buff) -> *mut sec_path {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm_state_lookup(
-    net: *mut c_void,
-    mark: *mut c_void,
-    daddr: *const nf_inet_addr,
-    spi: u32,
-    proto: u8,
-    family: c_int,
+    _net: *mut c_void,
+    _mark: *mut c_void,
+    _daddr: *const nf_inet_addr,
+    _spi: u32,
+    _proto: u8,
+    _family: c_int,
 ) -> *mut xfrm_state {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm_smark_get(mark: *mut c_void, x: *mut xfrm_state) -> *mut c_void {
+pub unsafe extern "C" fn xfrm_smark_get(mark: *mut c_void, _x: *mut xfrm_state) -> *mut c_void {
     // Implementation would interface with kernel APIs
     mark
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm_offload(skb: *mut sk_buff) -> *mut xfrm_offload {
+pub unsafe extern "C" fn xfrm_offload(_skb: *mut sk_buff) -> *mut xfrm_offload {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ipv6_hdr(skb: *mut sk_buff) -> *mut ipv6hdr {
+pub unsafe extern "C" fn ipv6_hdr(_skb: *mut sk_buff) -> *mut ipv6hdr {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dev_net(sk: *mut sock) -> *mut c_void {
+pub unsafe extern "C" fn dev_net(_sk: *mut sock) -> *mut c_void {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
@@ -534,21 +534,21 @@ pub unsafe extern "C" fn XFRM_SPI_SKB_CB(_skb: *mut sk_buff) -> *mut xfrm_spi_sk
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm_input(
-    skb: *mut sk_buff,
-    proto: u8,
-    spi: u32,
-    encap_type: c_int,
+    _skb: *mut sk_buff,
+    _proto: u8,
+    _spi: u32,
+    _encap_type: c_int,
 ) {
     // Implementation would interface with kernel APIs
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn secpath_reset(skb: *mut sk_buff) {
+pub unsafe extern "C" fn secpath_reset(_skb: *mut sk_buff) {
     // Implementation would interface with kernel APIs
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_push(skb: *mut sk_buff, len: c_int) {
+pub unsafe extern "C" fn skb_push(_skb: *mut sk_buff, _len: c_int) {
     // Implementation would interface with kernel APIs
 }
 
@@ -559,21 +559,21 @@ pub unsafe extern "C" fn NAPI_GRO_CB(_skb: *mut sk_buff) -> *mut napi_gro_cb {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn skb_gso_offset(skb: *mut sk_buff) -> c_int {
+pub unsafe extern "C" fn skb_gso_offset(_skb: *mut sk_buff) -> c_int {
     // Implementation would interface with kernel APIs
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn skb_gso_segment(
-    skb: *mut sk_buff,
-    features: netdev_features_t,
+    _skb: *mut sk_buff,
+    _features: netdev_features_t,
 ) -> *mut sk_buff {
     // Implementation would interface with kernel APIs
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pr_info(fmt: *const c_char) {
+pub unsafe extern "C" fn pr_info(_fmt: *const c_char) {
     // Implementation would interface with kernel APIs
 }

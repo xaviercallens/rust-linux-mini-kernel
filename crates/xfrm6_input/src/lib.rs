@@ -17,7 +17,6 @@
 #![allow(non_camel_case_types)]
 
 use core::{ffi::c_int, mem::offset_of};
-use kernel_types::*;
 
 pub const AF_INET6: c_int = 10; pub const NET_RX_DROP: c_int = 1; pub const XFRM_MAX_DEPTH: c_int = 16;
 

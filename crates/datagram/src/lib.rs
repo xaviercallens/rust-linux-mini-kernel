@@ -1,12 +1,12 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(dead_code)]
 
 use kernel_types::*;
 use core::ptr;
 use core::mem;
-use core::ptr;
-use kernel_types::*;
 
 pub type size_t = usize;
 pub type c_size_t = usize;
@@ -18,7 +18,83 @@ pub const ENOMEM: c_int = 12;
 pub const ENETUNREACH: c_int = 101;
 pub const EAFNOSUPPORT: c_int = 97;
 
-// Type definitions
+// Local definitions shadowing or augmenting kernel_types to avoid clutter
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct proto {
+    pub rehash: Option<unsafe extern "C" fn(*mut sock)>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sock {
+    pub sk_family: c_ushort,
+    pub sk_type: c_ushort,
+    pub sk_protocol: c_ushort,
+    pub sk_state: c_uint,
+    pub sk_refcnt: c_int,
+    pub sk_reuseport_cb: *mut c_void,
+    pub sk_reuse: c_int,
+    pub sk_reuseport: *mut c_void,
+    pub sk_rcv_saddr: *mut c_void,
+    pub sk_bound_dev_if: c_int,
+    pub sk_v6_rcv_saddr: in6_addr,
+    pub sk_v6_daddr: in6_addr,
+    pub sk_user_data: *mut c_void,
+    pub sk_ipv6only: c_int,
+    pub sk_prot: *mut proto,
+    pub sk_destruct: Option<unsafe extern "C" fn(*mut sock)>,
+    pub sk_backlog_rcv: Option<extern "C" fn(*mut sock, *mut c_void, usize) -> c_int>,
+    pub sk_mark: u32,
+    pub sk_uid: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ipv6_pinfo {
+    pub saddr: in6_addr,
+    pub daddr: in6_addr,
+    pub flow_label: __be32,
+    pub frag_size: __u32,
+    pub hop_limit: __s16,
+    pub mcast_hops: __s16,
+    pub mcast_oif: c_int,
+    pub rxopt: ip6cb,
+    pub mc_loop: u8,
+    pub mc_all: u8,
+    pub pmtudisc: u8,
+    pub repflow: u8,
+    pub sticky_pktinfo: pktinfo,
+    pub sndflow: u8,
+    pub opt: *mut ipv6_txoptions,
+    pub dst_cookie: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct inet_sock {
+    pub sk: *mut c_void,
+    pub pinet6: *mut c_void,
+    pub inet_saddr: __be32,
+    pub uc_ttl: __s16,
+    pub cmsg_flags: __u16,
+    pub inet_sport: __be16,
+    pub inet_dport: __be16,
+    pub inet_rcv_saddr: __be32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct dst_ops {
+    pub check: Option<unsafe extern "C" fn(*mut dst_entry, u32) -> c_int>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct dst_entry {
+    pub obsolete: c_int,
+    pub ops: *mut dst_ops,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -96,15 +172,15 @@ pub unsafe extern "C" fn ip6_datagram_flow_key_init(fl6: *mut flowi6, sk: *mut s
         return;
     }
 
-    let inet = (*sk).sk_prot as *mut inet_sock;
-    let np = (*sk).sk_prot as *mut ipv6_pinfo;
+    let inet = inet_sk(sk);
+    let np = inet6_sk(sk);
 
     ptr::write_bytes(fl6, 0, 1);
-    (*fl6).flowi6_proto = (*sk).sk_protocol;
+    (*fl6).flowi6_proto = (*sk).sk_protocol as u8;
     (*fl6).daddr = (*sk).sk_v6_daddr;
     (*fl6).saddr = (*np).saddr;
     (*fl6).flowi6_oif = (*sk).sk_bound_dev_if;
-    (*fl6).flowi6_mark = (*sk).sk_mark;
+    (*fl6).flowi6_mark = (*sk).sk_mark as c_int;
     (*fl6).fl6_dport = (*inet).inet_dport;
     (*fl6).fl6_sport = (*inet).inet_sport;
     (*fl6).flowlabel = (*np).flow_label;
@@ -126,7 +202,7 @@ pub unsafe extern "C" fn ip6_datagram_dst_update(
     sk: *mut sock,
     fix_sk_saddr: c_int
 ) -> c_int {
-    let np = (*sk).sk_prot as *mut ipv6_pinfo;
+    let np = inet6_sk(sk);
     let mut flowlabel: *mut ip6_flowlabel = ptr::null_mut();
 
     if (*np).sndflow != 0 && ((*np).flow_label & 0x0FFFFFFF) != 0 {
@@ -139,17 +215,19 @@ pub unsafe extern "C" fn ip6_datagram_dst_update(
     let mut fl6: flowi6 = mem::zeroed();
     ip6_datagram_flow_key_init(&mut fl6, sk);
 
-    let opt: *mut ipv6_txoptions = if !flowlabel.is_null() {
+    let _opt: *mut ipv6_txoptions = if !flowlabel.is_null() {
         (*flowlabel).opt
     } else {
         rcu_dereference((*np).opt)
     };
 
-    let mut final_p: *mut in6_addr = ptr::null_mut();
-    let mut final: in6_addr = mem::zeroed();
+    let final_p: *mut in6_addr = ptr::null_mut();
 
-    let dst = ip6_dst_lookup_flow(sock_net(sk), sk, &mut fl6, &mut final_p);
+    let dst = ip6_dst_lookup_flow(sock_net(sk), sk, &mut fl6, final_p) as *mut dst_entry;
     if dst.is_null() {
+        if !flowlabel.is_null() {
+            fl6_sock_release(flowlabel);
+        }
         return -ENETUNREACH;
     }
 
@@ -160,16 +238,22 @@ pub unsafe extern "C" fn ip6_datagram_dst_update(
 
         if ipv6_addr_any(&(*sk).sk_v6_rcv_saddr) {
             (*sk).sk_v6_rcv_saddr = fl6.saddr;
+            let inet = inet_sk(sk);
             (*inet).inet_rcv_saddr = 0x7F000001; // LOOPBACK4_IPV6
-            if let Some(rehash) = (*sk).sk_prot.as_ref().map(|p| p.rehash) {
-                rehash(sk);
+            let prot = (*sk).sk_prot;
+            if !prot.is_null() {
+                if let Some(rehash) = (*prot).rehash {
+                    rehash(sk);
+                }
             }
         }
     }
 
-    ip6_sk_dst_store_flow(sk, dst, &fl6);
+    ip6_sk_dst_store_flow(sk, dst, &mut fl6);
 
-    fl6_sock_release(flowlabel);
+    if !flowlabel.is_null() {
+        fl6_sock_release(flowlabel);
+    }
     0
 }
 
@@ -187,7 +271,8 @@ pub unsafe extern "C" fn ip6_datagram_release_cb(
 
     rcu_read_lock();
     let dst = __sk_dst_get(sk);
-    if !dst.is_null() && (dst.obsolete == 0 || dst.ops.check(dst, (*np).dst_cookie)) {
+    let np = inet6_sk(sk);
+    if !dst.is_null() && !(*dst).ops.is_null() && ((*dst).obsolete == 0 || (*(*dst).ops).check.map_or(false, |check| check(dst, (*np).dst_cookie) != 0)) {
         rcu_read_unlock();
         return;
     }
@@ -196,19 +281,23 @@ pub unsafe extern "C" fn ip6_datagram_release_cb(
     ip6_datagram_dst_update(sk, 0);
 }
 
-// Duplicate implementations removed - using extern declarations above
+#[inline]
+unsafe fn rcu_read_lock() {}
 
 #[inline]
-unsafe fn __sk_dst_get(sk: *mut sock) -> *mut dst_entry {
+unsafe fn rcu_read_unlock() {}
+
+#[inline]
+unsafe fn __sk_dst_get(_sk: *mut sock) -> *mut dst_entry {
     ptr::null_mut()
 }
 
 #[inline]
-unsafe fn ip6_sk_dst_store_flow(sk: *mut sock, dst: *mut dst_entry, fl6: *mut flowi6) {
+unsafe fn ip6_sk_dst_store_flow(_sk: *mut sock, _dst: *mut dst_entry, _fl6: *mut flowi6) {
     // Placeholder
 }
 
 #[inline]
-unsafe fn fl6_sock_release(flowlabel: *mut ip6_flowlabel) {
+unsafe fn fl6_sock_release(_flowlabel: *mut ip6_flowlabel) {
     // Placeholder
 }

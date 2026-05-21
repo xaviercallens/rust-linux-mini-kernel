@@ -179,7 +179,7 @@ pub unsafe extern "C" fn amanda_help(
     if start == c_uint::MAX {
         return NF_ACCEPT;
     }
-    let mut start = start + dataoff + SEARCH[0].len as c_uint;
+    let start = start + dataoff + SEARCH[0].len as c_uint;
 
     let stop = skb_find_text(skb, start, (*(skb as *mut sk_buff)).len, SEARCH[1].ts);
     if stop == c_uint::MAX {
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn amanda_help(
         if off == c_uint::MAX {
             continue;
         }
-        let mut off = off + start + SEARCH[i].len as c_uint;
+        let off = off + start + SEARCH[i].len as c_uint;
 
         let mut pbuf: [u8; 6] = [0; 6];
         let len = (stop - off).min((pbuf.len() - 1) as c_uint);

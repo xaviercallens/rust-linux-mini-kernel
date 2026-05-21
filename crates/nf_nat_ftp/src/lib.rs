@@ -8,6 +8,8 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
 
 use core::{ffi::c_void, ptr};
 use kernel_types::*;
@@ -254,8 +256,8 @@ pub unsafe extern "C" fn nf_nat_ftp(
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_nat_ftp_fini() {
-    nf_nat_helper_unregister(&NAT_HELPER_FTP);
-    RCU_INIT_POINTER(&mut NF_NAT_FTP_HOOK, ptr::null_mut());
+    nf_nat_helper_unregister(ptr::addr_of_mut!(NAT_HELPER_FTP));
+    RCU_INIT_POINTER(ptr::addr_of_mut!(NF_NAT_FTP_HOOK), ptr::null_mut());
     synchronize_rcu();
 }
 
@@ -264,14 +266,14 @@ pub unsafe extern "C" fn nf_nat_ftp_init() -> c_int {
     if !NF_NAT_FTP_HOOK.is_null() {
         return -1; // BUG_ON
     }
-    nf_nat_helper_register(&mut NAT_HELPER_FTP);
-    RCU_INIT_POINTER(&mut NF_NAT_FTP_HOOK, nf_nat_ftp as *mut c_void);
+    nf_nat_helper_register(ptr::addr_of_mut!(NAT_HELPER_FTP));
+    RCU_INIT_POINTER(ptr::addr_of_mut!(NF_NAT_FTP_HOOK), nf_nat_ftp as *mut c_void);
     0
 }
 
 // Helper functions
 #[no_mangle]
-pub unsafe extern "C" fn warn_set(val: *const u8, kp: *const c_void) -> c_int {
+pub unsafe extern "C" fn warn_set(_val: *const u8, _kp: *const c_void) -> c_int {
     pr_info(b"kernel >= 2.6.10 only uses 'ports' for conntrack modules\0".as_ptr() as *const u8);
     0
 }
@@ -289,17 +291,17 @@ pub static mut NF_NAT_FTP_HOOK: *mut c_void = ptr::null_mut();
 
 // FFI compatibility functions (only unique ones, rest from kernel_types)
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_l3num(ct: *mut nf_conn) -> c_int {
+pub unsafe extern "C" fn nf_ct_l3num(_ct: *mut nf_conn) -> c_int {
     NFPROTO_IPV4
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_nat_helper_register(helper: *mut nf_nat_helper) {
+pub unsafe extern "C" fn nf_nat_helper_register(_helper: *mut nf_nat_helper) {
     // Simulated implementation
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn pr_info(msg: *const u8) {
+pub unsafe extern "C" fn pr_info(_msg: *const u8) {
     // Simulated implementation
 }
 
@@ -319,7 +321,7 @@ struct Module {
 }
 
 // Helper function for formatting
-unsafe fn write(buffer: *mut u8, buflen: size_t, args: &core::fmt::Arguments) -> size_t {
+unsafe fn write(buffer: *mut u8, _buflen: size_t, args: &core::fmt::Arguments) -> size_t {
     let mut writer = BufferWriter { buffer, pos: 0 };
     core::fmt::Write::write_fmt(&mut writer, *args).unwrap();
     writer.pos

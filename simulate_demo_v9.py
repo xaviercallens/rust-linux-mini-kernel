@@ -49,7 +49,7 @@ def main():
     
     # 3. Status Verification
     type_string("git log -1 --oneline", speed=0.04, end_sleep=1.2)
-    print("a68ad08 (HEAD -> main, tag: v9.3.0-gamma, origin/main) refactor: isolate Lean 4 compatibility helpers into a dedicated module")
+    print("a68ad08 (HEAD -> main, tag: v9.3.1, origin/main) refactor: isolate Lean 4 compatibility helpers into a dedicated module")
     print("root@mvk-builder-container:/workspace# ", end="")
     sys.stdout.flush()
     time.sleep(1.0)
@@ -66,7 +66,7 @@ def main():
     ]
     
     for c in testing_crates:
-        print(f"   Compiling {c} v9.3.0 (/workspace/crates/{c})")
+        print(f"   Compiling {c} v9.3.1 (/workspace/crates/{c})")
         time.sleep(random.uniform(0.01, 0.08))
     
     time.sleep(0.5)
@@ -105,7 +105,7 @@ def main():
     type_string("./specs/scripts/verify_specs.sh", speed=0.03, end_sleep=1.5)
     print_slow([
         "========================================",
-        "  MVK v9.3.0-gamma Formal Verification",
+        "  MVK v9.3.1 Formal Verification",
         "========================================",
         "",
         "[INFO] Lean version: Lean (version 4.29.1, commit f72c35b3f637, Release)",
@@ -179,7 +179,7 @@ def main():
     type_string("qemu-system-x86_64 -kernel build/mvk_kernel_x86_64 -serial stdio -display none", speed=0.03, end_sleep=1.5)
     print_slow([
         "================================================================================",
-        "             RUST LINUX MINIMUM VIABLE KERNEL (MVK) - RELEASE v9.3.0            ",
+        "             RUST LINUX MINIMUM VIABLE KERNEL (MVK) - RELEASE v9.3.1            ",
         "================================================================================",
         "   ____   _                          __  __ __     __  _  _      ___    ___     ",
         "  |  _ \\ (_) _ __   _   _ __  __    |  \\/  |\\ \\   / / | |/ /    / _ \\  / _ \\    ",
@@ -204,7 +204,7 @@ def main():
     ], delay=0.08)
     
     time.sleep(1.0)
-    print("\n [Press Ctrl+C to terminate QEMU] | Rinux MVK v9.3.0-gamma | Launching console...")
+    print("\n [Press Ctrl+C to terminate QEMU] | Rinux MVK v9.3.1 | Launching console...")
     time.sleep(1.5)
     
     # Clean Screen to Interactive Shell

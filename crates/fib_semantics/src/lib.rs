@@ -67,7 +67,7 @@ pub struct fib_info {
     pub rcu: rcu_head,
 }
 
-static fib_info_cnt: AtomicUsize = AtomicUsize::new(0);
+static FIB_INFO_CNT: AtomicUsize = AtomicUsize::new(0);
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn free_fib_info(fi: *mut fib_info) {
         return;
     }
 
-    let _ = fib_info_cnt.fetch_sub(1, Ordering::Relaxed);
+    let _ = FIB_INFO_CNT.fetch_sub(1, Ordering::Relaxed);
     free_fib_info_rcu(&mut (*fi).rcu as *mut rcu_head);
 }
 
@@ -107,7 +107,7 @@ unsafe fn free_fib_info_rcu(head: *mut rcu_head) {
         let fib_nh = (*fi).nh as *mut fib_nh;
 
         for nhsel in 0..fi_nhs {
-            let nexthop_nh = fib_nh.add(nhsel as usize);
+            let _nexthop_nh = fib_nh.add(nhsel as usize);
             // fib_nh_release((*fi).fib_net, nexthop_nh);
             // Placeholder for actual implementation
         }
@@ -160,11 +160,11 @@ pub unsafe extern "C" fn fib_release_info(fi: *mut fib_info) {
 }
 
 // Static variables
-static fib_info_lock: AtomicUsize = AtomicUsize::new(0);
-static mut fib_info_hash: *mut c_void = core::ptr::null_mut();
-static mut fib_info_laddrhash: *mut c_void = core::ptr::null_mut();
-static fib_info_hash_size: AtomicUsize = AtomicUsize::new(0);
-static mut fib_info_devhash: [*mut c_void; 256] = [core::ptr::null_mut(); 256];
+static FIB_INFO_LOCK: AtomicUsize = AtomicUsize::new(0);
+static mut FIB_INFO_HASH: *mut c_void = core::ptr::null_mut();
+static mut FIB_INFO_LADDRHASH: *mut c_void = core::ptr::null_mut();
+static FIB_INFO_HASH_SIZE: AtomicUsize = AtomicUsize::new(0);
+static mut FIB_INFO_DEVHASH: [*mut c_void; 256] = [core::ptr::null_mut(); 256];
 
 // Constants
 const DEVINDEX_HASHBITS: c_int = 8; const DEVINDEX_HASHSIZE: c_int = 1 << DEVINDEX_HASHBITS;
@@ -184,7 +184,7 @@ fn fib_info_hashfn_1(init_val: c_int, protocol: c_int, scope: c_int, prefsrc: u3
 }
 
 fn fib_info_hashfn_result(val: c_int) -> c_int {
-    let mask = (fib_info_hash_size.load(Ordering::Relaxed) - 1) as c_int;
+    let mask = (FIB_INFO_HASH_SIZE.load(Ordering::Relaxed) - 1) as c_int;
     (val ^ (val >> 7) ^ (val >> 12)) & mask
 }
 
@@ -227,7 +227,7 @@ pub unsafe extern "C" fn fib_find_info_nh(net: *mut c_void, cfg: *mut c_void) ->
         (*(cfg as *mut fib_info)).fib_priority
     );
     let hash = fib_info_hashfn_result(hash);
-    let head = fib_info_hash.offset(hash as isize);
+    let _head = FIB_INFO_HASH.offset(hash as isize);
 
     let mut fi: *mut fib_info = core::ptr::null_mut();
     // hlist_for_each_entry(fi, head, fib_hash)

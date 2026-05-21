@@ -12,9 +12,11 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(dead_code)]
+#![allow(unused_unsafe)]
 
 use core::ffi::{c_int, c_uint};
-use core::panic::PanicInfo;
 use kernel_types::*;
 
 // Type aliases for Linux kernel types
@@ -199,7 +201,7 @@ fn __udp_manip_pkt(
     }
 }
 
-pub fn udp_manip_pkt(
+pub unsafe fn udp_manip_pkt(
     skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
@@ -218,7 +220,7 @@ pub fn udp_manip_pkt(
 }
 
 #[cfg(feature = "udplite")]
-pub fn udplite_manip_pkt(
+pub unsafe fn udplite_manip_pkt(
     skb: *mut sk_buff,
     iphdroff: c_uint,
     hdroff: c_uint,
@@ -237,7 +239,7 @@ pub fn udplite_manip_pkt(
 }
 
 #[cfg(not(feature = "udplite"))]
-pub fn udplite_manip_pkt(
+pub unsafe fn udplite_manip_pkt(
     _: *mut sk_buff,
     _: c_uint,
     _: c_uint,
@@ -248,11 +250,11 @@ pub fn udplite_manip_pkt(
 }
 
 fn sctp_manip_pkt(
-    skb: *mut sk_buff,
-    iphdroff: c_uint,
-    hdroff: c_uint,
-    tuple: *const nf_conntrack_tuple,
-    maniptype: c_int,
+    _skb: *mut sk_buff,
+    _iphdroff: c_uint,
+    _hdroff: c_uint,
+    _tuple: *const nf_conntrack_tuple,
+    _maniptype: c_int,
 ) -> bool {
     unsafe {
         #[cfg(feature = "sctp")]
@@ -339,11 +341,11 @@ fn tcp_manip_pkt(
 }
 
 fn dccp_manip_pkt(
-    skb: *mut sk_buff,
-    iphdroff: c_uint,
-    hdroff: c_uint,
-    tuple: *const nf_conntrack_tuple,
-    maniptype: c_int,
+    _skb: *mut sk_buff,
+    _iphdroff: c_uint,
+    _hdroff: c_uint,
+    _tuple: *const nf_conntrack_tuple,
+    _maniptype: c_int,
 ) -> bool {
     unsafe {
         #[cfg(feature = "dccp")]
@@ -393,7 +395,7 @@ fn icmp_manip_pkt(
     iphdroff: c_uint,
     hdroff: c_uint,
     tuple: *const nf_conntrack_tuple,
-    maniptype: c_int,
+    _maniptype: c_int,
 ) -> bool {
     unsafe {
         if skb_ensure_writable(skb, hdroff + core::mem::size_of::<icmphdr>() as c_uint) != 0 {
@@ -450,11 +452,11 @@ fn icmpv6_manip_pkt(
 }
 
 fn gre_manip_pkt(
-    skb: *mut sk_buff,
-    iphdroff: c_uint,
-    hdroff: c_uint,
-    tuple: *const nf_conntrack_tuple,
-    maniptype: c_int,
+    _skb: *mut sk_buff,
+    _iphdroff: c_uint,
+    _hdroff: c_uint,
+    _tuple: *const nf_conntrack_tuple,
+    _maniptype: c_int,
 ) -> bool {
     unsafe {
         #[cfg(feature = "gre")]
@@ -529,7 +531,7 @@ pub unsafe extern "C" fn nf_nat_ipv4_manip_pkt(
 
     let iph = (skb.add(iphdroff as usize)) as *mut iphdr;
     let iph = &mut *iph;
-    let hdroff = iphdroff + (iph.ihl as c_uint) * 4;
+    let hdroff = iphdroff + ((iph.version_ihl & 0x0f) as c_uint) * 4;
 
     if !l4proto_manip_pkt(skb, iphdroff, hdroff, target, maniptype) {
         return -12; // ENOMEM

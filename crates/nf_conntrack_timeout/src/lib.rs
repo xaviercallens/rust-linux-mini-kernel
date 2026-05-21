@@ -3,8 +3,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use core::ffi::{c_char, c_void, c_int};
-use kernel_types::*;
+use core::ffi::{c_char, c_void};
 
 extern "C" {
     fn kmalloc(size: usize, flags: u32) -> *mut c_void;
@@ -106,7 +105,7 @@ pub struct nf_conntrack_tuple {
 pub struct nf_conntrack_tuple_hash {
     pub tuplehash: *mut nf_conntrack_tuple_hash,
     pub tuple: nf_conntrack_tuple,
-    pub me: *mut nf_conntrack,
+    pub me: *mut nf_conn,
 }
 
 #[repr(C)]
@@ -119,151 +118,143 @@ pub struct nf_conntrack_expect {
     pub flags: u8,
     pub class: u8,
     pub id: u16,
-    pub master: *mut nf_conntrack,
+    pub master: *mut nf_conn,
     pub helper: *mut nf_conntrack_helper,
 }
 
 static mut NF_CT_TIMEOUT_LIST: *mut nf_conntrack_timeout = core::ptr::null_mut();
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_lookup(
+pub unsafe extern "C" fn nf_ct_timeout_lookup(
     name: *const c_char,
     timeout: u32,
     hook_mask: u8,
 ) -> *mut nf_conntrack_timeout {
-    let mut timeout_ptr = unsafe { nf_ct_timeout_find_get(name) };
+    let mut timeout_ptr = nf_ct_timeout_find_get(name);
 
     if timeout_ptr.is_null() {
-        timeout_ptr = unsafe { nf_ct_timeout_alloc(name, timeout, hook_mask) };
+        timeout_ptr = nf_ct_timeout_alloc(name, timeout, hook_mask);
         if timeout_ptr.is_null() {
             return core::ptr::null_mut();
         }
     } else {
-        unsafe { nf_ct_timeout_put(timeout_ptr) };
+        nf_ct_timeout_put(timeout_ptr);
     }
 
     timeout_ptr
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_find_get(name: *const c_char) -> *mut nf_conntrack_timeout {
-    let timeout_ptr = unsafe { nf_ct_timeout_find(name) };
+pub unsafe extern "C" fn nf_ct_timeout_find_get(name: *const c_char) -> *mut nf_conntrack_timeout {
+    let timeout_ptr = nf_ct_timeout_find(name);
 
     if !timeout_ptr.is_null() {
-        unsafe { nf_ct_timeout_get(timeout_ptr) };
+        nf_ct_timeout_get(timeout_ptr);
     }
 
     timeout_ptr
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_alloc(
+pub unsafe extern "C" fn nf_ct_timeout_alloc(
     name: *const c_char,
     timeout: u32,
     hook_mask: u8,
 ) -> *mut nf_conntrack_timeout {
-    let timeout_ptr = unsafe {
-        kmalloc(
-            core::mem::size_of::<nf_conntrack_timeout>(),
-            GFP_KERNEL,
-        ) as *mut nf_conntrack_timeout
-    };
+    let timeout_ptr = kmalloc(
+        core::mem::size_of::<nf_conntrack_timeout>(),
+        GFP_KERNEL,
+    ) as *mut nf_conntrack_timeout;
 
     if timeout_ptr.is_null() {
         return core::ptr::null_mut();
     }
 
-    unsafe {
-        (*timeout_ptr).name = name;
-        (*timeout_ptr).timeout = timeout;
-        (*timeout_ptr).hook_mask = hook_mask;
-        (*timeout_ptr).next = NF_CT_TIMEOUT_LIST;
-        (*timeout_ptr).use_ = 1;
-        NF_CT_TIMEOUT_LIST = timeout_ptr;
-    }
+    (*timeout_ptr).name = name;
+    (*timeout_ptr).timeout = timeout;
+    (*timeout_ptr).hook_mask = hook_mask;
+    (*timeout_ptr).next = NF_CT_TIMEOUT_LIST;
+    (*timeout_ptr).use_ = 1;
+    NF_CT_TIMEOUT_LIST = timeout_ptr;
 
     timeout_ptr
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_find(name: *const c_char) -> *mut nf_conntrack_timeout {
-    let mut cur = unsafe { NF_CT_TIMEOUT_LIST };
+pub unsafe extern "C" fn nf_ct_timeout_find(name: *const c_char) -> *mut nf_conntrack_timeout {
+    let mut cur = NF_CT_TIMEOUT_LIST;
 
     while !cur.is_null() {
-        let a = unsafe { core::ffi::CStr::from_ptr((*cur).name) };
-        let b = unsafe { core::ffi::CStr::from_ptr(name) };
+        let a = core::ffi::CStr::from_ptr((*cur).name);
+        let b = core::ffi::CStr::from_ptr(name);
         if a.to_bytes() == b.to_bytes() {
             return cur;
         }
-        cur = unsafe { (*cur).next };
+        cur = (*cur).next;
     }
 
     core::ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_get(timeout: *mut nf_conntrack_timeout) {
+pub unsafe extern "C" fn nf_ct_timeout_get(timeout: *mut nf_conntrack_timeout) {
     if timeout.is_null() {
         return;
     }
-    unsafe {
-        (*timeout).use_ = (*timeout).use_.wrapping_add(1);
-    }
+    (*timeout).use_ = (*timeout).use_.wrapping_add(1);
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_put(timeout: *mut nf_conntrack_timeout) {
+pub unsafe extern "C" fn nf_ct_timeout_put(timeout: *mut nf_conntrack_timeout) {
     if timeout.is_null() {
         return;
     }
 
-    unsafe {
-        if (*timeout).use_ <= 1 {
-            nf_ct_timeout_list_del(timeout);
-            kfree(timeout as *mut c_void);
-        } else {
-            (*timeout).use_ -= 1;
-        }
+    if (*timeout).use_ <= 1 {
+        nf_ct_timeout_list_del(timeout);
+        kfree(timeout as *mut c_void);
+    } else {
+        (*timeout).use_ -= 1;
     }
 }
 
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_list_del(timeout: *mut nf_conntrack_timeout) {
+pub unsafe extern "C" fn nf_ct_timeout_list_del(timeout: *mut nf_conntrack_timeout) {
     let mut prev: *mut nf_conntrack_timeout = core::ptr::null_mut();
-    let mut curr = unsafe { NF_CT_TIMEOUT_LIST };
+    let mut curr = NF_CT_TIMEOUT_LIST;
 
     while !curr.is_null() {
         if curr == timeout {
             if prev.is_null() {
-                unsafe { NF_CT_TIMEOUT_LIST = (*curr).next };
+                NF_CT_TIMEOUT_LIST = (*curr).next;
             } else {
-                unsafe { (*prev).next = (*curr).next };
+                (*prev).next = (*curr).next;
             }
             break;
         }
 
         prev = curr;
-        curr = unsafe { (*curr).next };
+        curr = (*curr).next;
     }
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_init() {
-    unsafe { NF_CT_TIMEOUT_LIST = core::ptr::null_mut() };
+pub unsafe extern "C" fn nf_ct_timeout_init() {
+    NF_CT_TIMEOUT_LIST = core::ptr::null_mut();
 }
 
 #[no_mangle]
-pub extern "C" fn nf_ct_timeout_cleanup() {
-    let mut timeout_ptr = unsafe { NF_CT_TIMEOUT_LIST };
+pub unsafe extern "C" fn nf_ct_timeout_cleanup() {
+    let mut timeout_ptr = NF_CT_TIMEOUT_LIST;
 
     while !timeout_ptr.is_null() {
-        let next = unsafe { (*timeout_ptr).next };
-        unsafe { kfree(timeout_ptr as *mut c_void) };
+        let next = (*timeout_ptr).next;
+        kfree(timeout_ptr as *mut c_void);
         timeout_ptr = next;
     }
 
-    unsafe { NF_CT_TIMEOUT_LIST = core::ptr::null_mut() };
+    NF_CT_TIMEOUT_LIST = core::ptr::null_mut();
 }
 
 #[cfg(not(test))]

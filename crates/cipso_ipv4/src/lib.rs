@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::unnecessary_cast)]
 
 use core::ptr;
 use kernel_types::*;
@@ -46,9 +48,9 @@ pub struct netlbl_lsm_secattr {
     type_: c_uint,
 }
 
-static mut cipso_v4_cache: *mut cipso_v4_map_cache_bkt = ptr::null_mut();
-static mut cipso_v4_cache_enabled: c_int = CIPSO_V4_CACHE_ENABLED_DEFAULT;
-static mut cipso_v4_cache_bucketsize: c_int = CIPSO_V4_CACHE_BUCKETS_SIZE_DEFAULT;
+static mut CIPSO_V4_CACHE: *mut cipso_v4_map_cache_bkt = ptr::null_mut();
+static mut CIPSO_V4_CACHE_ENABLED: c_int = CIPSO_V4_CACHE_ENABLED_DEFAULT;
+static mut CIPSO_V4_CACHE_BUCKETSIZE: c_int = CIPSO_V4_CACHE_BUCKETS_SIZE_DEFAULT;
 
 unsafe extern "C" {
     fn netlbl_secattr_cache_free(cache: *mut c_void);
@@ -126,18 +128,18 @@ pub unsafe extern "C" fn cipso_v4_cache_init() -> c_int {
         INIT_LIST_HEAD(&mut bucket.list as *mut _ as *mut c_void);
     }
 
-    cipso_v4_cache = cache;
+    CIPSO_V4_CACHE = cache;
     0
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cipso_v4_cache_invalidate() {
-    if cipso_v4_cache.is_null() {
+    if CIPSO_V4_CACHE.is_null() {
         return;
     }
 
     let buckets = CIPSO_V4_CACHE_BUCKETS as usize;
-    let cache = cipso_v4_cache;
+    let cache = CIPSO_V4_CACHE;
 
     for i in 0..buckets {
         let bucket = &mut *cache.add(i);
@@ -152,9 +154,9 @@ pub unsafe extern "C" fn cipso_v4_cache_invalidate() {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cipso_v4_cache_free() {
-    if !cipso_v4_cache.is_null() {
-        kfree(cipso_v4_cache as *mut c_void);
-        cipso_v4_cache = ptr::null_mut();
+    if !CIPSO_V4_CACHE.is_null() {
+        kfree(CIPSO_V4_CACHE as *mut c_void);
+        CIPSO_V4_CACHE = ptr::null_mut();
     }
 }
 
@@ -168,11 +170,11 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
     cipso_ptr: *const u8,
     secattr: *const netlbl_lsm_secattr,
 ) -> c_int {
-    if cipso_v4_cache.is_null() || cipso_ptr.is_null() || secattr.is_null() {
+    if CIPSO_V4_CACHE.is_null() || cipso_ptr.is_null() || secattr.is_null() {
         return 0;
     }
 
-    if cipso_v4_cache_enabled == 0 || cipso_v4_cache_bucketsize <= 0 {
+    if CIPSO_V4_CACHE_ENABLED == 0 || CIPSO_V4_CACHE_BUCKETSIZE <= 0 {
         return 0;
     }
 
@@ -215,7 +217,7 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
     (*entry).activity = 0;
 
     let bkt = (*entry).hash & (CIPSO_V4_CACHE_BUCKETS - 1) as u32;
-    let cache = cipso_v4_cache as *mut cipso_v4_map_cache_bkt;
+    let cache = CIPSO_V4_CACHE as *mut cipso_v4_map_cache_bkt;
     let bucket = &mut *cache.add(bkt as usize);
 
     // Acquire spinlock
@@ -224,7 +226,7 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
     }
     spin_lock_bh(&mut bucket.lock as *mut _ as *mut c_void);
 
-    if bucket.size < cipso_v4_cache_bucketsize as c_uint {
+    if bucket.size < CIPSO_V4_CACHE_BUCKETSIZE as c_uint {
         // Add to head
         extern "C" {
             fn list_add(new_entry: *mut c_void, head: *mut c_void);
@@ -264,15 +266,15 @@ pub unsafe extern "C" fn cipso_v4_cache_add(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cipso_v4_cache_get_enabled() -> c_int {
-    cipso_v4_cache_enabled
+    CIPSO_V4_CACHE_ENABLED
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cipso_v4_cache_set_bucketsize(size: c_int) {
-    cipso_v4_cache_bucketsize = size;
+    CIPSO_V4_CACHE_BUCKETSIZE = size;
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cipso_v4_cache_get_bucketsize() -> c_int {
-    cipso_v4_cache_bucketsize
+    CIPSO_V4_CACHE_BUCKETSIZE
 }

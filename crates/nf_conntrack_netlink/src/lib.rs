@@ -86,12 +86,8 @@ unsafe extern "C" {
     fn nf_ct_protonum(ct: *const nf_conn) -> u8;
     fn nf_ct_expires(ct: *const nf_conn) -> u32;
     fn nf_ct_acct_find(ct: *const nf_conn) -> *mut nf_conn_acct;
-    fn nf_conn_tstamp_find(ct: *const nf_conn) -> *const nf_conn_tstamp;
-    fn nf_ct_labels_find(ct: *const nf_conn) -> *const nf_conn_labels;
     fn rcu_read_lock();
     fn rcu_read_unlock();
-    fn security_secid_to_secctx(secid: u32, secctx: *mut *mut u8, len: *mut size_t) -> c_int;
-    fn security_release_secctx(secctx: *mut u8, len: size_t);
 }
 
 #[cfg(not(test))]
@@ -305,7 +301,7 @@ pub const NFPROTO_IPV4: u8 = 2; pub const NFPROTO_IPV6: u8 = 10; pub const NF_CT
 
 // htons and htonl implementations for no_std environment
 #[inline]
-fn htons(x: u16) -> u16 { (x >> 8) | (x << 8) }
+fn htons(x: u16) -> u16 { x.rotate_left(8) }
 
 #[inline]
 fn htonl(x: u32) -> u32 {

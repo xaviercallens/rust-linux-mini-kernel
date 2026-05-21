@@ -7,8 +7,9 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(unexpected_cfgs)]
 
-use core::{ptr, ffi::{c_int, c_void, c_uint}, mem::{self, size_of}};
+use core::{ptr, ffi::{c_int, c_void}, mem::{self, size_of}};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
@@ -97,7 +98,7 @@ pub const MRT6_FLUSH_MIFS_STATIC: u32 = 0x0002;
 pub const MRT6_FLUSH_MFC: u32 = 0x0004;
 pub const MRT6_FLUSH_MFC_STATIC: u32 = 0x0008;
 
-static mut mrt_cachep: *mut c_void = ptr::null_mut();
+static mut MRT_CACHEP: *mut c_void = ptr::null_mut();
 
 #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
 static mut IP6MR_CMPARG_ANY: mfc6_cache_cmp_arg = mfc6_cache_cmp_arg {
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn ip6mr_free_table(mrt: *mut mr_table) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_get_table(net: *const net, id: u32) -> *mut mr_table {
+pub unsafe extern "C" fn ip6mr_get_table(net: *const net, _id: u32) -> *mut mr_table {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     {
         let mut mrt: *mut mr_table = ptr::null_mut();
@@ -216,7 +217,7 @@ pub unsafe extern "C" fn ip6mr_get_table(net: *const net, id: u32) -> *mut mr_ta
 
     #[cfg(not(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES))]
     {
-        return (*net).ipv6.mrt6;
+        (*net).ipv6.mrt6
     }
 }
 
@@ -235,7 +236,7 @@ pub unsafe extern "C" fn ip6mr_mr_table_iter(net: *mut net, mrt: *mut mr_table) 
         if mrt.is_null() {
             return (*net).ipv6.mrt6;
         }
-        return ptr::null_mut();
+        ptr::null_mut()
     }
 }
 
@@ -258,8 +259,8 @@ pub unsafe extern "C" fn ip6mr_rule_default(rule: *const fib_rule) -> bool {
 pub unsafe extern "C" fn mr_table_alloc(
     net: *const net,
     id: u32,
-    ops: *const mr_table_ops,
-    expire_process: Option<unsafe extern "C" fn(t: *mut timer_list)>,
+    _ops: *const mr_table_ops,
+    _expire_process: Option<unsafe extern "C" fn(t: *mut timer_list)>,
     new_table_set: Option<unsafe extern "C" fn(mrt: *mut mr_table, net: *mut net)>,
 ) -> *mut mr_table {
     // Simplified allocation - in real implementation would use kernel allocators
@@ -280,17 +281,17 @@ pub unsafe extern "C" fn mr_table_alloc(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn del_timer_sync(timer: *mut timer_list) {
+pub unsafe extern "C" fn del_timer_sync(_timer: *mut timer_list) {
     // Placeholder for actual timer deletion
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mroute_clean_tables(mrt: *mut mr_table, flags: u32) {
+pub unsafe extern "C" fn mroute_clean_tables(_mrt: *mut mr_table, _flags: u32) {
     // Placeholder for actual table cleaning
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rhltable_destroy(table: *mut rhltable) {
+pub unsafe extern "C" fn rhltable_destroy(_table: *mut rhltable) {
     // Placeholder for hash table destruction
 }
 
@@ -315,12 +316,12 @@ const _: () = {};
 
 // SAFETY: These functions are called from the kernel and must be marked unsafe
 #[no_mangle]
-pub unsafe extern "C" fn ipmr_expire_process(t: *mut timer_list) {
+pub unsafe extern "C" fn ipmr_expire_process(_t: *mut timer_list) {
     // Implementation would handle timer expiration
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ip6mr_new_table_set(mrt: *mut mr_table, net: *mut net) {
+pub unsafe extern "C" fn ip6mr_new_table_set(_mrt: *mut mr_table, _net: *mut net) {
     #[cfg(CONFIG_IPV6_MROUTE_MULTIPLE_TABLES)]
     {
         list_add_tail_rcu(&(*mrt).list, &(*net).ipv6.mr6_tables);
@@ -328,7 +329,7 @@ pub unsafe extern "C" fn ip6mr_new_table_set(mrt: *mut mr_table, net: *mut net) 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn list_add_tail_rcu(new: *mut list_head, head: *mut list_head) {
+pub unsafe extern "C" fn list_add_tail_rcu(_new: *mut list_head, _head: *mut list_head) {
     // Placeholder for list operations
 }
 

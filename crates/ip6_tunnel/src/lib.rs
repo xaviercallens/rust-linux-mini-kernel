@@ -7,6 +7,7 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
 
 use core::{ptr, ffi::{c_char, c_int, c_uint, c_void}, panic::PanicInfo};
 use kernel_types::*;
@@ -62,7 +63,7 @@ pub struct ip6_tnl_net {
     pub collect_md_tun: *mut ip6_tnl,
 }
 
-static mut ip6_tnl_net_id: c_int = 0;
+static mut IP6_TNL_NET_ID: c_int = 0;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -115,8 +116,8 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
         return ptr::null_mut();
     }
 
-    let hash = HASH(remote, local);
-    let ip6n = net_generic(net, ip6_tnl_net_id);
+    let _hash = HASH(remote, local);
+    let ip6n = net_generic(net, IP6_TNL_NET_ID);
     let any = in6_addr {
         in6_u: in6_addr_union { u6_addr8: [0; 16] },
         s6_addr: ptr::null_mut(),
@@ -131,9 +132,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
         {
             return;
         }
-        if link == (*t).parms.link {
-            cand = t;
-        } else if cand.is_null() {
+        if link == (*t).parms.link || cand.is_null() {
             cand = t;
         }
     });
@@ -149,9 +148,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
         {
             return;
         }
-        if link == (*t).parms.link {
-            cand = t;
-        } else if cand.is_null() {
+        if link == (*t).parms.link || cand.is_null() {
             cand = t;
         }
     });
@@ -167,9 +164,7 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
         {
             return;
         }
-        if link == (*t).parms.link {
-            cand = t;
-        } else if cand.is_null() {
+        if link == (*t).parms.link || cand.is_null() {
             cand = t;
         }
     });
@@ -247,10 +242,8 @@ pub unsafe extern "C" fn ip6_tnl_unlink(
     }
 
     let mut tp = ip6_tnl_bucket(ip6n, &(*t).parms);
-    let mut iter: *mut ip6_tnl = ptr::null_mut();
-
     while !(*tp).is_null() {
-        iter = *tp;
+        let iter = *tp;
         if iter == t {
             *tp = (*t).next;
             break;
@@ -283,7 +276,7 @@ unsafe fn ipv6_addr_hash(addr: *const in6_addr) -> c_uint {
     }
 }
 
-unsafe fn net_generic(net: *mut c_void, id: c_int) -> *mut ip6_tnl_net {
+unsafe fn net_generic(_net: *mut c_void, _id: c_int) -> *mut ip6_tnl_net {
     // Simplified implementation - actual implementation depends on kernel's net_generic
     ptr::null_mut()
 }

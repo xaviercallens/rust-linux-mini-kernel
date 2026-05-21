@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
 
 use core::ffi::c_int;
 use core::ffi::c_uint;

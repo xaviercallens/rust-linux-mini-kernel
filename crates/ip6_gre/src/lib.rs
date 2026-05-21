@@ -4,8 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 
-use core::{ptr, ffi::{c_int, c_void}, panic::PanicInfo};
-use kernel_types::*;
+use core::{ptr, ffi::{c_int, c_void}};
 
 pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOSYS: c_int = -38;
 
@@ -105,7 +104,7 @@ pub unsafe extern "C" fn ip6gre_tunnel_lookup(
     }
 
     let net = dev_net(dev);
-    let link = (*dev).ifindex;
+    let _link = (*dev).ifindex;
     let h0 = HASH_ADDR(remote);
     let h1 = HASH_KEY(key);
     let ign = net_generic(net, IP6GRE_NET_ID) as *mut ip6gre_net;

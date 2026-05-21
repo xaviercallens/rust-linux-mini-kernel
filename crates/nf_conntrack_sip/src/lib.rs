@@ -7,7 +7,10 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
 #![allow(clippy::too_many_arguments)]
+#![allow(unused_assignments)]
+#![allow(unused_unsafe)]
 
 use core::{mem, ptr, ffi::{c_char, c_int, c_uchar}};
 use kernel_types::*;
@@ -272,7 +275,7 @@ pub unsafe extern "C" fn sip_parse_addr(
 pub unsafe extern "C" fn epaddr_len(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int {
     let mut addr: nf_inet_addr = mem::zeroed();
     let mut end: *const u8 = ptr::null();
-    let mut aux = dptr;
+    let aux = dptr;
 
     if sip_parse_addr(ct, dptr, &mut end, &mut addr, limit, 1) == 0 {
         pr_debug(b"ip: %s parse failed.\n\0".as_ptr() as *const u8);
@@ -282,7 +285,7 @@ pub unsafe extern "C" fn epaddr_len(ct: *const nf_conn, dptr: *const u8, limit: 
     let mut length = end.offset_from(aux) as c_int;
 
     if end < limit && *end == b':' {
-        let mut current = end.offset(1);
+        let current = end.offset(1);
         let port_len = digits_len(ct, current, limit, shift);
         length += port_len as c_int;
     }
@@ -295,8 +298,8 @@ pub unsafe extern "C" fn epaddr_len(ct: *const nf_conn, dptr: *const u8, limit: 
 
 #[no_mangle]
 pub unsafe extern "C" fn skp_epaddr_len(ct: *const nf_conn, dptr: *const u8, limit: *const u8, shift: *mut c_int) -> c_int {
-    let mut start = dptr;
-    let mut s = if !shift.is_null() { *shift } else { 0 };
+    let start = dptr;
+    let s = if !shift.is_null() { *shift } else { 0 };
     let mut current = dptr;
 
     while current < limit && *current != b'@' && *current != b'\r' && *current != b'\n' {
@@ -405,19 +408,19 @@ pub static mut NF_NAT_SIP_HOOKS: *mut nf_nat_sip_hooks = ptr::null_mut();
 
 // Helper functions (would be implemented in C headers)
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_l3num(ct: *const nf_conn) -> c_int {
+pub unsafe extern "C" fn nf_ct_l3num(_ct: *const nf_conn) -> c_int {
     // Stub implementation - actual implementation would read from nf_conn
     2 // AF_INET
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn in4_pton(cp: *const u8, len: c_int, buf: *mut u8, _flags: c_int, end: *mut *const u8) -> c_int {
+pub unsafe extern "C" fn in4_pton(_cp: *const u8, _len: c_int, _buf: *mut u8, _flags: c_int, _end: *mut *const u8) -> c_int {
     // Stub implementation - actual implementation would parse IPv4
     1
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn in6_pton(cp: *const u8, len: c_int, buf: *mut u8, _flags: c_int, end: *mut *const u8) -> c_int {
+pub unsafe extern "C" fn in6_pton(_cp: *const u8, _len: c_int, _buf: *mut u8, _flags: c_int, _end: *mut *const u8) -> c_int {
     // Stub implementation - actual implementation would parse IPv6
     1
 }
