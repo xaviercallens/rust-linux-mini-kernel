@@ -55,3 +55,15 @@ jobs:
       - name: Execute QEMU Full System Emulation Boot Test
         run: |
           python3 scripts/qemu_boot_test.py --kernel target/i686-unknown-linux-gnu/debug/demo_kernel --timeout 15.0
+
+      - name: Run C vs Rust Microbenchmark Comparison
+        run: |
+          python3 benchmarks/c_vs_rust_perf_report.py --results-dir benchmarks/results
+
+      - name: Upload Benchmark Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmarks/results/
+          retention-days: 30
