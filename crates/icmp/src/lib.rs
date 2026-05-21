@@ -6,6 +6,7 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
 
 use core::{ffi::c_void, panic::PanicInfo};
 use kernel_types::*;
@@ -48,7 +49,7 @@ pub unsafe extern "C" fn icmpv6_err(
     skb: *mut sk_buff,
     opt: *mut Inet6SkbParm,
     type_: u8,
-    code_: u8,
+    _code_: u8,
     offset: c_int,
     info: u32,
 ) -> c_int {
@@ -72,14 +73,12 @@ pub unsafe extern "C" fn icmpv6_err(
         );
     }
 
-    if (type_ & ICMPV6_INFOMSG_MASK) == 0 {
-        if (*icmp6).icmp6_type == ICMPV6_ECHO_REQUEST {
-            ping_err(
-                skb,
-                offset,
-                u32::from_ne_bytes([(*icmp6).icmp6_type, 0, 0, 0]),
-            );
-        }
+    if (type_ & ICMPV6_INFOMSG_MASK) == 0 && (*icmp6).icmp6_type == ICMPV6_ECHO_REQUEST {
+        ping_err(
+            skb,
+            offset,
+            u32::from_ne_bytes([(*icmp6).icmp6_type, 0, 0, 0]),
+        );
     }
 
     0
@@ -94,7 +93,7 @@ pub unsafe extern "C" fn icmpv6_err(
 ///
 /// # Returns
 /// true if allowed, false otherwise
-fn icmpv6_xrlim_allow(sk: *mut sock, type_: u8, fl6: *mut flowi6) -> bool {
+fn icmpv6_xrlim_allow(sk: *mut sock, _type_: u8, fl6: *mut flowi6) -> bool {
     if sk.is_null() || fl6.is_null() {
         return false;
     }
@@ -155,7 +154,7 @@ pub unsafe extern "C" fn icmp6_send(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn icmpv6_err_convert(type_: u8, code: u8, error: c_int) -> c_int {
+pub unsafe extern "C" fn icmpv6_err_convert(_type_: u8, _code: u8, _error: c_int) -> c_int {
     // Implementation would go here
     0
 }
@@ -194,8 +193,8 @@ unsafe fn sock_net_uid(net: *mut net, sk: *mut sock) -> u32 {
 /// Update PMTU
 unsafe fn ip6_update_pmtu(
     skb: *mut sk_buff,
-    net: *mut net,
-    info: u32,
+    _net: *mut net,
+    _info: u32,
 ) -> c_int {
     if skb.is_null() {
         return EINVAL;
@@ -207,7 +206,7 @@ unsafe fn ip6_update_pmtu(
 
 unsafe fn ip6_redirect(
     skb: *mut sk_buff,
-    net: *mut net,
+    _net: *mut net,
 ) -> c_int {
     if skb.is_null() {
         return EINVAL;
@@ -219,8 +218,8 @@ unsafe fn ip6_redirect(
 
 unsafe fn ping_err(
     skb: *mut sk_buff,
-    offset: c_int,
-    info: u32,
+    _offset: c_int,
+    _info: u32,
 ) -> c_int {
     if skb.is_null() {
         return EINVAL;
@@ -231,7 +230,7 @@ unsafe fn ping_err(
 }
 
 /// Check if rate limiting allows ICMP
-unsafe fn icmpv6_mask_allow(net: *mut net, type_: u8) -> bool {
+unsafe fn icmpv6_mask_allow(net: *mut net, _type_: u8) -> bool {
     if net.is_null() {
         return false;
     }
@@ -253,7 +252,7 @@ unsafe fn ipv6_hdr(skb: *const sk_buff) -> *const ipv6hdr {
 /// Skip extension headers
 unsafe fn ipv6_skip_exthdr(
     skb: *const sk_buff,
-    offset: isize,
+    _offset: isize,
     nexthdr: *mut u8,
     frag_off: *mut u16,
 ) -> isize {
@@ -268,9 +267,9 @@ unsafe fn ipv6_skip_exthdr(
 /// Get pointer to data in skb
 unsafe fn skb_header_pointer(
     skb: *const sk_buff,
-    offset: isize,
-    len: isize,
-    data: *mut u8,
+    _offset: isize,
+    _len: isize,
+    _data: *mut u8,
 ) -> *mut u8 {
     if skb.is_null() {
         return core::ptr::null_mut();
@@ -281,7 +280,7 @@ unsafe fn skb_header_pointer(
 }
 
 /// Get peer for IPv6
-unsafe fn inet_getpeer_v6(peers: *mut c_void, addr: *mut in6_addr, create: c_int) -> *mut inet_peer {
+unsafe fn inet_getpeer_v6(peers: *mut c_void, addr: *mut in6_addr, _create: c_int) -> *mut inet_peer {
     if peers.is_null() || addr.is_null() {
         return core::ptr::null_mut();
     }
@@ -291,7 +290,7 @@ unsafe fn inet_getpeer_v6(peers: *mut c_void, addr: *mut in6_addr, create: c_int
 }
 
 /// Check rate limit for peer
-unsafe fn inet_peer_xrlim_allow(peer: *mut inet_peer, tmo: c_int) -> bool {
+unsafe fn inet_peer_xrlim_allow(peer: *mut inet_peer, _tmo: c_int) -> bool {
     if peer.is_null() {
         return false;
     }
@@ -303,7 +302,6 @@ unsafe fn inet_peer_xrlim_allow(peer: *mut inet_peer, tmo: c_int) -> bool {
 /// Release peer reference
 unsafe fn inet_putpeer(peer: *mut inet_peer) {
     if peer.is_null() {
-        return;
     }
 
     // Implementation would go here

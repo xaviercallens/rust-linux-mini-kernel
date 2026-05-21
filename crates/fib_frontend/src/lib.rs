@@ -4,7 +4,6 @@
 #![allow(non_snake_case)]
 
 use core::{ptr, ffi::c_int};
-use kernel_types::*;
 
 pub const RT_TABLE_MAIN: u32 = 254;
 pub const RT_TABLE_LOCAL: u32 = 253;

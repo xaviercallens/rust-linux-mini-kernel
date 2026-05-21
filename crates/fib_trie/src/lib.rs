@@ -2,11 +2,11 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(non_upper_case_globals)]
+#![allow(no_mangle_generic_items)]
 
 use core::ffi::{c_int, c_uint, c_void};
-use core::mem;
-use core::ptr::{self, NonNull};
-use kernel_types::*;
+use core::ptr::{self};
 
 pub const MAX_STAT_DEPTH: c_int = 32;
 pub const KEYLENGTH: c_int = 8 * 32;
@@ -159,12 +159,12 @@ pub unsafe extern "C" fn call_rcu(head: *mut rcu_head, func: unsafe extern "C" f
 // Notification functions
 #[no_mangle]
 pub unsafe extern "C" fn call_fib_entry_notifier(
-    nb: *mut c_void,
-    event_type: c_int,
-    dst: c_uint,
-    dst_len: c_int,
-    fa: *mut fib_alias,
-    extack: *mut c_void,
+    _nb: *mut c_void,
+    _event_type: c_int,
+    _dst: c_uint,
+    _dst_len: c_int,
+    _fa: *mut fib_alias,
+    _extack: *mut c_void,
 ) -> c_int {
     // Implementation would go here
     0
@@ -172,12 +172,12 @@ pub unsafe extern "C" fn call_fib_entry_notifier(
 
 #[no_mangle]
 pub unsafe extern "C" fn call_fib_entry_notifiers(
-    net: *mut c_void,
-    event_type: c_int,
-    dst: c_uint,
-    dst_len: c_int,
-    fa: *mut fib_alias,
-    extack: *mut c_void,
+    _net: *mut c_void,
+    _event_type: c_int,
+    _dst: c_uint,
+    _dst_len: c_int,
+    _fa: *mut fib_alias,
+    _extack: *mut c_void,
 ) -> c_int {
     // Implementation would go here
     0

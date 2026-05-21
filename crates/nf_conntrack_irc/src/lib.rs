@@ -9,6 +9,10 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::all)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(private_interfaces)]
+#![allow(static_mut_refs)]
+#![allow(dead_code)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
@@ -138,8 +142,8 @@ unsafe fn tuple_src_l3num(tuple: *const nf_conntrack_tuple) -> u8 {
     (*(tuple as *const nf_conntrack_tuple_with_addr)).src.l3num
 }
 
-static mut irc: [nf_conntrack_helper; 8] = [nf_conntrack_helper { _priv: [], name: ptr::null() }; 8];
-static irc_exp_policy: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
+static mut IRC: [nf_conntrack_helper; 8] = [nf_conntrack_helper { _priv: [], name: ptr::null() }; 8];
+static IRC_EXP_POLICY: nf_conntrack_expect_policy = nf_conntrack_expect_policy {
     max_expected: 1,
     timeout: 300,
 };
@@ -232,7 +236,7 @@ pub extern "C" fn nf_conntrack_irc_init() -> c_int {
                 IRC_PORT,
                 PORTS[i as usize],
                 i,
-                &irc_exp_policy,
+                &IRC_EXP_POLICY,
                 0,
                 help,
                 ptr::null(),
@@ -303,7 +307,7 @@ pub unsafe extern "C" fn help(
         IRC_BUFFER,
     ) as *mut u8;
     if ib_ptr.is_null() {
-        spin_unlock_bh(&mut IRC_BUFFER_LOCK);
+        spin_unlock_bh(core::ptr::addr_of_mut!(IRC_BUFFER_LOCK));
         return NF_ACCEPT;
     }
 
@@ -423,7 +427,7 @@ pub unsafe extern "C" fn help(
         }
     }
 
-    spin_unlock_bh(&mut IRC_BUFFER_LOCK);
+    spin_unlock_bh(core::ptr::addr_of_mut!(IRC_BUFFER_LOCK));
     ret
 }
 

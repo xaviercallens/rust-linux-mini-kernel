@@ -1,0 +1,57 @@
+name: V9.4.0 Runtime & Integration Tests (QEMU & Fuzzing)
+
+on:
+  push:
+    branches: [ main, mvk-alpha ]
+  pull_request:
+    branches: [ main, mvk-alpha ]
+
+jobs:
+  runtime-tests:
+    name: Build, Boot & Fuzz Integration Suite
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Nightly with Target
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-05-15
+          targets: i686-unknown-linux-gnu
+
+      - name: Install QEMU System Emulation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86
+
+      - name: Cache Cargo Registry and Build Assets
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            fuzz/target/
+          key: ${{ runner.os }}-cargo-runtime-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-runtime-
+
+      - name: Check Workspace Compilation (no_std modules)
+        run: cargo check --workspace
+
+      - name: Check Fuzz Targets Compilation
+        run: cargo check --manifest-path fuzz/Cargo.toml
+
+      - name: Build 32-bit Multiboot 1 Kernel
+        run: |
+          cargo build --manifest-path examples/demo_kernel/Cargo.toml --target i686-unknown-linux-gnu
+
+      - name: Execute QEMU Full System Emulation Boot Test
+        run: |
+          python3 scripts/qemu_boot_test.py --kernel target/i686-unknown-linux-gnu/debug/demo_kernel --timeout 15.0

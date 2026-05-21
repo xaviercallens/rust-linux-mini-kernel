@@ -4,8 +4,7 @@
 //! This module implements fork functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel kernel/fork.c
 
-use kernel_types::*;
-use libc::{c_int, c_uint, c_void, c_ulong, size_t, pid_t};
+use libc::{c_int, c_uint, pid_t};
 
 /// Task structure (placeholder)
 #[repr(C)]

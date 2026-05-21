@@ -12,7 +12,6 @@
 
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use libc::{c_uint, size_t};
 use ::kernel_types::{requires, ensures};
 
 mod kernel_types {
@@ -24,6 +23,7 @@ mod kernel_types {
     pub type socklen_t = u32;
 }
 
+#[repr(C)]
 pub struct ipv6_fl_socklist {
     pub fl: *mut Ip6Flowlabel,
     pub next: *mut ipv6_fl_socklist,
@@ -31,10 +31,15 @@ pub struct ipv6_fl_socklist {
 }
 pub type Net = c_void;
 pub type Sock = c_void;
+#[repr(C)]
 pub struct ipv6_pinfo { pub ipv6_fl_list: *mut ipv6_fl_socklist }
+#[repr(C)]
 pub struct RcuHead { pub _priv: *mut c_void }
+#[repr(C)]
 pub struct SpinLock { pub _priv: *mut c_void }
+#[repr(C)]
 pub struct TimerList { pub _priv: *mut c_void, pub expires: c_ulong }
+#[repr(C)]
 pub struct Ipv6Txoptions {
     pub opt_nflen: u32,
     pub opt_flen: u32,
@@ -83,7 +88,7 @@ pub struct Ip6FlSocklist {
 }
 
 // Static variables
-static mut FL_SIZE: AtomicUsize = AtomicUsize::new(0);
+static FL_SIZE: AtomicUsize = AtomicUsize::new(0);
 static mut FL_HT: [*mut Ip6Flowlabel; FL_HASH_MASK as usize + 1] =
     [ptr::null_mut(); FL_HASH_MASK as usize + 1];
 static mut IP6_FL_GC_TIMER: TimerList = TimerList { _priv: ptr::null_mut(), expires: 0 };
@@ -189,13 +194,13 @@ pub unsafe extern "C" fn fl_free(fl: *mut Ip6Flowlabel) {
 }
 
 #[no_mangle]
-pub extern "C" fn fl_free_rcu(rcu: *mut RcuHead) {
+pub extern "C" fn fl_free_rcu(_rcu: *mut RcuHead) {
     // Free flowlabel
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn fl_release(fl: *mut Ip6Flowlabel) {
-    spin_lock_bh(&mut IP6_FL_LOCK);
+    spin_lock_bh(&raw mut IP6_FL_LOCK);
 
     (*fl).lastuse = jiffies();
     if atomic_dec_and_test(core::ptr::addr_of_mut!((*fl).users)) {
@@ -212,17 +217,17 @@ pub unsafe extern "C" fn fl_release(fl: *mut Ip6Flowlabel) {
             kfree(opt);
         }
 
-        if !timer_pending(&mut IP6_FL_GC_TIMER) || time_after(IP6_FL_GC_TIMER.expires, ttd) {
-            mod_timer(&mut IP6_FL_GC_TIMER, ttd);
+        if !timer_pending(&raw mut IP6_FL_GC_TIMER) || time_after(IP6_FL_GC_TIMER.expires, ttd) {
+            mod_timer(&raw mut IP6_FL_GC_TIMER, ttd);
         }
     }
 
-    spin_unlock_bh(&mut IP6_FL_LOCK);
+    spin_unlock_bh(&raw mut IP6_FL_LOCK);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ip6_fl_purge(net: *mut Net) {
-    spin_lock_bh(&mut IP6_FL_LOCK);
+    spin_lock_bh(&raw mut IP6_FL_LOCK);
 
     for i in 0..=FL_HASH_MASK as usize {
         let mut flp = core::ptr::addr_of_mut!(FL_HT[i]);
@@ -238,7 +243,7 @@ pub unsafe extern "C" fn ip6_fl_purge(net: *mut Net) {
         }
     }
 
-    spin_unlock_bh(&mut IP6_FL_LOCK);
+    spin_unlock_bh(&raw mut IP6_FL_LOCK);
 }
 
 #[no_mangle]
@@ -249,7 +254,7 @@ pub unsafe extern "C" fn fl_intern(
 ) -> *mut Ip6Flowlabel {
     (*fl).label = label & 0x0000000F; // IPV6_FLOWLABEL_MASK
 
-    spin_lock_bh(&mut IP6_FL_LOCK);
+    spin_lock_bh(&raw mut IP6_FL_LOCK);
 
     if label == 0 {
         loop {
@@ -265,7 +270,7 @@ pub unsafe extern "C" fn fl_intern(
         let lfl = __fl_lookup(net, (*fl).label);
         if !lfl.is_null() {
             atomic_inc(core::ptr::addr_of_mut!((*lfl).users));
-            spin_unlock_bh(&mut IP6_FL_LOCK);
+            spin_unlock_bh(&raw mut IP6_FL_LOCK);
             return lfl;
         }
     }
@@ -274,7 +279,7 @@ pub unsafe extern "C" fn fl_intern(
     (*fl).next = FL_HT[FL_HASH((*fl).label) as usize];
     FL_HT[FL_HASH((*fl).label) as usize] = fl;
     FL_SIZE.fetch_add(1, Ordering::Relaxed);
-    spin_unlock_bh(&mut IP6_FL_LOCK);
+    spin_unlock_bh(&raw mut IP6_FL_LOCK);
 
     ptr::null_mut()
 }
@@ -307,18 +312,18 @@ pub unsafe extern "C" fn fl6_free_socklist(sk: *mut Sock) {
         return;
     }
 
-    spin_lock_bh(&mut IP6_SK_FL_LOCK);
-    let mut sfl = (*np).ipv6_fl_list;
+    spin_lock_bh(&raw mut IP6_SK_FL_LOCK);
+    let sfl = (*np).ipv6_fl_list;
     while !sfl.is_null() {
         (*np).ipv6_fl_list = (*sfl).next;
-        spin_unlock_bh(&mut IP6_SK_FL_LOCK);
+        spin_unlock_bh(&raw mut IP6_SK_FL_LOCK);
 
         fl_release((*sfl).fl);
-        kfree_rcu(sfl as *mut c_void, &mut (*sfl).rcu);
+        kfree_rcu(sfl as *mut c_void, &raw mut (*sfl).rcu);
 
-        spin_lock_bh(&mut IP6_SK_FL_LOCK);
+        spin_lock_bh(&raw mut IP6_SK_FL_LOCK);
     }
-    spin_unlock_bh(&mut IP6_SK_FL_LOCK);
+    spin_unlock_bh(&raw mut IP6_SK_FL_LOCK);
 }
 
 #[no_mangle]
@@ -381,8 +386,7 @@ unsafe extern "C" fn atomic_inc_not_zero(a: *mut AtomicUsize) -> bool {
     if val == 0 {
         false
     } else {
-        (*a).compare_exchange(val, val + 1, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok();
+        let _ = (*a).compare_exchange(val, val + 1, Ordering::Relaxed, Ordering::Relaxed);
         true
     }
 }
@@ -399,16 +403,16 @@ unsafe extern "C" fn atomic_dec(a: *mut AtomicUsize) {
 }
 
 #[no_mangle]
-unsafe extern "C" fn spin_lock_bh(lock: *mut SpinLock) {}
+unsafe extern "C" fn spin_lock_bh(_lock: *mut SpinLock) {}
 
 #[no_mangle]
-unsafe extern "C" fn spin_unlock_bh(lock: *mut SpinLock) {}
+unsafe extern "C" fn spin_unlock_bh(_lock: *mut SpinLock) {}
 
 #[no_mangle]
-unsafe extern "C" fn spin_lock(lock: *mut SpinLock) {}
+unsafe extern "C" fn spin_lock(_lock: *mut SpinLock) {}
 
 #[no_mangle]
-unsafe extern "C" fn spin_unlock(lock: *mut SpinLock) {}
+unsafe extern "C" fn spin_unlock(_lock: *mut SpinLock) {}
 
 #[no_mangle]
 unsafe extern "C" fn rcu_read_lock_bh() {}
@@ -422,15 +426,15 @@ unsafe extern "C" fn call_rcu(head: *mut RcuHead, func: extern "C" fn(*mut RcuHe
 }
 
 #[no_mangle]
-unsafe extern "C" fn kfree(ptr: *mut c_void) {}
+unsafe extern "C" fn kfree(_ptr: *mut c_void) {}
 
 #[no_mangle]
-unsafe extern "C" fn kfree_rcu(ptr: *mut c_void, rcu: *mut RcuHead) {
+unsafe extern "C" fn kfree_rcu(ptr: *mut c_void, _rcu: *mut RcuHead) {
     kfree(ptr);
 }
 
 #[no_mangle]
-unsafe extern "C" fn put_pid(pid: *mut c_void) {}
+unsafe extern "C" fn put_pid(_pid: *mut c_void) {}
 
 #[no_mangle]
 unsafe extern "C" fn inet6_sk(sk: *mut Sock) -> *mut ipv6_pinfo {
@@ -438,7 +442,7 @@ unsafe extern "C" fn inet6_sk(sk: *mut Sock) -> *mut ipv6_pinfo {
 }
 
 #[no_mangle]
-unsafe extern "C" fn timer_pending(timer: *mut TimerList) -> bool { false }
+unsafe extern "C" fn timer_pending(_timer: *mut TimerList) -> bool { false }
 
 #[no_mangle]
 unsafe extern "C" fn time_after(a: c_ulong, b: c_ulong) -> bool {

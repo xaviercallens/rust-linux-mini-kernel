@@ -6,9 +6,10 @@
 
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(clippy::manual_c_str_literals)]
 
 use core::{ptr, ffi::{c_char, c_int, c_uint, c_void}};
-use kernel_types::*;
 
 pub const TFTP_PORT: u16 = 69;
 pub const TFTP_OPCODE_READ: u16 = 1;
@@ -142,7 +143,7 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
     }
 
     // Register helpers
-    ret = unsafe { nf_conntrack_helpers_register(TFTP.as_mut_ptr(), 2 * PORTS_C as c_int) };
+    ret = unsafe { nf_conntrack_helpers_register(ptr::addr_of_mut!(TFTP).cast::<nf_conntrack_helper>(), 2 * PORTS_C as c_int) };
     if ret < 0 {
         unsafe { pr_err(b"failed to register helpers\0".as_ptr() as *const c_char) };
     }
@@ -152,7 +153,7 @@ pub extern "C" fn nf_conntrack_tftp_init() -> c_int {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn nf_conntrack_tftp_fini() {
-    unsafe { nf_conntrack_helpers_unregister(TFTP.as_mut_ptr(), 2 * PORTS_C as c_int) };
+    unsafe { nf_conntrack_helpers_unregister(ptr::addr_of_mut!(TFTP).cast::<nf_conntrack_helper>(), 2 * PORTS_C as c_int) };
 }
 
 #[unsafe(no_mangle)]
@@ -222,8 +223,10 @@ pub extern "C" fn tftp_help(
 
             // NAT hook
             nf_nat_tftp = unsafe { nf_nat_tftp_hook };
-            if nf_nat_tftp.is_some() && unsafe { ((*ct).status & IPS_NAT_MASK) != 0 } {
-                ret = nf_nat_tftp.unwrap()(
+            let has_nat = unsafe { ((*ct).status & IPS_NAT_MASK) != 0 };
+            
+            if let (Some(hook), true) = (nf_nat_tftp, has_nat) {
+                ret = hook(
                     skb,
                     ctinfo,
                     exp,

@@ -8,7 +8,6 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use core::{panic::PanicInfo, ptr};
 use kernel_types::*;
 
 pub const SCTP_CID_INIT: u8 = 1;
@@ -140,7 +139,7 @@ static SCTP_CONNTRACKS: [[[u8; SCTP_CONNTRACK_MAX as usize]; 11]; 2] = {
 #[no_mangle]
 pub unsafe extern "C" fn sctp_print_conntrack(s: *mut c_void, ct: *mut nf_conn) {
     if !s.is_null() && !ct.is_null() {
-        let state = (*ct).proto.sctp.state;
+        let _state = (*ct).proto.sctp.state;
         // SAFETY: This is a no-op in Rust as we don't have seq_file
         // In real implementation, this would format to the seq_file
     }
@@ -230,12 +229,12 @@ pub unsafe extern "C" fn new_state(ct: *mut nf_conn, dir: c_uint, chunk_type: c_
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn sctp_packet(
-    ct: *mut nf_conn,
+    _ct: *mut nf_conn,
     skb: *mut sk_buff,
     dataoff: c_uint,
     map: *mut c_void,
-    dir: c_uint,
-    chunk_type: c_uchar,
+    _dir: c_uint,
+    _chunk_type: c_uchar,
 ) -> c_int {
     let mut offset: u32 = 0;
     let mut count: u32 = 0;
@@ -320,7 +319,7 @@ pub unsafe extern "C" fn sctp_new_state(dir: c_int, cur_state: u8, chunk_type: u
 pub unsafe extern "C" fn sctp_new(
     ct: *mut nf_conn,
     skb: *mut sk_buff,
-    sh: *mut sctphdr,
+    _sh: *mut sctphdr,
     dataoff: c_uint,
 ) -> c_int {
     let mut new_state_val: u8 = SCTP_CONNTRACK_MAX;
@@ -374,7 +373,7 @@ pub unsafe extern "C" fn sctp_new(
             }
 
             // Set vtag from init tag field (first u32 in init header)
-            (*ct).proto.sctp.vtag[1] = (*ih);
+            (*ct).proto.sctp.vtag[1] = *ih;
         }
 
         offset += ((*sch).length as u32 + 3) & !3;

@@ -4,9 +4,7 @@
 #![allow(dead_code)]
 
 use core::ffi::{c_int, c_uint, c_void};
-use core::panic::PanicInfo;
 use core::ptr;
-use kernel_types::*;
 
 // Constants from C
 pub const EINVAL: c_int = -22;
@@ -146,9 +144,9 @@ unsafe extern "C" {
 }
 
 // Global variables
-static mut tcp_sock_type: *mut BtfType = ptr::null_mut();
-static mut tcp_sock_id: c_uint = 0;
-static mut sock_id: c_uint = 0;
+static mut TCP_SOCK_TYPE: *mut BtfType = ptr::null_mut();
+static mut TCP_SOCK_ID: c_uint = 0;
+static mut SOCK_ID: c_uint = 0;
 
 #[no_mangle]
 pub unsafe extern "C" fn bpf_tcp_send_ack(tp: *mut tcp_sock, rcv_nxt: u32) -> c_int {
@@ -185,7 +183,7 @@ pub unsafe extern "C" fn is_optional(member_offset: c_uint) -> bool {
 }
 
 // Stub for BPF kfunc IDs set
-static bpf_tcp_ca_kfunc_ids: [Option<unsafe extern "C" fn() -> ()>; 20] = [None; 20];
+static BPF_TCP_CA_KFUNC_IDS: [Option<unsafe extern "C" fn() -> ()>; 20] = [None; 20];
 
 // Stub for registration function
 extern "C" fn bpf_tcp_ca_reg(_kdata: *mut c_void) -> c_int {
@@ -208,9 +206,9 @@ pub unsafe extern "C" fn bpf_tcp_ca_is_valid_access(off: c_int, size: c_int, typ
         return false;
     }
 
-    if (*info).reg_type == 1 && (*info).btf_id == sock_id {
+    if (*info).reg_type == 1 && (*info).btf_id == SOCK_ID {
         // promote it to tcp_sock
-        (*info).btf_id = tcp_sock_id;
+        (*info).btf_id = TCP_SOCK_ID;
     }
 
     true
@@ -222,7 +220,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_btf_struct_access(log: *mut BpfVerifierLog, 
         return btf_struct_access(log, btf, t, off, size, atype, next_btf_id);
     }
 
-    if t != tcp_sock_type {
+    if t != TCP_SOCK_TYPE {
         bpf_log(log, b"only read is supported\0" as *const u8);
         return EACCES;
     }
@@ -280,9 +278,9 @@ pub unsafe extern "C" fn bpf_tcp_ca_btf_struct_access(log: *mut BpfVerifierLog, 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn bpf_tcp_ca_get_func_proto(func_id: c_int, prog: *const BpfProg) -> *const BpfFuncProto {
+pub unsafe extern "C" fn bpf_tcp_ca_get_func_proto(func_id: c_int, _prog: *const BpfProg) -> *const BpfFuncProto {
     match func_id {
-        1 => &bpf_tcp_send_ack_proto as *const BpfFuncProto, // BPF_FUNC_tcp_send_ack
+        1 => &BPF_TCP_SEND_ACK_PROTO as *const BpfFuncProto, // BPF_FUNC_tcp_send_ack
         2 => &bpf_sk_storage_get_proto as *const BpfFuncProto, // BPF_FUNC_sk_storage_get
         3 => &bpf_sk_storage_delete_proto as *const BpfFuncProto, // BPF_FUNC_sk_storage_delete
         _ => bpf_base_func_proto(func_id),
@@ -291,7 +289,7 @@ pub unsafe extern "C" fn bpf_tcp_ca_get_func_proto(func_id: c_int, prog: *const 
 
 #[no_mangle]
 pub unsafe extern "C" fn bpf_tcp_ca_check_kfunc_call(kfunc_btf_id: c_int) -> bool {
-    btf_id_set_contains(&bpf_tcp_ca_kfunc_ids, kfunc_btf_id as c_uint)
+    btf_id_set_contains(&BPF_TCP_CA_KFUNC_IDS, kfunc_btf_id as c_uint)
 }
 
 #[no_mangle]
@@ -394,35 +392,35 @@ pub static mut bpf_tcp_ca_verifier_ops: BpfVerifierOps = BpfVerifierOps {
 
 // Helper functions
 #[no_mangle]
-pub unsafe extern "C" fn btf_member_bit_offset(t: *const BtfType, member: *const BtfMember) -> c_int {
+pub unsafe extern "C" fn btf_member_bit_offset(_t: *const BtfType, _member: *const BtfMember) -> c_int {
     // Implementation would depend on BTF structure layout
     // This is a placeholder for the actual implementation
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn btf_type_resolve_func_ptr(btf: *mut Btf, type_id: c_int, func_ptr: *mut *mut c_void) -> bool {
+pub unsafe extern "C" fn btf_type_resolve_func_ptr(_btf: *mut Btf, _type_id: c_int, _func_ptr: *mut *mut c_void) -> bool {
     // Implementation would depend on BTF structure layout
     // This is a placeholder for the actual implementation
     true
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn btf_id_set_contains(ids: *const [Option<unsafe extern "C" fn() -> ()>; 20], id: c_uint) -> bool {
+pub unsafe extern "C" fn btf_id_set_contains(_ids: *const [Option<unsafe extern "C" fn() -> ()>; 20], _id: c_uint) -> bool {
     // Implementation would depend on the actual set structure
     // This is a placeholder for the actual implementation
     true
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn bpf_base_func_proto(func_id: c_int) -> *const BpfFuncProto {
+pub unsafe extern "C" fn bpf_base_func_proto(_func_id: c_int) -> *const BpfFuncProto {
     // Implementation would depend on the actual base function prototypes
     // This is a placeholder for the actual implementation
     ptr::null()
 }
 
 // BPF function proto
-static mut bpf_tcp_send_ack_proto: BpfFuncProto = BpfFuncProto {
+static mut BPF_TCP_SEND_ACK_PROTO: BpfFuncProto = BpfFuncProto {
     // Actual fields would be initialized with appropriate values
     _private: [0; 0],
 };

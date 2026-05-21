@@ -161,7 +161,7 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ipv6_update_options(
-    sk: *mut c_void,
+    _sk: *mut c_void,
     opt: *mut ipv6_txoptions,
 ) -> *mut ipv6_txoptions {
     opt
@@ -174,7 +174,7 @@ pub extern "C" fn rust_eh_personality() {}
 #[no_mangle]
 pub unsafe extern "C" fn do_ipv6_setsockopt(
     sk: *mut c_void,
-    level: c_int,
+    _level: c_int,
     optname: c_int,
     optval: *const c_void,
     optlen: c_int,
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn do_ipv6_setsockopt(
         }
     }
 
-    let valbool = val != 0;
+    let _valbool = val != 0;
 
     if ip6_mroute_opt(optname) {
         return ip6_mroute_setsockopt(sk, optname, optval, optlen);
@@ -266,7 +266,7 @@ unsafe fn copy_group_source_from_sockptr(
 }
 
 // Placeholder for ip6_mroute_opt
-unsafe fn ip6_mroute_opt(optname: c_int) -> bool {
+unsafe fn ip6_mroute_opt(_optname: c_int) -> bool {
     false // Actual implementation would check specific values
 }
 

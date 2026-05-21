@@ -7,8 +7,11 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
 
-use core::{ptr, ffi::{c_int, c_uint}, panic::PanicInfo};
+use core::{ptr, ffi::{c_int, c_uint}};
 use kernel_types::*;
 
 // Constants from C
@@ -141,9 +144,9 @@ pub unsafe extern "C" fn ipv6_gso_pull_exthdrs(skb: *mut SkBuff, proto: c_int) -
 
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_gso_segment(skb: *mut SkBuff, features: NetdevFeaturesT) -> *mut SkBuff {
-    let mut segs: *mut SkBuff;
+    let segs: *mut SkBuff;
     let mut ipv6h: *mut Ipv6Hdr;
-    let mut proto: c_int;
+    let proto: c_int;
     let nhoff: u32;
     let mut offset: c_int = 0;
 
@@ -217,7 +220,7 @@ unsafe fn rcu_dereference<T>(ptr: *const T) -> *const T {
     ptr // Simplified - actual RCU implementation would be more complex
 }
 
-unsafe fn pskb_may_pull(skb: *mut SkBuff, len: c_uint) -> bool {
+unsafe fn pskb_may_pull(_skb: *mut SkBuff, _len: c_uint) -> bool {
     // Simplified implementation
     true
 }

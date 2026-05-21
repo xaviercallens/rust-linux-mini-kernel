@@ -1,19 +1,21 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
- "outputs": "1bb25cace46b590d.dylib",
+ "outputs": "7a7f5cc3c19073cc.dylib",
  "log":
  [{"message":
-   ".> MACOSX_DEPLOYMENT_TARGET=99.0 /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/clang -shared -o /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase1_InitMain.dylib /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/InitMain.c.o.export -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/lean --sysroot /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1 -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/libc -fuse-ld=lld -lc++ -lLake_shared -Wl,-undefined,dynamic_lookup -Wl,-no_fixup_chains -lgmp -luv -Wl,-dead_strip",
+   ".> MACOSX_DEPLOYMENT_TARGET=99.0 /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/clang -shared -o /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase1_InitMain.dylib /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/InitMain.c.o.export -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/lean --sysroot /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1 -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib -L /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/lib/libc -fuse-ld=lld -lc++ -lLake_shared -Wl,-undefined,dynamic_lookup -Wl,-no_fixup_chains -lgmp -luv -Wl,-dead_strip",
    "level": "trace"}],
  "inputs":
  [["linkObjs",
-   [["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/InitMain.c.o.export",
-     "df440cf4321ff925"]]],
+   [["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase1/InitMain.c.o.export",
+     "f4e19223d3ea8318"]]],
   ["linkLibs",
-   [["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase2_Common.dylib",
-     "dbd5f7aeee020317"]]],
+   [["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase1_Printk.dylib",
+     "a95e7ed49ebf420e"],
+    ["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/lib/lean/mvk__specs_MVK_Phase1_ArchSetup.dylib",
+     "418b22408b9720e7"]]],
   ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
    "fa77a35a41db35c0"],
   ["traceArgs: #[]", "00000000000006bb"],
   ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
- "depHash": "6d8a497fce618628"}
+ "depHash": "884fa76cca4bc748"}

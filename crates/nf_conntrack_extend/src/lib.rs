@@ -1,6 +1,5 @@
 use kernel_types::*;
 use core::ffi::c_void;
-use core::mem::MaybeUninit;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -40,7 +39,7 @@ pub struct nf_conntrack_extend {
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_conntrack_extend {
-    let extend = Box::into_raw(Box::new(nf_conntrack_extend {
+    Box::into_raw(Box::new(nf_conntrack_extend {
         ct,
         timeout: 0,
         flags: 0,
@@ -69,9 +68,7 @@ pub unsafe extern "C" fn nf_conntrack_extend_init(ct: *mut c_void) -> *mut nf_co
             },
         },
         timeout_data: [0; 4],
-    }));
-
-    extend
+    }))
 }
 
 #[no_mangle]
@@ -170,6 +167,7 @@ pub unsafe extern "C" fn nf_conntrack_extend_set_nat_ipv6(
     }
 }
 
+#[allow(improper_ctypes_definitions)]
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_extend_set_timeout_data(
     extend: *mut nf_conntrack_extend,

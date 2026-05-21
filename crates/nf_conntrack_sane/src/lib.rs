@@ -18,7 +18,7 @@ pub const IP_CT_DIR_ORIGINAL: c_int = 0;
 pub const IP_CT_DIR_REPLY: c_int = 1;
 pub const IP_CT_ESTABLISHED: c_int = 1 << 1;
 pub const IP_CT_ESTABLISHED_REPLY: c_int = IP_CT_ESTABLISHED | (1 << 2);
-pub const fn CTINFO2DIR(ctinfo: c_int) -> c_int {
+pub const fn ctinfo2_dir(ctinfo: c_int) -> c_int {
     (ctinfo >> 1) & 1
 }
 pub const SANE_PORT: u16 = 6566;
@@ -51,7 +51,7 @@ pub struct tcphdr {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct sane_request { pub RPC_code: u32, pub handle: u32 }
+pub struct sane_request { pub rpc_code: u32, pub handle: u32 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn help(
     ct: *mut nf_conn,
     ctinfo: c_int,
 ) -> c_int {
-    let dir: c_int = CTINFO2DIR(ctinfo);
+    let dir: c_int = ctinfo2_dir(ctinfo);
     let ct_sane_info = nf_ct_help_data(ct);
     let mut ret = NF_ACCEPT;
 
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn help(
         }
 
         let req = sb_ptr as *mut sane_request;
-        if (*req).RPC_code != u32::to_be(SANE_NET_START as u32) {
+        if (*req).rpc_code != SANE_NET_START {
             (*ct_sane_info).state = 0; // SANE_STATE_NORMAL
             spin_unlock_bh(NF_SANE_LOCK);
             return NF_ACCEPT;
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn help(
     }
 
     let reply = sb_ptr as *mut sane_reply_net_start;
-    if (*reply).status != u32::to_be(SANE_STATUS_SUCCESS as u32) {
+    if (*reply).status != SANE_STATUS_SUCCESS {
         spin_unlock_bh(NF_SANE_LOCK);
         return NF_ACCEPT;
     }
@@ -221,12 +221,12 @@ pub unsafe extern "C" fn help(
 
     let exp = nf_ct_expect_alloc(ct);
     if exp.is_null() {
-        nf_ct_helper_log(skb, ct, b"cannot alloc expectation\0".as_ptr() as *const c_char);
+        nf_ct_helper_log(skb, ct, c"cannot alloc expectation".as_ptr());
         spin_unlock_bh(NF_SANE_LOCK);
         return NF_DROP;
     }
 
-    let tuple = &(*ct).tuplehash[0].tuple;
+    let _tuple = &(*ct).tuplehash[0].tuple;
     let mut port = (*reply).port;
     nf_ct_expect_init(
         exp,
@@ -243,7 +243,7 @@ pub unsafe extern "C" fn help(
 
     // Can't expect this?  Best to drop packet now.
     if nf_ct_expect_related(exp, 0) != 0 {
-        nf_ct_helper_log(skb, ct, b"cannot add expectation\0".as_ptr() as *const c_char);
+        nf_ct_helper_log(skb, ct, c"cannot add expectation".as_ptr());
         ret = NF_DROP;
     }
 
@@ -258,8 +258,7 @@ pub unsafe extern "C" fn help(
 // Module init/exit
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
-    let mut i: c_int = 0;
-    let mut ret: c_int = 0;
+    let _i: c_int = 0;
 
     SANE_BUFFER = libc::malloc(65536);
     if SANE_BUFFER.is_null() {
@@ -302,7 +301,7 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
         );
     }
 
-    ret = nf_conntrack_helpers_register(SANE.as_ptr(), PORTS_C * 2);
+    let ret = nf_conntrack_helpers_register(ptr::addr_of!(SANE) as *const nf_conntrack_helper, PORTS_C * 2);
     if ret < 0 {
         libc::free(SANE_BUFFER);
         return ret;
@@ -313,7 +312,7 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_sane_fini() {
-    nf_conntrack_helpers_unregister(SANE.as_ptr(), PORTS_C * 2);
+    nf_conntrack_helpers_unregister(ptr::addr_of!(SANE) as *const nf_conntrack_helper, PORTS_C * 2);
     libc::free(SANE_BUFFER);
 }
 

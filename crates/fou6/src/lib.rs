@@ -237,7 +237,7 @@ extern "C" fn gue6_err(
                 skb_set_transport_header(skb, -(mem::size_of::<icmp6hdr>() as isize));
 
                 let iph = &*(guehdr as *const guehdr as *const iphdr);
-                match (*iph).version {
+                match (*iph).version_ihl >> 4 {
                     4 => {
                         let ret = gue6_err_proto_handler(
                             IPPROTO_IPIP as c_int,
@@ -313,13 +313,13 @@ extern "C" fn gue_encap_hlen_wrapper(e: *const ip_tunnel_encap) -> c_int {
 }
 
 // Static data
-static mut fou_ip6tun_ops: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
+static mut FOU_IP6TUN_OPS: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
     encap_hlen: fou_encap_hlen_wrapper,
     build_header: fou6_build_header,
     err_handler: gue6_err,
 };
 
-static mut gue_ip6tun_ops: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
+static mut GUE_IP6TUN_OPS: ip6_tnl_encap_ops = ip6_tnl_encap_ops {
     encap_hlen: gue_encap_hlen_wrapper,
     build_header: gue6_build_header,
     err_handler: gue6_err,
@@ -345,15 +345,15 @@ pub struct icmp6hdr {
 // Module functions
 #[no_mangle]
 pub unsafe extern "C" fn ip6_tnl_encap_add_fou_ops() -> c_int {
-    let mut ret = ip6_tnl_encap_add_ops(&fou_ip6tun_ops, 1); // TUNNEL_ENCAP_FOU
+    let mut ret = ip6_tnl_encap_add_ops(&FOU_IP6TUN_OPS, 1); // TUNNEL_ENCAP_FOU
     if ret < 0 {
         pr_err(b"can't add fou6 ops\0".as_ptr() as *const c_char);
         return ret;
     }
 
-    ret = ip6_tnl_encap_add_ops(&gue_ip6tun_ops, 2); // TUNNEL_ENCAP_GUE
+    ret = ip6_tnl_encap_add_ops(&GUE_IP6TUN_OPS, 2); // TUNNEL_ENCAP_GUE
     if ret < 0 {
-        ip6_tnl_encap_del_ops(&fou_ip6tun_ops, 1);
+        ip6_tnl_encap_del_ops(&FOU_IP6TUN_OPS, 1);
         pr_err(b"can't add gue6 ops\0".as_ptr() as *const c_char);
         return ret;
     }
@@ -363,8 +363,8 @@ pub unsafe extern "C" fn ip6_tnl_encap_add_fou_ops() -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn ip6_tnl_encap_del_fou_ops() {
-    ip6_tnl_encap_del_ops(&fou_ip6tun_ops, 1);
-    ip6_tnl_encap_del_ops(&gue_ip6tun_ops, 2);
+    ip6_tnl_encap_del_ops(&FOU_IP6TUN_OPS, 1);
+    ip6_tnl_encap_del_ops(&GUE_IP6TUN_OPS, 2);
 }
 
 // Module init/exit

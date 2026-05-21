@@ -4,7 +4,6 @@
 #![allow(clippy::too_many_arguments)]
 
 use core::{ptr, ffi::{c_int, c_uint, c_void}};
-use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -52,8 +51,9 @@ pub struct nf_net {
 #[repr(C)]
 pub struct net_device { nf_hooks_ingress: *mut nf_hook_entries }
 
-// Function pointer types
+#[allow(dead_code)]
 type HookFn = extern "C" fn(priv_data: *mut c_void, skb: *mut c_void, state: *const nf_hook_state) -> c_uint;
+
 
 // Static mutex implementation (simplified for FFI compatibility)
 #[repr(C)]
@@ -213,10 +213,12 @@ unsafe extern "C" fn __nf_hook_entries_free(h: *mut c_void) {
     libc::free((*head).allocation);
 }
 
+#[allow(dead_code)]
 unsafe fn call_rcu(head: *mut c_void, func: extern "C" fn(*mut c_void)) {
     func(head);
 }
 
+#[allow(dead_code)]
 unsafe extern "C" fn accept_all(
     _priv: *mut c_void,
     _skb: *mut c_void,
@@ -224,6 +226,7 @@ unsafe extern "C" fn accept_all(
 ) -> c_uint {
     1 // NF_ACCEPT
 }
+
 
 // Tests (conditional compilation)
 #[cfg(test)]

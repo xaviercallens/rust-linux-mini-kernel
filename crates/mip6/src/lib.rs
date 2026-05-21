@@ -1,6 +1,9 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(unused_unsafe)]
+#![allow(dead_code)]
 
 use core::{{mem, ptr}, ffi::{c_char, c_int, c_uint, c_void}};
 use kernel_types::*;
@@ -241,7 +244,7 @@ pub extern "C" fn mip6_destopt_output(state: *mut xfrm_state, skb: *mut c_void) 
 pub extern "C" fn mip6_destopt_reject(
     state: *mut xfrm_state,
     skb: *mut c_void,
-    err: *const c_void,
+    _err: *const c_void,
 ) -> c_int {
     unsafe {
         let skb = skb as *mut sk_buff;
@@ -300,104 +303,104 @@ pub static mut mip6_destopt_type: xfrm_type = xfrm_type {
 
 // Helper functions
 #[no_mangle]
-pub extern "C" fn skb_transport_offset(skb: *mut sk_buff) -> c_int {
+pub extern "C" fn skb_transport_offset(_skb: *mut sk_buff) -> c_int {
     // Implementation would access (*skb).transport_header
     0
 }
 
 #[no_mangle]
-pub extern "C" fn skb_network_offset(skb: *mut sk_buff) -> c_int {
+pub extern "C" fn skb_network_offset(_skb: *mut sk_buff) -> c_int {
     // Implementation would access (*skb).network_header
     0
 }
 
 #[no_mangle]
-pub extern "C" fn skb_push(skb: *mut sk_buff, offset: c_int) -> *mut sk_buff {
+pub extern "C" fn skb_push(skb: *mut sk_buff, _offset: c_int) -> *mut sk_buff {
     // Implementation would modify (*skb).data
     skb
 }
 
 #[no_mangle]
-pub extern "C" fn skb_mac_header(skb: *mut sk_buff) -> *mut u8 {
+pub extern "C" fn skb_mac_header(_skb: *mut sk_buff) -> *mut u8 {
     // Implementation would access (*skb).mac_header
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn ipv6_hdr(skb: *mut sk_buff) -> *mut in6_addr {
+pub extern "C" fn ipv6_hdr(_skb: *mut sk_buff) -> *mut in6_addr {
     // Implementation would access IPv6 header
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn skb_tail_pointer(skb: *mut sk_buff) -> *mut c_void {
+pub extern "C" fn skb_tail_pointer(_skb: *mut sk_buff) -> *mut c_void {
     // Implementation would access (*skb).tail
     ptr::null_mut()
 }
 
 #[no_mangle]
-pub extern "C" fn skb_get_ktime(skb: *mut sk_buff) -> u64 {
+pub extern "C" fn skb_get_ktime(_skb: *mut sk_buff) -> u64 {
     // Implementation would access (*skb).tstamp
     0
 }
 
 #[no_mangle]
-pub extern "C" fn ipv6_find_tlv(skb: *mut sk_buff, offset: c_int, type_: u8) -> c_int {
+pub extern "C" fn ipv6_find_tlv(_skb: *mut sk_buff, _offset: c_int, _type_: u8) -> c_int {
     // Implementation would search for TLV
     -1
 }
 
 #[no_mangle]
-pub extern "C" fn ipv6_addr_equal(a: *const in6_addr, b: *const in6_addr) -> c_int {
+pub extern "C" fn ipv6_addr_equal(_a: *const in6_addr, _b: *const in6_addr) -> c_int {
     // Implementation would compare addresses
     1
 }
 
 #[no_mangle]
-pub extern "C" fn spin_lock(lock: *mut spinlock_t) {
+pub extern "C" fn spin_lock(_lock: *mut spinlock_t) {
     // Implementation would acquire spinlock
 }
 
 #[no_mangle]
-pub extern "C" fn spin_unlock(lock: *mut spinlock_t) {
+pub extern "C" fn spin_unlock(_lock: *mut spinlock_t) {
     // Implementation would release spinlock
 }
 
 #[no_mangle]
-pub extern "C" fn spin_lock_bh(lock: *mut spinlock_t) {
+pub extern "C" fn spin_lock_bh(_lock: *mut spinlock_t) {
     // Implementation would acquire BH-safe spinlock
 }
 
 #[no_mangle]
-pub extern "C" fn spin_unlock_bh(lock: *mut spinlock_t) {
+pub extern "C" fn spin_unlock_bh(_lock: *mut spinlock_t) {
     // Implementation would release BH-safe spinlock
 }
 
 #[no_mangle]
 pub extern "C" fn km_report(
-    net: *mut net,
-    proto: c_int,
-    sel: *mut c_void,
-    addr: *mut c_void,
+    _net: *mut net,
+    _proto: c_int,
+    _sel: *mut c_void,
+    _addr: *mut c_void,
 ) -> c_int {
     // Implementation would report to KM
     0
 }
 
 #[no_mangle]
-pub extern "C" fn xfrm_flowi_dport(fl: *const flowi, uli: *const c_void) -> u16 {
+pub extern "C" fn xfrm_flowi_dport(_fl: *const flowi, _uli: *const c_void) -> u16 {
     // Implementation would extract destination port
     0
 }
 
 #[no_mangle]
-pub extern "C" fn xfrm_flowi_sport(fl: *const flowi, uli: *const c_void) -> u16 {
+pub extern "C" fn xfrm_flowi_sport(_fl: *const flowi, _uli: *const c_void) -> u16 {
     // Implementation would extract source port
     0
 }
 
 #[no_mangle]
-pub extern "C" fn xs_net(x: *mut xfrm_state) -> *mut net {
+pub extern "C" fn xs_net(_x: *mut xfrm_state) -> *mut net {
     // Implementation would get network namespace
     ptr::null_mut()
 }

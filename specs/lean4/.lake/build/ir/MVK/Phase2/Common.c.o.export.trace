@@ -1,18 +1,18 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
- "outputs": "b5740044b9939487.o",
+ "outputs": "3154306283923299.o",
  "log":
  [{"message":
-   ".> /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/clang -c -o /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c.o.export /Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c -I /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/include -fstack-clash-protection -fdata-sections -ffunction-sections -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1 -nostdinc -isystem /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
+   ".> /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/bin/clang -c -o /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c.o.export /Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c -I /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/include -fstack-clash-protection -fdata-sections -ffunction-sections -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1 -nostdinc -isystem /Users/xcallens/.elan/toolchains/leanprover--lean4---v4.29.1/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
    "level": "trace"}],
  "inputs":
  [["MVK.Phase2.Common:c",
-   [["/Users/xcallens/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c",
-     "60e92abee471e175"],
+   [["/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/specs/lean4/.lake/build/ir/MVK/Phase2/Common.c",
+     "c5d8dfe1a6d40408"],
     ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
      "fa77a35a41db35c0"]]],
   ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
    "fa77a35a41db35c0"],
   ["traceArgs: #[-O3, -DNDEBUG, -DLEAN_EXPORTING]", "c1efb66122fb2b9a"],
   ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
- "depHash": "c11e795c046365cc"}
+ "depHash": "78a86bf34cdb5180"}

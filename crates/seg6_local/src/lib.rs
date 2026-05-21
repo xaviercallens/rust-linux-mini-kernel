@@ -180,7 +180,7 @@ pub unsafe extern "C" fn advance_nextseg(srh: *mut ipv6_sr_hdr, daddr: *mut kern
 #[no_mangle]
 pub unsafe extern "C" fn seg6_lookup_any_nexthop(
     skb: *mut sk_buff,
-    nhaddr: *mut kernel_types::in6_addr,
+    _nhaddr: *mut kernel_types::in6_addr,
     tbl_id: u32,
     local_delivery: bool
 ) -> c_int {
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn seg6_lookup_nexthop(skb: *mut sk_buff, nhaddr: *mut ker
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn input_action_end(skb: *mut sk_buff, slwt: *mut seg6_local_lwt) -> c_int {
+pub unsafe extern "C" fn input_action_end(skb: *mut sk_buff, _slwt: *mut seg6_local_lwt) -> c_int {
     let srh = get_and_validate_srh(skb);
     if srh.is_null() {
         kfree_skb(skb);

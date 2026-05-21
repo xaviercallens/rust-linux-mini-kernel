@@ -240,13 +240,13 @@ pub unsafe extern "C" fn pptp_destroy_siblings(ct: *mut nf_conn) {
 /// - All parameters must be valid pointers
 #[no_mangle]
 pub unsafe extern "C" fn pptp_inbound_pkt(
-    skb: *mut c_void,
-    protoff: c_uint,
+    _skb: *mut c_void,
+    _protoff: c_uint,
     ctlh: *mut PptpControlHeader,
     pptpReq: *mut pptp_ctrl_union,
-    reqlen: c_uint,
+    _reqlen: c_uint,
     ct: *mut nf_conn,
-    ctinfo: c_int,
+    _ctinfo: c_int,
 ) -> c_int {
     if ct.is_null() || ctlh.is_null() || pptpReq.is_null() {
         return EINVAL;
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn nf_conntrack_pptp_fini() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(ct: *mut nf_conn) {
+pub unsafe extern "C" fn nf_ct_gre_keymap_destroy(_ct: *mut nf_conn) {
     // SAFETY: Kernel API to destroy GRE keymap
 }
 

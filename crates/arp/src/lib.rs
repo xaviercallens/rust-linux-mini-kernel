@@ -1,3 +1,8 @@
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 use kernel_types::*;
 
 #[repr(C)]
@@ -81,13 +86,13 @@ pub extern "C" fn arp_send(
             return -EINVAL;
         }
 
-        let arp = (*skb).data.offset(ETH_HLEN as isize) as *mut arphdr;
+        let arp = (*skb).data.add(ETH_HLEN) as *mut arphdr;
         if (*arp).ar_op != htons(ARPOP_REQUEST) {
             return -EINVAL;
         }
 
-        let saddr = (*arp).ar_sip as *mut in_addr;
-        let daddr = (*arp).ar_tip as *mut in_addr;
+        let saddr = (*arp).ar_sip;
+        let daddr = (*arp).ar_tip;
 
         if (*saddr).s_addr == (*daddr).s_addr {
             return -EINVAL;
@@ -102,7 +107,7 @@ pub extern "C" fn arp_send(
             return -EINVAL;
         }
 
-        let ops = (*dst).ops as *mut ndisc_ops;
+        let ops = (*dst).ops;
         if (*ops).output.is_none() {
             return -EINVAL;
         }

@@ -12,7 +12,6 @@
 #![allow(clippy::transmutes)]
 
 use core::{ptr, ffi::{c_int, c_uint, c_ulong}};
-use kernel_types::*;
 
 #[cfg(not(test))]
 #[panic_handler]

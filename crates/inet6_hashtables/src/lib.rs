@@ -4,7 +4,6 @@
 #![allow(dead_code)]
 
 use core::{ptr, ffi::{c_int, c_void}};
-use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;

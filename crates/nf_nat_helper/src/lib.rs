@@ -219,7 +219,7 @@ pub unsafe extern "C" fn __NF_NAT_MANGLE_TCP_PACKET(
 pub unsafe extern "C" fn NF_NAT_MANGLE_UDP_PACKET(
     skb: *mut sk_buff,
     ct: *mut nf_conn,
-    ctinfo: c_int,
+    _ctinfo: c_int,
     protoff: c_uint,
     match_offset: c_uint,
     match_len: c_uint,

@@ -11,6 +11,6 @@ pub fn mk_in6_addr(bytes: [u8; 16]) -> in6_addr {
 
 fn main() {
     // Minimal kernel demo entry point
-    let test_addr = mk_in6_addr([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    let _test_addr = mk_in6_addr([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
     println!("Micro kernel initialized with IPv6 address");
 }

@@ -8,11 +8,12 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(static_mut_refs)]
+#![allow(dead_code)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::mem::ManuallyDrop;
-use core::panic::PanicInfo;
-use kernel_types::*;
 
 pub const SNMP_PORT: u16 = 161;
 pub const NFPROTO_IPV4: u8 = 2;

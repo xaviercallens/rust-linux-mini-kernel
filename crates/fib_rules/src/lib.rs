@@ -5,7 +5,7 @@
 #![allow(clippy::all)]
 
 use core::ffi::{c_int, c_uint, c_void};
-use core::ptr::{self, NonNull};
+use core::ptr::{self};
 use core::mem;
 use kernel_types::*;
 
@@ -48,32 +48,25 @@ pub struct fib_lookup_arg {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct fib_rules_ops {
-    family: c_int,
-    rule_size: c_uint,
-    addr_size: c_uint,
-    action: extern "C" fn(*mut fib_rule, *mut c_void, c_int, *mut fib_lookup_arg) -> c_int,
-    suppress: extern "C" fn(*mut fib_rule, *mut fib_lookup_arg) -> bool,
-    match_: extern "C" fn(*mut fib_rule, *mut c_void, c_int) -> bool,
-    configure: extern "C" fn(*mut fib_rule, *mut c_void, *mut c_void, *mut *mut c_void, *mut c_void) -> c_int,
-    delete: extern "C" fn(*mut fib_rule) -> c_int,
-    compare: extern "C" fn(*mut fib_rule, *mut c_void, *mut *mut c_void) -> c_int,
-    fill: extern "C" fn(*mut fib_rule, *mut c_void, *mut c_void) -> c_int,
-    nlmsg_payload: extern "C" fn(*mut fib_rule) -> size_t,
-    flush_cache: extern "C" fn(*mut fib_rules_ops),
-    nlgroup: c_int,
-    policy: *const c_void,
-    owner: *const c_void,
+    pub family: c_int,
+    pub rule_size: c_uint,
+    pub addr_size: c_uint,
+    pub action: Option<unsafe extern "C" fn(*mut fib_rule, *mut c_void, c_int, *mut fib_lookup_arg) -> c_int>,
+    pub suppress: Option<unsafe extern "C" fn(*mut fib_rule, *mut fib_lookup_arg) -> bool>,
+    pub match_: Option<unsafe extern "C" fn(*mut fib_rule, *mut c_void, c_int) -> bool>,
+    pub configure: Option<unsafe extern "C" fn(*mut fib_rule, *mut c_void, *mut fib_rule_hdr, *mut *mut c_void, *mut netlink_ext_ack) -> c_int>,
+    pub delete: Option<unsafe extern "C" fn(*mut fib_rule) -> c_int>,
+    pub compare: Option<unsafe extern "C" fn(*mut fib_rule, *mut fib_rule_hdr, *mut *mut c_void) -> c_int>,
+    pub fill: Option<unsafe extern "C" fn(*mut fib_rule, *mut c_void, *mut fib_rule_hdr) -> c_int>,
+    pub nlmsg_payload: Option<unsafe extern "C" fn(*mut fib_rule) -> size_t>,
+    pub flush_cache: Option<unsafe extern "C" fn(*mut fib_rules_ops)>,
+    pub nlgroup: c_int,
+    pub policy: *const c_void,
+    pub owner: *const c_void,
+    pub fro_net: *mut net,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct net_ipv4 {
-    pub rules_ops: *mut fib_rules_ops,
-    pub fib_has_custom_rules: bool,
-    pub fib_rules_require_fldissect: c_int,
-    #[cfg(CONFIG_IP_ROUTE_CLASSID)]
-    pub fib_num_tclassid_users: c_int,
-}
+unsafe impl Sync for fib_rules_ops {}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -105,9 +98,26 @@ unsafe fn container_of(ptr: *const c_void, offset: usize) -> *const c_void {
     (ptr as usize - offset) as *const c_void
 }
 
+#[inline]
+pub unsafe fn offset_of<T, F>(base: *const T, field: *const F) -> usize {
+    (field as usize) - (base as usize)
+}
+
+#[inline]
+pub fn inet_make_mask(logmask: u8) -> u32 {
+    if logmask == 0 {
+        0
+    } else if logmask >= 32 {
+        !0
+    } else {
+        let mask = !((1u32 << (32 - logmask)) - 1);
+        mask.to_be()
+    }
+}
+
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo<'_>) -> ! {
+fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
 }
 
@@ -116,7 +126,7 @@ pub unsafe extern "C" fn rust_eh_personality() {}
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fib4_rule_matchall(rule: *const fib_rule) -> bool {
-    let offset = offset_of::<fib4_rule, u8>(ptr::null(), &(*ptr::null::<fib4_rule>()).tos);
+    let offset = core::mem::offset_of!(fib4_rule, tos);
     let r = container_of(rule as *const c_void, offset) as *const fib4_rule;
 
     if (*r).dst_len != 0 || (*r).src_len != 0 || (*r).tos != 0 {
@@ -132,7 +142,7 @@ pub unsafe extern "C" fn fib4_rule_default(rule: *const fib_rule) -> bool {
     if rule.is_null() {
         return false;
     }
-    if !fib4_rule_matchall(rule) || (*rule).action != 0 || (*rule).l3mdev != 0 {
+    if !fib4_rule_matchall(rule) || (*rule).action != 0 || (*rule).l3mdev != core::ptr::null_mut() {
         return false;
     }
 
@@ -163,16 +173,16 @@ pub unsafe extern "C" fn __fib_lookup(
     let mut err = 0;
 
     // update flow if oif or iif point to device enslaved to l3mdev
-    l3mdev_update_flow((*net).ipv4, flp as *mut flowi);
+    l3mdev_update_flow(&mut (*net).ipv4, flp as *mut flowi);
 
-    err = fib_rules_lookup((*net).ipv4.rules_ops, flp as *mut flowi, 0, &mut arg);
+    err = fib_rules_lookup((*net).ipv4.rules_ops.cast::<fib_rules_ops>(), flp as *mut flowi, 0, &mut arg);
 
     #[cfg(CONFIG_IP_ROUTE_CLASSID)]
     {
         if !arg.rule.is_null() {
             let rule4 = container_of(
                 arg.rule as *const c_void,
-                offset_of::<fib4_rule, u8>(ptr::null(), &(*ptr::null::<fib4_rule>()).tclassid),
+                core::mem::offset_of!(fib4_rule, tclassid),
             ) as *const fib4_rule;
             (*res).tclassid = (*rule4).tclassid;
         } else {
@@ -191,7 +201,7 @@ pub unsafe extern "C" fn __fib_lookup(
 pub unsafe extern "C" fn fib4_rule_action(
     rule: *mut fib_rule,
     flp: *mut c_void,
-    flags: c_int,
+    _flags: c_int,
     arg: *mut fib_lookup_arg,
 ) -> c_int {
     let mut err = -EAGAIN;
@@ -213,7 +223,7 @@ pub unsafe extern "C" fn fib4_rule_action(
     if !tbl.is_null() {
         err = fib_table_lookup(
             tbl,
-            &(*flp.cast::<flowi>()).u.ip4,
+            flp.cast::<flowi4>(),
             (*arg).result as *mut fib_result,
             (*arg).flags,
         );
@@ -230,29 +240,31 @@ pub unsafe extern "C" fn fib4_rule_suppress(
     arg: *mut fib_lookup_arg,
 ) -> bool {
     let result = (*arg).result as *mut fib_result;
-    let dev: *mut c_void = ptr::null_mut();
+    let mut dev: *mut net_device = ptr::null_mut();
 
     if !(*result).fi.is_null() {
-        let nhc = fib_info_nhc((*result).fi, 0);
+        let nhc = fib_info_nhc((*result).fi, 0) as *mut fib_nh_common;
         dev = (*nhc).nhc_dev;
     }
 
     if (*result).prefixlen <= (*rule).suppress_prefixlen {
-        suppress_route(result, arg, dev);
+        suppress_route(result, arg, dev.cast::<c_void>());
         return true;
     }
 
     if (*rule).suppress_ifgroup != -1 && !dev.is_null() && (*dev).group == (*rule).suppress_ifgroup {
-        suppress_route(result, arg, dev);
+        suppress_route(result, arg, dev.cast::<c_void>());
         return true;
     }
 
     false
 }
 
-fn suppress_route(result: *mut fib_result, arg: *mut fib_lookup_arg, dev: *mut c_void) {
-    if !((*arg).flags & 1) != 0 {
-        fib_info_put((*result).fi);
+fn suppress_route(result: *mut fib_result, arg: *mut fib_lookup_arg, _dev: *mut c_void) {
+    unsafe {
+        if !((*arg).flags & 1) != 0 {
+            fib_info_put((*result).fi);
+        }
     }
 }
 
@@ -260,10 +272,10 @@ fn suppress_route(result: *mut fib_result, arg: *mut fib_lookup_arg, dev: *mut c
 pub unsafe extern "C" fn fib4_rule_match(
     rule: *mut fib_rule,
     fl: *mut c_void,
-    flags: c_int,
+    _flags: c_int,
 ) -> bool {
     let r = rule as *mut fib4_rule;
-    let fl4 = &(*fl.cast::<flowi>()).u.ip4;
+    let fl4 = fl.cast::<flowi4>();
 
     if ((((*fl4).saddr ^ (*r).src) & (*r).srcmask) != 0) ||
        ((((*fl4).daddr ^ (*r).dst) & (*r).dstmask) != 0) {
@@ -278,13 +290,13 @@ pub unsafe extern "C" fn fib4_rule_match(
         return false;
     }
 
-    if fib_rule_port_range_set(&(*rule).sport_range) &&
-       !fib_rule_port_inrange(&(*rule).sport_range, (*fl4).fl4_sport) {
+    if fib_rule_port_range_set((*rule).sport_range) &&
+       !fib_rule_port_inrange((*rule).sport_range, (*fl4).fl4_sport) {
         return false;
     }
 
-    if fib_rule_port_range_set(&(*rule).dport_range) &&
-       !fib_rule_port_inrange(&(*rule).dport_range, (*fl4).fl4_dport) {
+    if fib_rule_port_range_set((*rule).dport_range) &&
+       !fib_rule_port_inrange((*rule).dport_range, (*fl4).fl4_dport) {
         return false;
     }
 
@@ -314,6 +326,10 @@ extern "C" {
     fn fib_default_rule_add(ops: *mut fib_rules_ops, priority: u16, table: c_int, flags: c_int) -> c_int;
     fn fib_rules_unregister(ops: *mut fib_rules_ops);
     fn rt_cache_flush(net: *mut net);
+    fn fib_rules_seq_read(net: *mut net, family: c_int) -> c_uint;
+    fn fib_rules_dump(net: *mut net, nb: *mut c_void, family: c_int, extack: *mut netlink_ext_ack) -> c_int;
+    fn fib_rules_register(ops: *const fib_rules_ops, net: *mut net) -> *mut fib_rules_ops;
+    fn fib_default_rules_init(ops: *mut fib_rules_ops) -> c_int;
 }
 
 // Module initialization
@@ -322,7 +338,7 @@ pub unsafe extern "C" fn fib4_rules_init(net: *mut net) -> c_int {
     let mut ops: *mut fib_rules_ops = ptr::null_mut();
     let mut err = 0;
 
-    ops = fib_rules_register(&fib4_rules_ops_template, net);
+    ops = fib_rules_register(&FIB4_RULES_OPS_TEMPLATE, net);
     if ops.is_null() {
         return -ENOMEM;
     }
@@ -333,7 +349,7 @@ pub unsafe extern "C" fn fib4_rules_init(net: *mut net) -> c_int {
         return err;
     }
 
-    (*net).ipv4.rules_ops = ops;
+    (*net).ipv4.rules_ops = ops.cast::<c_void>();
     (*net).ipv4.fib_has_custom_rules = false;
     (*net).ipv4.fib_rules_require_fldissect = 0;
 
@@ -342,27 +358,27 @@ pub unsafe extern "C" fn fib4_rules_init(net: *mut net) -> c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn fib4_rules_exit(net: *mut net) {
-    fib_rules_unregister((*net).ipv4.rules_ops);
+    fib_rules_unregister((*net).ipv4.rules_ops.cast::<fib_rules_ops>());
 }
 
 // Static rules_ops template
-#[repr(C)]
-static fib4_rules_ops_template: fib_rules_ops = fib_rules_ops {
+static FIB4_RULES_OPS_TEMPLATE: fib_rules_ops = fib_rules_ops {
     family: 2, // AF_INET
     rule_size: mem::size_of::<fib4_rule>() as c_uint,
     addr_size: 4, // sizeof(u32)
-    action: fib4_rule_action,
-    suppress: fib4_rule_suppress,
-    match_: fib4_rule_match,
-    configure: fib4_rule_configure,
-    delete: fib4_rule_delete,
-    compare: fib4_rule_compare,
-    fill: fib4_rule_fill,
-    nlmsg_payload: fib4_rule_nlmsg_payload,
-    flush_cache: fib4_rule_flush_cache,
+    action: Some(fib4_rule_action),
+    suppress: Some(fib4_rule_suppress),
+    match_: Some(fib4_rule_match),
+    configure: Some(fib4_rule_configure),
+    delete: Some(fib4_rule_delete),
+    compare: Some(fib4_rule_compare),
+    fill: Some(fib4_rule_fill),
+    nlmsg_payload: Some(fib4_rule_nlmsg_payload),
+    flush_cache: Some(fib4_rule_flush_cache),
     nlgroup: 5, // RTNLGRP_IPV4_RULE
     policy: ptr::null(),
     owner: ptr::null(),
+    fro_net: ptr::null_mut(),
 };
 
 // Helper functions
@@ -393,7 +409,7 @@ pub unsafe extern "C" fn fib4_rule_configure(
     tb: *mut *mut c_void,
     extack: *mut netlink_ext_ack,
 ) -> c_int {
-    let net = sock_net((*skb).sk);
+    let net = sock_net((*skb.cast::<sk_buff>()).sk);
     let rule4 = rule as *mut fib4_rule;
     let mut err = -EINVAL;
 
@@ -407,7 +423,7 @@ pub unsafe extern "C" fn fib4_rule_configure(
         return err;
     }
 
-    if (*rule).table == 0 && (*rule).l3mdev == 0 && (*rule).action == 0 {
+    if (*rule).table == 0 && (*rule).l3mdev == core::ptr::null_mut() && (*rule).action == 0 {
         let table = fib_empty_table(net);
         if table.is_null() {
             return -ENOBUFS;
@@ -544,7 +560,7 @@ pub unsafe extern "C" fn fib4_rule_fill(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fib4_rule_nlmsg_payload(rule: *mut fib_rule) -> size_t {
+pub unsafe extern "C" fn fib4_rule_nlmsg_payload(_rule: *mut fib_rule) -> size_t {
     nla_total_size(4) /* dst */
         + nla_total_size(4) /* src */
         + nla_total_size(4) /* flow */

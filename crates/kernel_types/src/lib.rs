@@ -89,8 +89,7 @@ pub struct ethhdr {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct iphdr {
-    pub ihl: __u8,
-    pub version: __u8,
+    pub version_ihl: __u8,
     pub tos: __u8,
     pub tot_len: __be16,
     pub id: __be16,
@@ -106,8 +105,7 @@ pub struct iphdr {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ipv6hdr {
-    pub priority: __u8,
-    pub version: __u8,
+    pub version_priority: __u8,
     pub flow_lbl: [__u8; 3],
     pub payload_len: __be16,
     pub nexthdr: __u8,
@@ -168,12 +166,16 @@ pub struct sock {
     pub sk_state: c_uint,
     pub sk_refcnt: c_int,
     pub sk_reuseport_cb: *mut core::ffi::c_void, // Auto-generated mock field
-    pub sk_reuse: *mut core::ffi::c_void, // Auto-generated mock field
+    pub sk_reuse: core::ffi::c_int, // Changed type to match C int usages
     pub sk_reuseport: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk_rcv_saddr: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk_bound_dev_if: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk_v6_rcv_saddr: *mut core::ffi::c_void, // Auto-generated mock field
     pub sk_user_data: *mut core::ffi::c_void, // Auto-generated mock field
+    pub sk_ipv6only: core::ffi::c_int,
+    pub sk_prot: *mut core::ffi::c_void,
+    pub sk_destruct: Option<unsafe extern "C" fn(*mut sock)>,
+    pub sk_backlog_rcv: Option<extern "C" fn(*mut sock, *mut core::ffi::c_void, usize) -> core::ffi::c_int>,
 }
 
 /// TCP socket
@@ -230,6 +232,10 @@ pub struct ipv6_pinfo {
     pub mcast_hops: __s16,
     pub mcast_oif: c_int,
     pub rxopt: ip6cb,
+    pub mc_loop: u8,
+    pub mc_all: u8,
+    pub pmtudisc: u8,
+    pub repflow: u8,
 }
 
 /// UDP socket
@@ -345,12 +351,50 @@ pub struct inet6_dev {
     _padding: [u8; 0],
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct netlink_ext_ack {
+    _private: [u8; 0],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fib_table {
+    pub tb_id: u32,
+    _private: [u8; 0],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fib_result {
+    pub prefixlen: u8,
+    pub fi: *mut core::ffi::c_void,
+    pub tclassid: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fib_nh_common {
+    pub nhc_dev: *mut net_device,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct net_ipv4 {
+    pub rules_ops: *mut core::ffi::c_void,
+    pub fib_has_custom_rules: bool,
+    pub fib_rules_require_fldissect: core::ffi::c_int,
+    pub fib_num_tclassid_users: core::ffi::c_int,
+    pub sysctl_ip_no_pmtu_disc: bool,
+}
+
 /// Network namespace
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct net {
     pub loopback_dev: *mut net_device,
     pub ct: *mut c_void,
+    pub ipv4: net_ipv4,
     _padding: [u8; 0],
 }
 
@@ -372,13 +416,13 @@ pub struct fib_rule {
     pub table: __u32,
     pub flags: __u32,
     pub action: __u8,
-    pub suppress_ifgroup: *mut core::ffi::c_void, // Auto-generated mock field
-    pub fr_net: *mut core::ffi::c_void, // Auto-generated mock field
-    pub ip_proto: *mut core::ffi::c_void, // Auto-generated mock field
-    pub suppress_prefixlen: *mut core::ffi::c_void, // Auto-generated mock field
-    pub sport_range: *mut core::ffi::c_void, // Auto-generated mock field
-    pub dport_range: *mut core::ffi::c_void, // Auto-generated mock field
-    pub l3mdev: *mut core::ffi::c_void, // Auto-generated mock field
+    pub suppress_ifgroup: c_int,
+    pub fr_net: *mut net,
+    pub ip_proto: u8,
+    pub suppress_prefixlen: u8,
+    pub sport_range: *mut core::ffi::c_void,
+    pub dport_range: *mut core::ffi::c_void,
+    pub l3mdev: *mut core::ffi::c_void,
 }
 
 // ============================================================================
@@ -740,4 +784,148 @@ pub type NF_INET_ADDR = nf_inet_addr;
 /// Network device (opaque type)
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct net_device { pub ifindex: c_int, _private: [u8; 0] }
+pub struct net_device {
+    pub ifindex: c_int,
+    pub group: c_int,
+    _private: [u8; 0],
+}
+
+// ============================================================================
+// KUnit Runtime Validation Framework Integration
+// ============================================================================
+
+/// Opaque kunit test instance passed to test cases
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct kunit {
+    _private: [u8; 0],
+}
+
+/// KUnit case structure for registering individual tests
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct kunit_case {
+    pub run_case: Option<unsafe extern "C" fn(*mut kunit)>,
+    pub name: *const c_char,
+    pub generate_params: *const c_void,
+}
+
+/// KUnit suite structure representing a test suite
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct kunit_suite {
+    pub name: *const c_char,
+    pub init: Option<unsafe extern "C" fn(*mut kunit) -> c_int>,
+    pub exit: Option<unsafe extern "C" fn(*mut kunit)>,
+    pub test_cases: *mut kunit_case,
+}
+
+#[cfg(target_os = "none")]
+extern "C" {
+    /// Internal KUnit function to register test failures
+    pub fn kunit_do_failed_assertion(
+        test: *mut kunit,
+        assertion: *const c_void,
+        message: *const c_char,
+    );
+}
+
+#[cfg(not(target_os = "none"))]
+#[no_mangle]
+pub unsafe extern "C" fn kunit_do_failed_assertion(
+    _test: *mut kunit,
+    _assertion: *const c_void,
+    message: *const c_char,
+) {
+    // Under no_std host-side build, we don't have println!. We can use write FFI to stderr.
+    extern "C" {
+        fn write(fd: c_int, buf: *const c_void, count: size_t) -> ssize_t;
+    }
+    let prefix = b"Mock KUnit assertion failed: ";
+    let _ = write(2, prefix.as_ptr() as *const c_void, prefix.len());
+    
+    if !message.is_null() {
+        let mut len = 0;
+        while *message.add(len) != 0 {
+            len += 1;
+        }
+        let _ = write(2, message as *const c_void, len);
+    } else {
+        let null_str = b"null";
+        let _ = write(2, null_str.as_ptr() as *const c_void, null_str.len());
+    }
+    
+    let newline = b"\n";
+    let _ = write(2, newline.as_ptr() as *const c_void, newline.len());
+}
+
+#[macro_export]
+macro_rules! kunit_unsafe_test_suite {
+    ($name:ident, $init:expr, $exit:expr, [$($case_name:ident => $case_fn:expr),* $(,)?]) => {
+        pub mod $name {
+            use super::*;
+
+            // Individual test case function wrappers
+            $(
+                #[no_mangle]
+                pub unsafe extern "C" fn $case_name(test: *mut $crate::kunit) {
+                    // Execute the case logic
+                    let result: Result<(), &'static str> = $case_fn(test);
+                    if let Err(_msg) = result {
+                        // Call kernel assertion fail FFI
+                        let c_msg = concat!(stringify!($case_name), " failed: \0").as_ptr() as *const $crate::c_char;
+                        $crate::kunit_do_failed_assertion(test, core::ptr::null(), c_msg);
+                    }
+                }
+            )*
+
+            // Test cases array, terminated by an empty case
+            #[cfg_attr(all(not(test), target_os = "macos"), link_section = "__DATA,kunit_cases")]
+            #[cfg_attr(all(not(test), not(target_os = "macos")), link_section = ".kunit_test_cases")]
+            #[no_mangle]
+            pub static mut CASES: [$crate::kunit_case; 1 + [$($case_name),*].len()] = [
+                $(
+                    $crate::kunit_case {
+                        run_case: Some($case_name),
+                        name: concat!(stringify!($case_name), "\0").as_ptr() as *const $crate::c_char,
+                        generate_params: core::ptr::null(),
+                    },
+                )*
+                $crate::kunit_case {
+                    run_case: None,
+                    name: core::ptr::null(),
+                    generate_params: core::ptr::null(),
+                }
+            ];
+
+            // Test suite definition
+            #[cfg_attr(all(not(test), target_os = "macos"), link_section = "__DATA,kunit_suites")]
+            #[cfg_attr(all(not(test), not(target_os = "macos")), link_section = ".kunit_test_suites")]
+            #[no_mangle]
+            pub static mut SUITE: $crate::kunit_suite = $crate::kunit_suite {
+                name: concat!(stringify!($name), "\0").as_ptr() as *const $crate::c_char,
+                init: $init,
+                exit: $exit,
+                test_cases: unsafe { CASES.as_mut_ptr() },
+            };
+        }
+    };
+}
+
+// ============================================================================
+// Compile-Time FFI Structural Layout Assertions
+// ============================================================================
+
+const _: () = {
+    // Validate iphdr constraints (20 bytes, align 4)
+    assert!(core::mem::size_of::<iphdr>() == 20);
+    assert!(core::mem::align_of::<iphdr>() == 4);
+
+    // Validate udphdr constraints (8 bytes, align 2)
+    assert!(core::mem::size_of::<udphdr>() == 8);
+    assert!(core::mem::align_of::<udphdr>() == 2);
+
+    // Validate ipv6hdr constraints (56 bytes, align 8)
+    assert!(core::mem::size_of::<ipv6hdr>() == 56);
+    assert!(core::mem::align_of::<ipv6hdr>() == 8);
+};

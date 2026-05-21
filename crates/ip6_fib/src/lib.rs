@@ -122,8 +122,8 @@ pub unsafe extern "C" fn fib6_tables_init(net: *mut net) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_table {
-    let mut table = ptr::null_mut::<fib6_table>();
+pub unsafe extern "C" fn fib6_alloc_table(_net: *mut net, id: u32) -> *mut fib6_table {
+    let table = ptr::null_mut::<fib6_table>();
     if !table.is_null() {
         (*table).tb6_id = id;
         (*table).tb6_root.fn_flags = 0x1 | 0x2 | 0x4; // RTN_ROOT | RTN_TL_ROOT | RTN_RTINFO
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn fib6_alloc_table(net: *mut net, id: u32) -> *mut fib6_t
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_table {
-    let mut tb = ptr::null_mut::<fib6_table>();
+    let _tb = ptr::null_mut::<fib6_table>();
     let mut id = id;
 
     if id == 0 {
@@ -152,20 +152,15 @@ pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_tab
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_table {
-    let mut tb: *mut fib6_table = ptr::null_mut();
-    let mut head: *mut hlist_head;
-    let h: usize;
-
     let mut id = id;
     if id == 0 {
         id = 0x100; // RT6_TABLE_MAIN
     }
 
     let hash: usize = (id as usize) & (FIB6_TABLE_HASHSZ - 1);
-    let mut node = (*net).ipv6.fib_table_hash[hash].first;
+    let _node = (*net).ipv6.fib_table_hash[hash].first;
 
-    tb = ptr::null_mut();
-    tb
+    ptr::null_mut()
 }
 
 /// Destroy a FIB6 info structure
@@ -173,13 +168,8 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
 /// # Safety
 /// - `head` must be a valid pointer to an RCU head
 #[no_mangle]
-pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
-    let f6i = ptr::null_mut::<fib6_info>();
-    if !f6i.is_null() {
-        if !(*f6i).nh.is_null() {
-        } else {
-        }
-    }
+pub unsafe extern "C" fn fib6_info_destroy_rcu(_head: *mut rcu_head) {
+    let _f6i = ptr::null_mut::<fib6_info>();
 }
 
 /// Allocate a new FIB6 info structure
@@ -188,18 +178,13 @@ pub unsafe extern "C" fn fib6_info_destroy_rcu(head: *mut rcu_head) {
 /// - `gfp_flags` must be a valid allocation flag
 /// - `with_fib6_nh` must be a valid boolean
 #[no_mangle]
-pub unsafe extern "C" fn fib6_info_alloc(gfp_flags: c_int, with_fib6_nh: bool) -> *mut fib6_info {
-    let f6i: *mut fib6_info;
-
-    let mut sz = core::mem::size_of::<fib6_info>() as size_t;
+pub unsafe extern "C" fn fib6_info_alloc(_gfp_flags: c_int, with_fib6_nh: bool) -> *mut fib6_info {
+    let mut _sz = core::mem::size_of::<fib6_info>() as size_t;
     if with_fib6_nh {
-        sz += core::mem::size_of::<fib6_nh>() as size_t;
+        _sz += core::mem::size_of::<fib6_nh>() as size_t;
     }
 
-    f6i = ptr::null_mut();
-    if !f6i.is_null() {
-        (*f6i).fib6_ref = AtomicU32::new(1);
-    }
+    let f6i: *mut fib6_info = ptr::null_mut();
     f6i
 }
 
@@ -225,7 +210,7 @@ pub unsafe extern "C" fn fib6_update_sernum(net: *mut net, f6i: *mut fib6_info) 
 /// # Safety
 /// - `net` must be a valid pointer to a network namespace
 #[no_mangle]
-pub unsafe extern "C" fn fib6_new_sernum(net: *mut net) -> c_int {
+pub unsafe extern "C" fn fib6_new_sernum(_net: *mut net) -> c_int {
     let _old: c_int = 0;
     let new: c_int = 1;
 
@@ -260,7 +245,7 @@ pub unsafe extern "C" fn fib6_walker_unlink(net: *mut net, w: *mut fib6_walker) 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_link_table(net: *mut net, tb: *mut fib6_table) {
     if !net.is_null() && !tb.is_null() {
-        let h: usize = (*tb).tb6_id as usize & (FIB6_TABLE_HASHSZ - 1);
+        let _h: usize = (*tb).tb6_id as usize & (FIB6_TABLE_HASHSZ - 1);
     }
 }
 

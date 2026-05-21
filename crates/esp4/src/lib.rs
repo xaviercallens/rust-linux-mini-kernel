@@ -1,10 +1,13 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::implicit_return_in_non_void_function)]
 
-use core::{alloc::{GlobalAlloc, Layout}, ffi::{c_int, c_uint, c_ulong, c_void}, mem, ptr};
+use core::{alloc::{GlobalAlloc, Layout}, ffi::{c_int, c_void}, mem, ptr};
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
@@ -269,7 +272,7 @@ pub unsafe extern "C" fn esp_ssg_unref(
         extralen += mem::size_of::<esp_output_extra>() as c_int;
     }
 
-    let extra = esp_tmp_extra(tmp);
+    let _extra = esp_tmp_extra(tmp);
     let iv = esp_tmp_iv(aead, tmp, extralen);
     let req = esp_tmp_req(aead, iv);
 
@@ -401,7 +404,7 @@ extern "C" {
 
 // Helper macros
 #[inline]
-fn ALIGN(mut val: usize, align: usize) -> usize { (val + align - 1) & !(align - 1) }
+fn ALIGN(val: usize, align: usize) -> usize { (val + align - 1) & !(align - 1) }
 
 #[inline]
 fn PTR_ALIGN(ptr: *mut c_void, align: usize) -> *mut c_void {

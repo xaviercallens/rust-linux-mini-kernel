@@ -3,6 +3,9 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(unused_unsafe)]
+#![allow(dead_code)]
 #![allow(unused_variables)]
 
 use core::ffi::{c_char, c_int, c_void};

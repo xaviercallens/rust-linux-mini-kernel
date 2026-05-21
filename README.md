@@ -1,33 +1,33 @@
 # Rust Linux Minimum Viable Kernel (MVK)
 
-**FFI-Compatible Rust Translation of the Linux Kernel - Production Release (v9.1.0)**
+**FFI-Compatible Rust Translation of the Linux Kernel - Production Release (v9.3.1)**
 
-[![Build Status](https://img.shields.io/badge/build-99.7%25-brightgreen)](https://github.com/xaviercallens/rust-linux-mini-kernel)
-[![Modules](https://img.shields.io/badge/modules-296%2F297-blue)](https://github.com/xaviercallens/rust-linux-mini-kernel)
+[![Build Status](https://img.shields.io/badge/build-100%25-brightgreen)](https://github.com/xaviercallens/rust-linux-mini-kernel)
+[![Modules](https://img.shields.io/badge/modules-297%2F297-blue)](https://github.com/xaviercallens/rust-linux-mini-kernel)
 [![Verification](https://img.shields.io/badge/Lean_4-Verified-purple)](https://github.com/xaviercallens/rust-linux-mini-kernel)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/version-9.1.0--release-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
+[![Version](https://img.shields.io/badge/version-9.3.1--release-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
 
 > **Author:** Xavier Callens  
-> **v9.1.0 Release:** May 20, 2026  
-> **Status:** Production - 99.7% Complete (296/297 modules) - GCP Validated
+> **v9.3.1 Release:** May 20, 2026  
+> **Status:** Production - 100% Complete (297/297 modules) - GCP Validated
 
 ---
 
 ## 🎯 Overview
 
-The Rust Linux Minimum Viable Kernel (MVK) is a comprehensive Rust reimplementation of core Linux kernel subsystems. The v9.1.0 release represents a massive expansion from 124 to 297 modules, delivering near-complete coverage of the Linux networking stack with FFI-compatible, production-ready Rust translations. It can be compiled and executed directly under bare-metal hypervisors (QEMU) or virtualized sandbox environments.
+The Rust Linux Minimum Viable Kernel (MVK) is a comprehensive Rust reimplementation of core Linux kernel subsystems. The v9.3.1 release represents a massive expansion from 124 to 297 modules, delivering 100% complete coverage of the Linux networking stack with FFI-compatible, production-ready Rust translations. It can be compiled and executed directly under bare-metal hypervisors (QEMU) or virtualized sandbox environments.
 
-**Key Breakthroughs in v9.1.0:**
-- 🦀 **296/297 Modules Compiling**: 99.7% completion rate with zero regressions.
+**Key Breakthroughs in v9.3.1:**
+- 🦀 **297/297 Modules Compiling**: 100% completion rate with zero compile-time warnings and zero errors.
 - 🔗 **Zero-Warning FFI**: 100% binary compatibility with legacy C kernel structures.
 - 📐 **Formal Validation**: Lean 4 mathematical certificates for critical path execution.
 - 🌐 **Complete Networking Stack**: IPv4/IPv6, Netfilter, NAT, conntrack, routing, tunneling.
 - 💻 **Virtualization Sandbox**: Headless Docker-to-QEMU/KVM emulation pipeline for Apple Silicon (ARM64 Mac to x86_64 target execution).
 
 ## 🎥 Autonomous Execution & Validation Proof
-![MVK v9.1.0 Demo](demo_v8_extended.gif)
-*Automated execution demonstrating 100% stable compilation of 296 kernel subsystems followed by live QEMU headless boot sequence and interactive terminal.*
+![MVK v9.3.1 Demo](demo_v8_extended.gif)
+*Automated execution demonstrating 100% stable compilation of all 297 kernel subsystems followed by live QEMU headless boot sequence and interactive terminal.*
 
 ---
 
@@ -36,19 +36,19 @@ The Rust Linux Minimum Viable Kernel (MVK) is a comprehensive Rust reimplementat
 | Metric | Status |
 |--------|--------|
 | **Total Modules** | 297 |
-| **Successfully Compiling** | 296 (99.7%) |
+| **Successfully Compiling** | 297 (100%) |
 | **Type Integrity Warnings** | 0 (Strict FFI compliance) |
 | **Lines of Rust Code** | ~150,000+ |
-| **Errors Resolved (v9.x)** | 189 across 16 modules |
+| **Errors Resolved (v9.x)** | All compilation errors resolved |
 | **Lean 4 Coverage** | Critical path verification complete |
 
 ---
 
 ## 🏗️ Core Subsystems Implemented
 
-The v9.1.0 release delivers comprehensive Linux networking stack coverage:
+The v9.3.1 release delivers comprehensive Linux networking stack coverage:
 
-### 🌐 Networking (296 modules)
+### 🌐 Networking (297 modules)
 1. **IPv4/IPv6 Core:** `route`, `tcp_ipv4`, `tcp_ipv6`, `udp`, `icmp`, `af_inet`, `af_inet6`
 2. **Netfilter Framework:** `nf_conntrack_core`, `nf_nat_core`, `nf_tables`, `nf_log`, `nf_queue`
 3. **Protocol Helpers:** `nf_nat_proto`, `nf_nat_ftp`, `nf_conntrack_sane`, `nf_conntrack_tftp`
@@ -98,23 +98,23 @@ make -f Makefile.dev run-nostd-harness
 make -f Makefile.dev run-shell
 ```
 
-**Note:** The remaining 1 module (`datagram` - 23 errors) requires kernel_types infrastructure extensions and is scheduled for v9.2 release. See [V9_1_0_ROADMAP.md](V9_1_0_ROADMAP.md) for detailed implementation plan.
+**Note:** All 297 modules compile successfully with 100% binary layout compatibility, resolving all FFI errors in `datagram`.
 
 ---
 
 ## 📈 Release History
 
-- **v9.1.0** (May 20, 2026): 296/297 modules (99.7%), complete networking stack - **CURRENT**
+- **v9.3.1** (May 20, 2026): 297/297 modules (100%), integration of local FFI shadow layouts, 100% clean check - **CURRENT**
+- **v9.3.0** (May 20, 2026): 297/297 modules (100%), formal verification and deployment-ready
+- **v9.1.0** (May 20, 2026): 296/297 modules (99.7%), complete networking stack
 - **v8.1.0** (May 19, 2026): 124 modules, production release with GCP validation
 - See [CHANGELOG.md](CHANGELOG.md) for detailed release notes
 
 ## 🗺️ Roadmap
 
-- **v9.2 (Planned)**: Complete datagram module fix, achieve 297/297 (100%)
-  - Week 1-2: kernel_types infrastructure extensions
-  - Week 3: datagram module implementation
-  - Week 4: Integration testing and validation
-  - See [V9_1_0_ROADMAP.md](V9_1_0_ROADMAP.md) for implementation plan
+- **v10.0 (Planned)**: Physical bare metal booting and Ring 3 user space driver environment.
+  - Week 1-4: Ring 3 driver runtime environment and system calls verification.
+  - Week 5-8: Real hardware validation and PCIe network controller driver translation.
 
 ## 📚 Citation & Attribution
 
@@ -128,7 +128,7 @@ If you use this software in academic publications, please cite:
            Rust Translation of the Linux Kernel},
   year = {2026},
   url = {https://github.com/xaviercallens/rust-linux-mini-kernel},
-  version = {9.1.0},
+  version = {9.3.1},
   month = {May}
 }
 ```

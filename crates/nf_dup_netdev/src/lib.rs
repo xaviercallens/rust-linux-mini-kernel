@@ -9,7 +9,6 @@
 #![allow(non_camel_case_types)]
 
 use core::ffi::c_int;
-use core::ptr;
 use kernel_types::*;
 
 pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const EOPNOTSUPP: c_int = -95;

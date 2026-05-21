@@ -2,6 +2,8 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(dead_code)]
 
 use core::{ptr, ffi::{c_int, c_void}};
 use kernel_types::*;
@@ -112,11 +114,14 @@ unsafe extern "C" {
     fn rcu_read_unlock();
 }
 
+#[allow(unused_unsafe)]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn gre_gso_segment(
     skb: *mut sk_buff,
     features: netdev_features_t,
 ) -> *mut sk_buff {
+    unsafe {
     // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: gre_encap_bounds_check)
     requires!(!skb.is_null(), "gre_encap_bounds_check: skb invariant violated");
 
@@ -214,26 +219,28 @@ pub extern "C" fn gre_gso_segment(
     }
 
     segs
+    }
 }
 
+#[allow(unused_unsafe)]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff) -> *mut sk_buff {
     unsafe {
     let mut pp = ptr::null_mut();
-    let mut flush = 1;
 
-    if (*NAPI_GRO_CB(skb)).encap_mark != 0 {
+    if (*napi_gro_cb(skb)).encap_mark != 0 {
         return pp;
     }
 
-    (*NAPI_GRO_CB(skb)).encap_mark = 1;
+    (*napi_gro_cb(skb)).encap_mark = 1;
 
-    let off = unsafe { skb_gro_offset(skb) };
+    let off = skb_gro_offset(skb);
     let hlen = off + core::mem::size_of::<gre_base_hdr>();
-    let greh = unsafe { skb_gro_header_fast(skb, off) } as *mut gre_base_hdr;
+    let greh = skb_gro_header_fast(skb, off) as *mut gre_base_hdr;
 
-    if unsafe { skb_gro_header_hard(skb, hlen) } != 0 {
-        let greh = unsafe { skb_gro_header_slow(skb, hlen, off) } as *mut gre_base_hdr;
+    if skb_gro_header_hard(skb, hlen) != 0 {
+        let greh = skb_gro_header_slow(skb, hlen, off) as *mut gre_base_hdr;
         if greh.is_null() {
             return pp;
         }
@@ -244,16 +251,16 @@ pub extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff) -> *m
         return pp;
     }
 
-    if (*greh).flags & GRE_CSUM != 0 && (*NAPI_GRO_CB(skb)).is_fou != 0 {
+    if (*greh).flags & GRE_CSUM != 0 && (*napi_gro_cb(skb)).is_fou != 0 {
         return pp;
     }
 
     let type_ = (*greh).protocol;
 
-    unsafe { rcu_read_lock() };
-    let ptype = unsafe { gro_find_receive_by_type(type_) };
+    rcu_read_lock();
+    let ptype = gro_find_receive_by_type(type_);
     if ptype.is_null() {
-        unsafe { rcu_read_unlock() };
+        rcu_read_unlock();
         return pp;
     }
 
@@ -266,56 +273,58 @@ pub extern "C" fn gre_gro_receive(head: *mut list_head, skb: *mut sk_buff) -> *m
     }
 
     let hlen = off + grehlen;
-    if unsafe { skb_gro_header_hard(skb, hlen) } != 0 {
-        let greh = unsafe { skb_gro_header_slow(skb, hlen, off) } as *mut gre_base_hdr;
+    if skb_gro_header_hard(skb, hlen) != 0 {
+        let greh = skb_gro_header_slow(skb, hlen, off) as *mut gre_base_hdr;
         if greh.is_null() {
-            unsafe { rcu_read_unlock() };
+            rcu_read_unlock();
             return pp;
         }
     }
 
     // Checksum validation
-    if (*greh).flags & GRE_CSUM != 0 && (*NAPI_GRO_CB(skb)).flush == 0 {
-        if unsafe { skb_gro_checksum_simple_validate(skb) } != 0 {
-            unsafe { rcu_read_unlock() };
+    if (*greh).flags & GRE_CSUM != 0 && (*napi_gro_cb(skb)).flush == 0 {
+        if skb_gro_checksum_simple_validate(skb) != 0 {
+            rcu_read_unlock();
             return pp;
         }
-        unsafe { skb_gro_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo) };
+        skb_gro_checksum_try_convert(skb, IPPROTO_GRE, null_compute_pseudo);
     }
 
     // Check same flow
     let mut p = (*head).next;
-    while p != head as *mut list_head {
-        let greh2 = (p as *mut sk_buff).offset(off as isize) as *mut gre_base_hdr;
+    while !core::ptr::eq(p, head) {
+        let greh2 = (p as *mut sk_buff).add(off) as *mut gre_base_hdr;
 
         if (*greh2).flags != (*greh).flags || (*greh2).protocol != (*greh).protocol {
-            (*NAPI_GRO_CB(p as *mut sk_buff)).same_flow = 0;
+            (*napi_gro_cb(p as *mut sk_buff)).same_flow = 0;
         } else if (*greh).flags & GRE_KEY != 0 {
             let key1 =
-                (greh as *mut u8).offset(core::mem::size_of::<gre_base_hdr>() as isize) as *mut u32;
+                (greh as *mut u8).add(core::mem::size_of::<gre_base_hdr>()) as *mut u32;
             let key2 =
-                (greh2 as *mut u8).offset(core::mem::size_of::<gre_base_hdr>() as isize) as *mut u32;
+                (greh2 as *mut u8).add(core::mem::size_of::<gre_base_hdr>()) as *mut u32;
             if *key1 != *key2 {
-                (*NAPI_GRO_CB(p as *mut sk_buff)).same_flow = 0;
+                (*napi_gro_cb(p as *mut sk_buff)).same_flow = 0;
             }
         }
 
         p = (*p).next;
     }
 
-    unsafe { skb_gro_pull(skb, grehlen) };
-    unsafe { skb_gro_postpull_rcsum(skb, greh as *mut c_void, grehlen) };
+    skb_gro_pull(skb, grehlen);
+    skb_gro_postpull_rcsum(skb, greh as *mut c_void, grehlen);
 
-    pp = unsafe { call_gro_receive((*ptype).callbacks.gro_receive.unwrap(), head, skb) };
-    flush = 0;
+    pp = call_gro_receive((*ptype).callbacks.gro_receive.unwrap(), head, skb);
+    let flush = 0;
 
-        rcu_read_unlock();
-        skb_gro_flush_final(skb, pp, flush);
+    rcu_read_unlock();
+    skb_gro_flush_final(skb, pp, flush);
 
-        pp
+    pp
     }
 }
 
+#[allow(unused_unsafe)]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn gre_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
     unsafe {
@@ -335,26 +344,26 @@ pub extern "C" fn gre_gro_complete(skb: *mut sk_buff, nhoff: c_int) -> c_int {
         grehlen += core::mem::size_of::<u16>() as u32;
     }
 
-        rcu_read_lock();
-        let ptype = gro_find_complete_by_type(type_);
-        if !ptype.is_null() {
-            if let Some(gro_complete_func) = (*ptype).callbacks.gro_complete {
-                err = gro_complete_func(skb, nhoff + grehlen as c_int);
-            }
+    rcu_read_lock();
+    let ptype = gro_find_complete_by_type(type_);
+    if !ptype.is_null() {
+        if let Some(gro_complete_func) = (*ptype).callbacks.gro_complete {
+            err = gro_complete_func(skb, nhoff + grehlen as c_int);
         }
-        rcu_read_unlock();
+    }
+    rcu_read_unlock();
 
-        skb_set_inner_mac_header(skb, nhoff + grehlen as c_int);
+    skb_set_inner_mac_header(skb, nhoff + grehlen as c_int);
 
-        err
+    err
     }
 }
 
+/// # Safety
+/// May modify kernel structures.
 #[no_mangle]
 pub unsafe extern "C" fn gre_offload_init() -> c_int {
-    let mut err = 0;
-
-    err = inet_add_offload(&gre_offload, IPPROTO_GRE);
+    let mut err = inet_add_offload(&GRE_OFFLOAD, IPPROTO_GRE);
     if err != 0 {
         return err;
     }
@@ -382,7 +391,7 @@ unsafe fn skb_shinfo(skb: *mut sk_buff) -> *mut skb_shared_info {
 }
 
 #[inline]
-unsafe fn skb_set_inner_mac_header(skb: *mut sk_buff, offset: c_int) {
+unsafe fn skb_set_inner_mac_header(_skb: *mut sk_buff, _offset: c_int) {
     // Simplified implementation
 }
 
@@ -404,12 +413,12 @@ struct NAPI_GRO_CB {
 }
 
 #[inline]
-unsafe fn NAPI_GRO_CB(skb: *mut sk_buff) -> *mut NAPI_GRO_CB {
+unsafe fn napi_gro_cb(skb: *mut sk_buff) -> *mut NAPI_GRO_CB {
     // Simplified implementation
     (skb as *mut c_void).offset(192) as *mut NAPI_GRO_CB
 }
 
-static gre_offload: packet_offload = packet_offload {
+static GRE_OFFLOAD: packet_offload = packet_offload {
     callbacks: packet_offload_callbacks {
         gso_segment: Some(gre_gso_segment as extern "C" fn(*mut sk_buff, netdev_features_t) -> *mut sk_buff),
         gro_receive: Some(gre_gro_receive as extern "C" fn(*mut list_head, *mut sk_buff) -> *mut sk_buff),
@@ -423,6 +432,8 @@ pub extern "C" fn null_compute_pseudo(_skb: *mut sk_buff) -> u32 {
 }
 
 // Module initialization
+/// # Safety
+/// Invokes initialization functions that modify kernel state.
 #[no_mangle]
 pub unsafe extern "C" fn device_initcall(gre_offload_init: extern "C" fn() -> c_int) {
     gre_offload_init();

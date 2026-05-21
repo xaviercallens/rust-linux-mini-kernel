@@ -6,8 +6,10 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
 
-use core::ffi::{c_int, c_void};
+use core::ffi::{c_int, c_char, c_void};
 use core::panic::PanicInfo;
 use core::ptr;
 use kernel_types::*;
@@ -24,16 +26,93 @@ pub const XFRM_MODE_TUNNEL: c_int = 1;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct ip_comp_hdr { pub cpi: __be16 }
+pub struct ip_comp_hdr {
+    pub cpi: __be16,
+}
 
 #[repr(C)]
-pub struct inet6_skb_parm { _priv: [u8; 0] }
+pub struct inet6_skb_parm {
+    _priv: [u8; 0],
+}
 
 #[repr(C)]
-pub struct xfrm_state { _priv: [u8; 0] }
+#[derive(Copy, Clone)]
+pub struct xfrm_mark {
+    pub v: u32,
+    pub m: u32,
+}
 
 #[repr(C)]
-pub struct sk_buff { _priv: [u8; 0] }
+#[derive(Copy, Clone)]
+pub struct xfrm_address_t {
+    pub a6: [u32; 4],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_state_props {
+    pub mode: c_int,
+    pub header_len: c_int,
+    pub saddr: xfrm_address_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_state_id {
+    pub daddr: xfrm_address_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_state {
+    pub mark: xfrm_mark,
+    pub props: xfrm_state_props,
+    pub id: xfrm_state_id,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct xfrm_type {
+    pub description: *const c_char,
+    pub owner: *const c_void,
+    pub proto: c_int,
+    pub init_state: Option<unsafe extern "C" fn(*mut xfrm_state) -> c_int>,
+    pub destructor: Option<unsafe extern "C" fn(*mut xfrm_state)>,
+    pub input: Option<unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int>,
+    pub output: Option<unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff) -> c_int>,
+    pub hdr_offset: Option<unsafe extern "C" fn(*mut xfrm_state, *mut sk_buff, *mut *mut u8) -> c_int>,
+}
+
+unsafe impl Sync for xfrm_type {}
+
+pub const THIS_MODULE: *const c_void = ptr::null();
+pub static ipcomp6_protocol: u8 = 0;
+
+extern "C" {
+    pub fn ntohs(val: __be16) -> u16;
+    pub fn dev_net(dev: *mut c_void) -> *mut c_void;
+    pub fn xfrm_state_lookup(
+        net: *mut c_void,
+        mark: u32,
+        daddr: *const xfrm_address_t,
+        spi: u32,
+        proto: u8,
+        family: c_int,
+    ) -> *mut xfrm_state;
+    pub fn sock_net_uid(net: *mut c_void, sk: *mut c_void) -> u32;
+    pub fn ip6_redirect(skb: *mut sk_buff, net: *mut c_void, ifindex: c_int, target: u32, uid: u32);
+    pub fn ip6_update_pmtu(skb: *mut sk_buff, net: *mut c_void, mtu: u32, flags: u32, tclass: u32, uid: u32);
+    pub fn xfrm_state_put(x: *mut xfrm_state);
+    pub fn xs_net(x: *mut xfrm_state) -> *mut c_void;
+    pub fn xfrm6_tunnel_spi_lookup(net: *mut c_void, saddr: *const xfrm_address_t) -> u32;
+    pub fn ipcomp_init_state(x: *mut xfrm_state) -> c_int;
+    pub fn xfrm_register_type(t: *const xfrm_type, family: c_int) -> c_int;
+    pub fn xfrm_unregister_type(t: *const xfrm_type, family: c_int);
+    pub fn xfrm6_protocol_register(handler: *const u8, proto: c_int) -> c_int;
+    pub fn xfrm6_protocol_deregister(handler: *const u8, proto: c_int) -> c_int;
+    pub fn pr_info(fmt: *const c_char);
+    pub fn xfrm6_find_1stfragopt(x: *mut xfrm_state, skb: *mut sk_buff, prevhdr: *mut *mut u8) -> c_int;
+}
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -46,29 +125,29 @@ pub unsafe extern "C" fn rust_eh_personality() {}
 
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_err(
-    _skb: *mut sk_buff,
+    skb: *mut sk_buff,
     _opt: *mut inet6_skb_parm,
-    _type: u8,
+    type_: u8,
     _code: u8,
-    _offset: c_int,
-    _info: __be32,
+    offset: c_int,
+    info: __be32,
 ) -> c_int {
     if type_ != 1 && type_ != 2 {
         return 0;
     }
 
     let iph = (*skb).data as *const ipv6hdr;
-    let ipcomph = (*skb).data.offset(offset as isize) as *const ip_comp_hdr;
+    let ipcomph = ((*skb).data as *const u8).add(offset as usize) as *const ip_comp_hdr;
 
-    let spi = u32::from_be(ntohs((*ipcomph).cpi));
+    let spi = u32::from_be(ntohs((*ipcomph).cpi) as u32);
     let net = dev_net((*skb).dev);
 
     let x = xfrm_state_lookup(
         net,
-        (*skb).mark,
+        (*skb).mark as usize as u32,
         &(*iph).daddr as *const _ as *const xfrm_address_t,
         spi,
-        IPPROTO_COMP,
+        IPPROTO_COMP as u8,
         AF_INET6,
     );
 
@@ -76,8 +155,9 @@ pub unsafe extern "C" fn ipcomp6_err(
         return 0;
     }
 
+    let dev = (*skb).dev as *mut net_device;
     if type_ == 2 {
-        ip6_redirect(skb, net, (*skb).dev.offset(0).ifindex, 0, sock_net_uid(net, ptr::null_mut()));
+        ip6_redirect(skb, net, (*dev).ifindex, 0, sock_net_uid(net, ptr::null_mut()));
     } else {
         ip6_update_pmtu(skb, net, info, 0, 0, sock_net_uid(net, ptr::null_mut()));
     }
@@ -95,7 +175,7 @@ pub unsafe extern "C" fn ipcomp6_tunnel_create(_x: *mut xfrm_state) -> *mut xfrm
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
     let net = xs_net(x);
-    let mut err = 0;
+    let err = 0;
     let mut t: *mut xfrm_state = ptr::null_mut();
     let mut spi: u32 = 0;
     let mark = (*x).mark.m & (*x).mark.v;
@@ -111,7 +191,7 @@ pub unsafe extern "C" fn ipcomp6_tunnel_attach(x: *mut xfrm_state) -> c_int {
             mark,
             &(*x).id.daddr as *const _ as *const xfrm_address_t,
             spi,
-            IPPROTO_IPV6,
+            IPPROTO_IPV6 as u8,
             AF_INET6
         );
     }
@@ -189,11 +269,14 @@ pub static ipcomp6_type: xfrm_type = xfrm_type {
     owner: THIS_MODULE,
     proto: IPPROTO_COMP,
     init_state: Some(ipcomp6_init_state),
-    destructor: Some(ipcomp_destroy),
-    input: Some(ipcomp_input),
-    output: Some(ipcomp_output),
+    destructor: Some(ipcomp6_destroy),
+    input: Some(ipcomp6_input),
+    output: Some(ipcomp6_output),
     hdr_offset: Some(xfrm6_find_1stfragopt),
 };
+
+#[no_mangle]
+pub unsafe extern "C" fn ipcomp6_destroy(_x: *mut xfrm_state) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn ipcomp6_get_mtu(_x: *mut xfrm_state, mtu: u32) -> u32 {

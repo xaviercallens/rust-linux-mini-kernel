@@ -10,9 +10,8 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 
-use core::ffi::{c_char, c_int, c_uint, c_ulong, c_ulonglong, c_void};
+use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::panic::PanicInfo;
-use kernel_types::*;
 
 pub type size_t = usize;
 pub type c_size_t = usize;

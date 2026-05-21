@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(clippy::all)]
+#![allow(dead_code)]
 
 use core::{ptr, ffi::c_void};
 use kernel_types::*;
@@ -100,10 +102,10 @@ pub unsafe extern "C" fn ipip6_dev_free(dev: *mut c_void) {
 #[unsafe(no_mangle)]
 pub extern "C" fn ipip6_tunnel_lookup(
     net: *mut c_void,
-    dev: *mut c_void,
-    remote: __be32,
-    local: __be32,
-    sifindex: c_int,
+    _dev: *mut c_void,
+    _remote: __be32,
+    _local: __be32,
+    _sifindex: c_int,
 ) -> *mut ip_tunnel {
     if net.is_null() {
         return ptr::null_mut();
@@ -179,7 +181,7 @@ pub unsafe extern "C" fn ipip6_tunnel_create(dev: *mut c_void) -> c_int {
 pub unsafe extern "C" fn ipip6_tunnel_locate(
     net: *mut c_void,
     parms: *mut ip_tunnel_parm,
-    create: c_int,
+    _create: c_int,
 ) -> *mut ip_tunnel {
     if net.is_null() || parms.is_null() {
         return ptr::null_mut();
@@ -197,7 +199,7 @@ pub unsafe extern "C" fn ipip6_tunnel_locate(
 #[no_mangle]
 pub unsafe extern "C" fn __ipip6_tunnel_locate_prl(
     t: *mut ip_tunnel,
-    addr: __be32,
+    _addr: __be32,
 ) -> *mut ip_tunnel_prl_entry {
     if t.is_null() {
         return ptr::null_mut();
@@ -231,7 +233,7 @@ pub unsafe extern "C" fn ipip6_tunnel_get_prl(dev: *mut c_void, ifr: *mut c_void
 pub unsafe extern "C" fn ipip6_tunnel_add_prl(
     t: *mut ip_tunnel,
     a: *mut ip_tunnel_prl,
-    chg: c_int,
+    _chg: c_int,
 ) -> c_int {
     if t.is_null() || a.is_null() {
         return -EINVAL;
@@ -247,7 +249,7 @@ pub unsafe extern "C" fn ipip6_tunnel_add_prl(
 /// - `t` must be valid pointer to ip_tunnel
 /// - `a` must be valid pointer to ip_tunnel_prl or null
 #[no_mangle]
-pub unsafe extern "C" fn ipip6_tunnel_del_prl(t: *mut ip_tunnel, a: *mut ip_tunnel_prl) -> c_int {
+pub unsafe extern "C" fn ipip6_tunnel_del_prl(t: *mut ip_tunnel, _a: *mut ip_tunnel_prl) -> c_int {
     if t.is_null() {
         return -EINVAL;
     }

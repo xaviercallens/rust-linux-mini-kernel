@@ -2,9 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 
-use kernel_types::*;
 use core::ffi::c_int;
-use kernel_types::*;
 
 #[cfg(not(test))]
 #[panic_handler]
