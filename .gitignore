@@ -10,3 +10,14 @@
 **/target/
 *.pyc
 __pycache__/
+
+# Lean 4 build artifacts
+specs/lean4/.lake/build/
+specs/lean4/build_*.log
+
+# Editor/OS artifacts
+.DS_Store
+*.swp
+*.swo
+cargo_warnings.txt
+clippy_remaining.txt
