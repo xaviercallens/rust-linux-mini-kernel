@@ -13,3 +13,9 @@ crate-type = ["staticlib", "rlib"]
 libc.workspace = true
 
 kernel_types = { path = "../kernel_types" }
+
+[features]
+default = []
+nf_ct_netlink = []
+nf_conntrack_timeout = []
+

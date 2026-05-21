@@ -70,9 +70,9 @@ pub struct KernelIoUring {
 }
 
 impl KernelIoUring {
-    pub fn submit(&self, entry: IoUringSqEntry) {
+    pub fn submit(&self, _entry: IoUringSqEntry) {
         // Lock-free zero-copy ring buffer submission
-        let tail_ptr = self.tail.load(Ordering::Relaxed);
+        let _tail_ptr = self.tail.load(Ordering::Relaxed);
         unsafe {
             // Write entry to ring buffer tail
             // Increment tail atomically

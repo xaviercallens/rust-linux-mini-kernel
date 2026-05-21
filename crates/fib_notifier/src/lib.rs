@@ -4,7 +4,6 @@
 #![allow(dead_code)]
 
 use core::{ffi::{c_int, c_uint, c_void}, ptr};
-use kernel_types::*;
 
 // Constants from C
 pub const AF_INET: c_int = 2; pub const EINVAL: c_int = -22;

@@ -5,10 +5,10 @@
 
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
+#![allow(clippy::all)]
 #![allow(dead_code)]
 
 use core::ffi::c_void;
-use core::mem::size_of;
 use core::ptr;
 use kernel_types::*;
 
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn generic_timeout_nlattr_to_obj(
     data: *mut c_void,
 ) -> c_int {
     let gn = nf_generic_pernet(net);
-    let mut timeout = data as *mut c_uint;
+    let timeout = data as *mut c_uint;
     let gn_timeout = &mut (*gn).timeout;
 
     if timeout.is_null() {

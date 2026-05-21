@@ -1,8 +1,11 @@
 #![cfg_attr(not(test), no_std)]
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
 
 use core::ffi::{c_int, c_uchar, c_uint, c_ulong, c_ushort, c_void};
 use core::ptr::null_mut;
-use kernel_types::*;
 
 pub type size_t = usize;
 pub type c_size_t = usize;

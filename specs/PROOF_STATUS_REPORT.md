@@ -1,31 +1,31 @@
-# MVK v9.1.0 Proof Status Report
+# MVK v9.3.1 Proof Status Report
 
-**Generated:** Wed May 20 16:19:43 CEST 2026
+**Generated:** Thu May 21 11:11:59 CEST 2026
 **Lean Version:** Lean (version 4.29.1, arm64-apple-darwin24.6.0, commit f72c35b3f637c8c6571d353742168ab66cc22c00, Release)
 
 ## Summary
 
 - **Total Theorems:** 316
-- **Total Axioms:** 124
-- **Total Obligations:** 440
-- **Completed Proofs:** 53
-- **Incomplete (sorry):** 263
-- **Completion:** 12%
+- **Total Axioms:** 127
+- **Total Obligations:** 443
+- **Completed Proofs:** 69
+- **Incomplete (sorry):** 247
+- **Completion:** 15%
 
 ## Module Breakdown
 
 | Module | Theorems | Axioms | Sorry | Status |
 |--------|----------|--------|-------|--------|
-| Printk | 4 | 4 | 1 | ⏳ In Progress |
+| Printk | 4 | 5 | 0 | ✅ Complete |
 | ArchSetup | 4 | 6 | 4 | ⏳ In Progress |
 | InitMain | 6 | 2 | 6 | ⏳ In Progress |
-| Common | 7 | 4 | 2 | ⏳ In Progress |
+| Common | 7 | 6 | 0 | ✅ Complete |
 | PageAlloc | 14 | 4 | 13 | ⏳ In Progress |
 | Slab | 15 | 3 | 15 | ⏳ In Progress |
 | ConntrackCore | 16 | 12 | 13 | ⏳ In Progress |
 | ConntrackGeneric | 15 | 3 | 10 | ⏳ In Progress |
 | ConntrackUDP | 14 | 7 | 10 | ⏳ In Progress |
-| ConntrackTCP | 17 | 10 | 13 | ⏳ In Progress |
+| ConntrackTCP | 17 | 10 | 0 | ✅ Complete |
 | ConntrackICMP | 24 | 5 | 16 | ⏳ In Progress |
 | ConntrackICMPv6 | 25 | 6 | 13 | ⏳ In Progress |
 | ConntrackSCTP | 26 | 5 | 23 | ⏳ In Progress |

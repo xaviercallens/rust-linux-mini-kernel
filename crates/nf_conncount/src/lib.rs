@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 #![allow(clashing_extern_declarations)]
 
-use core::{{ptr, slice}, ffi::{c_int, c_uint, c_ulong, c_void}, panic::PanicInfo};
+use core::{{ptr, slice}, ffi::{c_int, c_uint, c_ulong, c_void}};
 use kernel_types::*;
 
 pub const CONNCOUNT_SLOTS: usize = 256;
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn nf_conncount_gc_list(
     list: *mut nf_conncount_list,
 ) -> c_int {
     let mut collected = 0;
-    let mut conn: *mut nf_conncount_tuple = ptr::null_mut();
+    let conn: *mut nf_conncount_tuple = ptr::null_mut();
 
     if spin_trylock((*list).list_lock) == 0 {
         return 0;

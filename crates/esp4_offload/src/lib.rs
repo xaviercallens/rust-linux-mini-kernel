@@ -2,7 +2,6 @@
 #![allow(non_camel_case_types)]
 
 use core::{ptr, ffi::{c_int, c_void}, panic::PanicInfo};
-use kernel_types::*;
 
 type size_t = usize;
 pub type netdev_features_t = u32;

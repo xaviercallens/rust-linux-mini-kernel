@@ -5,7 +5,6 @@
 #![allow(clippy::all)]
 
 use core::{ffi::{c_char, c_int, c_uint, c_void}, mem, ptr, sync::atomic::{AtomicU32, Ordering}};
-use kernel_types::*;
 
 // Opaque kernel objects (FFI-safe)
 #[repr(C)]
@@ -31,7 +30,7 @@ struct hlist_head { first: *mut hlist_node }
 struct hlist_node { next: *mut hlist_node, pprev: *mut *mut hlist_node }
 
 #[repr(C)]
-struct xfrm_address_t { addr: [u8; 16] }
+pub struct xfrm_address_t { pub addr: [u8; 16] }
 
 #[repr(C)]
 struct rcu_head { func: Option<extern "C" fn(head: *mut rcu_head)> }
@@ -126,21 +125,19 @@ extern "C" fn xfrm6_tunnel_net_init(_net: *mut net) -> c_int {
 extern "C" fn xfrm6_tunnel_net_exit(_net: *mut net) {}
 
 // Global variables
-static mut xfrm6_tunnel_net_id: c_int = 0;
-static mut xfrm6_tunnel_spi_kmem: *mut c_void = ptr::null_mut();
-static mut xfrm6_tunnel_spi_lock: spinlock_t = spinlock_t { _private: 0 };
-static mut xfrm6_tunnel_net_ops: pernet_operations = unsafe {
-    pernet_operations {
-        init: xfrm6_tunnel_net_init,
-        exit: xfrm6_tunnel_net_exit,
-        id: &raw mut xfrm6_tunnel_net_id,
-        size: mem::size_of::<xfrm6_tunnel_net>() as c_int,
-    }
+static mut XFRM6_TUNNEL_NET_ID: c_int = 0;
+static mut XFRM6_TUNNEL_SPI_KMEM: *mut c_void = ptr::null_mut();
+static mut XFRM6_TUNNEL_SPI_LOCK: spinlock_t = spinlock_t { _private: 0 };
+static mut XFRM6_TUNNEL_NET_OPS: pernet_operations = pernet_operations {
+    init: xfrm6_tunnel_net_init,
+    exit: xfrm6_tunnel_net_exit,
+    id: &raw mut XFRM6_TUNNEL_NET_ID,
+    size: mem::size_of::<xfrm6_tunnel_net>() as c_int,
 };
 
 #[inline]
 unsafe fn xfrm6_tunnel_pernet(n: *mut net) -> *mut xfrm6_tunnel_net {
-    net_generic(n, xfrm6_tunnel_net_id) as *mut xfrm6_tunnel_net
+    net_generic(n, XFRM6_TUNNEL_NET_ID) as *mut xfrm6_tunnel_net
 }
 
 #[unsafe(no_mangle)]
@@ -201,7 +198,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_
     let mut spi: u32 = 0;
 
     // SAFETY: Spinlock held during critical section
-    spin_lock_bh(&mut xfrm6_tunnel_spi_lock);
+    spin_lock_bh(&raw mut XFRM6_TUNNEL_SPI_LOCK);
     {
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
@@ -226,7 +223,7 @@ pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_
             spi = __xfrm6_tunnel_alloc_spi(net, saddr);
         }
     }
-    spin_unlock_bh(&mut xfrm6_tunnel_spi_lock);
+    spin_unlock_bh(&raw mut XFRM6_TUNNEL_SPI_LOCK);
 
     spi
 }
@@ -239,14 +236,13 @@ pub unsafe extern "C" fn xfrm6_tunnel_alloc_spi(net: *mut net, saddr: *mut xfrm_
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_tunnel_free_spi(net: *mut net, saddr: *mut xfrm_address_t) {
     // SAFETY: Spinlock held during critical section
-    spin_lock_bh(&mut xfrm6_tunnel_spi_lock);
+    spin_lock_bh(&raw mut XFRM6_TUNNEL_SPI_LOCK);
     {
         let xfrm6_tn = xfrm6_tunnel_pernet(net);
         let h = xfrm6_tunnel_spi_hash_byaddr(saddr);
 
         let head = &(*xfrm6_tn).spi_byaddr[h as usize];
         let mut node = head.first;
-        let mut prev: *mut *mut hlist_node = head.first as *mut *mut hlist_node;
 
         while !node.is_null() {
             let x6spi = (node as *mut xfrm6_tunnel_spi)
@@ -266,11 +262,10 @@ pub unsafe extern "C" fn xfrm6_tunnel_free_spi(net: *mut net, saddr: *mut xfrm_a
                 break;
             }
 
-            prev = (*node).next as *mut *mut hlist_node;
-            node = *prev;
+            node = (*node).next;
         }
     }
-    spin_unlock_bh(&mut xfrm6_tunnel_spi_lock);
+    spin_unlock_bh(&raw mut XFRM6_TUNNEL_SPI_LOCK);
 }
 
 /// Check if SPI is already allocated
@@ -311,7 +306,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
     saddr: *mut xfrm_address_t,
 ) -> u32 {
     let xfrm6_tn = xfrm6_tunnel_pernet(net);
-    let mut spi: u32 = 0;
+    let spi: u32 = 0;
     let mut index: c_int = -1;
 
     if (*xfrm6_tn).spi < XFRM6_TUNNEL_SPI_MIN || (*xfrm6_tn).spi >= XFRM6_TUNNEL_SPI_MAX {
@@ -340,7 +335,7 @@ pub unsafe extern "C" fn __xfrm6_tunnel_alloc_spi(
         (*xfrm6_tn).spi = spi;
 
         // Allocate new SPI entry
-        let x6spi = kmem_cache_alloc(xfrm6_tunnel_spi_kmem, 0) as *mut xfrm6_tunnel_spi;
+        let x6spi = kmem_cache_alloc(XFRM6_TUNNEL_SPI_KMEM, 0) as *mut xfrm6_tunnel_spi;
         if !x6spi.is_null() {
             ptr::copy_nonoverlapping(saddr, &mut (*x6spi).addr, mem::size_of::<xfrm_address_t>());
             (*x6spi).spi = spi;

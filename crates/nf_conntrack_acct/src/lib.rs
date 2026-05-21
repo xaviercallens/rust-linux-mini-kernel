@@ -2,9 +2,9 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
+#![allow(clippy::manual_c_str_literals)]
 
 use core::{ptr, ffi::{c_int, c_char, c_void}};
-use kernel_types::*;
 
 pub const EINVAL: c_int = -22;
 pub const ENOMEM: c_int = -12;
@@ -22,10 +22,10 @@ struct nf_ct_ext_type {
 }
 
 #[repr(C)]
-struct net { ct: net_ct }
+pub struct net { pub ct: net_ct }
 
 #[repr(C)]
-struct net_ct { sysctl_acct: u8 }
+pub struct net_ct { pub sysctl_acct: u8 }
 
 static mut NF_CT_ACCT: u8 = 0;
 

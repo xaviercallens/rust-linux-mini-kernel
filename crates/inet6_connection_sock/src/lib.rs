@@ -170,7 +170,7 @@ pub unsafe extern "C" fn inet6_csk_addr2sockaddr(sk: *mut sock, uaddr: *mut sock
 #[no_mangle]
 pub unsafe extern "C" fn inet6_csk_xmit(
     sk: *mut sock,
-    skb: *mut sk_buff,
+    _skb: *mut sk_buff,
     _fl_unused: *mut c_void,
 ) -> c_int {
     let np = &*(sk as *const ipv6_pinfo);

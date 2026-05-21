@@ -8,8 +8,11 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(private_interfaces)]
+#![allow(static_mut_refs)]
+#![allow(dead_code)]
 
-use core::panic::PanicInfo;
 use kernel_types::*;
 
 pub const IP_CT_DIR_ORIGINAL: c_int = 0;

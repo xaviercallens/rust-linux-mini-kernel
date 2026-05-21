@@ -287,7 +287,7 @@ pub unsafe extern "C" fn udp6_lib_lookup2(
     let mut badness: c_int = -1;
 
     let mut sk = (*hslot2).head.next;
-    while !sk.is_null() && sk != &(*hslot2).head as *const _ as *mut _ {
+    while !sk.is_null() && !core::ptr::eq(sk, &raw const (*hslot2).head as *mut _) {
         let score = compute_score(sk as *mut sock, net, saddr, sport, daddr, hnum, dif, sdif);
         if score > badness {
             let reuse_sk = lookup_reuseport(net, sk as *mut sock, skb, saddr, sport, daddr, hnum);
@@ -314,7 +314,7 @@ pub unsafe extern "C" fn udp6_lookup_run_bpf(
     daddr: *const in6_addr,
     hnum: u16,
 ) -> *mut sock {
-    if udptable != &raw mut UDP_TABLE as *mut _ {
+    if !core::ptr::eq(udptable, &raw mut UDP_TABLE as *mut _) {
         return ptr::null_mut();
     }
 
@@ -430,14 +430,9 @@ pub unsafe extern "C" fn udpv6_recvmsg(
     addr_len: *mut c_int,
 ) -> c_int {
     let np = &(*sk).ipv6_pinfo;
-    let inet = &(*sk).inet_sk;
-    let mut skb: *mut sk_buff = ptr::null_mut();
-    let mut ulen: c_int = 0;
-    let mut copied: usize = 0;
+    let _inet = &(*sk).inet_sk;
     let mut err: c_int = 0;
-    let mut is_udplite: c_int = 0;
-    let mut is_udp4: c_int = 0;
-    let mut mib: *mut udp_mib = ptr::null_mut();
+    let is_udplite: c_int = 0;
 
     if flags & MSG_ERRQUEUE != 0 {
         return ipv6_recv_error(sk, msg as *mut c_void, len, addr_len);
@@ -448,20 +443,20 @@ pub unsafe extern "C" fn udpv6_recvmsg(
     }
 
     let mut off = sk_peek_offset(sk, flags);
-    skb = __skb_recv_udp(sk, flags, noblock, &mut off, &mut err);
+    let skb = __skb_recv_udp(sk, flags, noblock, &mut off, &mut err);
     if skb.is_null() {
         return err;
     }
 
-    ulen = udp6_skb_len(skb);
-    copied = len;
+    let ulen = udp6_skb_len(skb);
+    let mut copied = len;
     if copied > ulen as usize - off as usize {
         copied = ulen as usize - off as usize;
         (*msg).msg_flags |= MSG_TRUNC;
     }
 
-    is_udp4 = if (*skb).protocol == htons(ETH_P_IP) { 1 } else { 0 };
-    mib = __UDPX_MIB(sk, is_udp4);
+    let is_udp4 = if (*skb).protocol == htons(ETH_P_IP) { 1 } else { 0 };
+    let _mib = __UDPX_MIB(sk, is_udp4);
 
     let checksum_valid = if copied < ulen as usize || (flags & MSG_PEEK) != 0 || (is_udplite != 0 && (*UDP_SKB_CB(skb)).partial_cov != 0) {
         let valid = udp_skb_csum_unnecessary(skb) != 0 || __udp_lib_checksum_complete(skb) == 0;

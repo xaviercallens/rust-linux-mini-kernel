@@ -32,7 +32,7 @@
      [["mvk_specs/MVK:extraDep", [["@mvk_specs:extraDep", "00000000000006bb"]]],
       ["imports",
        [["MVK.Phase1.Printk transitive imports (legacy)", "00000000000006bb"],
-        ["MVK.Phase1.Printk:importAllArts", "9487216352fb11cd"],
+        ["MVK.Phase1.Printk:importAllArts", "329a2365e31f9215"],
         ["MVK.Phase1.ArchSetup transitive imports (legacy)",
          "00000000000006bb"],
         ["MVK.Phase1.ArchSetup:importAllArts", "54185e6cf312c0aa"]]]]],
@@ -54,4 +54,4 @@
   ["Module.name: MVK.Phase1.InitMain", "963ace22f27803a0"],
   ["Package.id?: (some mvk_specs)", "87e214ad4fcfa210"],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "964718808aad1ec9"}
+ "depHash": "df5348a0f434ccfc"}

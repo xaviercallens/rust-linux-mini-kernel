@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verify Lean 4 specifications for MVK v9.3.0-gamma
+# Verify Lean 4 specifications for MVK v9.3.1
 # Usage: ./verify_specs.sh [--verbose]
 
 set -e
@@ -10,7 +10,7 @@ if [[ "$1" == "--verbose" ]]; then
 fi
 
 echo "========================================"
-echo "  MVK v9.3.0-gamma Formal Verification"
+echo "  MVK v9.3.1 Formal Verification"
 echo "========================================"
 echo ""
 
@@ -142,17 +142,17 @@ log_info "Step 4/5: Analyzing proof obligations..."
 
 count_sorry() {
     local file=$1
-    grep -c "sorry" "$file" 2>/dev/null || echo "0"
+    grep "sorry" "$file" 2>/dev/null | wc -l | tr -d ' '
 }
 
 count_axiom() {
     local file=$1
-    grep -c "^axiom" "$file" 2>/dev/null || echo "0"
+    grep "^axiom" "$file" 2>/dev/null | wc -l | tr -d ' '
 }
 
 count_theorem() {
     local file=$1
-    grep -c "^theorem" "$file" 2>/dev/null || echo "0"
+    grep "^theorem" "$file" 2>/dev/null | wc -l | tr -d ' '
 }
 
 TOTAL_SORRY=0
@@ -203,7 +203,7 @@ log_info "Step 5/5: Generating reports..."
 REPORT_FILE="$SPECS_DIR/../PROOF_STATUS_REPORT.md"
 
 cat > "$REPORT_FILE" << EOF
-# MVK v9.1.0 Proof Status Report
+# MVK v9.3.1 Proof Status Report
 
 **Generated:** $(date)
 **Lean Version:** $(lean --version)

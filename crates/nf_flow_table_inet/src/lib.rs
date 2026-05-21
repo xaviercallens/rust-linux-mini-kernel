@@ -5,7 +5,6 @@
 
 use kernel_types::*;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use core::ffi::c_void;
 use core::panic::PanicInfo;
 
 #[cfg(not(test))]

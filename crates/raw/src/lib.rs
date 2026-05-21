@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+#![allow(clippy::all)]
 use kernel_types::*;
 
 // IPv6 helper function declarations
@@ -34,28 +36,28 @@ pub struct raw_v6_lookup_args {
 pub unsafe extern "C" fn raw_v6_lookup(
     skb: *mut sk_buff,
     flowi: *mut flowi,
-    oif: c_int,
+    _oif: c_int,
     saddr: *const in6_addr,
     daddr: *const in6_addr,
-    nexthdr: c_int,
-    hdr_len: c_int,
+    _nexthdr: c_int,
+    _hdr_len: c_int,
     dev: *mut net_device,
-    flags: c_uint,
-    sdif: c_int,
-    connected: c_int,
-    flow: *mut flowi,
-    loc_sk: *mut sock,
-    loc_addr: *mut in6_addr,
-    loc_port: c_int,
-    loc_rcv_saddr: *mut in6_addr,
-    loc_rcv_port: c_int,
+    _flags: c_uint,
+    _sdif: c_int,
+    _connected: c_int,
+    _flow: *mut flowi,
+    _loc_sk: *mut sock,
+    _loc_addr: *mut in6_addr,
+    _loc_port: c_int,
+    _loc_rcv_saddr: *mut in6_addr,
+    _loc_rcv_port: c_int,
 ) -> c_int {
     if skb.is_null() || flowi.is_null() || saddr.is_null() || daddr.is_null() || dev.is_null() {
         return -EINVAL;
     }
 
-    let skb = &mut *skb;
-    let flowi = &mut *flowi;
+    let _skb = &mut *skb;
+    let _flowi = &mut *flowi;
     let saddr = &*saddr;
     let daddr = &*daddr;
     let dev = &mut *dev;

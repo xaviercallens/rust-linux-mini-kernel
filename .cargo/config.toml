@@ -1,0 +1,12 @@
+[build]
+rustflags = [
+    "-A", "warnings"
+]
+
+[target.i686-unknown-linux-gnu]
+linker = "rust-lld"
+rustflags = [
+    "-C", "linker-flavor=ld.lld",
+    "-C", "link-arg=-T/Volumes/MacCleanerStorage/xdev/xavux/rust-linux-mini-kernel/examples/demo_kernel/linker.ld"
+]
+

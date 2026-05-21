@@ -8,6 +8,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(clippy::all)]
+#![allow(clippy::manual_c_str_literals)]
 
 use core::{ffi::{c_char, c_int, c_void}, mem::{self, size_of}, ptr};
 use kernel_types::*;
@@ -171,9 +172,9 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
     if test_bit(ct, IPS_SEEN_REPLY_BIT) {
         let proto = (*ct).proto as *mut nf_conn_proto;
         let extra = if time_after(jiffies(), (*proto).udp.stream_ts) {
-            (*timeouts.add(UDP_CT_REPLIED))
+            *timeouts.add(UDP_CT_REPLIED)
         } else {
-            (*timeouts.add(UDP_CT_UNREPLIED))
+            *timeouts.add(UDP_CT_UNREPLIED)
         };
 
         nf_ct_refresh_acct(ct, ctinfo, skb, extra);
@@ -186,7 +187,7 @@ pub unsafe extern "C" fn nf_conntrack_udp_packet(
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_UNREPLIED)));
+        nf_ct_refresh_acct(ct, ctinfo, skb, *timeouts.add(UDP_CT_UNREPLIED));
     }
 
     NF_ACCEPT
@@ -254,7 +255,7 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
     }
 
     if test_bit(ct, IPS_SEEN_REPLY_BIT) {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_REPLIED)));
+        nf_ct_refresh_acct(ct, ctinfo, skb, *timeouts.add(UDP_CT_REPLIED));
 
         if ((*ct).status & IPS_NAT_CLASH as c_ulong) != 0 {
             return NF_ACCEPT;
@@ -264,7 +265,7 @@ pub unsafe extern "C" fn nf_conntrack_udplite_packet(
             nf_conntrack_event_cache(IPCT_ASSURED, ct);
         }
     } else {
-        nf_ct_refresh_acct(ct, ctinfo, skb, (*timeouts.add(UDP_CT_UNREPLIED)));
+        nf_ct_refresh_acct(ct, ctinfo, skb, *timeouts.add(UDP_CT_UNREPLIED));
     }
 
     NF_ACCEPT
@@ -311,7 +312,7 @@ fn jiffies() -> c_int {
 fn HZ() -> c_int { 100 }
 
 #[inline]
-fn nf_ct_is_confirmed(ct: *mut nf_conn) -> bool {
+fn nf_ct_is_confirmed(_ct: *mut nf_conn) -> bool {
     // Placeholder for actual implementation
     false
 }

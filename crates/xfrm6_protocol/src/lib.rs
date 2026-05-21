@@ -50,9 +50,9 @@ pub struct xfrm_input_afinfo {
     pub callback: unsafe extern "C" fn(*mut sk_buff, u8, c_int) -> c_int,
 }
 
-static esp6_handlers: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
-static ah6_handlers: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
-static ipcomp6_handlers: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
+static ESP6_HANDLERS: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
+static AH6_HANDLERS: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
+static IPCOMP6_HANDLERS: AtomicPtr<xfrm6_protocol> = AtomicPtr::new(ptr::null_mut());
 
 // Dummy mutex implementation
 #[repr(C)]
@@ -61,13 +61,13 @@ impl Mutex {
     fn lock(&mut self) {}
     fn unlock(&mut self) {}
 }
-static mut xfrm6_protocol_mutex: Mutex = Mutex { _private: 0 };
+static mut XFRM6_PROTOCOL_MUTEX: Mutex = Mutex { _private: 0 };
 
 unsafe fn proto_handlers(protocol: u8) -> *mut AtomicPtr<xfrm6_protocol> {
     match protocol {
-        IPPROTO_ESP => &esp6_handlers as *const AtomicPtr<xfrm6_protocol> as *mut AtomicPtr<xfrm6_protocol>,
-        IPPROTO_AH => &ah6_handlers as *const AtomicPtr<xfrm6_protocol> as *mut AtomicPtr<xfrm6_protocol>,
-        IPPROTO_COMP => &ipcomp6_handlers as *const AtomicPtr<xfrm6_protocol> as *mut AtomicPtr<xfrm6_protocol>,
+        IPPROTO_ESP => &ESP6_HANDLERS as *const AtomicPtr<xfrm6_protocol> as *mut AtomicPtr<xfrm6_protocol>,
+        IPPROTO_AH => &AH6_HANDLERS as *const AtomicPtr<xfrm6_protocol> as *mut AtomicPtr<xfrm6_protocol>,
+        IPPROTO_COMP => &IPCOMP6_HANDLERS as *const AtomicPtr<xfrm6_protocol> as *mut AtomicPtr<xfrm6_protocol>,
         _ => ptr::null_mut(),
     }
 }
@@ -150,7 +150,7 @@ pub unsafe extern "C" fn xfrm6_rcv_encap(
     encap_type: c_int,
 ) -> c_int {
     let head = proto_handlers(nexthdr as u8);
-    let mut ret = 0;
+    let _ret = 0;
 
     if !head.is_null() {
         let mut handler = (*head).load(Ordering::Acquire);
@@ -179,11 +179,11 @@ pub unsafe extern "C" fn xfrm6_protocol_register(
         return EINVAL;
     }
 
-    let mut mutex = &mut xfrm6_protocol_mutex;
+    let mutex = &mut XFRM6_PROTOCOL_MUTEX;
     mutex.lock();
 
-    let mut t = (*headp).load(Ordering::Acquire);
-    let mut add_netproto = t.is_null();
+    let t = (*headp).load(Ordering::Acquire);
+    let add_netproto = t.is_null();
     let mut ret = 0;
 
     // Find insertion point
@@ -236,7 +236,7 @@ pub unsafe extern "C" fn xfrm6_protocol_deregister(
         return EINVAL;
     }
 
-    let mut mutex = &mut xfrm6_protocol_mutex;
+    let mutex = &mut XFRM6_PROTOCOL_MUTEX;
     mutex.lock();
 
     let mut t = (*headp).load(Ordering::Acquire);
@@ -280,49 +280,49 @@ pub unsafe extern "C" fn xfrm6_protocol_deregister(
 // Helper functions (simplified for kernel compatibility)
 unsafe fn netproto(protocol: u8) -> *mut inet6_protocol {
     match protocol {
-        IPPROTO_ESP => &esp6_protocol as *const inet6_protocol as *mut inet6_protocol,
-        IPPROTO_AH => &ah6_protocol as *const inet6_protocol as *mut inet6_protocol,
-        IPPROTO_COMP => &ipcomp6_protocol as *const inet6_protocol as *mut inet6_protocol,
+        IPPROTO_ESP => &ESP6_PROTOCOL as *const inet6_protocol as *mut inet6_protocol,
+        IPPROTO_AH => &AH6_PROTOCOL as *const inet6_protocol as *mut inet6_protocol,
+        IPPROTO_COMP => &IPCOMP6_PROTOCOL as *const inet6_protocol as *mut inet6_protocol,
         _ => ptr::null_mut(),
     }
 }
 
-static mut esp6_protocol: inet6_protocol = inet6_protocol {
+static mut ESP6_PROTOCOL: inet6_protocol = inet6_protocol {
     handler: xfrm6_esp_rcv,
     err_handler: xfrm6_esp_err,
     flags: INET6_PROTO_NOPOLICY,
 };
 
-static mut ah6_protocol: inet6_protocol = inet6_protocol {
+static mut AH6_PROTOCOL: inet6_protocol = inet6_protocol {
     handler: xfrm6_ah_rcv,
     err_handler: xfrm6_ah_err,
     flags: INET6_PROTO_NOPOLICY,
 };
 
-static mut ipcomp6_protocol: inet6_protocol = inet6_protocol {
+static mut IPCOMP6_PROTOCOL: inet6_protocol = inet6_protocol {
     handler: xfrm6_ipcomp_rcv,
     err_handler: xfrm6_ipcomp_err,
     flags: INET6_PROTO_NOPOLICY,
 };
 
-static mut xfrm6_input_afinfo: xfrm_input_afinfo = xfrm_input_afinfo {
+static mut XFRM6_INPUT_AFINFO: xfrm_input_afinfo = xfrm_input_afinfo {
     family: AF_INET6,
     callback: xfrm6_rcv_cb,
 };
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_protocol_init() -> c_int {
-    xfrm_input_register_afinfo(&raw mut xfrm6_input_afinfo)
+    xfrm_input_register_afinfo(&raw mut XFRM6_INPUT_AFINFO)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn xfrm6_protocol_fini() {
-    xfrm_input_unregister_afinfo(&raw mut xfrm6_input_afinfo)
+    xfrm_input_unregister_afinfo(&raw mut XFRM6_INPUT_AFINFO)
 }
 
 // Dummy implementations for required kernel functions
 #[no_mangle]
-pub unsafe extern "C" fn pr_err(fmt: *const c_char) {
+pub unsafe extern "C" fn pr_err(_fmt: *const c_char) {
     // Dummy implementation
 }
 
@@ -332,25 +332,25 @@ pub unsafe extern "C" fn synchronize_net() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn inet6_add_protocol(proto: *mut inet6_protocol, protocol: u8) -> c_int {
+pub unsafe extern "C" fn inet6_add_protocol(_proto: *mut inet6_protocol, _protocol: u8) -> c_int {
     // Dummy implementation
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn inet6_del_protocol(proto: *mut inet6_protocol, protocol: u8) -> c_int {
+pub unsafe extern "C" fn inet6_del_protocol(_proto: *mut inet6_protocol, _protocol: u8) -> c_int {
     // Dummy implementation
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm_input_register_afinfo(afinfo: *mut xfrm_input_afinfo) -> c_int {
+pub unsafe extern "C" fn xfrm_input_register_afinfo(_afinfo: *mut xfrm_input_afinfo) -> c_int {
     // Dummy implementation
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn xfrm_input_unregister_afinfo(afinfo: *mut xfrm_input_afinfo) {
+pub unsafe extern "C" fn xfrm_input_unregister_afinfo(_afinfo: *mut xfrm_input_afinfo) {
     // Dummy implementation
 }
 

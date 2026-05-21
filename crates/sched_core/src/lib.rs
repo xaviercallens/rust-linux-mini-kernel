@@ -4,8 +4,7 @@
 //! This module implements sched_core functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel kernel/sched/sched_core.c
 
-use kernel_types::*;
-use libc::{c_int, c_uint, c_void, c_ulong, size_t};
+use libc::c_int;
 
 /// Task structure (placeholder)
 #[repr(C)]

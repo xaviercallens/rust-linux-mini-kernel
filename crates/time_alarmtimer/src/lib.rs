@@ -4,8 +4,7 @@
 //! This module implements time_alarmtimer functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel time
 
-use kernel_types::*;
-use libc::{c_int, c_uint, c_void, c_ulong, size_t};
+use libc::c_int;
 
 /// Module initialization
 #[no_mangle]

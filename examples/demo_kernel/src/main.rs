@@ -2,7 +2,7 @@
 #![no_main]
 
 use core::panic::PanicInfo;
-use core::arch::global_asm;
+use core::arch::{global_asm, asm};
 
 global_asm!(r#"
 .section .multiboot, "a"
@@ -254,5 +254,3 @@ fn format_panic_location<'a>(location: &core::panic::Location, buf: &'a mut [u8]
 }
 
 // Assembly magic for inline asm
-#[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-use core::arch::asm;

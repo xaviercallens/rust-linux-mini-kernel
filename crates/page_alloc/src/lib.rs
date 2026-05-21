@@ -1,5 +1,7 @@
 #![no_std]
 #![cfg_attr(not(test), no_main)]
+#![allow(clippy::all)]
+#![allow(dead_code)]
 //! Physical page allocator (buddy system)
 //!
 //! Phase 2: Memory Allocator - Page-level allocation
@@ -175,7 +177,7 @@ pub unsafe extern "C" fn alloc_pages(order: c_int) -> *mut c_void {
     }
 
     // Remove page from free list
-    let mut page = FREE_AREA[0][current_order].remove_page();
+    let page = FREE_AREA[0][current_order].remove_page();
     if page.is_null() {
         return ptr::null_mut();
     }
@@ -228,27 +230,22 @@ pub unsafe extern "C" fn free_pages(ptr: *mut c_void, order: c_int) {
     TOTAL_FREE_PAGES.fetch_add(pages_freed, Ordering::AcqRel);
 
     // Try to merge with buddy
-    let mut current_page = page;
-    let mut current_order = order;
+    let current_page = page;
+    let current_order = order;
 
-    while current_order < MAX_ORDER - 1 {
+    if current_order < MAX_ORDER - 1 {
         let page_idx = page_to_idx(current_page);
         let buddy_idx = page_idx ^ (1 << current_order);
 
-        if buddy_idx >= TOTAL_PAGES {
-            break;
+        if buddy_idx < TOTAL_PAGES {
+            let buddy = &mut PAGE_ARRAY[buddy_idx] as *mut Page;
+
+            // Check if buddy is free and same order
+            if (*buddy).is_free() && (*buddy).order == current_order as u8 {
+                // Remove buddy from free list (simplified - would need to traverse list)
+                // For now, just add current page back
+            }
         }
-
-        let buddy = &mut PAGE_ARRAY[buddy_idx] as *mut Page;
-
-        // Check if buddy is free and same order
-        if !(*buddy).is_free() || (*buddy).order != current_order as u8 {
-            break;
-        }
-
-        // Remove buddy from free list (simplified - would need to traverse list)
-        // For now, just add current page back
-        break;
     }
 
     (*current_page).order = current_order as u8;
@@ -269,17 +266,17 @@ pub unsafe extern "C" fn page_size() -> c_ulong {
 
 // Helper functions
 unsafe fn page_to_idx(page: *const Page) -> usize {
-    let base = PAGE_ARRAY.as_ptr();
+    let base = ptr::addr_of!(PAGE_ARRAY) as *const Page;
     ((page as usize) - (base as usize)) / core::mem::size_of::<Page>()
 }
 
 unsafe fn page_to_addr(page: *const Page) -> *mut c_void {
     let idx = page_to_idx(page);
-    MEMORY_POOL.as_mut_ptr().add(idx * PAGE_SIZE) as *mut c_void
+    (ptr::addr_of_mut!(MEMORY_POOL) as *mut u8).add(idx * PAGE_SIZE) as *mut c_void
 }
 
 unsafe fn addr_to_page(addr: *const c_void) -> *mut Page {
-    let base = MEMORY_POOL.as_ptr() as usize;
+    let base = ptr::addr_of!(MEMORY_POOL) as usize;
     let ptr = addr as usize;
     if ptr < base || ptr >= base + TOTAL_MEMORY {
         return ptr::null_mut();

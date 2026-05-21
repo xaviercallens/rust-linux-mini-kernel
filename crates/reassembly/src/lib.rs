@@ -2,6 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![no_builtins]
 #![allow(non_camel_case_types)]
+#![allow(clippy::all)]
 
 use core::ptr;
 use kernel_types::*;

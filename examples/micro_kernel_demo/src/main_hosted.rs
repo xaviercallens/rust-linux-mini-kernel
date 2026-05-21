@@ -14,7 +14,7 @@ fn main() {
 
     // Example usage
     let localhost = std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1);
-    let addr = from_ipv6(localhost);
+    let _addr = from_ipv6(localhost);
 
     println!("IPv6 localhost initialized successfully");
 }

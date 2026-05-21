@@ -5,7 +5,6 @@
 #![allow(clippy::all)]
 
 use core::{mem, ffi::{c_char, c_int, c_uint, c_void}, panic::PanicInfo};
-use kernel_types::*;
 
 pub const EINVAL: c_int = -22; pub const ENOMEM: c_int = -12; pub const ENOTSUPP: c_int = -95;
 

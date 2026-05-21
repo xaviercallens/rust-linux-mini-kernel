@@ -85,7 +85,7 @@ fn ipv6_mc_check_ip6hdr(skb: *mut sk_buff) -> c_int {
     }
 
     let ip6h = unsafe { ipv6_hdr(skb) };
-    let version = unsafe { (*ip6h).version };
+    let version = unsafe { (*ip6h).version_priority };
     if ((version & 0xF0) >> 4) != 6 {
         return EINVAL;
     }

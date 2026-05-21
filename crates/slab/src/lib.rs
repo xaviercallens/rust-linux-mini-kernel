@@ -1,5 +1,8 @@
 #![no_std]
 #![cfg_attr(not(test), no_main)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(unused_assignments)]
 //! SLAB allocator for kernel objects
 //!
 //! Phase 2: Memory Allocator - Object-level allocation

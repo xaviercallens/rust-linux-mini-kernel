@@ -2,6 +2,9 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(static_mut_refs)]
+#![allow(dead_code)]
 
 use core::{mem, ptr, ffi::{c_int, c_uint, c_void}};
 use kernel_types::*;
@@ -246,9 +249,9 @@ pub unsafe extern "C" fn gre_pkt_to_tuple(
 pub unsafe extern "C" fn nf_conntrack_gre_packet(
     ct: *mut nf_conn,
     skb: *mut sk_buff,
-    dataoff: c_int,
+    _dataoff: c_int,
     ctinfo: c_int,
-    state: *const c_void,
+    _state: *const c_void,
 ) -> c_int {
     if ct.is_null() {
         return EINVAL;

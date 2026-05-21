@@ -5,9 +5,14 @@
 //! ABI compatibility is maintained for all exported symbols.
 
 #![cfg_attr(not(test), no_std)]
+#![allow(dead_code)]
+#![allow(clippy::all)]
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+#![allow(unused_assignments)]
 #![allow(non_camel_case_types)]
 
-use core::{ptr, panic::PanicInfo};
+use core::ptr;
 use kernel_types::*;
 
 pub const IP6_VTI_HASH_SIZE_SHIFT: c_int = 5;
@@ -74,7 +79,7 @@ pub unsafe extern "C" fn vti6_tnl_lookup(
 
     let ip6n = &*ip6n;
     let mut t: *mut ip6_tnl;
-    let mut hash_val = HASH(remote, local);
+    let _hash_val = HASH(remote, local);
     let any: in6_addr = core::mem::zeroed();
 
     for i in 0..IP6_VTI_HASH_SIZE {
@@ -269,7 +274,7 @@ unsafe fn HASH(addr1: *const in6_addr, addr2: *const in6_addr) -> c_uint {
 }
 
 #[inline]
-fn hash_32(mut val: u32, bits: u32) -> c_uint {
+fn hash_32(val: u32, bits: u32) -> c_uint {
     let val = val.wrapping_mul(0x9e3779b9);
     (val >> (32 - bits)) as c_uint
 }
@@ -290,7 +295,7 @@ unsafe fn ipv6_addr_hash(addr: *const in6_addr) -> u32 {
 
 // FFI helpers (mocked for example)
 #[inline]
-unsafe fn get_vti6_net(net: *mut c_void) -> *mut vti6_net {
+unsafe fn get_vti6_net(_net: *mut c_void) -> *mut vti6_net {
     // In real implementation, this would use net_generic
     ptr::null_mut()
 }
@@ -301,13 +306,13 @@ unsafe fn netdev_priv(dev: *mut net_device) -> *mut ip6_tnl {
 }
 
 #[inline]
-unsafe fn dev_net(dev: *mut net_device) -> *mut c_void {
+unsafe fn dev_net(_dev: *mut net_device) -> *mut c_void {
     // Mock implementation
     ptr::null_mut()
 }
 
 #[inline]
-unsafe fn register_netdevice(dev: *mut net_device) -> c_int {
+unsafe fn register_netdevice(_dev: *mut net_device) -> c_int {
     // Mock implementation
     0
 }
@@ -324,13 +329,13 @@ unsafe fn strcpy(dest: *mut c_char, src: *const c_char) {
 }
 
 #[inline]
-unsafe fn free_percpu(ptr: *mut c_void) {
+unsafe fn free_percpu(_ptr: *mut c_void) {
     // Mock implementation
 }
 
 // Add vti6_tnl_create stub
 #[no_mangle]
-pub unsafe extern "C" fn vti6_tnl_create(net: *mut c_void, p: *mut ip6_tnl_parm) -> *mut ip6_tnl {
+pub unsafe extern "C" fn vti6_tnl_create(_net: *mut c_void, _p: *mut ip6_tnl_parm) -> *mut ip6_tnl {
     ptr::null_mut()
 }
 
