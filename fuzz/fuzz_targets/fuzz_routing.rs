@@ -14,10 +14,8 @@ fuzz_target!(|data: &[u8]| {
     let target_ip = u32::from_ne_bytes(data[12..16].try_into().unwrap());
 
     // Fuzz a simulated routing lookup
-    let mut fib = fib_table {
-        tb_id: 254,
-        _private: [],
-    };
+    let mut fib: fib_table = unsafe { core::mem::zeroed() };
+    fib.tb_id = 254;
 
     // Very simple lookup mock based on standard IP bitwise operations
     // We just want to ensure these operations don't panic on weird input
