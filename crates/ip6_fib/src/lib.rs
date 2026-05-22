@@ -220,7 +220,7 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
     if id == 0 { id = 0x100; }
     let hash: usize = (id as usize) & (FIB6_TABLE_HASHSZ - 1);
     let _node = (*ptr).ipv6.fib_table_hash[hash].first;
-    let tb = ptr::null_mut();
+    let tb: *mut fib6_table = ptr::null_mut();
     ensures!(tb.is_null() || !tb.is_null(), "fib6_get_table: return bounds");
     tb
 }
