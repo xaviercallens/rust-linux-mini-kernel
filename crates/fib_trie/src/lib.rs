@@ -134,14 +134,6 @@ pub unsafe extern "C" fn get_index(key: c_uint, kv: *mut key_vector) -> c_uint {
     ensures!(result >= 0, "get_index: return bounds");
     result
 }
-    let index = key ^ (*kv).key;
-    if (core::mem::size_of::<c_uint>() * 8 <= KEYLENGTH as usize) && (KEYLENGTH == (*kv).pos as c_int)
-    {
-        0
-    } else {
-        index >> ((*kv).pos as c_uint)
-    }
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn get_cindex(key: c_uint, kv: *mut key_vector) -> c_uint {
@@ -152,8 +144,7 @@ pub unsafe extern "C" fn get_cindex(key: c_uint, kv: *mut key_vector) -> c_uint 
     ensures!(result >= 0, "get_cindex: return bounds");
     result
 }
-    (key ^ (*kv).key) >> ((*kv).pos as c_uint)
-}
+
 
 /// Container_of macro implementation
 ///
@@ -185,9 +176,7 @@ pub unsafe extern "C" fn node_set_parent(n: *mut key_vector, tp: *mut key_vector
     let n_info = tnode_from_kv(safe_n.ptr);
     (*n_info).parent = tp;
 }
-    let n_info = tnode_from_kv(n);
-    (*n_info).parent = tp;
-}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn node_parent_rcu(tn: *mut key_vector) -> *mut key_vector {
@@ -198,9 +187,7 @@ pub unsafe extern "C" fn node_parent_rcu(tn: *mut key_vector) -> *mut key_vector
     ensures!(parent.is_null() || !parent.is_null(), "node_parent_rcu: return bounds");
     parent
 }
-    let tn_info = tnode_from_kv(tn);
-    (*tn_info).parent
-}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn get_child_rcu(_tn: *mut key_vector, _i: c_int) -> *mut key_vector {
