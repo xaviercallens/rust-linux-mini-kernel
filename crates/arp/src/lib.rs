@@ -1,7 +1,10 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
+#![allow(clippy::missing_safety_doc)] // Disabled only for concise demonstration of FFI wrappers
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-#![allow(clippy::all)]
-#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use kernel_types::*;
 
@@ -62,44 +65,131 @@ pub struct ndisc_ops {
 }
 
 #[inline(always)]
-pub fn htons(x: c_int) -> u16 { x.to_be() as u16 }
+#[must_use]
+pub fn htons(x: c_int) -> u16 { (x as u16).to_be() }
+
+// Zero-Cost Abstraction Wrapper (Newtype pattern)
+pub struct SafeSkb<'a> {
+    ptr: *mut sk_buff,
+    _marker: core::marker::PhantomData<&'a mut sk_buff>,
+}
+
+impl<'a> SafeSkb<'a> {
+    pub unsafe fn new(ptr: *mut sk_buff) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self {
+                ptr,
+                _marker: core::marker::PhantomData,
+            })
+        }
+    }
+
+    #[must_use]
+    pub fn dev(&self) -> Option<*mut net_device> {
+        // SAFETY: Self cannot be constructed with a null skb pointer.
+        let dev_ptr = unsafe { (*self.ptr).dev } as *mut net_device;
+        if dev_ptr.is_null() {
+            None
+        } else {
+            Some(dev_ptr)
+        }
+    }
+
+    #[must_use]
+    pub fn data_as<T>(&self, offset: usize) -> Option<*mut T> {
+        // SAFETY: Self cannot be constructed with a null skb pointer.
+        unsafe {
+            let data_ptr = (*self.ptr).data as *mut u8;
+            if data_ptr.is_null() {
+                None
+            } else {
+                Some(data_ptr.add(offset) as *mut T)
+            }
+        }
+    }
+    #[must_use]
+    pub fn dst(&self) -> Option<*mut neighbour> {
+        // SAFETY: Self cannot be constructed with a null skb pointer.
+        unsafe {
+            let dst_ptr = (*self.ptr).dst as *mut neighbour;
+            if dst_ptr.is_null() {
+                None
+            } else {
+                Some(dst_ptr)
+            }
+        }
+    }
+}
 
 #[no_mangle]
-pub extern "C" fn arp_send(
+pub unsafe extern "C" fn arp_send(
     skb: *mut sk_buff,
     ip: *mut c_void,
 ) -> c_int {
-    // 🛡️ FORMAL VERIFICATION BOUNDARY (Mapped to Lean 4: arp_send_safety)
+    // 🛡️ FORMAL VERIFICATION BOUNDARY
     requires!(!skb.is_null(), "arp_send_safety: skb pointer invariant violated");
     requires!(!ip.is_null(), "arp_send_safety: ip pointer invariant violated");
 
-    unsafe {
-        requires!(!(*skb).dev.is_null(), "arp_send_safety: skb.dev invariant violated");
+    // Zero-cost abstraction conversion
+    let safe_skb = match unsafe { SafeSkb::new(skb) } {
+        Some(s) => s,
+        None => return -EINVAL,
+    };
+    
+    let dev = match safe_skb.dev() {
+        Some(d) => d,
+        None => return -EINVAL,
+    };
 
-        let dev = (*skb).dev as *mut net_device;
+    // SAFETY: Wrapper ensures non-null pointer
+    unsafe {
         if (*dev).type_ != ARPHRD_ETHER {
             return -EINVAL;
         }
+    }
 
-        let eth = (*skb).data as *mut ethhdr;
-        if (*eth).h_proto != htons(ETH_P_IP) {
+    let eth = match safe_skb.data_as::<ethhdr>(0) {
+        Some(e) => e,
+        None => return -EINVAL,
+    };
+
+    // SAFETY: Wrapper ensures non-null data pointer, alignment assumed correct for network start
+    unsafe {
+        if core::ptr::read_unaligned(core::ptr::addr_of!((*eth).h_proto)) != htons(ETH_P_IP) {
+            return -EINVAL;
+        }
+    }
+
+    let arp = match safe_skb.data_as::<arphdr>(ETH_HLEN) {
+        Some(a) => a,
+        None => return -EINVAL,
+    };
+
+    // SAFETY: Unaligned reads for network packet payload fields to prevent ARM panics
+    unsafe {
+        if core::ptr::read_unaligned(core::ptr::addr_of!((*arp).ar_op)) != htons(ARPOP_REQUEST) {
             return -EINVAL;
         }
 
-        let arp = (*skb).data.add(ETH_HLEN) as *mut arphdr;
-        if (*arp).ar_op != htons(ARPOP_REQUEST) {
+        let saddr = core::ptr::read_unaligned(core::ptr::addr_of!((*arp).ar_sip));
+        let daddr = core::ptr::read_unaligned(core::ptr::addr_of!((*arp).ar_tip));
+
+        if saddr.is_null() || daddr.is_null() {
             return -EINVAL;
         }
 
-        let saddr = (*arp).ar_sip;
-        let daddr = (*arp).ar_tip;
-
-        if (*saddr).s_addr == (*daddr).s_addr {
+        if core::ptr::read_unaligned(core::ptr::addr_of!((*saddr).s_addr)) == core::ptr::read_unaligned(core::ptr::addr_of!((*daddr).s_addr)) {
             return -EINVAL;
         }
 
-        let dst = (*skb).dst as *mut neighbour;
-        if dst.is_null() || (*dst).dev.is_null() || (*dst).dev != (*skb).dev as *mut net_device {
+        let dst = match safe_skb.dst() {
+            Some(d) => d,
+            None => return -EINVAL,
+        };
+
+        if (*dst).dev.is_null() || (*dst).dev != dev {
             return -EINVAL;
         }
 
