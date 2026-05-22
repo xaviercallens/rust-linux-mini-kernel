@@ -403,9 +403,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "driver_idpf"
+version = "9.4.0"
+
+[[package]]
+name = "driver_nvme"
+version = "9.4.0"
+
+[[package]]
 name = "driver_pci_access"
 version = "0.4.0"
 dependencies = [
+ "driver_pci_core",
  "kernel_types",
  "libc",
 ]
@@ -422,6 +431,7 @@ dependencies = [
 name = "driver_pci_probe"
 version = "0.4.0"
 dependencies = [
+ "driver_pci_core",
  "kernel_types",
  "libc",
 ]

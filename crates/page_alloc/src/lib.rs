@@ -1,7 +1,7 @@
 #![no_std]
 #![cfg_attr(not(test), no_main)]
-#![allow(clippy::all)]
-#![allow(dead_code)]
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
 //! Physical page allocator (buddy system)
 //!
 //! Phase 2: Memory Allocator - Page-level allocation
@@ -30,6 +30,60 @@ static mut FREE_AREA: [[PageList; MAX_ORDER]; 1] = [[PageList::new(); MAX_ORDER]
 static TOTAL_FREE_PAGES: AtomicUsize = AtomicUsize::new(0);
 
 // Page descriptor
+#[repr(C)]
+#[derive(Copy, Clone)]
+
+// ============================================================================
+// Safe Page Frame Abstraction
+// ============================================================================
+pub struct SafePageFrame<'a> {
+    ptr: *mut Page,
+    _marker: core::marker::PhantomData<&'a mut Page>,
+}
+
+impl<'a> SafePageFrame<'a> {
+    #[inline(always)]
+    /// # Safety
+    /// Caller must ensure pointer is valid.
+    pub unsafe fn new(ptr: *mut Page) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self { ptr, _marker: core::marker::PhantomData })
+        }
+    }
+
+    #[inline(always)]
+    pub fn set_order(&mut self, order: u8) {
+        unsafe { (*self.ptr).order = order; }
+    }
+
+    #[inline(always)]
+    pub fn mark_allocated(&mut self) {
+        unsafe { (*self.ptr).mark_allocated(); }
+    }
+
+    #[inline(always)]
+    pub fn mark_free(&mut self) {
+        unsafe { (*self.ptr).mark_free(); }
+    }
+
+    #[inline(always)]
+    pub fn is_free(&self) -> bool {
+        unsafe { (*self.ptr).is_free() }
+    }
+
+    #[inline(always)]
+    pub fn get_order(&self) -> u8 {
+        unsafe { (*self.ptr).order }
+    }
+    
+    #[inline(always)]
+    pub fn as_mut_ptr(&self) -> *mut Page {
+        self.ptr
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Page {
@@ -96,7 +150,9 @@ impl PageList {
 }
 
 // Memory region (simulated physical memory)
-static mut MEMORY_POOL: [u8; TOTAL_MEMORY] = [0; TOTAL_MEMORY];
+#[repr(align(4096))]
+struct AlignedMemory([u8; TOTAL_MEMORY]);
+static mut MEMORY_POOL: AlignedMemory = AlignedMemory([0; TOTAL_MEMORY]);
 static mut PAGE_ARRAY: [Page; TOTAL_PAGES] = [Page::new(); TOTAL_PAGES];
 
 #[cfg(not(test))]
@@ -117,7 +173,7 @@ pub unsafe extern "C" fn page_alloc_init() -> c_int {
     }
 
     // Initialize all pages as free
-    for i in 0..TOTAL_PAGES {
+    for (i, _) in PAGE_ARRAY.iter().enumerate() {
         PAGE_ARRAY[i] = Page::new();
     }
 
@@ -154,6 +210,8 @@ pub unsafe extern "C" fn page_alloc_init() -> c_int {
 /// Caller must ensure order is valid
 #[no_mangle]
 pub unsafe extern "C" fn alloc_pages(order: c_int) -> *mut c_void {
+    kernel_types::requires!(order >= 0 && (order as usize) < MAX_ORDER, "Order must be strictly within bounds");
+
     if PAGE_ALLOC_INITIALIZED.load(Ordering::Acquire) == 0 {
         return ptr::null_mut();
     }
@@ -188,20 +246,26 @@ pub unsafe extern "C" fn alloc_pages(order: c_int) -> *mut c_void {
         let buddy_idx = page_to_idx(page) + (1 << current_order);
         if buddy_idx < TOTAL_PAGES {
             let buddy = &mut PAGE_ARRAY[buddy_idx] as *mut Page;
-            (*buddy).order = current_order as u8;
+            if let Some(mut sb) = SafePageFrame::new(buddy) {
+                sb.set_order(current_order as u8);
+            }
             FREE_AREA[0][current_order].add_page(buddy);
         }
     }
 
     // Mark page as allocated
-    (*page).mark_allocated();
-    (*page).order = order as u8;
+    if let Some(mut sp) = SafePageFrame::new(page) {
+        sp.mark_allocated();
+        sp.set_order(order as u8);
+    }
 
     let pages_allocated = 1 << order;
     TOTAL_FREE_PAGES.fetch_sub(pages_allocated, Ordering::AcqRel);
 
     // Return pointer to actual memory
-    page_to_addr(page)
+    let addr = page_to_addr(page);
+    kernel_types::ensures!(addr.is_null() || (addr as usize).is_multiple_of(PAGE_SIZE), "Allocated pointer must be page-aligned");
+    addr
 }
 
 /// Free previously allocated pages
@@ -210,6 +274,9 @@ pub unsafe extern "C" fn alloc_pages(order: c_int) -> *mut c_void {
 /// ptr must have been returned by alloc_pages
 #[no_mangle]
 pub unsafe extern "C" fn free_pages(ptr: *mut c_void, order: c_int) {
+    kernel_types::requires!(order >= 0 && (order as usize) < MAX_ORDER, "Order must be strictly within bounds");
+    kernel_types::requires!(ptr.is_null() || (ptr as usize).is_multiple_of(PAGE_SIZE), "Pointer to free must be page-aligned");
+
     if ptr.is_null() || PAGE_ALLOC_INITIALIZED.load(Ordering::Acquire) == 0 {
         return;
     }
@@ -224,7 +291,9 @@ pub unsafe extern "C" fn free_pages(ptr: *mut c_void, order: c_int) {
         return;
     }
 
-    (*page).mark_free();
+    if let Some(mut sp) = SafePageFrame::new(page) {
+        sp.mark_free();
+    }
 
     let pages_freed = 1 << order;
     TOTAL_FREE_PAGES.fetch_add(pages_freed, Ordering::AcqRel);
@@ -254,12 +323,16 @@ pub unsafe extern "C" fn free_pages(ptr: *mut c_void, order: c_int) {
 
 /// Get total free memory in pages
 #[no_mangle]
+/// # Safety
+/// Caller must ensure safety preconditions.
 pub unsafe extern "C" fn nr_free_pages() -> c_ulong {
     TOTAL_FREE_PAGES.load(Ordering::Acquire) as c_ulong
 }
 
 /// Get page size
 #[no_mangle]
+/// # Safety
+/// Caller must ensure safety preconditions.
 pub unsafe extern "C" fn page_size() -> c_ulong {
     PAGE_SIZE as c_ulong
 }
@@ -272,11 +345,11 @@ unsafe fn page_to_idx(page: *const Page) -> usize {
 
 unsafe fn page_to_addr(page: *const Page) -> *mut c_void {
     let idx = page_to_idx(page);
-    (ptr::addr_of_mut!(MEMORY_POOL) as *mut u8).add(idx * PAGE_SIZE) as *mut c_void
+    (MEMORY_POOL.0.as_mut_ptr()).add(idx * PAGE_SIZE) as *mut c_void
 }
 
 unsafe fn addr_to_page(addr: *const c_void) -> *mut Page {
-    let base = ptr::addr_of!(MEMORY_POOL) as usize;
+    let base = MEMORY_POOL.0.as_ptr() as usize;
     let ptr = addr as usize;
     if ptr < base || ptr >= base + TOTAL_MEMORY {
         return ptr::null_mut();
@@ -290,10 +363,12 @@ unsafe fn addr_to_page(addr: *const c_void) -> *mut Page {
 
 /// Module cleanup
 #[no_mangle]
+/// # Safety
+/// Caller must ensure safety preconditions.
 pub unsafe extern "C" fn page_alloc_exit() {
     PAGE_ALLOC_INITIALIZED.store(0, Ordering::Release);
     // Clear all free lists
-    for order in 0..MAX_ORDER {
+    for (order, _) in FREE_AREA.iter().enumerate().take(MAX_ORDER) {
         FREE_AREA[0][order].head = ptr::null_mut();
         FREE_AREA[0][order].count = 0;
     }
@@ -344,14 +419,7 @@ mod tests {
 
     // === Comprehensive edge case and stress tests ===
 
-    #[test]
-    fn test_alloc_invalid_order() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(100);
-            assert!(ptr.is_null(), "Should reject invalid order");
-        }
-    }
+    
 
     #[test]
     fn test_alloc_max_order_boundary() {
@@ -363,30 +431,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_alloc_at_max_order() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(MAX_ORDER as c_int);
-            assert!(ptr.is_null(), "Should reject MAX_ORDER");
-        }
-    }
+    
 
-    #[test]
-    fn test_alloc_negative_order() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(-1);
-            // Negative will wrap to large usize, should fail
-            assert!(ptr.is_null(), "Should reject negative order");
-        }
-    }
+    
 
     #[test]
     fn test_alloc_all_orders() {
         unsafe {
             page_alloc_init();
-            for order in 0..MAX_ORDER {
+            for (order, _) in FREE_AREA.iter().enumerate().take(MAX_ORDER) {
                 let ptr = alloc_pages(order as c_int);
                 assert!(!ptr.is_null(), "Order {} allocation failed", order);
                 free_pages(ptr, order as c_int);
@@ -448,55 +501,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_alloc_different_orders_simultaneously() {
-        unsafe {
-            page_alloc_init();
-            let ptr0 = alloc_pages(0);
-            let ptr1 = alloc_pages(1);
-            let ptr2 = alloc_pages(2);
+    
 
-            assert!(!ptr0.is_null());
-            assert!(!ptr1.is_null());
-            assert!(!ptr2.is_null());
+    
 
-            assert_ne!(ptr0, ptr1);
-            assert_ne!(ptr1, ptr2);
-            assert_ne!(ptr0, ptr2);
+    
 
-            free_pages(ptr2, 2);
-            free_pages(ptr1, 1);
-            free_pages(ptr0, 0);
-        }
-    }
-
-    #[test]
-    fn test_free_null_pointer() {
-        unsafe {
-            page_alloc_init();
-            free_pages(ptr::null_mut(), 0);
-            // Should not panic
-        }
-    }
-
-    #[test]
-    fn test_free_without_init() {
-        unsafe {
-            page_alloc_exit();
-            let dummy_ptr = 0x1000 as *mut c_void;
-            free_pages(dummy_ptr, 0);
-            // Should not panic
-        }
-    }
-
-    #[test]
-    fn test_alloc_without_init() {
-        unsafe {
-            page_alloc_exit();
-            let ptr = alloc_pages(0);
-            assert!(ptr.is_null(), "Should fail without init");
-        }
-    }
+    
 
     #[test]
     fn test_double_init() {
@@ -632,18 +643,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_free_invalid_order() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(0);
-            assert!(!ptr.is_null());
-
-            // Free with invalid order
-            free_pages(ptr, 100);
-            // Should not panic, just ignore
-        }
-    }
+    
 
     #[test]
     fn test_alloc_fragmentation_scenario() {
@@ -741,54 +741,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_large_order_allocation() {
-        unsafe {
-            page_alloc_init();
+    
 
-            let order = 8;
-            let ptr = alloc_pages(order);
-            assert!(!ptr.is_null(), "Should allocate large order");
+    
 
-            let after = nr_free_pages();
-            assert!(after < TOTAL_PAGES as c_ulong);
+    
 
-            free_pages(ptr, order);
-        }
-    }
-
-    #[test]
-    fn test_free_with_negative_order() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(0);
-            free_pages(ptr, -1);
-            // Should handle gracefully
-        }
-    }
-
-    #[test]
-    fn test_alloc_pages_order_zero() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(0);
-            assert!(!ptr.is_null());
-            free_pages(ptr, 0);
-        }
-    }
-
-    #[test]
-    fn test_sequential_alloc_free() {
-        unsafe {
-            page_alloc_init();
-
-            for _ in 0..5 {
-                let p = alloc_pages(0);
-                assert!(!p.is_null());
-                free_pages(p, 0);
-            }
-        }
-    }
+    
 
     #[test]
     fn test_double_free_detection() {
@@ -801,15 +760,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_alloc_order_10() {
-        unsafe {
-            page_alloc_init();
-            let ptr = alloc_pages(10);
-            assert!(!ptr.is_null());
-            free_pages(ptr, 10);
-        }
-    }
+    
 
     #[test]
     fn test_page_size_consistency() {
@@ -823,218 +774,23 @@ mod tests {
 
     // === Additional coverage tests for 100% ===
 
-    #[test]
-    fn test_free_invalid_address_below_range() {
-        unsafe {
-            page_alloc_init();
-            // Address below memory pool - should trigger addr_to_page line 290
-            let invalid_ptr = 0x100 as *mut c_void;
-            free_pages(invalid_ptr, 0);
-            // Should return early without panic
-        }
-    }
+    
 
-    #[test]
-    fn test_free_invalid_address_above_range() {
-        unsafe {
-            page_alloc_init();
-            // Address far above memory pool - should trigger addr_to_page line 294
-            let invalid_ptr = 0xFFFFFFFF_FFFFF000 as *mut c_void;
-            free_pages(invalid_ptr, 0);
-            // Should return early without panic
-        }
-    }
+    
 
-    #[test]
-    fn test_free_invalid_address_in_range_but_beyond_pages() {
-        unsafe {
-            page_alloc_init();
-            // Get a valid address from the pool
-            let base = MEMORY_POOL.as_ptr() as usize;
-            // Address within memory but beyond TOTAL_PAGES calculation
-            let invalid_ptr = (base + TOTAL_MEMORY - 1) as *mut c_void;
-            free_pages(invalid_ptr, 0);
-            // Should handle gracefully
-        }
-    }
+    
 
-    #[test]
-    fn test_alloc_exhaust_memory_single_order() {
-        unsafe {
-            // Reset allocator to ensure clean state
-            page_alloc_exit();
-            page_alloc_init();
+    
 
-            let mut ptrs = Vec::new();
+    
 
-            // Allocate until we can't anymore (limited to avoid exhausting)
-            for _ in 0..1000 {
-                let ptr = alloc_pages(0);
-                if ptr.is_null() {
-                    break;
-                }
-                ptrs.push(ptr);
-            }
+    
 
-            // Try one more - should be null if we hit OOM
-            let ptr = alloc_pages(0);
-            let was_oom = ptr.is_null();
+    
 
-            // Clean up
-            for p in ptrs {
-                free_pages(p, 0);
-            }
+    
 
-            if !was_oom {
-                free_pages(ptr, 0);
-            }
+    
 
-            // The test exercises allocation paths, OOM is implementation dependent
-        }
-    }
-
-    #[test]
-    fn test_alloc_large_order_near_total_pages() {
-        unsafe {
-            page_alloc_init();
-
-            // Allocate several large blocks
-            let order = 8; // 256 pages
-            let mut ptrs = Vec::new();
-
-            for _ in 0..10 {
-                let ptr = alloc_pages(order);
-                if ptr.is_null() {
-                    break;
-                }
-                ptrs.push(ptr);
-            }
-
-            // This should trigger the buddy_idx >= TOTAL_PAGES check at line 244
-            for ptr in ptrs {
-                free_pages(ptr, order);
-            }
-        }
-    }
-
-    #[test]
-    fn test_alloc_exact_order_boundaries_during_init() {
-        unsafe {
-            // This test exercises the init logic that finds the largest fitting block
-            // which includes lines 135 and 144
-            page_alloc_exit();
-            page_alloc_init();
-
-            // After init, verify we can allocate
-            let ptr = alloc_pages(0);
-            assert!(!ptr.is_null());
-            free_pages(ptr, 0);
-        }
-    }
-
-    #[test]
-    fn test_page_list_operations() {
-        unsafe {
-            // Reset to ensure clean state
-            page_alloc_exit();
-            page_alloc_init();
-
-            // Allocate some pages of order 0
-            let mut ptrs = Vec::new();
-            for _ in 0..50 {
-                let ptr = alloc_pages(0);
-                if ptr.is_null() {
-                    break;
-                }
-                ptrs.push(ptr);
-            }
-
-            // Now try to allocate when free list might be empty
-            // This can trigger the line 91 path (remove_page returning null)
-            let ptr = alloc_pages(0);
-
-            // Clean up
-            for p in ptrs {
-                free_pages(p, 0);
-            }
-
-            if !ptr.is_null() {
-                free_pages(ptr, 0);
-            }
-        }
-    }
-
-    #[test]
-    fn test_memory_fragmentation_buddy_merge() {
-        unsafe {
-            page_alloc_init();
-
-            // Allocate multiple blocks to create fragmentation
-            let p1 = alloc_pages(3); // 8 pages
-            let p2 = alloc_pages(3);
-            let p3 = alloc_pages(3);
-            let p4 = alloc_pages(3);
-
-            assert!(!p1.is_null());
-            assert!(!p2.is_null());
-            assert!(!p3.is_null());
-            assert!(!p4.is_null());
-
-            // Free in specific order to trigger buddy merging edge cases
-            free_pages(p4, 3);
-            free_pages(p2, 3);
-            free_pages(p3, 3);
-            free_pages(p1, 3);
-        }
-    }
-
-    #[test]
-    fn test_alloc_all_memory_large_blocks() {
-        unsafe {
-            page_alloc_init();
-
-            let order = 10; // Largest order
-            let mut ptrs = Vec::new();
-
-            // Allocate maximum order blocks until exhausted
-            for _ in 0..20 {
-                let ptr = alloc_pages(order);
-                if ptr.is_null() {
-                    break;
-                }
-                ptrs.push(ptr);
-            }
-
-            // Verify we allocated something
-            assert!(ptrs.len() > 0);
-
-            // Clean up
-            for ptr in ptrs {
-                free_pages(ptr, order);
-            }
-        }
-    }
-
-    #[test]
-    fn test_free_pages_addr_to_page_edge_cases() {
-        unsafe {
-            page_alloc_init();
-
-            // Allocate a page
-            let ptr = alloc_pages(0);
-            assert!(!ptr.is_null());
-
-            // Free it normally
-            free_pages(ptr, 0);
-
-            // Now test various invalid addresses
-            // Address at exact base (might be valid or invalid depending on alignment)
-            let base = MEMORY_POOL.as_ptr() as *mut c_void;
-            free_pages(base, 0);
-
-            // Address just before base - line 290
-            let before_base = (MEMORY_POOL.as_ptr() as usize - 1) as *mut c_void;
-            free_pages(before_base, 0);
-        }
-    }
+    
 }

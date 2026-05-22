@@ -1,4 +1,6 @@
 #![no_std]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 //! Driver model
 //!
 //! This module implements driver_base_driver functionality for the Rust Linux Mini Kernel.
