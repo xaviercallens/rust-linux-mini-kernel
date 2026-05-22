@@ -10,6 +10,31 @@ global_asm!(r#"
 .long 0x1BADB002
 .long 0x00
 .long -(0x1BADB002)
+
+.section .bss
+.align 16
+stack_bottom:
+.skip 16384
+stack_top:
+
+.section .text
+.global _start
+_start:
+    mov esp, offset stack_top
+
+    # Enable SSE (required by Rust's optimized memory operations)
+    mov eax, cr0
+    and ax, 0xFFFB      # Clear EM bit (bit 2)
+    or ax, 0x2          # Set MP bit (bit 1)
+    mov cr0, eax
+    mov eax, cr4
+    or ax, 0x600        # Set OSFXSR (bit 9) and OSXMMEXCPT (bit 10)
+    mov cr4, eax
+
+    call kmain
+    cli
+1:  hlt
+    jmp 1b
 "#);
 
 #[no_mangle]
@@ -68,7 +93,7 @@ impl ColorCode {
 
 // Kernel entry point
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn kmain() -> ! {
     clear_screen();
 
     print_banner();
