@@ -39,6 +39,7 @@ jobs:
       - name: Build specifications
         run: |
           cd specs/lean4
+          lake update || true
           lake build
 
       - name: Type check specifications
