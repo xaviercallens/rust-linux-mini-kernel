@@ -22,7 +22,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-05-15
-          targets: i686-unknown-linux-gnu
+          targets: x86_64-unknown-none
 
       - name: Install QEMU System Emulation
         run: |
@@ -48,13 +48,25 @@ jobs:
       - name: Check Fuzz Targets Compilation
         run: cargo check --manifest-path fuzz/Cargo.toml
 
-      - name: Build 32-bit Multiboot 1 Kernel
+      - name: Build x86_64 Bare Metal Kernel
         run: |
-          cargo build --manifest-path examples/demo_kernel/Cargo.toml --target i686-unknown-linux-gnu
+          cd examples/demo_kernel && cargo build --release
 
       - name: Execute QEMU Full System Emulation Boot Test
         run: |
-          python3 scripts/qemu_boot_test.py --kernel target/i686-unknown-linux-gnu/debug/demo_kernel --timeout 15.0
+          python3 scripts/qemu_boot_test.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel --timeout 15.0
+
+      - name: Execute QEMU Stress Test (Concurrency)
+        run: |
+          python3 scripts/stress_test_qemu.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel --concurrency 5
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked || true
+
+      - name: Run Fuzzing Targets
+        run: |
+          ./scripts/run_fuzzing.sh fuzz_routing 30
+          ./scripts/run_fuzzing.sh fuzz_packet 30
 
       - name: Run C vs Rust Microbenchmark Comparison
         run: |

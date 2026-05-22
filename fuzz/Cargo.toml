@@ -17,4 +17,10 @@ path = "fuzz_targets/fuzz_packet.rs"
 test = false
 doc = false
 
+[[bin]]
+name = "fuzz_routing"
+path = "fuzz_targets/fuzz_routing.rs"
+test = false
+doc = false
+
 [workspace]

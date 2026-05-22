@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser(description="Automated QEMU boot smoke test")
     parser.add_argument(
         "--kernel",
-        default="/Users/xcallens/.gemini/antigravity-ide/scratch/target/i686-unknown-linux-gnu/debug/demo_kernel",
+        default="examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel",
         help="Path to the compiled bare-metal kernel ELF"
     )
     parser.add_argument(
