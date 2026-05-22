@@ -164,38 +164,6 @@ pub unsafe extern "C" fn fib6_rule_match(
     }
 }
 
-        if rule.dst_len > 0 {
-            let dst_mask = !((1 << (128 - rule.dst_len)) - 1);
-            let dst = rule.dst.in6_u.u6_addr32[0] & dst_mask;
-            let fl6_dst = fl6.daddr.in6_u.u6_addr32[0] & dst_mask;
-
-            if dst != fl6_dst {
-                return false;
-            }
-        }
-
-        // Placeholder - flowi6_tos field not in flowi6
-        // if rule.tos != 0 && rule.tos != fl6.flowi6_tos {
-        //     return false;
-        // }
-
-        if rule.fwmark != 0 && (rule.fwmark & rule.fwmask) != (fl6.flowi6_mark & rule.fwmask) {
-            return false;
-        }
-
-        // Placeholder - fl6_iifname field not in flowi6
-        // if rule.ifname[0] != 0 {
-        //     let ifname = core::ffi::CStr::from_ptr(rule.ifname.as_ptr());
-        //     let fl6_ifname = core::ffi::CStr::from_ptr(fl6.fl6_iifname.as_ptr());
-        //
-        //     if ifname != fl6_ifname {
-        //         return false;
-        //     }
-        // }
-
-        true
-    }
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_rule_action(

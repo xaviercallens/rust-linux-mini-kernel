@@ -192,8 +192,7 @@ pub unsafe extern "C" fn fib6_alloc_table(_net: *mut net, id: u32) -> *mut fib6_
     ensures!(table.is_null() || !table.is_null(), "fib6_alloc_table: return bounds");
     table
 }
-    table
-}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_table {
@@ -211,15 +210,6 @@ pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_tab
     tb
 }
 
-    let mut tb = fib6_get_table(net, id);
-    if tb.is_null() {
-        tb = fib6_alloc_table(net, id);
-        if !tb.is_null() {
-            fib6_link_table(net, tb);
-        }
-    }
-    tb
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_table {
@@ -235,11 +225,6 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
     tb
 }
 
-    let hash: usize = (id as usize) & (FIB6_TABLE_HASHSZ - 1);
-    let _node = (*net).ipv6.fib_table_hash[hash].first;
-
-    ptr::null_mut()
-}
 
 /// Destroy a FIB6 info structure
 ///
@@ -266,9 +251,6 @@ pub unsafe extern "C" fn fib6_info_alloc(_gfp_flags: c_int, with_fib6_nh: bool) 
     f6i
 }
 
-    let f6i: *mut fib6_info = ptr::null_mut();
-    f6i
-}
 
 /// Update serial number for FIB6 node
 ///
@@ -286,8 +268,6 @@ pub unsafe extern "C" fn fib6_update_sernum(net: *mut net, f6i: *mut fib6_info) 
     let fn_ptr = (*f6i_ptr).fib6_node;
     if !fn_ptr.is_null() {
         (*fn_ptr).fn_sernum = fib6_new_sernum(net_ptr) as u32;
-    }
-}
     }
 }
 
@@ -316,7 +296,6 @@ pub unsafe extern "C" fn fib6_walker_link(net: *mut net, w: *mut fib6_walker) {
     let _safe_w = SafeFib6Walker::new(w).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
 
 }
-}
 
 /// Unlink a FIB6 walker from the network namespace
 ///
@@ -331,7 +310,6 @@ pub unsafe extern "C" fn fib6_walker_unlink(net: *mut net, w: *mut fib6_walker) 
     let _safe_w = SafeFib6Walker::new(w).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
 
 }
-}
 
 // Helper functions
 #[no_mangle]
@@ -343,7 +321,6 @@ pub unsafe extern "C" fn fib6_link_table(net: *mut net, tb: *mut fib6_table) {
     let tb_ptr = safe_tb.ptr;
     let _h: usize = (*tb_ptr).tb6_id as usize & (FIB6_TABLE_HASHSZ - 1);
 
-}
 }
 
 // Constants
