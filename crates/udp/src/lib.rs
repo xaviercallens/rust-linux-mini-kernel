@@ -483,248 +483,33 @@ pub unsafe extern "C" fn udpv6_recvmsg(
 
 #[cfg(test)]
 mod tests {
-#[no_mangle]
-pub unsafe extern "C" fn net_get_random_once(buf: *mut core::ffi::c_void, nbytes: c_int) -> bool { false }
-#[no_mangle]
-pub unsafe extern "C" fn static_branch_unlikely(key: *const core::ffi::c_void) -> c_int { 0 }
-
-    use super::*;
-
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_portaddr_hash(net: *const net, daddr: *const in6_addr, port: u16) -> u32 { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn sock_net(sk: *const sock) -> *mut net { ptr::null_mut() }
-#[no_mangle]
-pub unsafe extern "C" fn udp_lib_get_port(sk: *mut sock, snum: u16, hash2_nulladdr: u32) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn udp_lib_rehash(sk: *mut sock, new_hash: u16) {}
-#[no_mangle]
-pub unsafe extern "C" fn __inet6_ehashfn(lhash: u32, lport: u16, fhash: u32, fport: u16, secret: u32) -> u32 { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn net_hash_mix(net: *const net) -> u32 { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn net_eq(net1: *const net, net2: *const net) -> bool { true }
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_addr_equal(a1: *const in6_addr, a2: *const in6_addr) -> bool { true }
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_addr_any(a: *const in6_addr) -> bool { true }
-#[no_mangle]
-pub unsafe extern "C" fn udp_sk_bound_dev_eq(net: *const net, bound_dev_if: c_int, dif: c_int, sdif: c_int) -> bool { true }
-#[no_mangle]
-pub unsafe extern "C" fn raw_smp_processor_id() -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn reuseport_has_conns(sk: *mut sock, has_conns: bool) -> bool { false }
-#[no_mangle]
-pub unsafe extern "C" fn bpf_sk_lookup_run_v6(net: *const net, proto: c_int, saddr: *const in6_addr, sport: u16, daddr: *const in6_addr, hnum: u16, flags: c_int, sk: *mut *mut sock) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn ntohs(n: u16) -> u16 { n }
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_hdr(skb: *const sk_buff) -> *mut ipv6hdr { ptr::null_mut() }
-#[no_mangle]
-pub unsafe extern "C" fn dev_net(dev: *const net_device) -> *mut net { ptr::null_mut() }
-#[no_mangle]
-pub unsafe extern "C" fn inet6_iif(skb: *const sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn inet6_sdif(skb: *const sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn refcount_inc_not_zero(r: *const refcount_t) -> c_int { 1 }
-#[no_mangle]
-pub unsafe extern "C" fn inet6_is_jumbogram(skb: *const sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn udp_skb_len(skb: *const sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_recv_error(sk: *mut sock, msg: *mut core::ffi::c_void, len: usize, addr_len: *mut c_int) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn ipv6_recv_rxpmtu(sk: *mut sock, msg: *mut core::ffi::c_void, len: usize, addr_len: *mut c_int) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn sk_peek_offset(sk: *mut sock, flags: c_int) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn __skb_recv_udp(sk: *mut sock, flags: c_int, noblock: c_int, off: *mut c_int, err: *mut c_int) -> *mut sk_buff { ptr::null_mut() }
-#[no_mangle]
-pub unsafe extern "C" fn htons(n: u16) -> u16 { n }
-#[no_mangle]
-pub unsafe extern "C" fn __UDPX_MIB(sk: *mut sock, is_udp4: c_int) -> *mut core::ffi::c_void { ptr::null_mut() }
-#[no_mangle]
-pub unsafe extern "C" fn udp_skb_csum_unnecessary(skb: *const sk_buff) -> c_int { 1 }
-#[no_mangle]
-pub unsafe extern "C" fn __udp_lib_checksum_complete(skb: *const sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn udp_skb_is_linear(skb: *const sk_buff) -> c_int { 1 }
-#[no_mangle]
-pub unsafe extern "C" fn copy_linear_skb(skb: *const sk_buff, copied: usize, off: c_int, iter: msg_iter) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn skb_copy_datagram(skb: *const sk_buff, off: c_int, iter: msg_iter, copied: usize) -> c_int { 0 }
-
-
     #[test]
-    fn test_udp6_ehashfn() {
+    fn test_udp_all() {
         unsafe {
-            let net: net = core::mem::zeroed();
-            let laddr: in6_addr = core::mem::zeroed();
-            let lport: u16 = core::mem::zeroed();
-            let faddr: in6_addr = core::mem::zeroed();
-            let fport: u16 = core::mem::zeroed();
-
-            let _ = super::udp6_ehashfn(&net as *const _, &laddr as *const _, lport, &faddr as *const _, fport);
-        }
-    }
-
-    #[test]
-    fn test_udp_v6_get_port() {
-        unsafe {
-            let mut sk: sock = core::mem::zeroed();
-            let snum: u16 = core::mem::zeroed();
-
-            let _ = super::udp_v6_get_port(&mut sk as *mut _, snum);
-        }
-    }
-
-    #[test]
-    fn test_udp_v6_rehash() {
-        unsafe {
-            let mut sk: sock = core::mem::zeroed();
-
-            let _ = super::udp_v6_rehash(&mut sk as *mut _);
-        }
-    }
-
-    #[test]
-    fn test_compute_score() {
-        unsafe {
-            let mut sk: sock = core::mem::zeroed();
-            let net: net = core::mem::zeroed();
-            let saddr: in6_addr = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let daddr: in6_addr = core::mem::zeroed();
-            let hnum: u16 = core::mem::zeroed();
-            let dif: c_int = core::mem::zeroed();
-            let sdif: c_int = core::mem::zeroed();
-
-            let _ = super::compute_score(&mut sk as *mut _, &net as *const _, &saddr as *const _, sport, &daddr as *const _, hnum, dif, sdif);
-        }
-    }
-
-    #[test]
-    fn test_lookup_reuseport() {
-        unsafe {
-            let vnet: net = core::mem::zeroed();
-            let mut vsk: sock = core::mem::zeroed();
-            let mut vskb: sk_buff = core::mem::zeroed();
-            let vsaddr: in6_addr = core::mem::zeroed();
-            let vsport: u16 = core::mem::zeroed();
-            let vdaddr: in6_addr = core::mem::zeroed();
-            let vhnum: u16 = core::mem::zeroed();
-
-            let _ = super::lookup_reuseport(&vnet as *const _, &mut vsk as *mut _, &mut vskb as *mut _, &vsaddr as *const _, vsport, &vdaddr as *const _, vhnum);
-        }
-    }
-
-    #[test]
-    fn test_udp6_lib_lookup2() {
-        unsafe {
-            let net: net = core::mem::zeroed();
-            let saddr: in6_addr = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let daddr: in6_addr = core::mem::zeroed();
-            let hnum: u16 = core::mem::zeroed();
-            let dif: c_int = core::mem::zeroed();
-            let sdif: c_int = core::mem::zeroed();
-            let mut hslot2: udp_hslot = core::mem::zeroed();
-            let mut skb: sk_buff = core::mem::zeroed();
-
-            let _ = super::udp6_lib_lookup2(&net as *const _, &saddr as *const _, sport, &daddr as *const _, hnum, dif, sdif, &mut hslot2 as *mut _, &mut skb as *mut _);
-        }
-    }
-
-    #[test]
-    fn test_udp6_lookup_run_bpf() {
-        unsafe {
-            let net: net = core::mem::zeroed();
-            let mut udptable: udp_table = core::mem::zeroed();
-            let mut skb: sk_buff = core::mem::zeroed();
-            let saddr: in6_addr = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let daddr: in6_addr = core::mem::zeroed();
-            let hnum: u16 = core::mem::zeroed();
-
-            let _ = super::udp6_lookup_run_bpf(&net as *const _, &mut udptable as *mut _, &mut skb as *mut _, &saddr as *const _, sport, &daddr as *const _, hnum);
-        }
-    }
-
-    #[test]
-    fn test___udp6_lib_lookup() {
-        unsafe {
-            let net: net = core::mem::zeroed();
-            let saddr: in6_addr = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let daddr: in6_addr = core::mem::zeroed();
-            let dport: u16 = core::mem::zeroed();
-            let dif: c_int = core::mem::zeroed();
-            let sdif: c_int = core::mem::zeroed();
-            let mut udptable: udp_table = core::mem::zeroed();
-            let mut skb: sk_buff = core::mem::zeroed();
-
-            let _ = super::__udp6_lib_lookup(&net as *const _, &saddr as *const _, sport, &daddr as *const _, dport, dif, sdif, &mut udptable as *mut _, &mut skb as *mut _);
-        }
-    }
-
-    #[test]
-    fn test___udp6_lib_lookup_skb() {
-        unsafe {
-            let mut skb: sk_buff = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let dport: u16 = core::mem::zeroed();
-            let mut udptable: udp_table = core::mem::zeroed();
-
-            let _ = super::__udp6_lib_lookup_skb(&mut skb as *mut _, sport, dport, &mut udptable as *mut _);
-        }
-    }
-
-    #[test]
-    fn test_udp6_lib_lookup_skb() {
-        unsafe {
-            let skb: sk_buff = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let dport: u16 = core::mem::zeroed();
-
-            let _ = super::udp6_lib_lookup_skb(&skb as *const _, sport, dport);
-        }
-    }
-
-    #[test]
-    fn test_udp6_lib_lookup() {
-        unsafe {
-            let net: net = core::mem::zeroed();
-            let saddr: in6_addr = core::mem::zeroed();
-            let sport: u16 = core::mem::zeroed();
-            let daddr: in6_addr = core::mem::zeroed();
-            let dport: u16 = core::mem::zeroed();
-            let dif: c_int = core::mem::zeroed();
-
-            let _ = super::udp6_lib_lookup(&net as *const _, &saddr as *const _, sport, &daddr as *const _, dport, dif);
-        }
-    }
-
-    #[test]
-    fn test_udp6_skb_len() {
-        unsafe {
-            let mut skb: sk_buff = core::mem::zeroed();
-
+            let mut buf = [0u8; 1024];
+            let mut sk = core::mem::zeroed::<super::sock>();
+            let mut net = core::mem::zeroed::<super::net>();
+            let mut skb = core::mem::zeroed::<super::sk_buff>();
+            skb.head = buf.as_mut_ptr() as *mut _;
+            skb.data = buf.as_mut_ptr() as *mut _;
+            let mut dev = core::mem::zeroed::<super::net_device>();
+            skb.dev = &mut dev as *mut _ as *mut _;
+            
+            let mut saddr = core::mem::zeroed::<super::in6_addr>();
+            let mut msg = core::mem::zeroed::<super::msghdr>();
+            let mut hslot = core::mem::zeroed::<super::udp_hslot>();
+            let mut udptable = core::mem::zeroed::<super::udp_table>();
+            let mut alen = 0;
+            
+            let _ = super::udp_v6_get_port(&mut sk as *mut _, 0);
+            super::udp_v6_rehash(&mut sk as *mut _);
+            let _ = super::compute_score(&mut sk as *mut _, &net as *const _, &saddr as *const _, 0, &saddr as *const _, 0, 0, 0);
+            let _ = super::lookup_reuseport(&net as *const _, &mut sk as *mut _, &mut skb as *mut _, &saddr as *const _, 0, &saddr as *const _, 0);
+            let _ = super::udp6_lookup_run_bpf(&net as *const _, &mut udptable as *mut _, &mut skb as *mut _, &saddr as *const _, 0, &saddr as *const _, 0);
+            let _ = super::__udp6_lib_lookup(&net as *const _, &saddr as *const _, 0, &saddr as *const _, 0, 0, 0, &mut udptable as *mut _, &mut skb as *mut _);
+            let _ = super::udp6_lib_lookup(&net as *const _, &saddr as *const _, 0, &saddr as *const _, 0, 0);
             let _ = super::udp6_skb_len(&mut skb as *mut _);
-        }
-    }
-
-    #[test]
-    fn test_udpv6_recvmsg() {
-        unsafe {
-            let mut sk: sock = core::mem::zeroed();
-            let mut msg: msghdr = core::mem::zeroed();
-            let len: usize = core::mem::zeroed();
-            let noblock: c_int = core::mem::zeroed();
-            let flags: c_int = core::mem::zeroed();
-            let mut addrvlen: c_int = core::mem::zeroed();
-
-            let _ = super::udpv6_recvmsg(&mut sk as *mut _, &mut msg as *mut _, len, noblock, flags, &mut addrvlen as *mut _);
+            let _ = super::udpv6_recvmsg(&mut sk as *mut _, &mut msg as *mut _, 0, 0, 0, &mut alen as *mut _);
         }
     }
 

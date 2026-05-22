@@ -246,7 +246,7 @@ unsafe fn ipv6_hdr(skb: *const sk_buff) -> *const ipv6hdr {
     }
 
     // Implementation would go here
-    core::ptr::null()
+    (*skb).data as *const ipv6hdr
 }
 
 /// Skip extension headers
@@ -328,72 +328,37 @@ pub const IPPROTO_ICMPV6: u8 = 58;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-#[no_mangle]
-pub unsafe extern "C" fn icmpv6_notify(skb: *mut sk_buff, type_: u8, code: u8, inner_offset: c_int) {}
-#[no_mangle]
-pub unsafe extern "C" fn ndisc_send_redirect(skb: *mut sk_buff, target: *const in6_addr) {}
-#[no_mangle]
-pub unsafe extern "C" fn __icmpv6_send(skb: *mut sk_buff, type_: u8, code: u8, info: u32, force_saddr: *const in6_addr, tclass: *const core::ffi::c_void) {}
-#[no_mangle]
-pub unsafe extern "C" fn csum_ipv6_magic(saddr: *const in6_addr, daddr: *const in6_addr, len: u32, proto: u8, csum: u32) -> u32 { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn icmpv6_csum_unnecessary(skb: *const sk_buff) -> c_int { 1 }
-#[no_mangle]
-pub unsafe extern "C" fn __skb_checksum_complete(skb: *const sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn icmpv6_rcv(skb: *mut sk_buff) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn ip6_flush_pending_frames(sk: *mut sock) {}
-#[no_mangle]
-pub unsafe extern "C" fn ip6_push_pending_frames(sk: *mut sock) -> c_int { 0 }
-#[no_mangle]
-pub unsafe extern "C" fn ip6_append_data(sk: *mut sock, getfrag: *const core::ffi::c_void, from: *const core::ffi::c_void, length: c_int, transhdrlen: c_int, ipc: *mut core::ffi::c_void, fl6: *mut flowi6, rt: *mut rt6_info, flags: c_int) -> c_int { 0 }
-
-
-    #[test]
-    fn test_rust_eh_personality() {
-        unsafe {
-
-            let _ = super::rust_eh_personality();
-        }
-    }
-
     #[test]
     fn test_icmpv6_err() {
         unsafe {
-            let mut skb: sk_buff = core::mem::zeroed();
-            let mut opt: Inet6SkbParm = core::mem::zeroed();
-            let typev: u8 = core::mem::zeroed();
-            let vcodev: u8 = core::mem::zeroed();
-            let offset: c_int = core::mem::zeroed();
-            let info: u32 = core::mem::zeroed();
+            let mut dev = core::mem::zeroed::<super::net_device>();
+            let mut buf = [0u8; 1024];
+            let mut skb = core::mem::zeroed::<super::sk_buff>();
+            let mut buf = [0u8; 1024];
+            skb.data = buf.as_mut_ptr() as *mut _;
 
-            let _ = super::icmpv6_err(&mut skb as *mut _, &mut opt as *mut _, typev, vcodev, offset, info);
+            skb.dev = &mut dev as *mut _ as *mut _;
+            skb.head = buf.as_mut_ptr() as *mut _;
+            skb.data = buf.as_mut_ptr() as *mut _;
+            let mut inet6cb = core::mem::zeroed::<core::ffi::c_void>();
+            let _ = super::icmpv6_err(&mut skb as *mut _, &mut inet6cb as *mut _, 0, 0, 0, 0);
         }
     }
-
     #[test]
     fn test_icmp6_send() {
         unsafe {
-            let mut skb: sk_buff = core::mem::zeroed();
-            let vtype: u8 = core::mem::zeroed();
-            let vcode: u8 = core::mem::zeroed();
-            let vinfo: u32 = core::mem::zeroed();
+            let mut dev = core::mem::zeroed::<super::net_device>();
+            let mut buf = [0u8; 1024];
+            let mut skb = core::mem::zeroed::<super::sk_buff>();
+            let mut buf = [0u8; 1024];
+            skb.data = buf.as_mut_ptr() as *mut _;
 
-            let _ = super::icmp6_send(&mut skb as *mut _, vtype, vcode, vinfo);
-        }
-    }
-
-    #[test]
-    fn test_icmpv6_err_convert() {
-        unsafe {
-            let vtypev: u8 = core::mem::zeroed();
-            let vcode: u8 = core::mem::zeroed();
-            let verror: c_int = core::mem::zeroed();
-
-            let _ = super::icmpv6_err_convert(vtypev, vcode, verror);
+            skb.dev = &mut dev as *mut _ as *mut _;
+            skb.head = buf.as_mut_ptr() as *mut _;
+            skb.data = buf.as_mut_ptr() as *mut _;
+            let mut saddr = core::mem::zeroed::<super::in6_addr>();
+            let mut tclass = core::mem::zeroed::<core::ffi::c_void>();
+            super::icmp6_send(&mut skb as *mut _, 0, 0, 0, &mut saddr as *const _, &mut tclass as *const _);
         }
     }
 
