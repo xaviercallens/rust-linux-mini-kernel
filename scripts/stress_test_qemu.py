@@ -8,7 +8,7 @@ import concurrent.futures
 def run_qemu_instance(kernel_path, timeout_sec, instance_id):
     """Boot a single QEMU instance and wait for the success banner."""
     cmd = [
-        "qemu-system-x86_64",
+        "qemu-system-i386",
         "-kernel", kernel_path,
         "-display", "none",
         "-serial", "stdio"
@@ -57,7 +57,7 @@ def run_qemu_instance(kernel_path, timeout_sec, instance_id):
 
 def main():
     parser = argparse.ArgumentParser(description="QEMU boot stress test")
-    parser.add_argument("--kernel", default="examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel", help="Path to kernel ELF")
+    parser.add_argument("--kernel", default="examples/demo_kernel/target/i686-unknown-linux-gnu/release/demo_kernel", help="Path to kernel ELF")
     parser.add_argument("--concurrency", type=int, default=10, help="Number of concurrent QEMU boots")
     parser.add_argument("--timeout", type=float, default=15.0, help="Timeout per boot")
     args = parser.parse_args()
