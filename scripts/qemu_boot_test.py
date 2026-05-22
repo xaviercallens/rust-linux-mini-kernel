@@ -24,7 +24,7 @@ def main():
     print(f"[INFO] Timeout: {args.timeout} seconds")
 
     cmd = [
-        "qemu-system-i386",
+        "qemu-system-x86_64",
         "-kernel", args.kernel,
         "-display", "none",
         "-serial", "stdio"
