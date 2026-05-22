@@ -27,33 +27,14 @@ def run_qemu_instance(kernel_path, timeout_sec, instance_id):
 
     booted_banner = False
     try:
-        while True:
-            elapsed = time.time() - start_time
-            if elapsed > timeout_sec:
-                process.terminate()
-                return False, f"Instance {instance_id}: TIMED OUT after {elapsed:.2f}s"
-            
-            if process.poll() is not None:
-                return False, f"Instance {instance_id}: Terminated prematurely"
-                
-            line = process.stdout.readline()
-            if "RUST LINUX MINI KERNEL - DEMO" in line:
-                booted_banner = True
-                break
-                
-            time.sleep(0.01)
-            
-    finally:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=1)
-            except:
-                process.kill()
-                
-    if booted_banner:
-        return True, f"Instance {instance_id}: Booted in {time.time() - start_time:.3f}s"
-    return False, f"Instance {instance_id}: Failed to find banner"
+        stdout, _ = process.communicate(timeout=timeout_sec)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        stdout, _ = process.communicate()
+    
+    if "RUST LINUX MINI KERNEL - DEMO" in stdout:
+        return True, f"Instance {instance_id}: Booted successfully"
+    return False, f"Instance {instance_id}: Failed to find banner. Output: {stdout}"
 
 def main():
     parser = argparse.ArgumentParser(description="QEMU boot stress test")

@@ -5,155 +5,68 @@ mod tests {
     use kernel_types::{sk_buff, in_addr, c_int, c_void};
     use core::ptr;
 
-    unsafe extern "C" fn mock_output(skb: *mut sk_buff, neighbour: *mut neighbour) -> c_int {
-        // Mock returning 0 for success
-        0
-    }
+    unsafe extern "C" fn mock_output(skb: *mut sk_buff, neighbour: *mut neighbour) -> c_int { 0 }
 
     #[test]
     fn test_arp_send_success() {
         unsafe {
-            // Setup mocks
-            let mut ops = ndisc_ops {
-                output: Some(mock_output),
-            };
-
-            let mut dev = net_device {
-                type_: ARPHRD_ETHER,
-            };
-
-            let mut dst = neighbour {
-                dev: &mut dev as *mut _,
-                ops: &mut ops as *mut _,
-            };
-
-            // Setup SKB data
+            let mut ops = ndisc_ops { output: Some(mock_output) };
+            let mut dev = net_device { type_: ARPHRD_ETHER };
+            let mut dst = neighbour { dev: &mut dev as *mut _, ops: &mut ops as *mut _ };
             let mut data = [0u64; 16];
             let data_ptr = data.as_mut_ptr() as *mut u8;
-            let eth_start = data_ptr.add(2); // NET_IP_ALIGN
-            
-            // Set ethernet header (ETH_P_IP)
-            // Ethernet header is 14 bytes: dest(6) + src(6) + proto(2)
+            let eth_start = data_ptr.add(2); 
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
             ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
-
-            // Set ARP header (ARPOP_REQUEST)
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
             ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
-
-            // Setup fake IP addresses
             let mut s_addr = in_addr { s_addr: 1, ip: ptr::null_mut() };
             let mut d_addr = in_addr { s_addr: 2, ip: ptr::null_mut() };
             ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
             ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
-
             let mut skb = sk_buff {
-                next: ptr::null_mut(),
-                prev: ptr::null_mut(),
-                tstamp: 0,
-                dev: &mut dev as *mut _ as *mut c_void,
-                len: 128,
-                data_len: 0,
-                mac_len: 14,
-                hdr_len: 0,
-                csum: 0,
-                priority: 0,
-                protocol: 0,
-                flags: 0,
-                cb: [0u8; 48],
-                ip_summed: 0,
-                csum_level: 0,
-                csum_valid: 0,
-                csum_complete_sw: 0,
-                remcsum_offload: ptr::null_mut(),
-                mark: ptr::null_mut(),
-                data: eth_start as *mut c_void,
-                sk: ptr::null_mut(),
-                dst: &mut dst as *mut _ as *mut c_void,
-                head: eth_start,
-                network_header: 0,
-                transport_header: 0,
-                transport_offset: 0,
-                network_header_len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 128,
+                data_len: 0, mac_len: 14, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
+                head: eth_start, network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
-
             let mut mock_ip: u32 = 0;
-            let ip = &mut mock_ip as *mut _ as *mut c_void;
-
-            // Call function
-            let result = unsafe { arp_send(&mut skb as *mut _, ip) };
+            let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
             assert_eq!(result, 0);
         }
     }
 
     #[test]
-    fn test_arp_send_invalid_dev() {
+    fn test_arp_send_null_dev() {
         unsafe {
-            let mut dev = net_device {
-                type_: 0, // Not ARPHRD_ETHER
-            };
-
             let mut skb = sk_buff {
-                next: ptr::null_mut(),
-                prev: ptr::null_mut(),
-                tstamp: 0,
-                dev: &mut dev as *mut _ as *mut c_void,
-                len: 128,
-                data_len: 0,
-                mac_len: 14,
-                hdr_len: 0,
-                csum: 0,
-                priority: 0,
-                protocol: 0,
-                flags: 0,
-                cb: [0u8; 48],
-                ip_summed: 0,
-                csum_level: 0,
-                csum_valid: 0,
-                csum_complete_sw: 0,
-                remcsum_offload: ptr::null_mut(),
-                mark: ptr::null_mut(),
-                data: ptr::null_mut(),
-                sk: ptr::null_mut(),
-                dst: ptr::null_mut(),
-                head: ptr::null_mut(),
-                network_header: 0,
-                transport_header: 0,
-                transport_offset: 0,
-                network_header_len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: ptr::null_mut(), len: 128,
+                data_len: 0, mac_len: 14, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: ptr::null_mut(), sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
-
             let mut mock_ip: u32 = 0;
-            let ip = &mut mock_ip as *mut _ as *mut c_void;
-
-            // Should fail because dev type is not ARPHRD_ETHER
-            let result = unsafe { arp_send(&mut skb as *mut _, ip) };
+            let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
             assert_eq!(result, -kernel_types::EINVAL);
         }
     }
 
     #[test]
-    fn test_safe_skb_new_null() {
+    fn test_arp_send_null_data() {
         unsafe {
-            let skb = arp::SafeSkb::new(core::ptr::null_mut());
-            assert!(skb.is_none());
-        }
-    }
-
-    #[test]
-    fn test_safe_skb_methods_null() {
-        unsafe {
+            let mut dev = net_device { type_: ARPHRD_ETHER };
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: core::ptr::null_mut(), len: 0,
-                data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: core::ptr::null_mut(), sk: core::ptr::null_mut(), dst: core::ptr::null_mut(),
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 128,
+                data_len: 0, mac_len: 14, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: ptr::null_mut(), sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
-            let safe_skb = arp::SafeSkb::new(&mut skb as *mut _).unwrap();
-            assert!(safe_skb.dev().is_none());
-            assert!(safe_skb.data_as::<u8>(0).is_none());
-            assert!(safe_skb.dst().is_none());
+            let mut mock_ip: u32 = 0;
+            let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
+            assert_eq!(result, -kernel_types::EINVAL);
         }
     }
 
@@ -162,11 +75,11 @@ mod tests {
         unsafe {
             let mut dev = net_device { type_: 0 };
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: core::ptr::null_mut(), sk: core::ptr::null_mut(), dst: core::ptr::null_mut(),
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: ptr::null_mut(), sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -182,14 +95,14 @@ mod tests {
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(0x0806)); // wrong protocol
+            ptr::write_unaligned(eth_proto_ptr, htons(0x0806)); 
             
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: core::ptr::null_mut(),
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -205,17 +118,17 @@ mod tests {
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(2)); // wrong op
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(2)); 
             
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: core::ptr::null_mut(),
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -231,18 +144,18 @@ mod tests {
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), core::ptr::null_mut());
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), ptr::null_mut());
             
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: core::ptr::null_mut(),
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -258,21 +171,21 @@ mod tests {
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
             
-            let mut addr = in_addr { s_addr: 1, ip: core::ptr::null_mut() };
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut addr as *mut _);
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut addr as *mut _); // same addr
+            let mut addr = in_addr { s_addr: 1, ip: ptr::null_mut() };
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut addr as *mut _);
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut addr as *mut _); 
             
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: core::ptr::null_mut(),
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: ptr::null_mut(),
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -288,22 +201,22 @@ mod tests {
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
             
-            let mut s_addr = in_addr { s_addr: 1, ip: core::ptr::null_mut() };
-            let mut d_addr = in_addr { s_addr: 2, ip: core::ptr::null_mut() };
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
+            let mut s_addr = in_addr { s_addr: 1, ip: ptr::null_mut() };
+            let mut d_addr = in_addr { s_addr: 2, ip: ptr::null_mut() };
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
             
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: core::ptr::null_mut(), // null dst
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: ptr::null_mut(), 
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -316,30 +229,25 @@ mod tests {
         unsafe {
             let mut dev = net_device { type_: ARPHRD_ETHER };
             let mut other_dev = net_device { type_: ARPHRD_ETHER };
-            
             let mut ops = ndisc_ops { output: Some(mock_output) };
             let mut dst = neighbour { dev: &mut other_dev as *mut _, ops: &mut ops as *mut _ };
-            
             let mut data = [0u64; 16];
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
-            
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
-            
-            let mut s_addr = in_addr { s_addr: 1, ip: core::ptr::null_mut() };
-            let mut d_addr = in_addr { s_addr: 2, ip: core::ptr::null_mut() };
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
-            
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
+            let mut s_addr = in_addr { s_addr: 1, ip: ptr::null_mut() };
+            let mut d_addr = in_addr { s_addr: 2, ip: ptr::null_mut() };
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -351,29 +259,24 @@ mod tests {
     fn test_arp_send_dst_no_ops() {
         unsafe {
             let mut dev = net_device { type_: ARPHRD_ETHER };
-            
-            let mut dst = neighbour { dev: &mut dev as *mut _, ops: core::ptr::null_mut() }; // ops is null
-            
+            let mut dst = neighbour { dev: &mut dev as *mut _, ops: ptr::null_mut() }; 
             let mut data = [0u64; 16];
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
-            
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
-            
-            let mut s_addr = in_addr { s_addr: 1, ip: core::ptr::null_mut() };
-            let mut d_addr = in_addr { s_addr: 2, ip: core::ptr::null_mut() };
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
-            
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
+            let mut s_addr = in_addr { s_addr: 1, ip: ptr::null_mut() };
+            let mut d_addr = in_addr { s_addr: 2, ip: ptr::null_mut() };
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
@@ -385,35 +288,30 @@ mod tests {
     fn test_arp_send_dst_ops_no_output() {
         unsafe {
             let mut dev = net_device { type_: ARPHRD_ETHER };
-            
             let mut ops = ndisc_ops { output: None };
             let mut dst = neighbour { dev: &mut dev as *mut _, ops: &mut ops as *mut _ };
-            
             let mut data = [0u64; 16];
             let data_ptr = data.as_mut_ptr() as *mut u8;
             let eth_start = data_ptr.add(2);
             let eth_proto_ptr = eth_start.add(12) as *mut u16;
-            core::ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
-            
+            ptr::write_unaligned(eth_proto_ptr, htons(ETH_P_IP));
             let arp_ptr = eth_start.add(ETH_HLEN) as *mut arphdr;
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
-            
-            let mut s_addr = in_addr { s_addr: 1, ip: core::ptr::null_mut() };
-            let mut d_addr = in_addr { s_addr: 2, ip: core::ptr::null_mut() };
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
-            core::ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
-            
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_op), htons(ARPOP_REQUEST));
+            let mut s_addr = in_addr { s_addr: 1, ip: ptr::null_mut() };
+            let mut d_addr = in_addr { s_addr: 2, ip: ptr::null_mut() };
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_sip), &mut s_addr as *mut _);
+            ptr::write_unaligned(core::ptr::addr_of_mut!((*arp_ptr).ar_tip), &mut d_addr as *mut _);
             let mut skb = sk_buff {
-                next: core::ptr::null_mut(), prev: core::ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
+                next: ptr::null_mut(), prev: ptr::null_mut(), tstamp: 0, dev: &mut dev as *mut _ as *mut c_void, len: 0,
                 data_len: 0, mac_len: 0, hdr_len: 0, csum: 0, priority: 0, protocol: 0, flags: 0, cb: [0u8; 48],
-                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: core::ptr::null_mut(),
-                mark: core::ptr::null_mut(), data: eth_start as *mut c_void, sk: core::ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
-                head: core::ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
+                ip_summed: 0, csum_level: 0, csum_valid: 0, csum_complete_sw: 0, remcsum_offload: ptr::null_mut(),
+                mark: ptr::null_mut(), data: eth_start as *mut c_void, sk: ptr::null_mut(), dst: &mut dst as *mut _ as *mut c_void,
+                head: ptr::null_mut(), network_header: 0, transport_header: 0, transport_offset: 0, network_header_len: 0,
             };
             let mut mock_ip: u32 = 0;
             let result = arp_send(&mut skb as *mut _, &mut mock_ip as *mut _ as *mut c_void);
             assert_eq!(result, -kernel_types::EINVAL);
         }
     }
-
 }
+mod tcp_ipv6;
