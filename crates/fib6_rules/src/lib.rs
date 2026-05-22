@@ -1,6 +1,14 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 use kernel_types::*;
 
 const FR_ACT_TO_TBL: u32 = 0;
+pub const EINVAL: core::ffi::c_int = 22;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -102,29 +110,59 @@ pub struct fib_nh_common {
     pub nh_nhs: *mut c_void,
 }
 
+
+pub struct SafeFib6Rule<'a> {
+    ptr: *const fib6_rule,
+    _marker: core::marker::PhantomData<&'a fib6_rule>,
+}
+impl<'a> SafeFib6Rule<'a> {
+    pub unsafe fn new(ptr: *const fib6_rule) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+pub struct SafeFlowi6<'a> {
+    ptr: *const flowi6,
+    _marker: core::marker::PhantomData<&'a flowi6>,
+}
+impl<'a> SafeFlowi6<'a> {
+    pub unsafe fn new(ptr: *const flowi6) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn fib6_rule_match(
     rule: *const fib6_rule,
     fl6: *const flowi6,
     _flags: u32,
 ) -> bool {
+    requires!(!rule.is_null(), "fib6_rule_match: rule invariant violated");
+    requires!(!fl6.is_null(), "fib6_rule_match: fl6 invariant violated");
+    let safe_rule = SafeFib6Rule::new(rule).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let safe_fl6 = SafeFlowi6::new(fl6).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
     unsafe {
-        let rule = &*rule;
-        let fl6 = &*fl6;
-
-        if rule.action != FR_ACT_TO_TBL {
-            return false;
-        }
-
+        let rule = &*(safe_rule.ptr);
+        let fl6 = &*(safe_fl6.ptr);
+        if rule.action != FR_ACT_TO_TBL { return false; }
         if rule.src_len > 0 {
             let src_mask = !((1 << (128 - rule.src_len)) - 1);
             let src = rule.src.in6_u.u6_addr32[0] & src_mask;
             let fl6_src = fl6.saddr.in6_u.u6_addr32[0] & src_mask;
-
-            if src != fl6_src {
-                return false;
-            }
+            if src != fl6_src { return false; }
         }
+        if rule.dst_len > 0 {
+            let dst_mask = !((1 << (128 - rule.dst_len)) - 1);
+            let dst = rule.dst.in6_u.u6_addr32[0] & dst_mask;
+            let fl6_dst = fl6.daddr.in6_u.u6_addr32[0] & dst_mask;
+            if dst != fl6_dst { return false; }
+        }
+        if rule.fwmark != 0 && (rule.fwmark & rule.fwmask) != (fl6.flowi6_mark & rule.fwmask) {
+            return false;
+        }
+        true
+    }
+}
 
         if rule.dst_len > 0 {
             let dst_mask = !((1 << (128 - rule.dst_len)) - 1);
@@ -165,22 +203,27 @@ pub unsafe extern "C" fn fib6_rule_action(
     fl6: *const flowi6,
     res: *mut fib6_rule_action_result,
 ) -> c_int {
-    unsafe {
-        let rule = &*rule;
-        let fl6 = &*fl6;
+    requires!(!rule.is_null(), "fib6_rule_action: rule invariant violated");
+    requires!(!fl6.is_null(), "fib6_rule_action: fl6 invariant violated");
+    requires!(!res.is_null(), "fib6_rule_action: res invariant violated");
+    let safe_rule = SafeFib6Rule::new(rule).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let safe_fl6 = SafeFlowi6::new(fl6).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let result = unsafe {
+        let rule = &*(safe_rule.ptr);
+        let fl6 = &*(safe_fl6.ptr);
         let res = &mut *res;
-
         if rule.action != FR_ACT_TO_TBL {
-            return -EINVAL;
+            -EINVAL
+        } else {
+            res.table = rule.table;
+            res.oif = fl6.flowi6_oif;
+            res.mark = fl6.flowi6_mark;
+            res.tos = 0;
+            0
         }
-
-        res.table = rule.table;
-        res.oif = fl6.flowi6_oif;
-        res.mark = fl6.flowi6_mark;
-        res.tos = 0; // Placeholder - flowi6_tos not in flowi6
-
-        0
-    }
+    };
+    ensures!(result == 0 || result == -EINVAL, "fib6_rule_action: return value bounds");
+    result
 }
 
 #[repr(C)]

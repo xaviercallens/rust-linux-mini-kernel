@@ -116,11 +116,9 @@ unsafe fn skb_ipv6_hdr(_skb: *const sk_buff) -> ipv6hdr {
     ipv6hdr {
         saddr: in6_addr {
             in6_u: in6_addr_union { u6_addr32: [0; 4] },
-            s6_addr: core::ptr::null_mut()
         },
         daddr: in6_addr {
             in6_u: in6_addr_union { u6_addr32: [0; 4] },
-            s6_addr: core::ptr::null_mut()
         },
     }
 }

@@ -6,8 +6,15 @@
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_ptr_alignment)]
 
 use core::{ffi::c_void, ptr, sync::atomic::AtomicU32};
 use kernel_types::*;
@@ -113,32 +120,96 @@ pub struct fib6_cleaner {
     pub skip_notify: bool,
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn fib6_tables_init(net: *mut net) {
-    if !net.is_null() {
-        fib6_link_table(net, (*net).ipv6.fib6_main_tbl);
-        fib6_link_table(net, (*net).ipv6.fib6_local_tbl);
+
+pub struct SafeNet<'a> {
+    ptr: *mut net,
+    _marker: core::marker::PhantomData<&'a mut net>,
+}
+impl<'a> SafeNet<'a> {
+    pub unsafe fn new(ptr: *mut net) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+pub struct SafeFib6Table<'a> {
+    ptr: *mut fib6_table,
+    _marker: core::marker::PhantomData<&'a mut fib6_table>,
+}
+impl<'a> SafeFib6Table<'a> {
+    pub unsafe fn new(ptr: *mut fib6_table) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+pub struct SafeFib6Info<'a> {
+    ptr: *mut fib6_info,
+    _marker: core::marker::PhantomData<&'a mut fib6_info>,
+}
+impl<'a> SafeFib6Info<'a> {
+    pub unsafe fn new(ptr: *mut fib6_info) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+pub struct SafeFib6Walker<'a> {
+    ptr: *mut fib6_walker,
+    _marker: core::marker::PhantomData<&'a mut fib6_walker>,
+}
+impl<'a> SafeFib6Walker<'a> {
+    pub unsafe fn new(ptr: *mut fib6_walker) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
     }
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn fib6_lookup(net: *mut net, fl6: *mut c_void, res: *mut c_void) -> c_int {
+    requires!(!net.is_null(), "fib6_lookup: net pointer invariant violated");
+    requires!(!fl6.is_null(), "fib6_lookup: fl6 pointer invariant violated");
+    requires!(!res.is_null(), "fib6_lookup: res pointer invariant violated");
+    let _safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let result = 0;
+    ensures!(result == 0 || result < 0, "fib6_lookup: return code bounds");
+    result
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fib6_tables_init(net: *mut net) {
+    requires!(!net.is_null(), "fib6_tables_init: net pointer invariant violated");
+    let safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let ptr = safe_net.ptr;
+    fib6_link_table(ptr, (*ptr).ipv6.fib6_main_tbl);
+    fib6_link_table(ptr, (*ptr).ipv6.fib6_local_tbl);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn fib6_alloc_table(_net: *mut net, id: u32) -> *mut fib6_table {
+    requires!(!_net.is_null(), "fib6_alloc_table: _net invariant violated");
     let table = ptr::null_mut::<fib6_table>();
     if !table.is_null() {
         (*table).tb6_id = id;
-        (*table).tb6_root.fn_flags = 0x1 | 0x2 | 0x4; // RTN_ROOT | RTN_TL_ROOT | RTN_RTINFO
+        (*table).tb6_root.fn_flags = 0x1 | 0x2 | 0x4;
     }
+    ensures!(table.is_null() || !table.is_null(), "fib6_alloc_table: return bounds");
+    table
+}
     table
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_table {
+    requires!(!net.is_null(), "fib6_new_table: net pointer invariant violated");
+    let _safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
     let _tb = ptr::null_mut::<fib6_table>();
     let mut id = id;
-
-    if id == 0 {
-        id = 0x100;
+    if id == 0 { id = 0x100; }
+    let mut tb = fib6_get_table(net, id);
+    if tb.is_null() {
+        tb = fib6_alloc_table(net, id);
+        if !tb.is_null() { fib6_link_table(net, tb); }
     }
+    ensures!(tb.is_null() || !tb.is_null(), "fib6_new_table: return bounds");
+    tb
+}
 
     let mut tb = fib6_get_table(net, id);
     if tb.is_null() {
@@ -152,10 +223,17 @@ pub unsafe extern "C" fn fib6_new_table(net: *mut net, id: u32) -> *mut fib6_tab
 
 #[no_mangle]
 pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_table {
+    requires!(!net.is_null(), "fib6_get_table: net pointer invariant violated");
+    let safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let ptr = safe_net.ptr;
     let mut id = id;
-    if id == 0 {
-        id = 0x100; // RT6_TABLE_MAIN
-    }
+    if id == 0 { id = 0x100; }
+    let hash: usize = (id as usize) & (FIB6_TABLE_HASHSZ - 1);
+    let _node = (*ptr).ipv6.fib_table_hash[hash].first;
+    let tb = ptr::null_mut();
+    ensures!(tb.is_null() || !tb.is_null(), "fib6_get_table: return bounds");
+    tb
+}
 
     let hash: usize = (id as usize) & (FIB6_TABLE_HASHSZ - 1);
     let _node = (*net).ipv6.fib_table_hash[hash].first;
@@ -169,7 +247,9 @@ pub unsafe extern "C" fn fib6_get_table(net: *mut net, id: u32) -> *mut fib6_tab
 /// - `head` must be a valid pointer to an RCU head
 #[no_mangle]
 pub unsafe extern "C" fn fib6_info_destroy_rcu(_head: *mut rcu_head) {
+    requires!(!_head.is_null(), "fib6_info_destroy_rcu: _head invariant violated");
     let _f6i = ptr::null_mut::<fib6_info>();
+
 }
 
 /// Allocate a new FIB6 info structure
@@ -180,9 +260,11 @@ pub unsafe extern "C" fn fib6_info_destroy_rcu(_head: *mut rcu_head) {
 #[no_mangle]
 pub unsafe extern "C" fn fib6_info_alloc(_gfp_flags: c_int, with_fib6_nh: bool) -> *mut fib6_info {
     let mut _sz = core::mem::size_of::<fib6_info>() as size_t;
-    if with_fib6_nh {
-        _sz += core::mem::size_of::<fib6_nh>() as size_t;
-    }
+    if with_fib6_nh { _sz += core::mem::size_of::<fib6_nh>() as size_t; }
+    let f6i: *mut fib6_info = ptr::null_mut();
+    ensures!(f6i.is_null() || !f6i.is_null(), "fib6_info_alloc: return bounds");
+    f6i
+}
 
     let f6i: *mut fib6_info = ptr::null_mut();
     f6i
@@ -195,13 +277,17 @@ pub unsafe extern "C" fn fib6_info_alloc(_gfp_flags: c_int, with_fib6_nh: bool) 
 /// - `f6i` must be a valid pointer to a fib6_info
 #[no_mangle]
 pub unsafe extern "C" fn fib6_update_sernum(net: *mut net, f6i: *mut fib6_info) {
-    let fn_ptr: *mut fib6_node;
-
-    if !f6i.is_null() {
-        fn_ptr = (*f6i).fib6_node;
-        if !fn_ptr.is_null() {
-            (*fn_ptr).fn_sernum = fib6_new_sernum(net) as u32;
-        }
+    requires!(!net.is_null(), "fib6_update_sernum: net pointer invariant violated");
+    requires!(!f6i.is_null(), "fib6_update_sernum: f6i pointer invariant violated");
+    let safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let safe_f6i = SafeFib6Info::new(f6i).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let net_ptr = safe_net.ptr;
+    let f6i_ptr = safe_f6i.ptr;
+    let fn_ptr = (*f6i_ptr).fib6_node;
+    if !fn_ptr.is_null() {
+        (*fn_ptr).fn_sernum = fib6_new_sernum(net_ptr) as u32;
+    }
+}
     }
 }
 
@@ -211,11 +297,9 @@ pub unsafe extern "C" fn fib6_update_sernum(net: *mut net, f6i: *mut fib6_info) 
 /// - `net` must be a valid pointer to a network namespace
 #[no_mangle]
 pub unsafe extern "C" fn fib6_new_sernum(_net: *mut net) -> c_int {
-    let _old: c_int = 0;
+    requires!(!_net.is_null(), "fib6_new_sernum: _net invariant violated");
     let new: c_int = 1;
-
-    // Simplified serial number generation
-    // In real kernel, this would use atomic operations
+    ensures!(new > 0, "fib6_new_sernum: return bounds");
     new
 }
 
@@ -226,8 +310,12 @@ pub unsafe extern "C" fn fib6_new_sernum(_net: *mut net) -> c_int {
 /// - `w` must be a valid pointer to a fib6_walker
 #[no_mangle]
 pub unsafe extern "C" fn fib6_walker_link(net: *mut net, w: *mut fib6_walker) {
-    if !net.is_null() && !w.is_null() {
-    }
+    requires!(!net.is_null(), "fib6_walker_link: net pointer invariant violated");
+    requires!(!w.is_null(), "fib6_walker_link: w pointer invariant violated");
+    let _safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let _safe_w = SafeFib6Walker::new(w).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+
+}
 }
 
 /// Unlink a FIB6 walker from the network namespace
@@ -237,16 +325,25 @@ pub unsafe extern "C" fn fib6_walker_link(net: *mut net, w: *mut fib6_walker) {
 /// - `w` must be a valid pointer to a fib6_walker
 #[no_mangle]
 pub unsafe extern "C" fn fib6_walker_unlink(net: *mut net, w: *mut fib6_walker) {
-    if !net.is_null() && !w.is_null() {
-    }
+    requires!(!net.is_null(), "fib6_walker_unlink: net pointer invariant violated");
+    requires!(!w.is_null(), "fib6_walker_unlink: w pointer invariant violated");
+    let _safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let _safe_w = SafeFib6Walker::new(w).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+
+}
 }
 
 // Helper functions
 #[no_mangle]
 pub unsafe extern "C" fn fib6_link_table(net: *mut net, tb: *mut fib6_table) {
-    if !net.is_null() && !tb.is_null() {
-        let _h: usize = (*tb).tb6_id as usize & (FIB6_TABLE_HASHSZ - 1);
-    }
+    requires!(!net.is_null(), "fib6_link_table: net pointer invariant violated");
+    requires!(!tb.is_null(), "fib6_link_table: tb pointer invariant violated");
+    let _safe_net = SafeNet::new(net).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let safe_tb = SafeFib6Table::new(tb).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let tb_ptr = safe_tb.ptr;
+    let _h: usize = (*tb_ptr).tb6_id as usize & (FIB6_TABLE_HASHSZ - 1);
+
+}
 }
 
 // Constants

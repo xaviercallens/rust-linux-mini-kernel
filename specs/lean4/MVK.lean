@@ -34,3 +34,4 @@ import MVK.Phase4.ICMP
 
 -- Phase 5: IPv6 Advanced
 import MVK.Phase5.IPv6
+import MVK.Phase6.Routing

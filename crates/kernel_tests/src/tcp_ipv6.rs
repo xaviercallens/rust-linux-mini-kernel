@@ -94,7 +94,6 @@ mod tests {
                 sin6_family: 10, // AF_INET6
                 sin6_port: 0,
                 sin6_flowinfo: 0,
-                sin6_addr: in6_addr { in6_u: in6_addr_union { u6_addr32: [0; 4] }, s6_addr: ptr::null_mut() },
                 sin6_scope_id: 0,
             };
             
