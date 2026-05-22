@@ -4,11 +4,11 @@ steps:
     id: 'build-dev-env'
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['run', '--rm', '-v', '/workspace:/app', '-w', '/app', 'mvk-dev-env', 'bash', '-c', 'cd examples/demo_kernel && cargo build --release && cd ../.. && python3 scripts/qemu_boot_test.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel']
+    args: ['run', '--rm', '-v', '/workspace:/app', '-w', '/app', 'mvk-dev-env', 'bash', '-c', 'cd examples/demo_kernel && cargo build --release && cd ../.. && python3 scripts/qemu_boot_test.py --kernel examples/demo_kernel/target/i686-unknown-linux-gnu/release/demo_kernel']
     id: 'qemu-boot-test'
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['run', '--rm', '-v', '/workspace:/app', '-w', '/app', 'mvk-dev-env', 'bash', '-c', 'python3 scripts/stress_test_qemu.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel --concurrency 5']
+    args: ['run', '--rm', '-v', '/workspace:/app', '-w', '/app', 'mvk-dev-env', 'bash', '-c', 'python3 scripts/stress_test_qemu.py --kernel examples/demo_kernel/target/i686-unknown-linux-gnu/release/demo_kernel --concurrency 5']
     id: 'qemu-stress-test'
 
   - name: 'gcr.io/cloud-builders/docker'

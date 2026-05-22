@@ -25,7 +25,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Configure specific nightly toolchain and bare-metal targets
 RUN rustup toolchain install nightly-2026-05-15 && \
     rustup default nightly-2026-05-15 && \
-    rustup target add x86_64-unknown-none
+    rustup target add x86_64-unknown-none i686-unknown-linux-gnu
 
 WORKDIR /app
 

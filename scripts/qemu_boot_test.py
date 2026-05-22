@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser(description="Automated QEMU boot smoke test")
     parser.add_argument(
         "--kernel",
-        default="examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel",
+        default="examples/demo_kernel/target/i686-unknown-linux-gnu/release/demo_kernel",
         help="Path to the compiled bare-metal kernel ELF"
     )
     parser.add_argument(
@@ -24,7 +24,7 @@ def main():
     print(f"[INFO] Timeout: {args.timeout} seconds")
 
     cmd = [
-        "qemu-system-x86_64",
+        "qemu-system-i386",
         "-kernel", args.kernel,
         "-display", "none",
         "-serial", "stdio"

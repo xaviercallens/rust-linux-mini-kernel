@@ -7,7 +7,7 @@ license.workspace = true
 
 [lib]
 path = "src/lib.rs"
-crate-type = ["staticlib", "rlib"]
+crate-type = ["rlib"]
 
 [dependencies]
 libc.workspace = true
