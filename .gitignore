@@ -27,3 +27,5 @@ deploy/gke/.terraform/
 *.tfstate
 *.tfstate.backup
 
+target/
+patch_*.py

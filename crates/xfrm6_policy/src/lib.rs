@@ -89,11 +89,9 @@ pub unsafe extern "C" fn xfrm6_dst_lookup(
         flowi6_mark: mark,
         daddr: in6_addr {
             in6_u: in6_addr_union { u6_addr8: [0; 16] },
-            s6_addr: ptr::null_mut()
         },
         saddr: in6_addr {
             in6_u: in6_addr_union { u6_addr8: [0; 16] },
-            s6_addr: ptr::null_mut()
         },
     };
 

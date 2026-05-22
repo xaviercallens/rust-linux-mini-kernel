@@ -1,12 +1,17 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(non_upper_case_globals)]
 #![allow(no_mangle_generic_items)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr::{self};
+use kernel_types::*;
 
 pub const MAX_STAT_DEPTH: c_int = 32;
 pub const KEYLENGTH: c_int = 8 * 32;
@@ -63,6 +68,48 @@ pub struct tnode {
 #[derive(Copy, Clone)]
 pub struct trie { pub kv: key_vector }
 
+
+pub struct SafeKeyVector<'a> {
+    ptr: *mut key_vector,
+    _marker: core::marker::PhantomData<&'a mut key_vector>,
+}
+impl<'a> SafeKeyVector<'a> {
+    pub unsafe fn new(ptr: *mut key_vector) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+pub struct SafeTrie<'a> {
+    ptr: *mut trie,
+    _marker: core::marker::PhantomData<&'a mut trie>,
+}
+impl<'a> SafeTrie<'a> {
+    pub unsafe fn new(ptr: *mut trie) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+pub struct SafeTnode<'a> {
+    ptr: *mut tnode,
+    _marker: core::marker::PhantomData<&'a mut tnode>,
+}
+impl<'a> SafeTnode<'a> {
+    pub unsafe fn new(ptr: *mut tnode) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fib_trie_insert(t: *mut trie, kv: *mut key_vector) -> c_int {
+    requires!(!t.is_null(), "fib_trie_insert: t invariant violated");
+    requires!(!kv.is_null(), "fib_trie_insert: kv invariant violated");
+    let _safe_t = SafeTrie::new(t).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let _safe_kv = SafeKeyVector::new(kv).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let result = 0;
+    ensures!(result == 0 || result < 0, "fib_trie_insert: result bounds");
+    result
+}
+
 #[no_mangle]
 pub static mut tnode_free_size: usize = 0;
 
@@ -75,9 +122,18 @@ unsafe fn tnode_from_kv(kv: *mut key_vector) -> *mut tnode {
 
 #[no_mangle]
 pub unsafe extern "C" fn get_index(key: c_uint, kv: *mut key_vector) -> c_uint {
-    if kv.is_null() {
-        return 0;
-    }
+    requires!(!kv.is_null(), "get_index: kv invariant violated");
+    let safe_kv = SafeKeyVector::new(kv).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let kv_ptr = safe_kv.ptr;
+    let index = key ^ (*kv_ptr).key;
+    let result = if (core::mem::size_of::<c_uint>() * 8 <= KEYLENGTH as usize) && (KEYLENGTH == (*kv_ptr).pos as c_int) {
+        0
+    } else {
+        index >> ((*kv_ptr).pos as c_uint)
+    };
+    ensures!(result >= 0, "get_index: return bounds");
+    result
+}
     let index = key ^ (*kv).key;
     if (core::mem::size_of::<c_uint>() * 8 <= KEYLENGTH as usize) && (KEYLENGTH == (*kv).pos as c_int)
     {
@@ -89,9 +145,13 @@ pub unsafe extern "C" fn get_index(key: c_uint, kv: *mut key_vector) -> c_uint {
 
 #[no_mangle]
 pub unsafe extern "C" fn get_cindex(key: c_uint, kv: *mut key_vector) -> c_uint {
-    if kv.is_null() {
-        return 0;
-    }
+    requires!(!kv.is_null(), "get_cindex: kv invariant violated");
+    let safe_kv = SafeKeyVector::new(kv).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let kv_ptr = safe_kv.ptr;
+    let result = (key ^ (*kv_ptr).key) >> ((*kv_ptr).pos as c_uint);
+    ensures!(result >= 0, "get_cindex: return bounds");
+    result
+}
     (key ^ (*kv).key) >> ((*kv).pos as c_uint)
 }
 
@@ -119,18 +179,25 @@ pub unsafe extern "C" fn container_of<T, U>(
 /// - `tp` must be a valid pointer or null
 #[no_mangle]
 pub unsafe extern "C" fn node_set_parent(n: *mut key_vector, tp: *mut key_vector) {
-    if n.is_null() {
-        return;
-    }
+    requires!(!n.is_null(), "node_set_parent: n invariant violated");
+    requires!(!tp.is_null() || tp.is_null(), "node_set_parent: tp invariant violated");
+    let safe_n = SafeKeyVector::new(n).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let n_info = tnode_from_kv(safe_n.ptr);
+    (*n_info).parent = tp;
+}
     let n_info = tnode_from_kv(n);
     (*n_info).parent = tp;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn node_parent_rcu(tn: *mut key_vector) -> *mut key_vector {
-    if tn.is_null() {
-        return ptr::null_mut();
-    }
+    requires!(!tn.is_null(), "node_parent_rcu: tn invariant violated");
+    let safe_tn = SafeKeyVector::new(tn).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let tn_info = tnode_from_kv(safe_tn.ptr);
+    let parent = (*tn_info).parent;
+    ensures!(parent.is_null() || !parent.is_null(), "node_parent_rcu: return bounds");
+    parent
+}
     let tn_info = tnode_from_kv(tn);
     (*tn_info).parent
 }

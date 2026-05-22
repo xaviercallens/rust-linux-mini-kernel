@@ -104,11 +104,9 @@ static mut MRT_CACHEP: *mut c_void = ptr::null_mut();
 static mut IP6MR_CMPARG_ANY: mfc6_cache_cmp_arg = mfc6_cache_cmp_arg {
     mf6c_origin: in6_addr {
         in6_u: in6_addr_union { u6_addr8: [0; 16] },
-        s6_addr: ptr::null_mut(),
     },
     mf6c_mcastgrp: in6_addr {
         in6_u: in6_addr_union { u6_addr8: [0; 16] },
-        s6_addr: ptr::null_mut(),
     },
 };
 

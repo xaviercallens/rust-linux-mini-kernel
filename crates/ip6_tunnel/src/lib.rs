@@ -120,7 +120,6 @@ pub unsafe extern "C" fn ip6_tnl_lookup(
     let ip6n = net_generic(net, IP6_TNL_NET_ID);
     let any = in6_addr {
         in6_u: in6_addr_union { u6_addr8: [0; 16] },
-        s6_addr: ptr::null_mut(),
     };
     let mut cand: *mut ip6_tnl = ptr::null_mut();
 
@@ -293,11 +292,9 @@ mod tests {
     fn test_hash() {
         let a = in6_addr {
             in6_u: in6_addr_union { u6_addr8: [1; 16] },
-            s6_addr: ptr::null_mut(),
         };
         let b = in6_addr {
             in6_u: in6_addr_union { u6_addr8: [2; 16] },
-            s6_addr: ptr::null_mut(),
         };
         unsafe {
             let h = HASH(&a, &b);
