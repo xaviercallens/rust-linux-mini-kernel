@@ -81,7 +81,7 @@ mod tests {
             let ip = &mut mock_ip as *mut _ as *mut c_void;
 
             // Call function
-            let result = arp_send(&mut skb as *mut _, ip);
+            let result = unsafe { arp_send(&mut skb as *mut _, ip) };
             assert_eq!(result, 0);
         }
     }
@@ -127,7 +127,7 @@ mod tests {
             let ip = &mut mock_ip as *mut _ as *mut c_void;
 
             // Should fail because dev type is not ARPHRD_ETHER
-            let result = arp_send(&mut skb as *mut _, ip);
+            let result = unsafe { arp_send(&mut skb as *mut _, ip) };
             assert_eq!(result, -kernel_types::EINVAL);
         }
     }

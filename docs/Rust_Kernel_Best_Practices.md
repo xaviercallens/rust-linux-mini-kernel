@@ -1,28 +1,30 @@
-# Rust Kernel Best Practices
+# Rust Kernel Best Practices (110/100 Elite Standard)
 
-## 1. Unsafe Code Boundaries
-- **Minimize `unsafe` Blocks**: Keep `unsafe` blocks as small as possible. Only encapsulate the specific operations that require it (e.g., raw pointer dereferences).
-- **Document `unsafe`**: Always provide a safety comment explaining *why* the unsafe block is actually safe (e.g., "The caller guarantees `ptr` is valid and aligned").
-- **Safe Wrappers**: Wrap unsafe C APIs in safe Rust abstractions. Provide idiomatic Rust interfaces that enforce safety invariants (e.g., using lifetimes instead of raw pointers).
+## 1. Zero-Cost Abstractions & Safe Wrappers
+- **Opaque C Types**: For C structs that Rust should only hold pointers to, define them using `#[repr(C)]` with a zero-sized array and `PhantomData` to enforce strict type checking and variance at compile-time without adding overhead.
+  ```rust
+  #[repr(C)]
+  pub struct OpaqueDevice {
+      _p: [u8; 0],
+      _marker: core::marker::PhantomData<(*mut u8, core::marker::PhantomPinned)>,
+  }
+  ```
+- **The Newtype Pattern**: NEVER expose raw `*mut T` pointers. Wrap them in a newtype struct, keeping the inner pointer private, and expose only safe methods. 
+- **RAII and `Drop`**: Implement the `Drop` trait on your safe wrappers to automate C cleanup functions (e.g., calling `kfree()` or `dev_put()`), ensuring memory safety and preventing leaks without manual lifecycle management.
 
-## 2. Memory Management
-- **Avoid Global State**: Global mutable state is dangerous and often requires `unsafe` and `static mut`. Use `Atomic` types or `Mutex`/`RwLock` where possible.
-- **`core::ptr::addr_of_mut!`**: When interacting with `static mut` variables, use `addr_of_mut!` instead of creating a mutable reference (`&mut`), which can lead to aliasing violations.
-- **Allocations**: Be mindful of allocations in the kernel. Use fallible allocations (`try_new`, `try_with_capacity`) to gracefully handle OOM (Out Of Memory) conditions without panicking.
+## 2. Memory Allocation and OOM Handling
+- **No Panics Allowed**: The kernel cannot panic upon memory exhaustion, as it takes down the entire system. All allocations must be **fallible**.
+- **Result vs Panic**: Return `Result<T, AllocError>` instead of panicking. If an allocation fails, gracefully propagate the `-ENOMEM` code back up the call stack to userspace.
+- **Strict Lifetimes**: Bind kernel objects (like sockets or devices) to Rust's lifetime (`'a`) system. This proves at compile time that no kernel object outlives the structure that owns it, eliminating Use-After-Free vulnerabilities natively.
 
-## 3. FFI (Foreign Function Interface)
-- **`#[repr(C)]`**: Always use `#[repr(C)]` for structs that are shared between Rust and C to ensure consistent memory layout.
-- **Raw Pointers**: When dealing with raw pointers from C, explicitly check for null pointers before dereferencing, unless the C API guarantees a non-null pointer.
-- **Type Aliases**: Use type aliases (e.g., `pub type c_int = i32;`) to match C types, improving readability and portability.
+## 3. Advanced Tooling & Static Analysis
+- **Granular `clippy.toml`**: Go beyond standard linting by tuning `clippy.toml` for kernel idiosyncrasies (e.g., custom `cognitive-complexity-threshold`).
+- **Zero-Tolerance CI**: Enforce `#![deny(clippy::all)]` and `#![warn(clippy::pedantic)]` in CI pipelines. Warnings must be treated as breaking errors.
+- **Klint Integration**: Utilize advanced, kernel-specific static analysis tools like `Klint` to prove that functions do not sleep while holding atomic spinlocks (a fatal kernel error invisible to standard Rust tooling).
 
-## 4. Error Handling
-- **Use `Result`**: Always use `Result` for operations that can fail, instead of returning integer error codes directly. Map standard POSIX error codes (e.g., `-EINVAL`) to custom error enums if appropriate.
-- **No Panics**: Panics in the kernel can lead to system crashes. Use `#![no_main]` and `#![no_std]` and provide a custom panic handler that logs the error and gracefully halts or recovers. Avoid `unwrap()` and `expect()`.
+## 4. FFI (Foreign Function Interface) Invariants
+- **`core::ptr::addr_of_mut!`**: Always use `addr_of_mut!` for `static mut` and unaligned field accesses. Creating a mutable reference (`&mut`) to an unaligned pointer is Undefined Behavior in Rust.
+- **Unsafe Boundaries**: Keep `unsafe` blocks exclusively for the direct C-function invocation. Never perform complex business logic inside an `unsafe` block. Document every block with a specific safety invariant (e.g., `// SAFETY: The C API guarantees the pointer is valid and properly aligned here.`).
 
-## 5. Tooling
-- **Clippy**: Run `cargo clippy` regularly and strive for zero warnings. Suppress specific warnings only when absolutely necessary and document the reason.
-- **Formatting**: Use `cargo fmt` to maintain a consistent coding style.
-
-## 6. Concurrency
-- **Locking**: When using locks, ensure they are held for the shortest time possible. Be aware of lock ordering to prevent deadlocks.
-- **Interrupt Context**: Be mindful of whether code is running in an interrupt context or process context. Avoid operations that can block (like sleeping or allocating memory with `GFP_KERNEL`) in interrupt context.
+## 5. Real-World Inspiration
+- Apply these paradigms modeling real-world successes, such as Asahi Linux's GPU driver abstractions (wrapping memory management and DRM schedulers safely) and Google Android's Rust rewrite of the Binder IPC subsystem.
