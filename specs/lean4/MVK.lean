@@ -31,3 +31,6 @@ import MVK.Phase4.ARP
 import MVK.Phase4.IPv4IPv6.Tcpv6
 import MVK.Phase4.UDP
 import MVK.Phase4.ICMP
+
+-- Phase 5: IPv6 Advanced
+import MVK.Phase5.IPv6

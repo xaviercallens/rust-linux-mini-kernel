@@ -137,6 +137,7 @@ members = [
     "crates/kfifo",
     "crates/*",
     "examples/micro_kernel_demo",
+    "examples/qemu_harness",
     # Memory Management modules
     "crates/page_alloc",
     "crates/slab",

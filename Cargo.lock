@@ -1627,6 +1627,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "qemu_harness"
+version = "0.1.0"
+dependencies = [
+ "icmp",
+ "ip6_input",
+ "ip6_output",
+ "ipv6_sockglue",
+ "kernel_types",
+ "udp",
+]
+
+[[package]]
 name = "radix_tree"
 version = "0.4.0"
 dependencies = [

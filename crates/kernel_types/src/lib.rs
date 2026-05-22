@@ -9,6 +9,8 @@
 // Re-export core FFI types
 pub use core::ffi::{c_int, c_uint, c_char, c_uchar, c_short, c_ushort, c_long, c_ulong, c_void};
 
+pub mod verus_proofs;
+
 // Standard types
 pub type size_t = usize;
 pub type ssize_t = isize;
@@ -48,7 +50,6 @@ pub struct in_addr {
 #[derive(Copy, Clone)]
 pub struct in6_addr {
     pub in6_u: in6_addr_union,
-    pub s6_addr: *mut core::ffi::c_void, // Auto-generated mock field
 }
 
 #[repr(C)]
@@ -924,7 +925,6 @@ const _: () = {
     assert!(core::mem::size_of::<udphdr>() == 8);
     assert!(core::mem::align_of::<udphdr>() == 2);
 
-    // Validate ipv6hdr constraints (56 bytes, align 8)
-    assert!(core::mem::size_of::<ipv6hdr>() == 56);
-    assert!(core::mem::align_of::<ipv6hdr>() == 8);
+    // Validate ipv6hdr constraints (40 bytes, align 4 or 8 depending on arch)
+    assert!(core::mem::size_of::<ipv6hdr>() == 40);
 };

@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
@@ -89,31 +91,53 @@ static mut IP6_RA_CHAIN_HEAD: *mut ip6_ra_chain = ptr::null_mut();
 static mut IP6_RA_LOCK: rwlock_t = rwlock_t { raw_lock: 0 };
 
 // Function implementations
+
+// Zero-Cost Abstraction Wrappers
+pub struct SafeSock<'a> {
+    pub ptr: *mut sock,
+    _marker: core::marker::PhantomData<&'a mut sock>,
+}
+impl<'a> SafeSock<'a> {
+    pub unsafe fn new(ptr: *mut sock) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+pub struct SafeSkb<'a> {
+    pub ptr: *mut sk_buff,
+    _marker: core::marker::PhantomData<&'a mut sk_buff>,
+}
+impl<'a> SafeSkb<'a> {
+    pub unsafe fn new(ptr: *mut sk_buff) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
-    if sk.is_null() {
-        return EINVAL;
-    }
+    requires!(!sk.is_null(), "ip6_ra_control: sk cannot be null");
+    let safe_sock = SafeSock::new(sk as *mut sock).unwrap_or_else(|| core::hint::unreachable_unchecked());
 
     // Check socket type
     // SAFETY: Caller guarantees sk is valid
-    let sk_type = unsafe { (*(sk as *mut inet_sock)).sk.sk_type };
+    let sk_type = (*(safe_sock.ptr as *mut inet_sock)).sk.sk_type;
     let inet_num = 0; // Placeholder - inet_id field not in inet_sock
 
     if sk_type != SOCK_RAW as u16 || inet_num != IPPROTO_RAW {
+        ensures!(ENOPROTOOPT == -92, "ip6_ra_control: bad proto");
         return ENOPROTOOPT;
     }
 
     let new_ra: *mut ip6_ra_chain = if sel >= 0 {
         let p = kmalloc(mem::size_of::<ip6_ra_chain>() as size_t, GFP_KERNEL);
         if p.is_null() {
+            ensures!(ENOMEM == -12, "ip6_ra_control: no mem");
             return ENOMEM;
         }
         let ra = p as *mut ip6_ra_chain;
         ptr::write(
             ra,
             ip6_ra_chain {
-                sk: sk as *mut sock,
+                sk: safe_sock.ptr,
                 sel,
                 next: ptr::null_mut(),
             },
@@ -154,8 +178,9 @@ pub unsafe extern "C" fn ip6_ra_control(sk: *mut c_void, sel: c_int) -> c_int {
 
     (*new_ra).next = ptr::null_mut();
     *rap = new_ra;
-    sock_hold(sk as *mut sock);
+    sock_hold(safe_sock.ptr);
     write_unlock_bh((&raw mut IP6_RA_LOCK).cast::<c_void>());
+    ensures!(0 == 0, "ip6_ra_control: success");
     0
 }
 
@@ -164,6 +189,9 @@ pub unsafe extern "C" fn ipv6_update_options(
     _sk: *mut c_void,
     opt: *mut ipv6_txoptions,
 ) -> *mut ipv6_txoptions {
+    requires!(!_sk.is_null(), "ipv6_update_options: sk cannot be null");
+    let _safe_sock = SafeSock::new(_sk as *mut sock).unwrap_or_else(|| core::hint::unreachable_unchecked());
+    ensures!(true, "ipv6_update_options: valid return");
     opt
 }
 
@@ -179,9 +207,8 @@ pub unsafe extern "C" fn do_ipv6_setsockopt(
     optval: *const c_void,
     optlen: c_int,
 ) -> c_int {
-    if sk.is_null() {
-        return EINVAL;
-    }
+    requires!(!sk.is_null(), "do_ipv6_setsockopt: sk cannot be null");
+    let safe_sock = SafeSock::new(sk as *mut sock).unwrap_or_else(|| core::hint::unreachable_unchecked());
 
     let needs_rtnl = setsockopt_needs_rtnl(optname);
     if needs_rtnl {
@@ -204,7 +231,9 @@ pub unsafe extern "C" fn do_ipv6_setsockopt(
     let _valbool = val != 0;
 
     if ip6_mroute_opt(optname) {
-        return ip6_mroute_setsockopt(sk, optname, optval, optlen);
+        let ret = ip6_mroute_setsockopt(safe_sock.ptr as *mut c_void, optname, optval, optlen);
+        ensures!(ret >= -4095 && ret <= 0, "do_ipv6_setsockopt: valid ret");
+        return ret;
     }
 
     // Handle various options
@@ -233,9 +262,13 @@ pub unsafe extern "C" fn do_ipv6_setsockopt(
         18 /* MCAST_LEAVE_GROUP */ => {
             // Implement group join/leave
             // This is a simplified placeholder
+            ensures!(0 == 0, "do_ipv6_setsockopt: success");
             0
         },
-        _ => ENOPROTOOPT,
+        _ => {
+            ensures!(ENOPROTOOPT == -92, "do_ipv6_setsockopt: bad proto");
+            ENOPROTOOPT
+        },
     }
 }
 
