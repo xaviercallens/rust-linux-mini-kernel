@@ -8,7 +8,7 @@ import concurrent.futures
 def run_qemu_instance(kernel_path, timeout_sec, instance_id):
     """Boot a single QEMU instance and wait for the success banner."""
     cmd = [
-        "qemu-system-i386",
+        "qemu-system-x86_64",
         "-kernel", kernel_path,
         "-display", "none",
         "-serial", "stdio"
