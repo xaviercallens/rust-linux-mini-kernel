@@ -3,7 +3,7 @@
 IMAGE_NAME = mvk-dev-env
 CONTAINER_NAME = mvk-dev-container
 
-.PHONY: build-image run-shell run-c-harness run-rs-harness run-nostd-harness clean
+.PHONY: build-image run-shell run-c-harness run-rs-harness run-nostd-harness run-qemu-test run-stress-test clean
 
 # 1. Build the developer container
 build-image:
@@ -44,7 +44,22 @@ run-nostd-harness:
 		rustc --target x86_64-unknown-linux-gnu -C opt-level=3 -C panic=abort harness_nostd.rs -o harness_nostd && \
 		qemu-x86_64 ./harness_nostd"
 
-# 6. Clean compilation artifacts
+# 6. Run automated QEMU boot test
+run-qemu-test:
+	@echo "Compiling demo_kernel and running automated QEMU boot test..."
+	docker run --rm -v "$(shell pwd)":/app $(IMAGE_NAME) bash -c "\
+		cd examples/demo_kernel && cargo build --release && cd ../.. && \
+		python3 scripts/qemu_boot_test.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel"
+
+# 7. Run QEMU boot stress test
+run-stress-test:
+	@echo "Compiling demo_kernel and running QEMU boot stress test..."
+	docker run --rm -v "$(shell pwd)":/app $(IMAGE_NAME) bash -c "\
+		cd examples/demo_kernel && cargo build --release && cd ../.. && \
+		python3 scripts/stress_test_qemu.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel"
+
+# 8. Clean compilation artifacts
 clean:
 	@echo "Cleaning local build stubs..."
 	rm -rf harness_c harness_rs harness_nostd
+	cd examples/demo_kernel && cargo clean
