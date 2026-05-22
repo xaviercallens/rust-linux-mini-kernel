@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
     # Generated modules for v8.0.0
+    "crates/driver_nvme", 
+    "crates/driver_idpf",
     "crates/vfs_inode",
     "crates/vfs_dcache",
     "crates/vfs_file",

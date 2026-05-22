@@ -1,4 +1,6 @@
 #![no_std]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 //! PCI bus driver
 //!
 //! This module implements driver_pci_core functionality for the Rust Linux Mini Kernel.
@@ -19,3 +21,24 @@ pub unsafe extern "C" fn driver_pci_core_exit() {
 
 #[no_mangle]
 pub static DRIVER_PCI_CORE_INITIALIZED: bool = false;
+
+/// A safe wrapper around raw `pci_dev` pointers.
+#[repr(transparent)]
+pub struct SafePciDevice(*mut libc::c_void);
+
+impl SafePciDevice {
+    /// Creates a new `SafePciDevice` from a raw pointer.
+    ///
+    /// # Safety
+    /// The caller must ensure that the pointer is valid and properly aligned.
+    #[must_use]
+    pub unsafe fn new(ptr: *mut libc::c_void) -> Self {
+        Self(ptr)
+    }
+
+    /// Returns the underlying raw pointer.
+    #[must_use]
+    pub fn as_ptr(&self) -> *mut libc::c_void {
+        self.0
+    }
+}

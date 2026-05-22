@@ -39,3 +39,14 @@ import MVK.Phase6.Routing
 -- Phase 7: Formal Requirements
 import MVK.Phase7.Netfilter
 import MVK.Phase7.Sockets
+
+-- Phase 8: Scheduling
+import MVK.Phase8.Scheduling
+
+-- Phase 9: Memory Allocation
+import MVK.Phase9.Memory
+-- Phase 11: Hardware Drivers
+import MVK.Phase11.Hardware
+
+-- Phase 12: GCP Baremetal Drivers
+import MVK.Phase12.GCP_Drivers

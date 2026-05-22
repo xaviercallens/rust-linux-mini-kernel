@@ -1,4 +1,6 @@
 #![no_std]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 //! Bus subsystem
 //!
 //! This module implements driver_base_bus functionality for the Rust Linux Mini Kernel.

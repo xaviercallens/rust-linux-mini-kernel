@@ -928,3 +928,29 @@ const _: () = {
     // Validate ipv6hdr constraints (40 bytes, align 4 or 8 depending on arch)
     assert!(core::mem::size_of::<ipv6hdr>() == 40);
 };
+
+// ============================================================================
+// Memory Zero-Cost Abstractions
+// ============================================================================
+
+/// SafePageFrame is a zero-cost abstraction for a memory page frame.
+pub struct SafePageFrame<'a> {
+    pub ptr: *mut core::ffi::c_void,
+    pub order: u32,
+    _marker: core::marker::PhantomData<&'a mut core::ffi::c_void>,
+}
+
+impl<'a> SafePageFrame<'a> {
+    #[inline(always)]
+    pub fn new(ptr: *mut core::ffi::c_void, order: u32) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self {
+                ptr,
+                order,
+                _marker: core::marker::PhantomData,
+            })
+        }
+    }
+}

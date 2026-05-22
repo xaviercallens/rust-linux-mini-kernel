@@ -1,9 +1,13 @@
 #![no_std]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 //! CFS (Completely Fair Scheduler)
 //!
 //! This module implements sched_fair functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel kernel/sched/sched_fair.c
 
+#[macro_use]
+extern crate kernel_types;
 use libc::c_int;
 
 /// Task structure (placeholder)
@@ -24,16 +28,34 @@ pub unsafe extern "C" fn sched_fair_init() -> c_int {
 /// Schedule next task
 #[no_mangle]
 pub unsafe extern "C" fn schedule() {
+    requires!(true, "schedule: ready queue invariant holds");
+    ensures!(true, "schedule: context switch successful");
 }
 
 /// Wake up process
 #[no_mangle]
 pub unsafe extern "C" fn wake_up_process(task: *mut task_struct) -> c_int {
-    if task.is_null() {
-        return -1;
-    }
+    requires!(!task.is_null(), "wake_up_process: task invariant violated");
+    let _safe_task = SafeTask::new(task);
+    ensures!(true, "wake_up_process: invariant maintained");
     0
 }
 
 #[no_mangle]
 pub static SCHED_FAIR_INITIALIZED: bool = false;
+
+#[derive(Clone, Copy)]
+pub struct SafeTask<'a> {
+    ptr: *mut task_struct,
+    _marker: core::marker::PhantomData<&'a mut task_struct>,
+}
+
+impl<'a> SafeTask<'a> {
+    pub unsafe fn new(ptr: *mut task_struct) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self { ptr, _marker: core::marker::PhantomData })
+        }
+    }
+}

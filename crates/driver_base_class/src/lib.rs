@@ -1,4 +1,6 @@
 #![no_std]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 //! Device classes
 //!
 //! This module implements driver_base_class functionality for the Rust Linux Mini Kernel.

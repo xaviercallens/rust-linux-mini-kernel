@@ -1,4 +1,6 @@
 #![no_std]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 //! Platform devices
 //!
 //! This module implements driver_base_platform functionality for the Rust Linux Mini Kernel.
