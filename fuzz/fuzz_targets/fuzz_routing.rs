@@ -16,9 +16,7 @@ fuzz_target!(|data: &[u8]| {
     // Fuzz a simulated routing lookup
     let mut fib = fib_table {
         tb_id: 254,
-        tb_default: 0,
-        tb_num_default: 0,
-        tb_data: [core::ptr::null_mut(); 256],
+        _private: [],
     };
 
     // Very simple lookup mock based on standard IP bitwise operations
