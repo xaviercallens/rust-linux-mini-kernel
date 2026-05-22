@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 #![no_std]
 //! Socket syscalls
 //!
