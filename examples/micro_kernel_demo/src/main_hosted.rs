@@ -5,7 +5,6 @@ pub fn from_ipv6(addr: std::net::Ipv6Addr) -> in6_addr {
     let bytes = addr.octets();
     in6_addr {
         in6_u: in6_addr_union { u6_addr8: bytes },
-        s6_addr: std::ptr::null_mut()
     }
 }
 

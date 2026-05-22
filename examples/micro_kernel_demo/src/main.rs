@@ -5,7 +5,6 @@ use kernel_types::*;
 pub fn mk_in6_addr(bytes: [u8; 16]) -> in6_addr {
     in6_addr {
         in6_u: in6_addr_union { u6_addr8: bytes },
-        s6_addr: core::ptr::null_mut()
     }
 }
 
