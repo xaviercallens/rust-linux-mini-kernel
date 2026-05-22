@@ -126,10 +126,10 @@ for module in "${MODULES[@]}"; do
     echo -n "  Checking $module... "
     if lake env lean "$module" > /dev/null 2>&1; then
         echo -e "${GREEN}✓${NC}"
-        ((PASSED++))
+        PASSED=$((PASSED + 1))
     else
         echo -e "${RED}✗${NC}"
-        ((FAILED++))
+        FAILED=$((FAILED + 1))
     fi
 done
 
