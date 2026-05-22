@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
@@ -5,6 +7,27 @@
 
 use core::{mem, ffi::{c_int, c_void}};
 use kernel_types::*;
+
+#[repr(transparent)]
+pub struct SafeSocket(*mut sock);
+
+impl SafeSocket {
+    #[inline(always)]
+    pub unsafe fn new(ptr: *mut sock) -> Self {
+        requires!(!ptr.is_null(), "Socket pointer must not be null");
+        Self(ptr)
+    }
+    
+    #[inline(always)]
+    pub fn as_ptr(&self) -> *mut sock {
+        self.0
+    }
+    
+    #[inline(always)]
+    pub fn as_const_ptr(&self) -> *const sock {
+        self.0 as *const sock
+    }
+}
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -122,10 +145,15 @@ extern "C" {
 #[no_mangle]
 pub unsafe extern "C" fn inet6_csk_route_req(
     sk: *const sock,
+
     fl6: *mut flowi6,
     req: *const request_sock,
     proto: u8,
 ) -> *mut dst_entry {
+    requires!(!sk.is_null(), "Socket pointer must not be null");
+    requires!(!fl6.is_null(), "Flow pointer must not be null");
+    requires!(!req.is_null(), "Request socket pointer must not be null");
+    let safe_sk = SafeSocket::new(sk as *mut sock);
     let ireq = &*(req as *const inet_request_sock);
     let np = &*(sk as *const ipv6_pinfo);
 
@@ -156,6 +184,9 @@ pub unsafe extern "C" fn inet6_csk_route_req(
 
 #[no_mangle]
 pub unsafe extern "C" fn inet6_csk_addr2sockaddr(sk: *mut sock, uaddr: *mut sockaddr_in6) {
+    requires!(!sk.is_null(), "Socket pointer must not be null");
+    requires!(!uaddr.is_null(), "Sockaddr pointer must not be null");
+    let safe_sk = SafeSocket::new(sk);
     let sin6 = &mut *uaddr;
     sin6.sin6_family = AF_INET6;
     sin6.sin6_addr = ksock_v6_daddr(sk as *const sock);
@@ -173,6 +204,8 @@ pub unsafe extern "C" fn inet6_csk_xmit(
     _skb: *mut sk_buff,
     _fl_unused: *mut c_void,
 ) -> c_int {
+    requires!(!sk.is_null(), "Socket pointer must not be null");
+    let safe_sk = SafeSocket::new(sk);
     let np = &*(sk as *const ipv6_pinfo);
     let isk = inet_sk(sk);
 

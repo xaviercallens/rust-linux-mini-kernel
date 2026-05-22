@@ -35,3 +35,7 @@ import MVK.Phase4.ICMP
 -- Phase 5: IPv6 Advanced
 import MVK.Phase5.IPv6
 import MVK.Phase6.Routing
+
+-- Phase 7: Formal Requirements
+import MVK.Phase7.Netfilter
+import MVK.Phase7.Sockets
