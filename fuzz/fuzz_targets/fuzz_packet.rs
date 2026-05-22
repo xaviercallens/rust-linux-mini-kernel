@@ -75,7 +75,7 @@ fuzz_target!(|data: &[u8]| {
     unsafe {
         let network_header_ptr = (skb.head as *const u8).add(skb.network_header as usize);
         if skb.len > skb.network_header as u32 + size_of::<iphdr>() as u32 {
-            let iph = &*(network_header_ptr as *const iphdr);
+            let iph = core::ptr::read_unaligned(network_header_ptr as *const iphdr);
             let version = iph.version_ihl >> 4;
             let ihl = iph.version_ihl & 0x0f;
             if version == 4 && ihl >= 5 {
