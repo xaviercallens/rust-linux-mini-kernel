@@ -61,7 +61,9 @@ jobs:
           python3 scripts/stress_test_qemu.py --kernel examples/demo_kernel/target/i686-unknown-linux-gnu/release/demo_kernel --concurrency 5
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked || true
+        run: |
+          rustup toolchain install stable
+          cargo +stable install cargo-fuzz || true
 
       - name: Run Fuzzing Targets
         run: |

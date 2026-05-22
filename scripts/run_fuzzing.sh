@@ -9,8 +9,11 @@ echo "[INFO] Setting up Rust Nightly toolchain for fuzzing..."
 rustup toolchain install nightly
 rustup default nightly
 
-echo "[INFO] Installing cargo-fuzz if not present..."
-cargo install cargo-fuzz --locked || true
+if ! command -v cargo-fuzz &> /dev/null; then
+    echo "[INFO] Installing cargo-fuzz..."
+    rustup toolchain install stable
+    cargo +stable install cargo-fuzz
+fi
 
 cd fuzz
 echo "[INFO] Running fuzzer on target: ${TARGET} for ${DURATION} seconds..."
