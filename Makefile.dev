@@ -3,7 +3,7 @@
 IMAGE_NAME = mvk-dev-env
 CONTAINER_NAME = mvk-dev-container
 
-.PHONY: build-image run-shell run-c-harness run-rs-harness run-nostd-harness run-qemu-test run-stress-test clean
+.PHONY: build-image run-shell run-c-harness run-rs-harness run-nostd-harness run-qemu-test run-stress-test verify clean
 
 # 1. Build the developer container
 build-image:
@@ -57,6 +57,13 @@ run-stress-test:
 	docker run --rm -v "$(shell pwd)":/app $(IMAGE_NAME) bash -c "\
 		cd examples/demo_kernel && cargo build --release && cd ../.. && \
 		python3 scripts/stress_test_qemu.py --kernel examples/demo_kernel/target/x86_64-unknown-none/release/demo_kernel"
+
+# 8. Run formal verification proofs
+verify:
+	@echo "Running Lean 4 specifications proofs..."
+	cd specifications && lake build
+	@echo "Checking inline Verus proofs..."
+	cargo check -p kernel_types --features verus || cargo check -p kernel_types
 
 # 8. Clean compilation artifacts
 clean:

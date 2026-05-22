@@ -1,3 +1,4 @@
+namespace Kernel
 -- Core Kernel Types
 structure NetDevice where
   type_ : Nat
@@ -32,10 +33,10 @@ theorem arp_send_safety (skb : Option SkBuff) :
 -- ============================================================================
 def is_aligned_allocation (size : Nat) : Prop := size % 8 = 0
 
-theorem skb_alloc_safety (size : Nat) :
-  is_aligned_allocation size → size > 0 → True := by
-  intros h_align h_size
-  exact True.intro
+theorem skb_alloc_safety (size : Nat) (offset : Nat) :
+  is_aligned_allocation size → offset < size → offset + 1 ≤ size := by
+  intro _h_align h_offset
+  omega
 
 -- ============================================================================
 -- MODULE 3: UDP-Lite Checksum
@@ -57,25 +58,27 @@ theorem ip6_flowlabel_atomic_safety (fl : Ipv6FlowLabel) :
 -- MODULE 5: GRE Offload
 -- ============================================================================
 theorem gre_encap_bounds_check (data_len : Nat) (encap_len : Nat) :
-  data_len + encap_len < 65535 → True := by
-  intros h_bounds
-  exact True.intro
+  data_len + encap_len < 65535 → data_len < 65535 ∧ encap_len < 65535 := by
+  intro h
+  apply And.intro
+  · omega
+  · omega
 
 -- ============================================================================
 -- MODULE 6: Anycast Routing
 -- ============================================================================
-theorem anycast_resolution_termination (nodes : Nat) :
-  nodes < 1000 → True := by
-  intros h_nodes
-  exact True.intro
+theorem anycast_resolution_termination (nodes : Nat) (visited : Nat) :
+  visited ≤ nodes → nodes - visited < 1000 → nodes < visited + 1000 := by
+  intro _h1 h2
+  omega
 
 -- ============================================================================
 -- MODULE 7: MIP6 (Mobile IPv6)
 -- ============================================================================
-theorem mip6_header_bounds (hdr_len : Nat) :
-  hdr_len ≥ 8 → True := by
-  intros h_bounds
-  exact True.intro
+theorem mip6_header_bounds (hdr_len : Nat) (payload_len : Nat) :
+  hdr_len ≥ 8 → payload_len ≥ hdr_len → payload_len - hdr_len < payload_len := by
+  intro h1 h2
+  omega
 
 -- ============================================================================
 -- MODULE 8: FOU6 (Foo over UDP IPv6)
@@ -128,3 +131,5 @@ axiom global_memory_safety_99_percent (ptr : Option Nat) (subsystem : Nat) :
 
 -- The above specifications and global axioms guarantee formal verification of memory safety, 
 -- bounded recursion, and valid type coercion across 99% of the C-to-Rust ABI boundary.
+
+end Kernel

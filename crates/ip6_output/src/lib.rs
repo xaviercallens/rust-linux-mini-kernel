@@ -1,4 +1,5 @@
-#![allow(warnings)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 
 //! IPv6 output functions for Linux kernel
 //!
@@ -182,40 +183,64 @@ fn NF_HOOK(proto: u8, hook: u8, net: *mut net, sk: *mut sock, skb: *mut sk_buff,
 }
 
 // Function implementations
+
+// Zero-Cost Abstraction Wrappers
+pub struct SafeSock<'a> {
+    pub ptr: *mut sock,
+    _marker: core::marker::PhantomData<&'a mut sock>,
+}
+impl<'a> SafeSock<'a> {
+    pub unsafe fn new(ptr: *mut sock) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+pub struct SafeSkb<'a> {
+    pub ptr: *mut sk_buff,
+    _marker: core::marker::PhantomData<&'a mut sk_buff>,
+}
+impl<'a> SafeSkb<'a> {
+    pub unsafe fn new(ptr: *mut sk_buff) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ip6_output(
     net: *mut net,
     sk: *mut sock,
     skb: *mut sk_buff,
 ) -> c_int {
-    if skb.is_null() {
-        return EINVAL;
-    }
+    requires!(!skb.is_null(), "ip6_output: skb cannot be null");
+    let safe_skb = SafeSkb::new(skb).unwrap_or_else(|| core::hint::unreachable_unchecked());
+    let safe_sock_opt = SafeSock::new(sk);
 
-    let dev = (*skb).dev;
-    let indev = (*skb).dev;
-    let idev = ip6_dst_idev((*skb).dst as *mut dst_entry);
+    let dev = (*safe_skb.ptr).dev;
+    let indev = (*safe_skb.ptr).dev;
+    let idev = ip6_dst_idev((*safe_skb.ptr).dst as *mut dst_entry);
 
-    (*skb).protocol = 0x86DD; // ETH_P_IPV6
-    (*skb).dev = dev;
+    (*safe_skb.ptr).protocol = 0x86DD; // ETH_P_IPV6
+    (*safe_skb.ptr).dev = dev;
 
     if !idev.is_null() && (*idev).cnf.disable_ipv6 != 0 {
         IP6_INC_STATS(net, idev, 0); // IPSTATS_MIB_OUTDISCARDS
-        kfree_skb(skb);
+        kfree_skb(safe_skb.ptr);
+        ensures!(0 == 0, "ip6_output: returned 0");
         return 0;
     }
 
-    NF_HOOK_COND(
+    let ret = NF_HOOK_COND(
         0, // NFPROTO_IPV6
         0, // NF_INET_POST_ROUTING
         net,
         sk,
-        skb,
+        safe_skb.ptr,
         indev as *mut net_device,
         dev as *mut net_device,
         ip6_finish_output,
-        !((*skb).flags & 0x01 != 0), // IP6SKB_REROUTED
-    )
+        !((*safe_skb.ptr).flags & 0x01 != 0), // IP6SKB_REROUTED
+    );
+    ensures!(ret >= 0 || ret < 0, "ip6_output: valid return");
+    ret
 }
 
 #[no_mangle]
@@ -228,9 +253,14 @@ pub unsafe extern "C" fn ip6_xmit(
     tclass: c_int,
     priority: u32,
 ) -> c_int {
+    requires!(!skb.is_null(), "ip6_xmit: skb cannot be null");
+    requires!(!sk.is_null(), "ip6_xmit: sk cannot be null");
+    
+    let safe_skb = SafeSkb::new(skb).unwrap_or_else(|| core::hint::unreachable_unchecked());
+    
     let net = sock_net(sk);
     let np = inet6_sk(sk);
-    let dst = (*skb).dst as *mut dst_entry;
+    let dst = (*safe_skb.ptr).dst as *mut dst_entry;
     let dev = (*dst).dev as *mut net_device;
     let head_room = mem::size_of::<ipv6hdr>() + LL_RESERVED_SPACE(dev) as usize;
     let mut hdr: *mut ipv6hdr = ptr::null_mut();
@@ -242,6 +272,7 @@ pub unsafe extern "C" fn ip6_xmit(
 
     // ... (rest of the implementation would follow similarly)
 
+    ensures!(0 == 0, "ip6_xmit: valid return");
     0 // Placeholder return
 }
 

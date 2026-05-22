@@ -1,17 +1,20 @@
-import Mathlib.Tactic.Basic
+namespace Arp
 
 -- Mock Kernel Types for ARP verification
 structure NetDevice where
   type_ : Nat
+  deriving Inhabited
 
 structure Neighbour where
   dev : Option NetDevice
   ops : Option Nat -- mock ops pointer
+  deriving Inhabited
 
 structure SkBuff where
   dev : Option NetDevice
   data : Option Nat
   dst : Option Neighbour
+  deriving Inhabited
 
 -- Pointer validity propositions
 def is_valid_ptr {α : Type} (p : Option α) : Prop :=
@@ -30,3 +33,5 @@ theorem arp_send_safety (skb : Option SkBuff) (ip : Option Nat) :
   -- The safety is guaranteed by our sequential null-checks in rust
   -- In Rust, if skb.is_null() returns early, the pointer deref (*skb).dev is safe.
   exact True.intro
+
+end Arp

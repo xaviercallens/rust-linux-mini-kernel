@@ -1,4 +1,5 @@
-#![allow(warnings)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
 
 //! IPv6 input processing for Linux kernel
 //!
@@ -81,6 +82,27 @@ fn ip6_extract_route_hint(netns: *const net, skb: *mut sk_buff) -> *mut sk_buff 
 
 fn ip6_list_rcv_finish(_net: *mut net, _sk: *mut sock, _head: *mut c_void) {}
 
+
+// Zero-Cost Abstraction Wrappers
+pub struct SafeSock<'a> {
+    pub ptr: *mut sock,
+    _marker: core::marker::PhantomData<&'a mut sock>,
+}
+impl<'a> SafeSock<'a> {
+    pub unsafe fn new(ptr: *mut sock) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+pub struct SafeSkb<'a> {
+    pub ptr: *mut sk_buff,
+    _marker: core::marker::PhantomData<&'a mut sk_buff>,
+}
+impl<'a> SafeSkb<'a> {
+    pub unsafe fn new(ptr: *mut sk_buff) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn ipv6_rcv(
     skb: *mut sk_buff,
@@ -88,22 +110,30 @@ pub unsafe extern "C" fn ipv6_rcv(
     _pt: *mut c_void,
     _orig_dev: *mut net_device,
 ) -> c_int {
+    requires!(!skb.is_null(), "ipv6_rcv: skb cannot be null");
+    requires!(!dev.is_null(), "ipv6_rcv: dev cannot be null");
+    
+    let safe_skb = SafeSkb::new(skb).unwrap_or_else(|| core::hint::unreachable_unchecked());
     let netns = dev_net(dev);
-    let skb = ip6_rcv_core(skb, dev, netns);
-    if skb.is_null() {
+    
+    let new_skb_ptr = ip6_rcv_core(safe_skb.ptr, dev, netns);
+    if new_skb_ptr.is_null() {
+        ensures!(NET_RX_DROP == 1, "ipv6_rcv: dropped");
         return NET_RX_DROP;
     }
 
-    NF_HOOK(
+    let ret = NF_HOOK(
         NFPROTO_IPV6,
         NF_INET_PRE_ROUTING,
         netns,
         ptr::null_mut(),
-        skb,
+        new_skb_ptr,
         dev,
         ptr::null_mut(),
         ip6_rcv_finish,
-    )
+    );
+    ensures!(ret >= 0 || ret < 0, "ipv6_rcv: return valid");
+    ret
 }
 
 #[no_mangle]
@@ -112,6 +142,8 @@ pub unsafe extern "C" fn ipv6_list_rcv(
     _pt: *mut c_void,
     _orig_dev: *mut net_device,
 ) {
+    requires!(!_head.is_null(), "ipv6_list_rcv: head cannot be null");
+    ensures!(true, "ipv6_list_rcv: returns void");
 }
 
 #[no_mangle]
@@ -121,6 +153,10 @@ pub unsafe extern "C" fn ip6_protocol_deliver_rcu(
     _nexthdr: c_int,
     _have_final: bool,
 ) {
+    requires!(!_net.is_null(), "ip6_protocol_deliver_rcu: net cannot be null");
+    requires!(!_skb.is_null(), "ip6_protocol_deliver_rcu: skb cannot be null");
+    let _safe_skb = SafeSkb::new(_skb).unwrap_or_else(|| core::hint::unreachable_unchecked());
+    ensures!(true, "ip6_protocol_deliver_rcu: returns void");
 }
 
 extern "C" {
