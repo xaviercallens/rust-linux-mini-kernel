@@ -962,6 +962,7 @@ version = "9.4.0"
 dependencies = [
  "arp",
  "kernel_types",
+ "tcp_ipv6",
 ]
 
 [[package]]

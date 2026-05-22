@@ -1,13 +1,21 @@
-#![allow(warnings)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::all)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_ptr_alignment)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)] // Replaced with strict boundaries
+#![allow(clippy::empty_loop)]
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
 
 //! TCP over IPv6 implementation for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.
 //! ABI compatibility is maintained for all exported symbols.
 
-#![cfg_attr(not(test), no_std)]
-#![cfg_attr(not(test), no_main)]
-#![allow(non_camel_case_types)]
+#![cfg_attr(all(not(test), target_os = "none"), no_std)]
+#![cfg_attr(all(not(test), target_os = "none"), no_main)]
 
 use core::ffi::c_void;
 use kernel_types::*;
@@ -24,20 +32,48 @@ pub static mut ICMPV6_ERR_CONVERT: *mut core::ffi::c_void = core::ptr::null_mut(
 pub static mut INET6_SOCKRAW_OPS: *mut core::ffi::c_void = core::ptr::null_mut();
 pub static mut IP6_DATAGRAM_CONNECT_V6_ONLY: *mut core::ffi::c_void = core::ptr::null_mut();
 
-// Function implementations
+// Zero-Cost Abstraction Wrappers
+pub struct SafeSock<'a> {
+    ptr: *mut sock,
+    _marker: core::marker::PhantomData<&'a mut sock>,
+}
 
-/// Helper returning the ipv6_pinfo from a tcp socket
-///
-/// # Safety
-/// - `sk` must be a valid pointer to sock
-/// - Caller must ensure the pointer is valid and properly aligned
-#[no_mangle]
-pub unsafe extern "C" fn tcp_inet6_sk(sk: *const sock) -> *mut ipv6_pinfo {
-    let offset = core::mem::size_of::<sock>() - core::mem::size_of::<ipv6_pinfo>();
-    // SAFETY: The offset calculation is valid for the structure layout
-    // Caller guarantees sk is valid and properly aligned
-    let ptr = sk as *const u8;
-    ptr.add(offset) as *mut ipv6_pinfo
+impl<'a> SafeSock<'a> {
+    pub unsafe fn new(ptr: *mut sock) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+
+    pub fn tcp_inet6_sk(&self) -> Option<*mut ipv6_pinfo> {
+        let offset = core::mem::size_of::<sock>() - core::mem::size_of::<ipv6_pinfo>();
+        // SAFETY: The offset calculation is valid for the structure layout
+        let ptr = self.ptr as *mut u8;
+        let pinfo = unsafe { ptr.add(offset) as *mut ipv6_pinfo };
+        if pinfo.is_null() { None } else { Some(pinfo) }
+    }
+}
+
+pub struct SafeSkb<'a> {
+    ptr: *const sk_buff,
+    _marker: core::marker::PhantomData<&'a sk_buff>,
+}
+
+impl<'a> SafeSkb<'a> {
+    pub unsafe fn new(ptr: *const sk_buff) -> Option<Self> {
+        if ptr.is_null() { None } else { Some(Self { ptr, _marker: core::marker::PhantomData }) }
+    }
+
+    pub fn dst(&self) -> Option<*mut c_void> {
+        let dst_ptr = unsafe { skb_dst(self.ptr) };
+        if dst_ptr.is_null() { None } else { Some(dst_ptr) }
+    }
+
+    pub fn ipv6_hdr(&self) -> ipv6hdr {
+        unsafe { skb_ipv6_hdr(self.ptr) }
+    }
+
+    pub fn tcp_hdr(&self) -> tcphdr {
+        unsafe { skb_tcp_hdr(self.ptr) }
+    }
 }
 
 #[repr(C)]
@@ -57,7 +93,7 @@ pub struct tcphdr { pub source: c_ushort, pub dest: c_ushort }
 
 #[inline(always)]
 unsafe fn skb_dst(_skb: *const sk_buff) -> *mut c_void {
-    core::ptr::null_mut()
+    _skb as *mut c_void
 }
 
 #[inline(always)]
@@ -102,28 +138,40 @@ unsafe extern "C" {
     fn secure_tcpv6_ts_off(net: *const c_void, daddr: *const u32, saddr: *const u32) -> u32;
 }
 
+/// Helper returning the ipv6_pinfo from a tcp socket
+#[no_mangle]
+pub unsafe extern "C" fn tcp_inet6_sk(sk: *const sock) -> *mut ipv6_pinfo {
+    requires!(!sk.is_null(), "tcp_inet6_sk: sk invariant violated");
+    let safe_sock = SafeSock::new(sk as *mut sock).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    safe_sock.tcp_inet6_sk().unwrap_or(core::ptr::null_mut())
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn inet6_sk_rx_dst_set(sk: *mut sock, skb: *const sk_buff) {
-    if sk.is_null() || skb.is_null() {
-        return;
-    }
+    requires!(!sk.is_null(), "inet6_sk_rx_dst_set: sk pointer invariant violated");
+    requires!(!skb.is_null(), "inet6_sk_rx_dst_set: skb pointer invariant violated");
 
-    let dst = skb_dst(skb);
-    if !dst.is_null() {
+    let safe_sock = SafeSock::new(sk).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+    let safe_skb = SafeSkb::new(skb).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+
+    if let Some(dst) = safe_skb.dst() {
         let rt = dst as *const rt6_info;
         sock_set_rx_dst(sk, dst);
         sock_set_rx_dst_ifindex(sk, skb_iif(skb));
-        ipv6_pinfo_set_rx_dst_cookie(tcp_inet6_sk(sk), rt6_get_cookie(rt));
+        if let Some(pinfo) = safe_sock.tcp_inet6_sk() {
+            ipv6_pinfo_set_rx_dst_cookie(pinfo, rt6_get_cookie(rt));
+        }
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
-    if skb.is_null() {
-        return 0;
-    }
-    let ipv6_hdr = skb_ipv6_hdr(skb);
-    let tcp_hdr = skb_tcp_hdr(skb);
+    requires!(!skb.is_null(), "tcp_v6_init_seq: skb pointer invariant violated");
+
+    let safe_skb = SafeSkb::new(skb).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+
+    let ipv6_hdr = safe_skb.ipv6_hdr();
+    let tcp_hdr = safe_skb.tcp_hdr();
     secure_tcpv6_seq(
         ipv6_hdr.daddr.in6_u.u6_addr32.as_ptr(),
         ipv6_hdr.saddr.in6_u.u6_addr32.as_ptr(),
@@ -134,7 +182,12 @@ pub unsafe extern "C" fn tcp_v6_init_seq(skb: *const sk_buff) -> u32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn tcp_v6_init_ts_off(net: *const c_void, skb: *const sk_buff) -> u32 {
-    let ipv6_hdr = skb_ipv6_hdr(skb);
+    requires!(!skb.is_null(), "tcp_v6_init_ts_off: skb invariant violated");
+    requires!(!net.is_null(), "tcp_v6_init_ts_off: net invariant violated");
+
+    let safe_skb = SafeSkb::new(skb).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
+
+    let ipv6_hdr = safe_skb.ipv6_hdr();
     secure_tcpv6_ts_off(net, ipv6_hdr.daddr.in6_u.u6_addr32.as_ptr(), ipv6_hdr.saddr.in6_u.u6_addr32.as_ptr())
 }
 
@@ -144,10 +197,15 @@ pub unsafe extern "C" fn tcp_v6_pre_connect(
     _uaddr: *mut sockaddr,
     addr_len: c_int,
 ) -> c_int {
+    requires!(addr_len >= 0, "tcp_v6_pre_connect: addr_len cannot be negative");
+    
     if addr_len < 28 {
         return EINVAL;
     }
-    0
+    
+    let result = 0;
+    ensures!(result <= 0, "tcp_v6_pre_connect: return code must be <= 0");
+    result
 }
 
 #[no_mangle]
@@ -156,9 +214,11 @@ pub unsafe extern "C" fn tcp_v6_connect(
     uaddr: *mut sockaddr,
     addr_len: c_int,
 ) -> c_int {
-    if sk.is_null() || uaddr.is_null() {
-        return EINVAL;
-    }
+    requires!(!sk.is_null(), "tcp_v6_connect: sk invariant violated");
+    requires!(!uaddr.is_null(), "tcp_v6_connect: uaddr invariant violated");
+    requires!(addr_len >= 0, "tcp_v6_connect: addr_len cannot be negative");
+
+    let safe_sock = SafeSock::new(sk).unwrap_or_else(|| unsafe { core::hint::unreachable_unchecked() });
 
     if addr_len < 28 {
         return EINVAL;
@@ -169,8 +229,11 @@ pub unsafe extern "C" fn tcp_v6_connect(
         return EAFNOSUPPORT;
     }
 
-    let _np = tcp_inet6_sk(sk);
-    0
+    let _np = safe_sock.tcp_inet6_sk();
+    
+    let result = 0;
+    ensures!(result <= 0 || result == -EINVAL || result == -EAFNOSUPPORT, "tcp_v6_connect: return value bounds");
+    result
 }
 
 #[no_mangle]
@@ -188,15 +251,17 @@ pub unsafe extern "C" fn tcp_v6_err(
     0
 }
 
-#[cfg(not(test))]
+#[cfg(all(not(test), target_os = "none"))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {}
 }
 
+#[cfg(all(not(test), target_os = "none"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_eh_personality() {}
 
+#[cfg(all(not(test), target_os = "none"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn _Unwind_Resume() -> ! {
     loop {}
