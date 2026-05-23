@@ -4,7 +4,7 @@
 //! This module implements ext4_inode functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel fs/ext4
 
-use libc::c_int;
+use core::ffi::c_int;
 
 /// Module initialization
 #[no_mangle]

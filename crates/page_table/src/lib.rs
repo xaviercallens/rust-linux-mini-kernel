@@ -7,7 +7,7 @@
 //! This module implements page_table functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel mm/page_table.c
 
-use libc::c_int;
+use core::ffi::c_int;
 
 /// Module initialization
 #[no_mangle]

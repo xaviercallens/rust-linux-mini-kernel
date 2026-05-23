@@ -8,7 +8,7 @@
 
 #[macro_use]
 extern crate kernel_types;
-use libc::c_int;
+use core::ffi::c_int;
 
 /// Task structure (placeholder)
 #[repr(C)]
