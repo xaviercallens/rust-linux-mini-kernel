@@ -271,7 +271,8 @@ All workflows run on every push to `main`:
 
 | Version | Date | Milestone |
 |---|---|---|
-| **v10.3** | May 23, 2026 | **RISC-V cross-compilation support**, multi-arch CI pipeline |
+| **v10.4** | May 23, 2026 | **RISC-V no_std allocator & compilation fixes**, all modules green |
+| v10.3 | May 23, 2026 | **RISC-V cross-compilation support**, multi-arch CI pipeline |
 | v10.2 | May 23, 2026 | Comprehensive README, GCP demo, full paper citation |
 | v10.1 | May 22, 2026 | GCP bare metal deployment (`c3-metal-85`) |
 | v10.0 | May 22, 2026 | Bare metal architecture, GCP hardware drivers |
@@ -288,7 +289,7 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed notes.
 
 ## Roadmap
 
-- **v10.4 (Next):** RISC-V hardware validation
+- **v10.5 (Next):** RISC-V hardware validation
   - Phase 1: QEMU `riscv64 virt` boot harness ✅ (CI ready)
   - Phase 2: Milk-V Duo S embedded IoT boot (~$20)
   - Phase 3: StarFive VisionFive 2 Lite desktop-class benchmarks (~$45)
