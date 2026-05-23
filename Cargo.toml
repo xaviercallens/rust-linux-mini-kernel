@@ -183,6 +183,12 @@ members = [
     "crates/cpuset",
     "crates/cgroup",
     "crates/kernel_tests",
+    # RISC-V AI/ML runtime crates (Phase 5A)
+    "crates/ai_runtime",
+    "crates/rvv_simd",
+    "crates/turbo_quant",
+    "crates/ai_bridge",
+    "crates/federated",
 ]
 
 [workspace.package]
