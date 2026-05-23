@@ -224,3 +224,9 @@ pub unsafe extern "C" fn NF_NAT_MASQUERADE_INET(
         -EINVAL
     }
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

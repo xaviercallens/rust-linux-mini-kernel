@@ -141,3 +141,9 @@ pub unsafe extern "C" fn ip6_udp_tunnel_close(
 
     0
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

@@ -173,3 +173,9 @@ unsafe fn nf_nat_core_cleanup_local_out(_skb: &mut sk_buff, _ct: &mut nf_conn, _
 unsafe fn nf_nat_core_cleanup_post_routing(_skb: &mut sk_buff, _ct: &mut nf_conn, _ctinfo: u8, _out: *mut net_device) {
     // Implement post-routing NAT cleanup logic here
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

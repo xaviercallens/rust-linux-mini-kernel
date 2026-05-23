@@ -164,3 +164,9 @@ pub fn ip6_icmp_send_error(
         ip6_icmp_error(skb, type_, code, offset, mtu)
     }
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

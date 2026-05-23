@@ -203,3 +203,9 @@ pub struct fib6_rule_action_result {
     pub mark: u32,
     pub tos: u8,
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

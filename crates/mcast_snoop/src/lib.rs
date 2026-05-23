@@ -183,3 +183,9 @@ fn ipv6_mc_check_mld_msg(skb: *mut sk_buff) -> c_int {
         _ => ENOMSG,
     }
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
