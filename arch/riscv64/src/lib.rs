@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc, clippy::inline_always, clippy::must_use_candidate, clippy::doc_markdown, clippy::ptr_as_ptr)]
+
 //! RISC-V Architecture Support Layer
 //!
 //! This module provides RISC-V-specific implementations for RunuX,
@@ -9,7 +11,7 @@
 //!   M-mode (Machine)    — firmware (OpenSBI)
 //!   S-mode (Supervisor) — kernel (RunuX)
 //!   U-mode (User)       — applications
-
+#![cfg(target_arch = "riscv64")]
 #![no_std]
 #![allow(unused)]
 

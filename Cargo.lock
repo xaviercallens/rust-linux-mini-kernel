@@ -1681,6 +1681,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "riscv_qemu_harness"
+version = "0.1.0"
+dependencies = [
+ "kernel_types",
+ "runux_riscv64",
+]
+
+[[package]]
 name = "rmap"
 version = "0.4.0"
 dependencies = [
@@ -1702,6 +1710,13 @@ version = "9.4.0"
 dependencies = [
  "kernel_types",
  "libc",
+]
+
+[[package]]
+name = "runux_riscv64"
+version = "0.1.0"
+dependencies = [
+ "kernel_types",
 ]
 
 [[package]]

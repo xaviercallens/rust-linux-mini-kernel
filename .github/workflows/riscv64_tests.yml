@@ -74,6 +74,14 @@ jobs:
             cargo check --target riscv64gc-unknown-none-elf -p "$crate" 2>/dev/null && echo "✅" || echo "⚠️ (non-blocking)"
           done
 
+      - name: Build & Execute QEMU RISC-V Boot Smoke Test
+        run: |
+          echo "=== Building RISC-V QEMU Boot Harness ==="
+          cargo build --target riscv64gc-unknown-none-elf -p riscv_qemu_harness --release
+          
+          echo "=== Executing RISC-V QEMU Boot Smoke Test ==="
+          python3 scripts/qemu_riscv_boot_test.py --timeout 15.0
+
       - name: Count RISC-V Compatible Modules
         run: |
           echo "=== RISC-V Compatibility Report ==="
