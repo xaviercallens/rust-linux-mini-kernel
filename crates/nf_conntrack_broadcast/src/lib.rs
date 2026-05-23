@@ -5,6 +5,33 @@ extern crate alloc;
 use alloc::boxed::Box;
 use kernel_types::*;
 
+#[cfg(not(target_arch = "x86_64"))]
+use core::alloc::{GlobalAlloc, Layout};
+
+#[cfg(not(target_arch = "x86_64"))]
+struct KernelAlloc;
+
+#[cfg(not(target_arch = "x86_64"))]
+unsafe impl GlobalAlloc for KernelAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        unsafe extern "C" {
+            fn kmalloc(size: core::ffi::c_ulong) -> *mut core::ffi::c_void;
+        }
+        unsafe { kmalloc(layout.size() as core::ffi::c_ulong) as *mut u8 }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        unsafe extern "C" {
+            fn kfree(ptr: *mut core::ffi::c_void);
+        }
+        unsafe { kfree(ptr as *mut core::ffi::c_void) }
+    }
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+#[global_allocator]
+static GLOBAL_ALLOCATOR: KernelAlloc = KernelAlloc;
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct nf_conntrack_broadcast {
