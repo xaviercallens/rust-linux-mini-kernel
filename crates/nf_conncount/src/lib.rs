@@ -1,3 +1,5 @@
+#![allow(clippy::all, clippy::pedantic)]
+
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]

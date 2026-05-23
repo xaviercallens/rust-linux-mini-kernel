@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 use kernel_types::*;
 
 /// Helper to create an in6_addr from standard library Ipv6Addr

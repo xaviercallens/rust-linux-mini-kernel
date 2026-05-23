@@ -140,6 +140,7 @@ members = [
     "crates/*",
     "examples/micro_kernel_demo",
     "examples/qemu_harness",
+    "examples/riscv_qemu_harness",
     # Memory Management modules
     "crates/page_alloc",
     "crates/slab",
@@ -183,6 +184,7 @@ members = [
     "crates/cpuset",
     "crates/cgroup",
     "crates/kernel_tests",
+    "arch/riscv64",
 ]
 
 [workspace.package]

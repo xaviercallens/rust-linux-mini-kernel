@@ -311,9 +311,9 @@ pub struct dst_ops {
 pub struct dst_entry {
     pub dev: *mut c_void, // struct net_device *
     pub ops: *mut dst_ops,
-    pub _rcuhead: *mut c_void,
-    pub _metrics: [c_int; 17],
-    pub _mtu: c_ulong,
+    pub rcuhead: *mut c_void,
+    pub metrics: [c_int; 17],
+    pub mtu: c_ulong,
     pub flags: c_ushort,
     pub obsolete: c_short,
     pub header_len: c_ushort,
@@ -429,7 +429,7 @@ pub struct fib_rule {
 // Packet Buffer Structures
 // ============================================================================
 
-/// Socket buffer (packet buffer) - also aliased as sk_buff
+/// Socket buffer (packet buffer) - also aliased as `sk_buff`
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct sk_buff {
@@ -608,7 +608,7 @@ pub struct hlist_nulls_node {
     pub pprev: *mut *mut hlist_nulls_node,
 }
 
-/// XFRM (IPsec) mode skb callback
+/// XFRM (`IPsec`) mode skb callback
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct xfrm_mode_skb_cb {
@@ -801,7 +801,7 @@ pub struct kunit {
     _private: [u8; 0],
 }
 
-/// KUnit case structure for registering individual tests
+/// `KUnit` case structure for registering individual tests
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct kunit_case {
@@ -810,7 +810,7 @@ pub struct kunit_case {
     pub generate_params: *const c_void,
 }
 
-/// KUnit suite structure representing a test suite
+/// `KUnit` suite structure representing a test suite
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct kunit_suite {
@@ -832,6 +832,8 @@ extern "C" {
 
 #[cfg(not(target_os = "none"))]
 #[no_mangle]
+/// # Safety
+/// FFI boundary for `KUnit`
 pub unsafe extern "C" fn kunit_do_failed_assertion(
     _test: *mut kunit,
     _assertion: *const c_void,
@@ -842,21 +844,21 @@ pub unsafe extern "C" fn kunit_do_failed_assertion(
         fn write(fd: c_int, buf: *const c_void, count: size_t) -> ssize_t;
     }
     let prefix = b"Mock KUnit assertion failed: ";
-    let _ = write(2, prefix.as_ptr() as *const c_void, prefix.len());
+    let _ = write(2, prefix.as_ptr().cast::<c_void>(), prefix.len());
     
-    if !message.is_null() {
+    if message.is_null() {
+        let null_str = b"null";
+        let _ = write(2, null_str.as_ptr().cast::<c_void>(), null_str.len());
+    } else {
         let mut len = 0;
         while *message.add(len) != 0 {
             len += 1;
         }
-        let _ = write(2, message as *const c_void, len);
-    } else {
-        let null_str = b"null";
-        let _ = write(2, null_str.as_ptr() as *const c_void, null_str.len());
+        let _ = write(2, message.cast::<c_void>(), len);
     }
     
     let newline = b"\n";
-    let _ = write(2, newline.as_ptr() as *const c_void, newline.len());
+    let _ = write(2, newline.as_ptr().cast::<c_void>(), newline.len());
 }
 
 #[macro_export]
@@ -933,15 +935,15 @@ const _: () = {
 // Memory Zero-Cost Abstractions
 // ============================================================================
 
-/// SafePageFrame is a zero-cost abstraction for a memory page frame.
+/// `SafePageFrame` is a zero-cost abstraction for a memory page frame.
 pub struct SafePageFrame<'a> {
     pub ptr: *mut core::ffi::c_void,
     pub order: u32,
     _marker: core::marker::PhantomData<&'a mut core::ffi::c_void>,
 }
 
-impl<'a> SafePageFrame<'a> {
-    #[inline(always)]
+impl SafePageFrame<'_> {
+    #[inline]
     pub fn new(ptr: *mut core::ffi::c_void, order: u32) -> Option<Self> {
         if ptr.is_null() {
             None
