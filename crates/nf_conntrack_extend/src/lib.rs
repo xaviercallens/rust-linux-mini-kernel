@@ -176,3 +176,9 @@ pub unsafe extern "C" fn nf_conntrack_extend_set_timeout_data(
         (*extend).timeout_data = data;
     }
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

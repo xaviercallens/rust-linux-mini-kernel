@@ -415,3 +415,9 @@ pub unsafe extern "C" fn module_exit() {
 
 // Constants for ICMPv6
 pub const ICMPV6_DEST_UNREACH: c_int = 3; pub const ICMPV6_PORT_UNREACH: c_int = 4;
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

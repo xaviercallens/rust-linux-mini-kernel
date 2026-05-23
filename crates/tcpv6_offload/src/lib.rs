@@ -199,3 +199,9 @@ extern "C" {
     fn tcp_gso_segment(skb: *mut sk_buff, features: netdev_features_t) -> *mut sk_buff;
     fn inet6_add_offload(offload: *const NetOffload, proto: c_int) -> c_int;
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
