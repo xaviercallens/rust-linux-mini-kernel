@@ -1,4 +1,8 @@
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
+#[cfg(not(target_arch = "x86_64"))]
+extern crate alloc;
+#[cfg(not(target_arch = "x86_64"))]
+use alloc::boxed::Box;
 use kernel_types::*;
 use core::ffi::c_void;
 
