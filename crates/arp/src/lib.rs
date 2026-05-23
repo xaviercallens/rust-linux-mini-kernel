@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 #![warn(clippy::pedantic)]
 #![deny(clippy::all)]
 #![allow(clippy::missing_safety_doc)] // Disabled only for concise demonstration of FFI wrappers

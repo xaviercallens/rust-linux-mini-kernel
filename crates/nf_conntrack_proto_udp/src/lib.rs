@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 //!
 //! This module provides FFI-compatible Rust bindings for the Linux kernel's UDP connection tracking
 //! functionality. It implements connection tracking for UDP and UDPLITE protocols with timeout

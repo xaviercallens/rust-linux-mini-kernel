@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 //! IPv6 XFRM (IPsec) Input Processing
 //!
 //! This module implements the IPv6-specific input path for XFRM (IPsec) in the Linux kernel.

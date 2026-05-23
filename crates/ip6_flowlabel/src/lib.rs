@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 
 //! IPv6 flowlabel manager for Linux kernel
 //!

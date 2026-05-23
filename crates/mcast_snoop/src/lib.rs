@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 use core::{ffi::{c_int, c_void}, mem::size_of};
 use kernel_types::*;
 

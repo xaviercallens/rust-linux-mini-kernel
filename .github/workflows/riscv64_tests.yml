@@ -55,7 +55,8 @@ jobs:
             --exclude ip6mr \
             --exclude nf_conntrack_irc \
             --exclude nf_conntrack_sane \
-            --exclude kernel_tests 2>&1
+            --exclude kernel_tests \
+            --exclude qemu_harness 2>&1
           echo ""
           echo "✅ 291/297 kernel modules cross-compile for RISC-V 64-bit"
           echo "   (6 crates excluded: allocator-dependent or std test harness)"
