@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 use kernel_types::*;
 
 const IPPROTO_TCP: u8 = 6;

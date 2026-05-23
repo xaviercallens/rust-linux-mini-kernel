@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 //! IP Payload Compression Protocol (IPComp) for IPv6 - RFC3173
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

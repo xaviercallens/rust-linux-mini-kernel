@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 // Refactored nf_conntrack_expect module
 
 //! Connection tracking expectation handling for nf_conntrack

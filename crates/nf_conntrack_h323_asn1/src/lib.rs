@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(target_arch = "x86_64"), no_std)]
 
 //! H.323 ASN.1 Decoder for Linux Kernel Connection Tracking
 //!
