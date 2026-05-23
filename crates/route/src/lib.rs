@@ -102,9 +102,9 @@ pub unsafe extern "C" fn ip6_dst_alloc(
         dst: dst_entry {
             dev: dev as *mut c_void,
             ops: ptr::null_mut(),
-            _rcuhead: ptr::null_mut(),
-            _metrics: [0; 17],
-            _mtu: 0,
+            rcuhead: ptr::null_mut(),
+            metrics: [0; 17],
+            mtu: 0,
             flags: 0,
             obsolete: 1,
             header_len: 0,
