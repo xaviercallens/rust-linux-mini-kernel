@@ -1,3 +1,4 @@
+#![no_std]
 
 //! DCCP connection tracking protocol helper
 //!

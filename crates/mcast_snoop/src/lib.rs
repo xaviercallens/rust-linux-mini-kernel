@@ -1,3 +1,4 @@
+#![no_std]
 use core::{ffi::{c_int, c_void}, mem::size_of};
 use kernel_types::*;
 

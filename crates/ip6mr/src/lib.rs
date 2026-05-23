@@ -1,3 +1,4 @@
+#![no_std]
 //! IPv6 multicast routing support for Linux kernel
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

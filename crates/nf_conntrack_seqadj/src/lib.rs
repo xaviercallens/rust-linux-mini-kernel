@@ -1,3 +1,4 @@
+#![no_std]
 
 //! TCP Sequence Adjustment for Netfilter Connection Tracking
 //!

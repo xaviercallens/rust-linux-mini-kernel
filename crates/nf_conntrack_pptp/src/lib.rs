@@ -1,3 +1,4 @@
+#![no_std]
 
 //! Connection tracking support for PPTP (Point to Point Tunneling Protocol).
 //!

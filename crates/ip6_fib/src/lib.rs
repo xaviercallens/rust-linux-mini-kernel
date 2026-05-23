@@ -1,3 +1,4 @@
+#![no_std]
 //!
 //! IPv6 Forwarding Information Base (FIB)
 //!

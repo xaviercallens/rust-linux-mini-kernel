@@ -54,10 +54,11 @@ jobs:
             --exclude esp4 \
             --exclude ip6mr \
             --exclude nf_conntrack_irc \
-            --exclude nf_conntrack_sane 2>&1
+            --exclude nf_conntrack_sane \
+            --exclude kernel_tests 2>&1
           echo ""
-          echo "✅ 292/297 kernel modules cross-compile for RISC-V 64-bit"
-          echo "   (5 crates excluded: need allocator linkage for libc::malloc/free)"
+          echo "✅ 291/297 kernel modules cross-compile for RISC-V 64-bit"
+          echo "   (6 crates excluded: allocator-dependent or std test harness)"
 
       - name: Verify Core Subsystem Compilation
         run: |

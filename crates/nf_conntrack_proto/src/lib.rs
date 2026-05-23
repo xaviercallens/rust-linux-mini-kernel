@@ -1,3 +1,4 @@
+#![no_std]
 
 //! This module provides FFI-compatible Rust bindings for the Linux kernel's
 //! nf_conntrack_proto.c implementation. It maintains ABI compatibility with

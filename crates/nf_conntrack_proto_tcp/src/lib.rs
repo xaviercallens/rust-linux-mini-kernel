@@ -1,3 +1,4 @@
+#![no_std]
 //! TCP connection tracking module for Netfilter
 //!
 //! This is an FFI-compatible Rust translation of the Linux kernel C implementation.

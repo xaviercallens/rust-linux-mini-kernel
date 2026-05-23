@@ -1,3 +1,4 @@
+#![no_std]
 
 //! IPv6 virtual tunneling interface
 //!

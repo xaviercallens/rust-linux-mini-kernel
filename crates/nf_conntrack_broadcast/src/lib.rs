@@ -1,3 +1,4 @@
+#![no_std]
 use kernel_types::*;
 
 #[repr(C)]

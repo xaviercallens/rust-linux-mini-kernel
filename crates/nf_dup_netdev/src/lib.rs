@@ -1,3 +1,4 @@
+#![no_std]
 
 //! Netfilter packet duplication support
 //!

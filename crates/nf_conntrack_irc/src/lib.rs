@@ -1,3 +1,4 @@
+#![no_std]
 
 //! IRC (DCC) connection tracking helper for Linux kernel
 //!

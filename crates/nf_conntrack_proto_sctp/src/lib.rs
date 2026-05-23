@@ -1,3 +1,4 @@
+#![no_std]
 
 //! Connection tracking protocol helper module for SCTP.
 //!

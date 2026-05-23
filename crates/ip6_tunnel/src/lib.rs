@@ -1,3 +1,4 @@
+#![no_std]
 //!
 //! IPv6 tunneling device implementation for Linux kernel
 //!
