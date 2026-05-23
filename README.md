@@ -1,19 +1,21 @@
 # RunuX — The First Production-Grade Rust Linux Kernel
 
-**FFI-Compatible Rust Reimplementation of the Linux Kernel · Formally Verified · Chaos Tested · GCP Bare Metal Deployed**
+**FFI-Compatible Rust Reimplementation of the Linux Kernel · Formally Verified · Chaos Tested · Multi-Architecture (x86_64 + RISC-V)**
 
 [![CI — Runtime & Integration](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/runtime_tests.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/runtime_tests.yml)
+[![CI — RISC-V Cross-Compilation](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/riscv64_tests.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/riscv64_tests.yml)
 [![CI — Security Audit](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/security_audit.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/security_audit.yml)
 [![CI — Lean 4 Verification](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/lean4.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/lean4.yml)
 [![Modules](https://img.shields.io/badge/modules-297%2F297_compiling-blue)](https://github.com/xaviercallens/rust-linux-mini-kernel)
+[![Architectures](https://img.shields.io/badge/arch-x86__64_%7C_RISC--V-blue)](https://github.com/xaviercallens/rust-linux-mini-kernel)
 [![Lean 4](https://img.shields.io/badge/Lean_4-12_phases_verified-purple)](specs/lean4/)
 [![Chaos Tests](https://img.shields.io/badge/chaos_tests-0_panics%2F6_experiments-brightgreen)](paper/REPRODUCIBILITY.md)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/version-10.2-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
+[![Version](https://img.shields.io/badge/version-10.3-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
 
 > **Author:** Xavier Callens  
-> **Latest Release:** v10.2 — May 23, 2026  
-> **Status:** ✅ All CI Green · Runtime Validated · Formally Verified · GKE Chaos Tested · GCP Bare Metal Deployed
+> **Latest Release:** v10.3 — May 23, 2026  
+> **Status:** ✅ All CI Green · Multi-Arch (x86_64 + RISC-V) · Formally Verified · GKE Chaos Tested · GCP Bare Metal Deployed
 
 ---
 
@@ -258,6 +260,7 @@ All workflows run on every push to `main`:
 | Workflow | What It Checks | Status |
 |---|---|---|
 | **Runtime & Integration Tests** | `cargo check --workspace`, QEMU boot, fuzzing harnesses | ✅ Passing |
+| **RISC-V Cross-Compilation** | `cargo check --workspace --target riscv64gc-unknown-none-elf` | ✅ Passing |
 | **Security Audit** | `cargo +nightly miri test`, `cargo audit` | ✅ Passing |
 | **Lean 4 Mathematical Validation** | `lake build` — all 12 phases, zero `sorry` | ✅ Passing |
 | **Formal Verification** | `verify_specs.sh`, unit tests | ✅ Passing |
@@ -268,7 +271,8 @@ All workflows run on every push to `main`:
 
 | Version | Date | Milestone |
 |---|---|---|
-| **v10.2** | May 23, 2026 | Comprehensive README, GCP demo, full paper citation |
+| **v10.3** | May 23, 2026 | **RISC-V cross-compilation support**, multi-arch CI pipeline |
+| v10.2 | May 23, 2026 | Comprehensive README, GCP demo, full paper citation |
 | v10.1 | May 22, 2026 | GCP bare metal deployment (`c3-metal-85`) |
 | v10.0 | May 22, 2026 | Bare metal architecture, GCP hardware drivers |
 | v9.4.1 | May 22, 2026 | All CI green, scientific paper, README refresh |
@@ -284,16 +288,21 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed notes.
 
 ## Roadmap
 
-- **v11.0 (Planned):** Ring 3 user-space driver environment
-  - Weeks 1–4: System call verification, user-space driver runtime
-  - Weeks 5–8: PCIe network controller driver translation
-  - Weeks 9–12: Real hardware validation on additional cloud providers
+- **v10.4 (Next):** RISC-V hardware validation
+  - Phase 1: QEMU `riscv64 virt` boot harness ✅ (CI ready)
+  - Phase 2: Milk-V Duo S embedded IoT boot (~$20)
+  - Phase 3: StarFive VisionFive 2 Lite desktop-class benchmarks (~$45)
+  - Phase 4: SpacemiT K1 (BPI-F3) 8-core SMP + NVMe validation (~$120)
+- **v11.0 (Planned):** RISC-V CHERI hardware-enforced memory safety
+  - Triple safety: Rust ownership + Lean 4 proofs + CHERI capabilities
+  - Ring 3 user-space driver environment
+  - Real hardware validation on RISC-V and additional cloud providers
 
 ---
 
 ## Acknowledgments
 
-This project owes its existence to **Linus Torvalds** and the Linux kernel community, whose decades of engineering excellence created the foundation that RunuX translates into Rust. We also acknowledge the contributions of the **Rust**, **Lean 4**, **QEMU**, **Chaos Mesh**, and **Google Cloud Platform** communities for the tooling and infrastructure that make this work possible.
+This project owes its existence to **Linus Torvalds** and the Linux kernel community, whose decades of engineering excellence created the foundation that RunuX translates into Rust. We also acknowledge the contributions of the **Rust**, **Lean 4**, **RISC-V International**, **QEMU**, **Chaos Mesh**, and **Google Cloud Platform** communities for the tooling and infrastructure that make this work possible.
 
 ---
 
