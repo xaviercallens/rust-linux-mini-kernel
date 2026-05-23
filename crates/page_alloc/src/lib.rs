@@ -1,4 +1,8 @@
 #![no_std]
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use alloc::string::String;
 #![cfg_attr(not(test), no_main)]
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
