@@ -1,3 +1,4 @@
+#![no_std]
 
 //! FTP NAT helper for Linux kernel
 //!

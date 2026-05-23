@@ -1,3 +1,4 @@
+#![no_std]
 
 //! NetBIOS name service broadcast connection tracking helper
 //!

@@ -1,3 +1,4 @@
+#![no_std]
 
 //! This module provides FFI-compatible Rust bindings for the Linux kernel's
 //! generic protocol connection tracking implementation. It maintains ABI

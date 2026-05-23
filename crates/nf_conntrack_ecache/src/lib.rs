@@ -1,3 +1,4 @@
+#![no_std]
 
 //! Event cache for netfilter connection tracking
 //!

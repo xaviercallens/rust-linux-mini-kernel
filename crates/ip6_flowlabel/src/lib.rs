@@ -1,3 +1,4 @@
+#![no_std]
 
 //! IPv6 flowlabel manager for Linux kernel
 //!

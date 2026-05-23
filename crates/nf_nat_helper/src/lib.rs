@@ -1,3 +1,4 @@
+#![no_std]
 
 //! NAT Helper Functions for Linux Kernel
 //!

@@ -1,3 +1,4 @@
+#![no_std]
 use kernel_types::*;
 use core::ffi::c_void;
 

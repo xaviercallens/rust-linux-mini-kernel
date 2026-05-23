@@ -1,3 +1,4 @@
+#![no_std]
 #[cfg(test)]
 mod tests {
     use arp::{arphdr, arp_send, neighbour, ndisc_ops, net_device, htons};

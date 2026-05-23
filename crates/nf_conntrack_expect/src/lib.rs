@@ -1,3 +1,4 @@
+#![no_std]
 // Refactored nf_conntrack_expect module
 
 //! Connection tracking expectation handling for nf_conntrack

@@ -1,3 +1,4 @@
+#![no_std]
 
 //! TFTP connection tracking helper for Linux kernel
 //!

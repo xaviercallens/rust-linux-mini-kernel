@@ -1,3 +1,4 @@
+#![no_std]
 
 //! Amanda NAT helper for TCP NAT alteration in Linux kernel
 //!

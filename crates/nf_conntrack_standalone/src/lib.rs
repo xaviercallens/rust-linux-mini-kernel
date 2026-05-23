@@ -1,3 +1,4 @@
+#![no_std]
 
 //! nf_conntrack Standalone Module
 //!

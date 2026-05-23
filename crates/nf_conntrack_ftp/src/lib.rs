@@ -1,3 +1,4 @@
+#![no_std]
 
 //! FTP connection tracking helper for Netfilter
 //!

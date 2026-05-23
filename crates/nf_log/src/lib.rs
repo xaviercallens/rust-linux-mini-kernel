@@ -1,3 +1,4 @@
+#![no_std]
 
 //! Network Filter Logging Module
 //!

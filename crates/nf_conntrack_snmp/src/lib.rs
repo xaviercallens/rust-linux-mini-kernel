@@ -1,3 +1,4 @@
+#![no_std]
 
 //! SNMP service broadcast connection tracking helper
 //!

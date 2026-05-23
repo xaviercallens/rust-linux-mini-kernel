@@ -1,3 +1,4 @@
+#![no_std]
 #![allow(warnings)]
 #![allow(non_camel_case_types)]
 #![allow(clippy::not_unsafe_ptr_arg_deref)]

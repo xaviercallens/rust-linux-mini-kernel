@@ -1,3 +1,4 @@
+#![no_std]
 // Amanda connection tracking module for Linux kernel
 //
 // This is an FFI-compatible Rust translation of the Linux kernel C implementation.

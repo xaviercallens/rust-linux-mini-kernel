@@ -1,3 +1,4 @@
+#![no_std]
 
 //! IPv6 GSO/GRO offload support for Linux kernel
 //!

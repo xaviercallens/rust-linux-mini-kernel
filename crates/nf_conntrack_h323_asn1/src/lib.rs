@@ -1,3 +1,4 @@
+#![no_std]
 
 //! H.323 ASN.1 Decoder for Linux Kernel Connection Tracking
 //!

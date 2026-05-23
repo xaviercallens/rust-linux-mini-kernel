@@ -1,3 +1,4 @@
+#![no_std]
 
 //! SIP connection tracking helper for Linux kernel
 //!
