@@ -19,6 +19,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ai_bridge"
+version = "0.1.0"
+dependencies = [
+ "ai_runtime",
+ "rvv_simd",
+]
+
+[[package]]
+name = "ai_runtime"
+version = "0.1.0"
+
+[[package]]
 name = "anon_inodes"
 version = "0.4.0"
 dependencies = [
@@ -586,6 +598,13 @@ version = "9.4.0"
 dependencies = [
  "kernel_types",
  "libc",
+]
+
+[[package]]
+name = "federated"
+version = "0.1.0"
+dependencies = [
+ "ai_runtime",
 ]
 
 [[package]]
@@ -1705,6 +1724,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rvv_simd"
+version = "0.1.0"
+dependencies = [
+ "ai_runtime",
+]
+
+[[package]]
 name = "sched_core"
 version = "0.4.0"
 dependencies = [
@@ -2246,6 +2272,13 @@ version = "9.4.0"
 dependencies = [
  "kernel_types",
  "libc",
+]
+
+[[package]]
+name = "turbo_quant"
+version = "0.1.0"
+dependencies = [
+ "ai_runtime",
 ]
 
 [[package]]
