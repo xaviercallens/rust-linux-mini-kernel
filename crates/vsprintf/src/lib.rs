@@ -1,12 +1,13 @@
 #![no_std]
-extern crate alloc;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use alloc::string::String;
 //! String formatting
 //!
 //! This module implements vsprintf functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel lib
+
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use alloc::string::String;
 
 use core::ffi::c_int;
 

@@ -1,8 +1,4 @@
 #![no_std]
-extern crate alloc;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use alloc::string::String;
 #![cfg_attr(not(test), no_main)]
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
@@ -10,6 +6,11 @@ use alloc::string::String;
 //!
 //! Phase 2: Memory Allocator - Page-level allocation
 //! Implements a simple buddy allocator for physical memory management
+
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use alloc::string::String;
 
 use core::ffi::{c_int, c_ulong, c_void};
 use core::ptr;
