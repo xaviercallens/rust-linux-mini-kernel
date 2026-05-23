@@ -6,7 +6,7 @@
 //! This module implements driver_pci_access functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel drivers/pci
 
-use libc::c_int;
+use core::ffi::c_int;
 use kernel_types::{requires, ensures};
 use driver_pci_core::SafePciDevice;
 
@@ -29,7 +29,7 @@ pub static DRIVER_PCI_ACCESS_INITIALIZED: bool = false;
 /// # Panics
 /// Panics if the offset and size are out of bounds.
 #[no_mangle]
-pub extern "C" fn pci_read_config(dev: &SafePciDevice, offset: u32, size: u32, value: &mut u32) -> libc::c_int {
+pub extern "C" fn pci_read_config(dev: &SafePciDevice, offset: u32, size: u32, value: &mut u32) -> c_int {
     requires!(!dev.as_ptr().is_null(), "Device pointer must not be null");
     requires!(offset + size <= 4096, "Read out of bounds"); // Basic PCI-e extended config space limit
 
@@ -45,7 +45,7 @@ pub extern "C" fn pci_read_config(dev: &SafePciDevice, offset: u32, size: u32, v
 /// # Panics
 /// Panics if the offset and size are out of bounds.
 #[no_mangle]
-pub extern "C" fn pci_write_config(dev: &SafePciDevice, offset: u32, size: u32, value: u32) -> libc::c_int {
+pub extern "C" fn pci_write_config(dev: &SafePciDevice, offset: u32, size: u32, value: u32) -> c_int {
     requires!(!dev.as_ptr().is_null(), "Device pointer must not be null");
     requires!(offset + size <= 4096, "Write out of bounds");
 

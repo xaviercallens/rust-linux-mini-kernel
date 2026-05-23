@@ -4,7 +4,7 @@
 //! This module implements mprotect functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel mm/mprotect.c
 
-use libc::c_int;
+use core::ffi::c_int;
 
 /// Module initialization
 #[no_mangle]

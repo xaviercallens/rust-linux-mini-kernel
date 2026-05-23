@@ -6,7 +6,7 @@
 //! This module implements driver_base_core functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel drivers/base
 
-use libc::c_int;
+use core::ffi::c_int;
 
 /// Module initialization
 #[no_mangle]
@@ -24,7 +24,7 @@ pub static DRIVER_BASE_CORE_INITIALIZED: bool = false;
 
 /// A safe wrapper around raw device pointers.
 #[repr(transparent)]
-pub struct SafeDevice(*mut libc::c_void);
+pub struct SafeDevice(*mut core::ffi::c_void);
 
 impl SafeDevice {
     /// Creates a new `SafeDevice` from a raw pointer.
@@ -32,20 +32,20 @@ impl SafeDevice {
     /// # Safety
     /// The caller must ensure that the pointer is valid and properly aligned.
     #[must_use]
-    pub unsafe fn new(ptr: *mut libc::c_void) -> Self {
+    pub unsafe fn new(ptr: *mut core::ffi::c_void) -> Self {
         Self(ptr)
     }
 
     /// Returns the underlying raw pointer.
     #[must_use]
-    pub fn as_ptr(&self) -> *mut libc::c_void {
+    pub fn as_ptr(&self) -> *mut core::ffi::c_void {
         self.0
     }
 }
 
 /// A safe wrapper around raw kobject pointers.
 #[repr(transparent)]
-pub struct SafeKObject(*mut libc::c_void);
+pub struct SafeKObject(*mut core::ffi::c_void);
 
 impl SafeKObject {
     /// Creates a new `SafeKObject` from a raw pointer.
@@ -53,13 +53,13 @@ impl SafeKObject {
     /// # Safety
     /// The caller must ensure that the pointer is valid and properly aligned.
     #[must_use]
-    pub unsafe fn new(ptr: *mut libc::c_void) -> Self {
+    pub unsafe fn new(ptr: *mut core::ffi::c_void) -> Self {
         Self(ptr)
     }
 
     /// Returns the underlying raw pointer.
     #[must_use]
-    pub fn as_ptr(&self) -> *mut libc::c_void {
+    pub fn as_ptr(&self) -> *mut core::ffi::c_void {
         self.0
     }
 }

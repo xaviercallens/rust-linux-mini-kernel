@@ -6,7 +6,7 @@
 //! This module implements driver_pci_probe functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel drivers/pci
 
-use libc::c_int;
+use core::ffi::c_int;
 use kernel_types::{requires, ensures};
 use driver_pci_core::SafePciDevice;
 
@@ -29,7 +29,7 @@ pub static DRIVER_PCI_PROBE_INITIALIZED: bool = false;
 /// # Panics
 /// Panics if the device is null.
 #[no_mangle]
-pub extern "C" fn pci_probe_device(dev: &SafePciDevice) -> libc::c_int {
+pub extern "C" fn pci_probe_device(dev: &SafePciDevice) -> c_int {
     requires!(!dev.as_ptr().is_null(), "Device pointer must not be null");
 
     // Mock implementation of probe

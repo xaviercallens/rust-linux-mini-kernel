@@ -4,7 +4,8 @@
 //! This module implements cpuset functionality for the Rust Linux Mini Kernel.
 //! Based on Linux kernel kernel/cpuset.c
 
-use libc::{c_int, c_uint, pid_t};
+use core::ffi::{c_int, c_uint};
+type pid_t = i32;
 
 /// Task structure (placeholder)
 #[repr(C)]
