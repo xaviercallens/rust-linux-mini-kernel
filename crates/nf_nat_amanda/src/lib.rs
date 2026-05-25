@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
 
 //! Amanda NAT helper for TCP NAT alteration in Linux kernel

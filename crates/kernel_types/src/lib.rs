@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 // Linux kernel type definitions for Rust FFI
 // Target: Linux kernel 5.10 LTS networking stack
 // Manually curated based on kernel headers

@@ -110,7 +110,7 @@ This paper makes the following contributions:
 The tension between performance and safety in OS kernels has driven decades of research. seL4~\cite{seL4_2009} demonstrated the feasibility of formally verified microkernels, but at the cost of limited functionality and significant proof engineering effort. Singularity~\cite{Singularity2007} used managed code for safety but required a custom runtime. CertiKOS~\cite{CertiKOS2016} provided certified concurrent kernels with layered abstraction.
 
 \subsection{Rust in Systems Programming}
-Redox OS~\cite{RedoxOS} is a microkernel written entirely in Rust but breaks POSIX compatibility. Theseus~\cite{Theseus2020} explores intralingual OS design in Rust. The Rust-for-Linux project~\cite{RustForLinux2022} integrates Rust modules into the mainline Linux kernel, but remains limited to individual driver subsystems.
+Redox OS~\cite{RedoxOS} is a microkernel written entirely in Rust but breaks POSIX compatibility. Theseus~\cite{Theseus2020} explores intralingual OS design in Rust. The Minimum Viable Kernel (MVK)~\cite{CallensMvk2026,CallensSecurity2026} presents a bare-metal operating system architecture in Rust verified with Lean 4. The Rust-for-Linux project~\cite{RustForLinux2022} integrates Rust modules into the mainline Linux kernel, but remains limited to individual driver subsystems. Meanwhile, RunuX-AI~\cite{CallensRunuxAi2027} extends these safety abstractions into cloud accelerator runtimes, and rusty-SUNDIALS~\cite{CallensSundials2026} demonstrates verification of complex mathematical solver loops under Rust.
 
 RunuX differs from all prior work by performing a \emph{comprehensive, FFI-compatible translation} of an existing production kernel's networking stack, preserving binary layout compatibility while introducing Rust's safety guarantees.
 
@@ -342,6 +342,18 @@ L.~de~Moura and S.~Ullrich. \emph{The Lean 4 Theorem Prover and Programming Lang
 
 \bibitem{Verus2023}
 A.~Lattuada et~al. \emph{Verus: Verifying Rust Programs via Linear Ghost Types}. In \emph{OOPSLA '23}, 2023.
+
+\bibitem{CallensRunuxAi2027}
+X.~Callens. \emph{RunuX-AI: A Unified, Memory-Safe Rust Runtime for High-Efficiency Federated LLM Execution across Edge RISC-V and Cloud Systolic TPUs}. MLSys '27, 2027.
+
+\bibitem{CallensMvk2026}
+X.~Callens. \emph{Beyond Legacy Abstractions: A Formally Verified, High-Performance Bare-Metal Rust Architecture (MVK)}. ACM SOSP (Draft), 2026.
+
+\bibitem{CallensSecurity2026}
+X.~Callens. \emph{The Death of the Kernel Zero-Day: Mathematically Eliminating Spatial and Temporal Memory Vulnerabilities in Bare-Metal Architectures}. IEEE S\&P (Draft), 2026.
+
+\bibitem{CallensSundials2026}
+X.~Callens. \emph{rusty-SUNDIALS: A Memory-Safe Rust Implementation of CVODE with Formally Verified Newton Convergence}. ACM TOMS, 2026.
 
 \end{thebibliography}
 

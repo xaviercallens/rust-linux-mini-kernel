@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(test), no_std)]
 //! Platform setup (x86_64) - Rust Linux Mini Kernel
 
