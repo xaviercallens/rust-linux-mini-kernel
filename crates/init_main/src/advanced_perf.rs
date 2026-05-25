@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 #[cfg(all(target_arch = "x86_64", not(miri)))]

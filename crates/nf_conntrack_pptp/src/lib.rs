@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
 
 //! Connection tracking support for PPTP (Point to Point Tunneling Protocol).

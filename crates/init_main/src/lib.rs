@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(test), no_std)]
 //! start_kernel() entry point - Rust Linux Mini Kernel
 
