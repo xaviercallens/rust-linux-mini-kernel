@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(test), no_std)]
 
 use core::ffi::c_void;

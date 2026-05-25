@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 // SPDX-License-Identifier: GPL-2.0-or-later
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
