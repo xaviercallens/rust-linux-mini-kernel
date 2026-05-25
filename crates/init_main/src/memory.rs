@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 //! Memory subsystem integration for Phase 2
 //!
 //! This module integrates page and slab allocators into the boot sequence

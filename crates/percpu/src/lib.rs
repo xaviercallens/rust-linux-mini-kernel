@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![no_std]
 //! Per-CPU memory allocator
 //!

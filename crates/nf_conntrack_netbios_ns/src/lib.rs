@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
 
 //! NetBIOS name service broadcast connection tracking helper

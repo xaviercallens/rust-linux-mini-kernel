@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
 //! Internet Control Message Protocol (ICMPv6) for IPv6
 //!

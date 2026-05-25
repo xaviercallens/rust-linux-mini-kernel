@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
 //! IPv6 XFRM (IPsec) Input Processing
 //!

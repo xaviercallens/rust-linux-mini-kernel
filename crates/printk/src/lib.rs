@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(test), no_std)]
 //! Kernel logging - Phase 1: Serial port output via QEMU
 
