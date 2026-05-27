@@ -560,6 +560,159 @@ impl ModelRegistry {
 }
 
 // ---------------------------------------------------------------------------
+// SymBrain v3 Dual-Hemisphere Configuration & Quantization Mapping
+// ---------------------------------------------------------------------------
+
+/// Represents one of the dual hemispheres or components of SymBrain v3.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SymBrainHemisphere {
+    /// Left Hemisphere (Qwen-7B-Reasoning): dense logical inference
+    LeftHemisphere,
+    /// Right Hemisphere (Ministral-8B-Creative): creative formulation & MCTS rollouts
+    RightHemisphere,
+    /// PFC Controller (WARS-CI-DFA Bridge): coordinating attention and routing
+    PfcController,
+}
+
+/// Dynamic config describing the quantization mapping for one SymBrain hemisphere.
+#[derive(Debug, Clone)]
+pub struct SymBrainHemisphereConfig {
+    /// Name of the hemisphere module
+    pub name: String,
+    /// Component type
+    pub component: SymBrainHemisphere,
+    /// Weight quantization format used
+    pub weight_quant: QuantFormat,
+    /// KV-cache compression or format used
+    pub kv_cache_dtype: DataType,
+    /// Size of the parameter set in billions
+    pub params_billions: f32,
+    /// Hidden dimension
+    pub hidden_dim: usize,
+    /// Number of attention layers
+    pub num_layers: usize,
+    /// Target execution device
+    pub device: DeviceType,
+}
+
+impl SymBrainHemisphereConfig {
+    /// Calculates the precise estimated memory footprint for this hemisphere.
+    pub fn estimated_vram_bytes(&self, max_context_len: usize) -> usize {
+        let params = (self.params_billions * 1_000_000_000.0) as usize;
+        let weight_bytes = match self.weight_quant {
+            QuantFormat::None => params * 4,
+            QuantFormat::Fp8E4M3 | QuantFormat::GgufQ8_0 => params,
+            QuantFormat::GgufQ6K => params * 6 / 8,
+            QuantFormat::GgufQ4KM | QuantFormat::GgufQ4KS | QuantFormat::Awq | QuantFormat::Gptq => params * 9 / 16, // ~4.5 bits
+        };
+
+        // KV cache footprint
+        let kv_bytes_per_element = match self.kv_cache_dtype {
+            DataType::FP32 => 4,
+            DataType::FP16 | DataType::BF16 => 2,
+            DataType::FP8 | DataType::INT8 => 1,
+            DataType::INT4 => 1, // PolarQuant 3-bit effective
+            _ => 2,
+        };
+
+        // Standard sequence cache size: 2 * layers * kv_heads * head_dim * seq_len
+        // Let's assume standard GQA with 8 KV heads and head_dim=128
+        let head_dim = 128;
+        let num_kv_heads = 8;
+        let kv_cache_bytes = 2 * self.num_layers * num_kv_heads * head_dim * max_context_len * kv_bytes_per_element;
+
+        weight_bytes + kv_cache_bytes
+    }
+}
+
+/// Unified quantization mapping config for the complete SymBrain v3 system.
+#[derive(Debug, Clone)]
+pub struct SymBrainQuantConfig {
+    /// Left hemisphere config
+    pub left: SymBrainHemisphereConfig,
+    /// Right hemisphere config
+    pub right: SymBrainHemisphereConfig,
+    /// PFC coordinator config
+    pub pfc: SymBrainHemisphereConfig,
+    /// Profile identifier
+    pub profile_name: String,
+}
+
+impl SymBrainQuantConfig {
+    /// Create the official SymBrain v3 Swarm Bourbaki preset.
+    ///
+    /// Configures precision targets adaptively based on hardware capabilities:
+    /// - **Cloud (K3)**: Left (FP8), Right (Q8_0 + PolarQuant 3-bit), PFC (FP16)
+    /// - **Edge (K1)**: Left (Q4_K_M), Right (Q8_0), PFC (FP16)
+    pub fn v3_bourbaki(caps: &HardwareCaps) -> Self {
+        let is_k3 = caps.has_fp8 && caps.vlen_bits >= 1024;
+        let (left_quant, left_kv, left_device) = if is_k3 {
+            (QuantFormat::Fp8E4M3, DataType::FP8, DeviceType::A100AiCore)
+        } else {
+            (QuantFormat::GgufQ4KM, DataType::FP16, DeviceType::Cpu)
+        };
+
+        let (right_quant, right_kv, right_device) = if is_k3 {
+            (QuantFormat::GgufQ8_0, DataType::INT4, DeviceType::A100AiCore) // INT4 represent PolarQuant 3-bit
+        } else {
+            (QuantFormat::GgufQ8_0, DataType::FP16, DeviceType::Cpu)
+        };
+
+        let profile_name = if is_k3 {
+            String::from("cloud_spacemit_k3")
+        } else {
+            String::from("edge_spacemit_k1")
+        };
+
+        Self {
+            left: SymBrainHemisphereConfig {
+                name: String::from("Qwen-7B-Reasoning"),
+                component: SymBrainHemisphere::LeftHemisphere,
+                weight_quant: left_quant,
+                kv_cache_dtype: left_kv,
+                params_billions: 7.0,
+                hidden_dim: 4096,
+                num_layers: 32,
+                device: left_device,
+            },
+            right: SymBrainHemisphereConfig {
+                name: String::from("Ministral-8B-Creative"),
+                component: SymBrainHemisphere::RightHemisphere,
+                weight_quant: right_quant,
+                kv_cache_dtype: right_kv,
+                params_billions: 8.0,
+                hidden_dim: 4096,
+                num_layers: 32,
+                device: right_device,
+            },
+            pfc: SymBrainHemisphereConfig {
+                name: String::from("WARS-CI-DFA-Bridge"),
+                component: SymBrainHemisphere::PfcController,
+                weight_quant: QuantFormat::None, // FP16 (represented as None in QuantFormat)
+                kv_cache_dtype: DataType::FP16,
+                params_billions: 0.5,
+                hidden_dim: 1024,
+                num_layers: 12,
+                device: DeviceType::Cpu,
+            },
+            profile_name,
+        }
+    }
+
+    /// Computes the total VRAM/RAM required to execute this configuration.
+    pub fn total_vram_bytes(&self, max_context_len: usize) -> usize {
+        self.left.estimated_vram_bytes(max_context_len)
+            + self.right.estimated_vram_bytes(max_context_len)
+            + self.pfc.estimated_vram_bytes(max_context_len)
+    }
+
+    /// Checks if this configuration fits within the system's available RAM.
+    pub fn fits_in_ram(&self, max_context_len: usize, available_ram: usize) -> bool {
+        self.total_vram_bytes(max_context_len) <= available_ram
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -618,5 +771,28 @@ mod tests {
         let k1 = HardwareCaps::spacemit_k1(8);
         let small = ModelRegistry::qwen_0_5b(DeviceType::Cpu);
         assert!(small.fits_in_ram(k1.available_ram));
+    }
+
+    #[test]
+    fn test_symbrain_v3_config_edge() {
+        let k1 = HardwareCaps::spacemit_k1(8);
+        let config = SymBrainQuantConfig::v3_bourbaki(&k1);
+        assert_eq!(config.profile_name, "edge_spacemit_k1");
+        assert_eq!(config.left.weight_quant, QuantFormat::GgufQ4KM);
+        assert_eq!(config.right.weight_quant, QuantFormat::GgufQ8_0);
+        
+        let total_ram_needed = config.total_vram_bytes(4096);
+        // Total footprint should fit inside 8GB easily since 7B is Q4 and 8B is Q8
+        assert!(total_ram_needed < 15 * 1024 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_symbrain_v3_config_cloud() {
+        let k3 = HardwareCaps::spacemit_k3(32);
+        let config = SymBrainQuantConfig::v3_bourbaki(&k3);
+        assert_eq!(config.profile_name, "cloud_spacemit_k3");
+        assert_eq!(config.left.weight_quant, QuantFormat::Fp8E4M3);
+        assert_eq!(config.right.weight_quant, QuantFormat::GgufQ8_0);
+        assert_eq!(config.right.kv_cache_dtype, DataType::INT4); // PolarQuant 3-bit
     }
 }
