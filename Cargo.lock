@@ -473,6 +473,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "edge_inference_demo"
+version = "0.1.0"
+dependencies = [
+ "ai_runtime",
+ "federated",
+ "rvv_simd",
+ "turbo_quant",
+]
+
+[[package]]
 name = "esp4"
 version = "9.4.0"
 dependencies = [
