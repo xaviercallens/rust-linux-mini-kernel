@@ -141,6 +141,7 @@ members = [
     "examples/micro_kernel_demo",
     "examples/qemu_harness",
     "examples/riscv_qemu_harness",
+    "examples/edge_inference_demo",
     # Memory Management modules
     "crates/page_alloc",
     "crates/slab",
