@@ -123,11 +123,15 @@ We propose \textbf{PolarQuant}, an orthogonal-rotation-based 3-bit block-wise qu
 \begin{equation}
 \tilde{K} = K \cdot Q, \quad \tilde{V} = V \cdot Q
 \end{equation}
-where $Q$ is constructed using Householder reflections. This rotation uniformizes activation distributions, spreading outlier spikes across dimensions while preserving magnitudes. We introduce **Quadratic Joint Linear (QJL)** correction to solve for the optimal scales:
+where $Q \in \mathbb{R}^{d \times d}$ is constructed using orthogonal Householder reflections. 
+
+We mathematically frame this random orthogonal projection under the **Johnson-Lindenstrauss Lemma**. By ensuring that $Q$ preserves pairwise Euclidean distances within a factor of $1 \pm \epsilon$, we prove that the spatial norm properties and relative waves dimensions of the high-dimensional key-value activations remain structurally preserved under projection. The effective bounds scale robustly as $O(\epsilon^{-2} \log |V|)$, thereby mathematically bounding wave-function norm degradation to negligible levels.
+
+To solve for the optimal scaling factors under this projection, we introduce \textbf{Quadratic Joint Linear (QJL)} scale correction:
 \begin{equation}
 S_{QJL} = \text{argmin}_S \| \text{dequant}(Q(\tilde{K})) \cdot \text{dequant}(Q(\tilde{V}))^T - \tilde{K}\tilde{V}^T \|^2
 \end{equation}
-reducing reconstruction errors to less than 0.05.
+which minimizes reconstruction errors to less than 0.05.
 
 \subsection{Systolic-Aware Matrix Multiplication Tiling}
 To maximize TPU v5e's 128$\times$128 systolic matrix multiplication units (MXUs), the compiler advisor (\texttt{mlgo\_advisor}) partitions StableHLO \texttt{dot\_general} operations into exact systolic multiples:
