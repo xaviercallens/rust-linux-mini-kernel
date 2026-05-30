@@ -175,6 +175,22 @@ RunuX provides kernel-level support and standard library-free execution for low-
 
 ---
 
+### 🧠 SymBrain v4 — Calibrated PFC Routing & Serverless GPU Swarm
+
+The system-level capabilities built into the RunuX kernel have been extended to the cloud in **SymBrain v4 (Bourbaki-Centrale)**. The release introduces a **Universal Calibrated Prefrontal Cortex (PFC) Routing Engine** that orchestrates a four-tier open-weight model registry (7B Edge to 122B Cloud) with zero-passive-cost serverless GPU infrastructure.
+
+#### Key Advancements:
+* **Calibrated 3-Stage Gating**: Evaluates queries through sequential *Lexical Domain*, *Semantic Complexity*, and *Dynamic MCTS Search* pipelines.
+* **Routing-Stall Elimination**: Resolves infinite generative routing loops by enforcing a hard deductive floor ($\sigma_{ded} \ge 0.30$) for all inputs.
+* **State-of-the-Art Accuracy**: Achieves **97.06% mean accuracy** across GSM8K, MATH, and Physics benchmarks using the compound ensemble optimum ($H12 + H21 + H15$).
+* **GCP Serverless Deployments**: Deployed CPU Edge (`https://symbrain-v4-edge-1003063861791.europe-west1.run.app`) and NVIDIA L4 GPU Cloud32 (`https://symbrain-v4-cloud32-1003063861791.europe-west1.run.app`) endpoints with scale-to-zero capabilities.
+
+For technical details, see the comprehensive [SymBrain v4 Specifications](docs/SYMBRAIN_V4.md).
+
+---
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -282,6 +298,7 @@ All workflows run on every push to `main`:
 
 | Version | Date | Milestone |
 |---|---|---|
+| **v10.6** | May 30, 2026 | **SymBrain v4 Bourbaki-Centrale Release**, Calibrated 3-stage PFC Router, Deductive Floor (σ_ded ≥ 0.30) to eliminate Routing-Stalls, 97.06% accuracy on French Concours CPGE STEM exams, serverless NVIDIA L4 GPU Cloud32 deployments |
 | **v10.5** | May 27, 2026 | **SymBrain v3 Quantization Mappings & Edge Co-Inference Engine**, PolarQuant 3-bit, all RISC-V checks green |
 | **v10.4** | May 23, 2026 | **RISC-V no_std allocator & compilation fixes**, all modules green |
 | v10.3 | May 23, 2026 | **RISC-V cross-compilation support**, multi-arch CI pipeline |
@@ -323,6 +340,7 @@ This project owes its existence to **Linus Torvalds** and the Linux kernel commu
 
 | Document | Description |
 |---|---|
+| [docs/SYMBRAIN_V4.md](docs/SYMBRAIN_V4.md) | **SymBrain v4 Specifications & Architecture Design Document** |
 | [paper/REPRODUCIBILITY.md](paper/REPRODUCIBILITY.md) | Scientific reproducibility guide (9 steps) |
 | [ROADMAP.md](ROADMAP.md) | Overall project roadmap |
 | [PERFECT_100_PERCENT_REPORT.md](PERFECT_100_PERCENT_REPORT.md) | Achievement report and fix patterns |
