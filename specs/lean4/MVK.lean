@@ -50,3 +50,6 @@ import MVK.Phase11.Hardware
 
 -- Phase 12: GCP Baremetal Drivers
 import MVK.Phase12.GCP_Drivers
+
+-- Runux Core Defenses: Active Defense Pipeline & Kernel Isolation
+import MVK.RunuxDefenses

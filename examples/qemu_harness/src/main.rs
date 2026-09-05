@@ -51,8 +51,13 @@ pub unsafe extern "C" fn memset(dest: *mut u8, c: i32, n: usize) -> *mut u8 {
 pub extern "C" fn rust_eh_personality() {}
 
 fn outb(port: u16, val: u8) {
+    #[cfg(target_arch = "x86_64")]
     unsafe {
         asm!("out dx, al", in("dx") port, in("al") val, options(nomem, nostack, preserves_flags));
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        let _ = (port, val);
     }
 }
 

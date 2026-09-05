@@ -30,6 +30,17 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 
+pub mod ring_buffer;
+pub use ring_buffer::{LockFreeAuditRingBuffer, PerCpuRingArray};
+
+pub mod dma_ring;
+pub use dma_ring::{DmaRingError, HardwareDmaDescriptor, SafeHardwareDmaRing};
+
+pub mod enclave_ipc;
+pub use enclave_ipc::{
+    EnclaveIpcChannel, EnclaveIpcError, EnclaveIpcState, DEFAULT_ENCLAVE_IPC_BUFFER,
+};
+
 use ai_runtime::{
     AiError, DataType, DeviceType, HardwareCaps, ModelConfig, ModelRegistry,
     TensorDescriptor, MAX_DIMS,

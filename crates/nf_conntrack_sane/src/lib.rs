@@ -127,6 +127,7 @@ static mut PORTS_C: c_int = 0;
 
 // Spinlock and buffer
 static mut NF_SANE_LOCK: *mut c_void = ptr::null_mut();
+static mut SANE_STORAGE: [u8; 65536] = [0; 65536];
 static mut SANE_BUFFER: *mut c_void = ptr::null_mut();
 
 // Helper array
@@ -261,10 +262,7 @@ pub unsafe extern "C" fn help(
 pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
     let _i: c_int = 0;
 
-    SANE_BUFFER = libc::malloc(65536);
-    if SANE_BUFFER.is_null() {
-        return ENOMEM;
-    }
+    SANE_BUFFER = ptr::addr_of_mut!(SANE_STORAGE).cast();
 
     if PORTS_C == 0 {
         PORTS[0] = SANE_PORT;
@@ -304,7 +302,7 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
 
     let ret = nf_conntrack_helpers_register(ptr::addr_of!(SANE) as *const nf_conntrack_helper, PORTS_C * 2);
     if ret < 0 {
-        libc::free(SANE_BUFFER);
+        SANE_BUFFER = ptr::null_mut();
         return ret;
     }
 
@@ -314,7 +312,7 @@ pub unsafe extern "C" fn nf_conntrack_sane_init() -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn nf_conntrack_sane_fini() {
     nf_conntrack_helpers_unregister(ptr::addr_of!(SANE) as *const nf_conntrack_helper, PORTS_C * 2);
-    libc::free(SANE_BUFFER);
+    SANE_BUFFER = ptr::null_mut();
 }
 
 // Expectation policy
