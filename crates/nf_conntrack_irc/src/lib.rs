@@ -105,7 +105,7 @@ type nf_nat_irc_hook_t = Option<
 static mut PORTS: [u16; 8] = [0; 8];
 static mut PORTS_C: c_uint = 0;
 static mut MAX_DCC_CHANNELS: c_uint = 8;
-static mut DCC_TIMEOUT: c_uint = 300;
+static mut IRC_STORAGE: [u8; 65536] = [0; 65536];
 static mut IRC_BUFFER: *mut c_void = ptr::null_mut();
 static mut IRC_BUFFER_LOCK: Spinlock = Spinlock { _private: 0 };
 static mut NF_NAT_IRC_HOOK: Option<nf_nat_irc_hook_t> = None;
@@ -216,10 +216,7 @@ pub extern "C" fn nf_conntrack_irc_init() -> c_int {
             pr_debug(b"max_dcc_channels must not be more than %u\n\0".as_ptr() as *const u8);
             return EINVAL;
         }
-        IRC_BUFFER = libc::malloc(65536);
-        if IRC_BUFFER.is_null() {
-            return ENOMEM;
-        }
+        IRC_BUFFER = ptr::addr_of_mut!(IRC_STORAGE).cast();
 
         // Default to standard IRC port if none specified
         if PORTS_C == 0 {
@@ -249,7 +246,7 @@ pub extern "C" fn nf_conntrack_irc_init() -> c_int {
 
         let ret = nf_conntrack_helpers_register(&mut irc_helpers[0], PORTS_C);
         if ret != 0 {
-            libc::free(IRC_BUFFER);
+            IRC_BUFFER = ptr::null_mut();
             return ret;
         }
 
@@ -262,7 +259,7 @@ pub extern "C" fn nf_conntrack_irc_fini() {
     unsafe {
         let mut irc_helpers: [nf_conntrack_helper; 8] = [Default::default(); 8];
         nf_conntrack_helpers_unregister(&mut irc_helpers[0], PORTS_C);
-        libc::free(IRC_BUFFER);
+        IRC_BUFFER = ptr::null_mut();
     }
 }
 

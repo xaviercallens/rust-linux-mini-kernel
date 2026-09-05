@@ -632,6 +632,90 @@ fn lcg_next(state: &mut u64) -> f64 {
 // Tests
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// REQ-RCD-017: Neuro-Symbolic Multi-Gate Federated Ingress Verification
+// ---------------------------------------------------------------------------
+
+/// Maximum ε budget in Q8.8 fixed-point: 256 corresponds to ε ≤ 1.0 (REQ-RCD-017).
+pub const MAX_DP_EPSILON_Q8: u32 = 256;
+
+/// Errors returned by the multi-gate federated ingress verifier (REQ-RCD-017).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MultiGateVerifyError {
+    /// Gate 1 failed: VRAM headroom is below the required 8%.
+    VramHeadroomExceeded,
+    /// Gate 2 failed: Differential privacy budget ε exceeds 1.0.
+    DifferentialPrivacyBudgetExceeded,
+    /// Gate 3 failed: Cryptographic enclave attestation is absent.
+    AttestationFailed,
+}
+
+/// Specification of a federated node submitted to the multi-gate verifier (REQ-RCD-017).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FederatedNodeIngressSpec {
+    /// Unique identifier for the ingress node.
+    pub node_id: u64,
+    /// VRAM currently allocated (MiB).
+    pub vram_alloc_mb: u64,
+    /// Total VRAM capacity (MiB).
+    pub vram_total_mb: u64,
+    /// Differential privacy epsilon in Q8.8 fixed-point (256 = ε 1.0).
+    pub dp_epsilon_q8: u32,
+    /// Whether the node holds a valid cryptographic enclave attestation.
+    pub attested: bool,
+}
+
+impl FederatedNodeIngressSpec {
+    /// Constructs a node ingress specification.
+    #[must_use]
+    pub const fn new(
+        node_id: u64,
+        vram_alloc_mb: u64,
+        vram_total_mb: u64,
+        dp_epsilon_q8: u32,
+        attested: bool,
+    ) -> Self {
+        Self {
+            node_id,
+            vram_alloc_mb,
+            vram_total_mb,
+            dp_epsilon_q8,
+            attested,
+        }
+    }
+}
+
+/// Kernel-level three-gate verifier for federated node ingress (REQ-RCD-017).
+pub struct KernelMultiGateVerifier;
+
+impl KernelMultiGateVerifier {
+    /// Verifies node ingress against:
+    /// - Gate 1: VRAM headroom ≥ 8% (`vram_alloc ≤ 92% × vram_total`)
+    /// - Gate 2: DP budget ε ≤ 1.0 (`dp_epsilon_q8 ≤ 256`)
+    /// - Gate 3: Cryptographic enclave attestation present
+    ///
+    /// # Errors
+    /// Returns `Err(MultiGateVerifyError)` describing the first failing gate.
+    pub fn verify_node(spec: &FederatedNodeIngressSpec) -> Result<(), MultiGateVerifyError> {
+        // Gate 1: VRAM headroom >= 8% (vram_alloc * 100 <= vram_total * 92)
+        if spec.vram_alloc_mb.saturating_mul(100) > spec.vram_total_mb.saturating_mul(92) {
+            return Err(MultiGateVerifyError::VramHeadroomExceeded);
+        }
+
+        // Gate 2: Differential privacy bound (ε <= 1.0 -> dp_epsilon_q8 <= 256)
+        if spec.dp_epsilon_q8 > MAX_DP_EPSILON_Q8 {
+            return Err(MultiGateVerifyError::DifferentialPrivacyBudgetExceeded);
+        }
+
+        // Gate 3: Enclave cryptographic attestation
+        if !spec.attested {
+            return Err(MultiGateVerifyError::AttestationFailed);
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -751,4 +835,34 @@ mod tests {
         let nonzero = buf.data.iter().filter(|&&v| v != 0.0).count();
         assert!(nonzero <= 3); // Approximately top 40%
     }
+
+    /// Verification of REQ-RCD-017: Neuro-Symbolic Multi-Gate Federated Verification.
+    #[test]
+    fn test_req_rcd_017_federated_multigate_verification() {
+        // 1. Compliant node passes all 3 gates
+        let compliant = FederatedNodeIngressSpec::new(101, 6000, 8192, 200, true);
+        assert_eq!(KernelMultiGateVerifier::verify_node(&compliant), Ok(()));
+
+        // 2. Gate 1 failure: VRAM headroom violated (> 92%)
+        let vram_fail = FederatedNodeIngressSpec::new(102, 7800, 8192, 200, true);
+        assert_eq!(
+            KernelMultiGateVerifier::verify_node(&vram_fail),
+            Err(MultiGateVerifyError::VramHeadroomExceeded)
+        );
+
+        // 3. Gate 2 failure: DP privacy budget exceeded (ε > 1.0)
+        let dp_fail = FederatedNodeIngressSpec::new(103, 6000, 8192, 350, true);
+        assert_eq!(
+            KernelMultiGateVerifier::verify_node(&dp_fail),
+            Err(MultiGateVerifyError::DifferentialPrivacyBudgetExceeded)
+        );
+
+        // 4. Gate 3 failure: Attestation invalid
+        let unauth = FederatedNodeIngressSpec::new(104, 6000, 8192, 200, false);
+        assert_eq!(
+            KernelMultiGateVerifier::verify_node(&unauth),
+            Err(MultiGateVerifyError::AttestationFailed)
+        );
+    }
 }
+

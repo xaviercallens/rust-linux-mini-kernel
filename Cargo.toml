@@ -192,10 +192,13 @@ members = [
     "crates/turbo_quant",
     "crates/ai_bridge",
     "crates/federated",
+    "crates/ebpf_firewall",
+    "crates/ai_detector",
+    "crates/immutable_logs",
 ]
 
 [workspace.package]
-version = "9.4.0"
+version = "10.7.0"
 edition = "2021"
 authors = ["Linux Kernel Contributors", "Socrate AI"]
 license = "GPL-2.0"

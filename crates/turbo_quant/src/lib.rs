@@ -610,4 +610,133 @@ mod tests {
         // Empty cache should return 0 ratio
         assert_eq!(cache.compression_ratio(), 0.0);
     }
+
+    /// Verification of REQ-RCD-019: TurboQuant KV-Cache Zero-Leak Bounds & Zeroization.
+    #[test]
+    fn test_req_rcd_019_turboquant_kv_cache_bounds_and_zeroize() {
+        let mut cache = SafeKvCache::new(64);
+        assert_eq!(cache.capacity(), 64);
+        assert_eq!(cache.active_blocks(), 0);
+        assert!(cache.is_zeroized());
+
+        // 1. Valid allocation within bounds succeeds
+        assert_eq!(cache.allocate_blocks(32), Ok(()));
+        assert_eq!(cache.active_blocks(), 32);
+
+        // 2. Allocation exceeding capacity is rejected
+        assert_eq!(cache.allocate_blocks(40), Err(KvCacheError::CapacityExceeded));
+        assert_eq!(cache.active_blocks(), 32);
+
+        // 3. Write non-zero data
+        let sample_data = [0x5A; 128];
+        cache.write_bytes(&sample_data);
+        assert!(!cache.is_zeroized());
+
+        // 4. Manual or drop zeroization restores clean state
+        cache.zeroize();
+        assert_eq!(cache.active_blocks(), 0);
+        assert!(cache.is_zeroized());
+    }
 }
+
+// ---------------------------------------------------------------------------
+// REQ-RCD-019: TurboQuant KV-Cache Zero-Leak Memory Bounds & RAII Zeroization
+// ---------------------------------------------------------------------------
+
+/// Maximum number of KV-cache blocks that `SafeKvCache` will honour (REQ-RCD-019).
+pub const MAX_SAFE_KV_BLOCKS: usize = 128;
+
+/// Size in bytes of each KV-cache block (REQ-RCD-019).
+pub const KV_BLOCK_SIZE_BYTES: usize = 256;
+
+/// Error returned when a KV-cache allocation exceeds the capacity bound (REQ-RCD-019).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KvCacheError {
+    /// Requested block count would exceed the cache's capacity ceiling.
+    CapacityExceeded,
+}
+
+/// Bounded, zero-leak RAII wrapper around KV-cache memory (REQ-RCD-019).
+///
+/// Guarantees:
+/// - Active blocks never exceed the capacity set at construction (capped at `MAX_SAFE_KV_BLOCKS`).
+/// - On `drop()`, all backing memory is volatile-zeroized to prevent residual-data leaks.
+pub struct SafeKvCache {
+    capacity_blocks: usize,
+    active_blocks: usize,
+    buffer: Vec<u8>,
+}
+
+impl SafeKvCache {
+    /// Allocates a new safe KV-cache with bounded block capacity.
+    /// Capacity is silently clamped to `MAX_SAFE_KV_BLOCKS` if the argument exceeds it.
+    #[must_use]
+    pub fn new(capacity_blocks: usize) -> Self {
+        let cap = capacity_blocks.min(MAX_SAFE_KV_BLOCKS);
+        Self {
+            capacity_blocks: cap,
+            active_blocks: 0,
+            buffer: vec![0u8; cap * KV_BLOCK_SIZE_BYTES],
+        }
+    }
+
+    /// Returns the clamped capacity in blocks.
+    #[must_use]
+    pub fn capacity(&self) -> usize {
+        self.capacity_blocks
+    }
+
+    /// Returns the number of currently allocated blocks.
+    #[must_use]
+    pub fn active_blocks(&self) -> usize {
+        self.active_blocks
+    }
+
+    /// Allocates `blocks` additional KV-cache blocks, enforcing the capacity upper bound.
+    ///
+    /// # Errors
+    /// Returns `Err(KvCacheError::CapacityExceeded)` if the requested count would push
+    /// `active_blocks` above `capacity_blocks`.
+    pub fn allocate_blocks(&mut self, blocks: usize) -> Result<(), KvCacheError> {
+        let new_total = self.active_blocks.saturating_add(blocks);
+        if new_total > self.capacity_blocks {
+            return Err(KvCacheError::CapacityExceeded);
+        }
+        self.active_blocks = new_total;
+        Ok(())
+    }
+
+    /// Volatile-zeroizes all backing memory and resets the block counter to zero.
+    ///
+    /// Uses `core::ptr::write_volatile` to prevent the compiler from eliding the zeroing
+    /// as a dead-store optimization (critical for security-sensitive memory wipes).
+    pub fn zeroize(&mut self) {
+        for byte in self.buffer.iter_mut() {
+            // SAFETY: `byte` is a valid reference to a byte in our own allocation.
+            // `write_volatile` prevents dead-store elimination of this security-critical wipe.
+            unsafe {
+                core::ptr::write_volatile(byte, 0);
+            }
+        }
+        self.active_blocks = 0;
+    }
+
+    /// Writes raw bytes into the backing buffer (for testing).
+    pub fn write_bytes(&mut self, data: &[u8]) {
+        let len = data.len().min(self.buffer.len());
+        self.buffer[..len].copy_from_slice(&data[..len]);
+    }
+
+    /// Returns `true` if every byte in the backing buffer is zero.
+    #[must_use]
+    pub fn is_zeroized(&self) -> bool {
+        self.buffer.iter().all(|&b| b == 0)
+    }
+}
+
+impl Drop for SafeKvCache {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+

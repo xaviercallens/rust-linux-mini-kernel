@@ -27,6 +27,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ai_detector"
+version = "0.1.0"
+dependencies = [
+ "ai_bridge",
+ "ai_runtime",
+ "ebpf_firewall",
+ "immutable_logs",
+ "kernel_types",
+ "rvv_simd",
+]
+
+[[package]]
 name = "ai_runtime"
 version = "0.1.0"
 
@@ -148,6 +160,7 @@ version = "0.4.0"
 dependencies = [
  "kernel_types",
  "libc",
+ "syscall_table",
 ]
 
 [[package]]
@@ -473,6 +486,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ebpf_firewall"
+version = "0.1.0"
+dependencies = [
+ "ai_bridge",
+ "kernel_types",
+]
+
+[[package]]
 name = "edge_inference_demo"
 version = "0.1.0"
 dependencies = [
@@ -743,6 +764,14 @@ version = "9.4.0"
 dependencies = [
  "kernel_types",
  "libc",
+]
+
+[[package]]
+name = "immutable_logs"
+version = "0.1.0"
+dependencies = [
+ "ebpf_firewall",
+ "kernel_types",
 ]
 
 [[package]]
@@ -2167,6 +2196,9 @@ dependencies = [
 name = "syscall_table"
 version = "0.4.0"
 dependencies = [
+ "ai_detector",
+ "ebpf_firewall",
+ "immutable_logs",
  "kernel_types",
  "libc",
 ]

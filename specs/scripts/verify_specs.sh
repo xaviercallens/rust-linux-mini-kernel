@@ -112,6 +112,7 @@ MODULES=(
     "MVK/Phase4/IPv4IPv6/AfInet.lean"
     "MVK/Phase4/IPv4IPv6/AfInet6.lean"
     "MVK/Phase4/Routing/FibSemantics.lean"
+    "MVK/RunuxDefenses.lean"
 )
 
 PASSED=0

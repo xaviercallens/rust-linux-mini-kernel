@@ -211,7 +211,7 @@ pub unsafe extern "C" fn nf_unregister_net_hook(
 unsafe extern "C" fn __nf_hook_entries_free(h: *mut c_void) {
     let offset = core::mem::offset_of!(nf_hook_entries_rcu_head, head);
     let head = (h as *mut u8).sub(offset) as *mut nf_hook_entries_rcu_head;
-    libc::free((*head).allocation);
+    let _ = (*head).allocation;
 }
 
 #[allow(dead_code)]

@@ -298,13 +298,17 @@ pub unsafe extern "C" fn rhltable_destroy(_table: *mut rhltable) {
 #[no_mangle]
 pub unsafe extern "C" fn alloc(size: usize) -> *mut c_void {
     // Placeholder for kernel memory allocation
-    libc::malloc(size)
+    static mut IP6MR_BUF: [u8; 4096] = [0; 4096];
+    if size <= 4096 {
+        core::ptr::addr_of_mut!(IP6MR_BUF).cast()
+    } else {
+        core::ptr::null_mut()
+    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free(ptr: *mut c_void) {
+pub unsafe extern "C" fn free(_ptr: *mut c_void) {
     // Placeholder for kernel memory free
-    libc::free(ptr);
 }
 
 // Constants
