@@ -20,6 +20,7 @@ specs/lean4/build_*.log
 .DS_Store
 *.swp
 *.swo
+*.code-workspace
 cargo_warnings.txt
 clippy_remaining.txt
 

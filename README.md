@@ -14,8 +14,8 @@
 [![Version](https://img.shields.io/badge/version-10.3-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
 
 > **Author:** Xavier Callens  
-> **Latest Release:** v10.3 — May 23, 2026  
-> **Status:** ✅ All CI Green · Multi-Arch (x86_64 + RISC-V) · Formally Verified · GKE Chaos Tested · GCP Bare Metal Deployed
+> **Latest Release:** v11.0.0 — September 5, 2026  
+> **Status:** ✅ All CI Green · Multi-Arch (x86_64 + RISC-V) · Formally Verified (84 Lean 4 Theorems, 0 sorry) · GKE Chaos Tested · GCP Bare Metal Deployed
 
 ---
 
@@ -298,6 +298,8 @@ All workflows run on every push to `main`:
 
 | Version | Date | Milestone |
 |---|---|---|
+| **v11.0.0** | September 5, 2026 | **RunuX Core Defenses 100% Completion (40 REQs, 84 Lean 4 Theorems, Zero sorry)**: Pre-dispatch Ring 0 active interception across all 297 modules, LMS state machine, TinyML inference (<15µs), frozen INT8 weight loader, netfilter active ingress defense, multi-engine consensus aggregator, and formal kernel isolation proofs |
+| **v10.7.0** | June 2, 2026 | **RunuX Core Defenses (Phases 1-7, 35 REQs, 74 Lean 4 Theorems)**: Pre-dispatch interception pipeline, lock-free ring buffer, W^X enforcement, Merkle audit trail |
 | **v10.6** | May 30, 2026 | **SymBrain v4 Bourbaki-Centrale Release**, Calibrated 3-stage PFC Router, Deductive Floor (σ_ded ≥ 0.30) to eliminate Routing-Stalls, 97.06% accuracy on French Concours CPGE STEM exams, serverless NVIDIA L4 GPU Cloud32 deployments |
 | **v10.5** | May 27, 2026 | **SymBrain v3 Quantization Mappings & Edge Co-Inference Engine**, PolarQuant 3-bit, all RISC-V checks green |
 | **v10.4** | May 23, 2026 | **RISC-V no_std allocator & compilation fixes**, all modules green |

@@ -306,22 +306,49 @@ gantt
 * **Invariant**: Enforces real-time cycle deadlines on defense filter evaluations. Exceeding budgets triggers deterministic fail-safe degradation (`RetryRollback`) without kernel panic, preventing denial-of-service.
 * **Lean 4 Proofs**: `watchdog_deadline_monotonic`, `watchdog_timeout_triggers_failsafe`.
 
+### Sprint 9: Unified System Call Dispatch, AI Weights, Netfilter & Full Kernel Isolation (Phase 8)
+
+#### 9.1 `REQ-RCD-036`: Unified System Call Table Dispatcher with Defense Guard
+* **Role**: Pre-dispatch guarded table dispatcher `SyscallDispatchTable` and `dispatch_syscall_guarded` in `crates/syscall_table` and `crates/sys_*`.
+* **Invariant**: Routes authorized system calls directly to module handlers while intercepting and short-circuiting malicious calls prior to handler dispatch with negative errno (-EPERM, -EACCES).
+* **Lean 4 Proofs**: `sys_dispatch_hook_soundness`, `sys_dispatch_denied_aborts_execution`.
+
+#### 9.2 `REQ-RCD-037`: Edge AI Runtime Statically Compiled Model Weight Adapter
+* **Role**: Static weight loader `DefenseModelLoader` in `crates/ai_runtime`.
+* **Invariant**: Provides embedded INT8 quantized model weights in immutable `.rodata`, verified via constant-time SHA-256/BLAKE3 digest verification without heap allocation.
+* **Lean 4 Proofs**: `frozen_weights_rodata_immutable`, `model_loader_checksum_verified`.
+
+#### 9.3 `REQ-RCD-038`: Netfilter Active Ingress Packet Defense Hook
+* **Role**: Ring 0 packet filtering hook `runux_netfilter_ingress_check` in `crates/netfilter` and `crates/ebpf_firewall`.
+* **Invariant**: Intercepts packets at network ingress prior to routing, dropping abnormal TCP flag scans (Null, Xmas, SYN-FIN, SYN-RST) and high-entropy exploit payloads.
+* **Lean 4 Proofs**: `netfilter_packet_ingress_defense_soundness`, `netfilter_benign_packet_forwarded`.
+
+#### 9.4 `REQ-RCD-039`: Multi-Engine Consensus Verdict Aggregator
+* **Role**: Consensus aggregator `ConsensusVerdictAggregator` and `ConsensusDecision` in `crates/ebpf_firewall`.
+* **Invariant**: Enforces pessimistic security dominance where `Verdict::BlockKill` unconditionally absorbs all other verdicts, computing bounded Q8 fixed-point confidence scores.
+* **Lean 4 Proofs**: `consensus_verdict_pessimistic_dominance`, `confidence_score_bounded`.
+
+#### 9.5 `REQ-RCD-040`: Complete End-to-End Kernel Isolation Guarantee & Full Stack Attestation
+* **Role**: End-to-end formal mathematical closure in `specs/lean4/MVK/RunuxDefenses.lean` and `crates/immutable_logs`.
+* **Invariant**: Proves that suspect (trust rank = 0) or quarantined processes can never execute kernel code, guaranteeing complete Ring 0 kernel isolation with immutable Merkle audit logging.
+* **Lean 4 Proofs**: `runux_core_defense_complete_isolation`, `full_defense_pipeline_soundness`.
+
 ---
 
-## 9. Verification Commands
+## 10. Verification Commands
 
 ```bash
-# 1. Unified Automated Quality Gate & Traceability Matrix (All 35 Requirements)
+# 1. Unified Automated Quality Gate & Traceability Matrix (All 40 Requirements)
 python3 scripts/workflow.py --all
 
 # 2. Multi-Target Compilation Check (Native x86_64 + Embedded RISC-V)
 CARGO_TARGET_DIR="/tmp/runux_target" cargo check --workspace --quiet
-CARGO_TARGET_DIR="/tmp/runux_target" cargo check --workspace --target riscv64gc-unknown-none-elf --quiet
+CARGO_TARGET_DIR="/tmp/runux_target" cargo check --workspace --lib --target riscv64gc-unknown-none-elf --quiet
 
-# 3. Defense Crates Unit Tests (All 68 Tests across 8 Defense Crates)
-CARGO_TARGET_DIR="/tmp/runux_target" cargo test -p ai_bridge -p ebpf_firewall -p ai_detector -p immutable_logs -p syscall_table -p arch_syscall -p turbo_quant -p federated
+# 3. Defense Crates Unit Tests (All 73 Tests across 10 Defense Crates)
+CARGO_TARGET_DIR="/tmp/runux_target" cargo test -p ai_bridge -p ebpf_firewall -p ai_detector -p immutable_logs -p syscall_table -p arch_syscall -p turbo_quant -p federated -p ai_runtime -p netfilter
 
-# 4. Lean 4 Formal Proof Verification (74 Theorems, 0 sorry, 0 axioms in RunuxDefenses.lean)
+# 4. Lean 4 Formal Proof Verification (84 Theorems, 0 sorry, 0 axioms in RunuxDefenses.lean)
 ./specs/scripts/verify_specs.sh
 
 # 5. Core Defenses Microbenchmark & Latency SLA (< 2.00 µs)

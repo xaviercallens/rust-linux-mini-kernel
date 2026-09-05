@@ -1,16 +1,16 @@
 # MVK v9.3.1 Proof Status Report
 
-**Generated:** sam. 05 sept. 2026 19:46:55 CEST
+**Generated:** sam. 05 sept. 2026 21:16:41 CEST
 **Lean Version:** Lean (version 4.29.1, x86_64-unknown-linux-gnu, commit f72c35b3f637c8c6571d353742168ab66cc22c00, Release)
 
 ## Summary
 
-- **Total Theorems:** 390
+- **Total Theorems:** 400
 - **Total Axioms:** 127
-- **Total Obligations:** 517
-- **Completed Proofs:** 143
+- **Total Obligations:** 527
+- **Completed Proofs:** 153
 - **Incomplete (sorry):** 247
-- **Completion:** 27%
+- **Completion:** 29%
 
 ## Module Breakdown
 
@@ -35,7 +35,7 @@
 | AfInet | 13 | 12 | 13 | ⏳ In Progress |
 | AfInet6 | 17 | 9 | 22 | ⏳ In Progress |
 | FibSemantics | 12 | 13 | 10 | ⏳ In Progress |
-| RunuxDefenses | 74 | 0 | 0 | ✅ Complete |
+| RunuxDefenses | 84 | 0 | 0 | ✅ Complete |
 
 ## Next Steps
 

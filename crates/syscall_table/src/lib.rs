@@ -172,6 +172,115 @@ pub unsafe extern "C" fn runux_intercept_syscall(
     result.status as c_int
 }
 
+// ---------------------------------------------------------------------------
+// REQ-RCD-036: Unified System Call Table Dispatcher with Defense Guard
+// ---------------------------------------------------------------------------
+
+/// Maximum number of system call numbers supported in the kernel dispatch table (REQ-RCD-036).
+pub const MAX_SYSCALL_HANDLERS: usize = 512;
+
+/// Standard kernel system call handler function pointer signature.
+pub type SyscallHandler = fn(pid: u32, args: [u64; 6], ip: u64) -> i32;
+
+/// System call table entry mapping a system call number to its handler and human-readable name.
+#[derive(Clone, Copy)]
+pub struct SyscallDispatchEntry {
+    pub nr: u32,
+    pub handler: Option<SyscallHandler>,
+    pub name: &'static str,
+}
+
+impl SyscallDispatchEntry {
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self {
+            nr: 0,
+            handler: None,
+            name: "sys_unknown",
+        }
+    }
+
+    #[must_use]
+    pub const fn new(nr: u32, handler: SyscallHandler, name: &'static str) -> Self {
+        Self {
+            nr,
+            handler: Some(handler),
+            name,
+        }
+    }
+}
+
+/// Static, zero-allocation dispatch table mapping system call numbers to kernel handlers (REQ-RCD-036).
+pub struct SyscallDispatchTable<const MAX: usize = MAX_SYSCALL_HANDLERS> {
+    pub entries: [SyscallDispatchEntry; MAX],
+}
+
+impl SyscallDispatchTable<MAX_SYSCALL_HANDLERS> {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            entries: [SyscallDispatchEntry::empty(); MAX_SYSCALL_HANDLERS],
+        }
+    }
+}
+
+impl<const MAX: usize> SyscallDispatchTable<MAX> {
+    #[must_use]
+    pub const fn with_capacity() -> Self {
+        Self {
+            entries: [SyscallDispatchEntry::empty(); MAX],
+        }
+    }
+
+    /// Registers a handler for a given system call number.
+    pub fn register(&mut self, nr: u32, handler: SyscallHandler, name: &'static str) -> bool {
+        let idx = nr as usize;
+        if idx < MAX {
+            self.entries[idx] = SyscallDispatchEntry::new(nr, handler, name);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Dispatches an incoming system call through the RunuX Core Defenses guard (REQ-RCD-036).
+    ///
+    /// Evaluates `runux_pre_dispatch_pipeline` first.
+    /// If `PreDispatchStatus::Allowed`, invokes the registered handler.
+    /// If denied or rollback, short-circuits execution and returns the negative errno without
+    /// invoking the underlying handler.
+    pub fn dispatch_guarded(
+        &self,
+        pid: u32,
+        nr: u32,
+        args: [u64; 6],
+        ip: u64,
+    ) -> i32 {
+        let pre_res = runux_pre_dispatch_pipeline(pid, nr, args, ip);
+        match pre_res.status {
+            PreDispatchStatus::Allowed => {
+                let idx = nr as usize;
+                if idx < MAX {
+                    if let Some(handler) = self.entries[idx].handler {
+                        handler(pid, args, ip)
+                    } else {
+                        -38 // -ENOSYS: Function not implemented
+                    }
+                } else {
+                    -38
+                }
+            }
+            status => status as i32,
+        }
+    }
+}
+
+impl Default for SyscallDispatchTable<MAX_SYSCALL_HANDLERS> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,7 +289,7 @@ mod tests {
     #[test]
     fn test_quarantined_syscall_interception() {
         let pid = 9999;
-        PROCESS_QUARANTINE.reset();
+        let _ = PROCESS_QUARANTINE.lift_quarantine(pid, true);
         assert!(quarantine_pid(pid));
 
         unsafe {
@@ -200,7 +309,6 @@ mod tests {
     #[test]
     fn test_req_rcd_023_pre_dispatch_short_circuit_and_quarantine() {
         let pid = 7777;
-        PROCESS_QUARANTINE.reset();
         let _ = PROCESS_QUARANTINE.lift_quarantine(pid, true);
 
         // 1. Attack syscall: W^X violation via mprotect(PROT_WRITE | PROT_EXEC)
@@ -253,4 +361,36 @@ mod tests {
         assert_eq!(res_timeout.final_verdict, Verdict::Rollback);
         assert!(res_timeout.audit_logged);
     }
+
+    /// Verification of REQ-RCD-036: Unified System Call Table Dispatcher with Defense Guard.
+    #[test]
+    fn test_req_rcd_036_syscall_dispatch_table_guarded() {
+        let mut table = SyscallDispatchTable::new();
+
+        fn mock_sys_write(_pid: u32, args: [u64; 6], _ip: u64) -> i32 {
+            args[2] as i32 // return bytes written
+        }
+
+        fn mock_sys_mprotect(_pid: u32, _args: [u64; 6], _ip: u64) -> i32 {
+            0
+        }
+
+        assert!(table.register(1, mock_sys_write, "sys_write"));
+        assert!(table.register(SYS_MPROTECT, mock_sys_mprotect, "sys_mprotect"));
+
+        // 1. Benign sys_write call passes guard and executes handler
+        let benign_args = [1, 0x7fff_0000, 42, 0, 0, 0];
+        let res_write = table.dispatch_guarded(1234, 1, benign_args, 0x400_000);
+        assert_eq!(res_write, 42, "Registered handler must be invoked on benign call");
+
+        // 2. Malicious W^X violation via mprotect is intercepted by pre-dispatch guard
+        let attack_args = [0x1000_0000, 4096, PROT_WRITE | PROT_EXEC, 0, 0, 0];
+        let res_attack = table.dispatch_guarded(1234, SYS_MPROTECT, attack_args, 0x400_000);
+        assert_eq!(res_attack, PreDispatchStatus::DeniedEperm as i32, "Guard must abort execution without invoking handler");
+
+        // 3. Unimplemented syscall returns -ENOSYS (-38)
+        let res_enosys = table.dispatch_guarded(1234, 999, [0; 6], 0x400_000);
+        assert_eq!(res_enosys, -38);
+    }
 }
+

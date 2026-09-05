@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 kernel_types = { path = "../kernel_types" }
+syscall_table = { path = "../syscall_table" }
 libc = "0.2"
 
 [lib]
