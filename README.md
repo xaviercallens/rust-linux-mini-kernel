@@ -298,6 +298,7 @@ All workflows run on every push to `main`:
 
 | Version | Date | Milestone |
 |---|---|---|
+| **v11.0.1** | September 5, 2026 | **Formal Verification Reports Update**: Updated the Lean 4 Proof Status report and the Core Defenses traceability matrix post-validation. |
 | **v11.0.0** | September 5, 2026 | **RunuX Core Defenses 100% Completion (40 REQs, 84 Lean 4 Theorems, Zero sorry)**: Pre-dispatch Ring 0 active interception across all 297 modules, LMS state machine, TinyML inference (<15µs), frozen INT8 weight loader, netfilter active ingress defense, multi-engine consensus aggregator, and formal kernel isolation proofs |
 | **v10.7.0** | June 2, 2026 | **RunuX Core Defenses (Phases 1-7, 35 REQs, 74 Lean 4 Theorems)**: Pre-dispatch interception pipeline, lock-free ring buffer, W^X enforcement, Merkle audit trail |
 | **v10.6** | May 30, 2026 | **SymBrain v4 Bourbaki-Centrale Release**, Calibrated 3-stage PFC Router, Deductive Floor (σ_ded ≥ 0.30) to eliminate Routing-Stalls, 97.06% accuracy on French Concours CPGE STEM exams, serverless NVIDIA L4 GPU Cloud32 deployments |
@@ -320,12 +321,12 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed notes.
 
 ## Roadmap
 
-- **v10.5 (Next):** RISC-V hardware validation
+- **v11.5 (Next):** RISC-V hardware validation
   - Phase 1: QEMU `riscv64 virt` boot harness ✅ (CI ready)
   - Phase 2: Milk-V Duo S embedded IoT boot (~$20)
   - Phase 3: StarFive VisionFive 2 Lite desktop-class benchmarks (~$45)
   - Phase 4: SpacemiT K1 (BPI-F3) 8-core SMP + NVMe validation (~$120)
-- **v11.0 (Planned):** RISC-V CHERI hardware-enforced memory safety
+- **v12.0 (Planned):** RISC-V CHERI hardware-enforced memory safety
   - Triple safety: Rust ownership + Lean 4 proofs + CHERI capabilities
   - Ring 3 user-space driver environment
   - Real hardware validation on RISC-V and additional cloud providers
@@ -343,6 +344,8 @@ This project owes its existence to **Linus Torvalds** and the Linux kernel commu
 | Document | Description |
 |---|---|
 | [docs/SYMBRAIN_V4.md](docs/SYMBRAIN_V4.md) | **SymBrain v4 Specifications & Architecture Design Document** |
+| [docs/ROADMAP_TRACEABILITY_MATRIX.md](docs/ROADMAP_TRACEABILITY_MATRIX.md) | Core Defenses requirements traceability matrix |
+| [specs/PROOF_STATUS_REPORT.md](specs/PROOF_STATUS_REPORT.md) | Lean 4 formal verification theorem status report |
 | [paper/REPRODUCIBILITY.md](paper/REPRODUCIBILITY.md) | Scientific reproducibility guide (9 steps) |
 | [ROADMAP.md](ROADMAP.md) | Overall project roadmap |
 | [PERFECT_100_PERCENT_REPORT.md](PERFECT_100_PERCENT_REPORT.md) | Achievement report and fix patterns |
