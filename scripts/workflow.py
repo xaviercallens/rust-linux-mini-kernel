@@ -318,6 +318,46 @@ REQUIREMENTS = [
         "test_target": "tests::test_req_rcd_035_defense_watchdog_realtime_deadline, tests::test_req_rcd_035_pre_dispatch_watchdog_deadline",
         "description": "Monitors defense execution deadlines in real time, triggering fail-safe rollback upon timeout to prevent kernel denial-of-service.",
     },
+    {
+        "id": "REQ-RCD-036",
+        "title": "Unified System Call Table Dispatcher with Defense Guard",
+        "crate": "crates/syscall_table, crates/sys_*",
+        "lean_theorem": "sys_dispatch_hook_soundness, sys_dispatch_denied_aborts_execution",
+        "test_target": "tests::test_req_rcd_036_syscall_dispatch_table_guarded",
+        "description": "Pre-dispatch guarded system call table routing authorized calls to module handlers while immediately aborting denied calls.",
+    },
+    {
+        "id": "REQ-RCD-037",
+        "title": "Edge AI Runtime Statically Compiled Model Weight Adapter",
+        "crate": "crates/ai_runtime, crates/ai_detector",
+        "lean_theorem": "frozen_weights_rodata_immutable, model_loader_checksum_verified",
+        "test_target": "tests::test_req_rcd_037_defense_model_loader",
+        "description": "Static .rodata weight loader providing zero-copy slice descriptors and constant-time SHA-256/BLAKE3 digest verification.",
+    },
+    {
+        "id": "REQ-RCD-038",
+        "title": "Netfilter Active Ingress Packet Defense Hook",
+        "crate": "crates/netfilter, crates/ebpf_firewall",
+        "lean_theorem": "netfilter_packet_ingress_defense_soundness, netfilter_benign_packet_forwarded",
+        "test_target": "tests::test_req_rcd_038_netfilter_ingress_defense",
+        "description": "Active Ring 0 packet filter intercepting network ingress in IPv6 routing paths, dropping stealth scans and high-entropy exploits.",
+    },
+    {
+        "id": "REQ-RCD-039",
+        "title": "Multi-Engine Consensus Verdict Aggregator",
+        "crate": "crates/ebpf_firewall",
+        "lean_theorem": "consensus_verdict_pessimistic_dominance, confidence_score_bounded",
+        "test_target": "tests::test_req_rcd_039_consensus_verdict_aggregator",
+        "description": "Consensus aggregator enforcing pessimistic dominance where BlockKill absorbs all other verdicts, with fixed-point Q8 confidence scoring.",
+    },
+    {
+        "id": "REQ-RCD-040",
+        "title": "Complete End-to-End Kernel Isolation Guarantee & Full Stack Attestation",
+        "crate": "specs/lean4, crates/immutable_logs",
+        "lean_theorem": "runux_core_defense_complete_isolation, full_defense_pipeline_soundness",
+        "test_target": "verify_specs.sh (84 theorems, 0 sorry, 0 axioms)",
+        "description": "End-to-end mathematical closure and full stack attestation proving that suspect or quarantined processes can never execute kernel code.",
+    },
 ]
 
 def run_cmd(cmd: List[str], cwd: str = ROOT_DIR, env: dict = None) -> Tuple[int, str, str]:
@@ -386,7 +426,18 @@ def verify_lean_specs() -> bool:
 def verify_cargo_tests() -> bool:
     print(f"\n{BOLD}{CYAN}=== Gate 2: Defense Crates Rust Unit Tests ==={RESET}")
     target_dir = "/tmp/runux_target"
-    crates = ["ai_bridge", "ebpf_firewall", "ai_detector", "immutable_logs", "syscall_table", "arch_syscall", "turbo_quant", "federated"]
+    crates = [
+        "ai_bridge",
+        "ebpf_firewall",
+        "ai_detector",
+        "immutable_logs",
+        "syscall_table",
+        "arch_syscall",
+        "turbo_quant",
+        "federated",
+        "ai_runtime",
+        "netfilter",
+    ]
     cmd = ["cargo", "test"]
     for c in crates:
         cmd.extend(["-p", c])

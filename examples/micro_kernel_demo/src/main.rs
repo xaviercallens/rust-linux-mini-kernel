@@ -1,4 +1,6 @@
 #![allow(clippy::all, clippy::pedantic)]
+extern crate std;
+use std::println;
 use kernel_types::*;
 
 /// Helper to safely initialize an IPv6 address from a 16-byte array

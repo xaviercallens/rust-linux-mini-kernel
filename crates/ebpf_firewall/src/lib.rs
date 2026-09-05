@@ -974,6 +974,93 @@ impl DefenseWatchdog {
     }
 }
 
+// ---------------------------------------------------------------------------
+// REQ-RCD-039: Multi-Engine Consensus Verdict Aggregator
+// ---------------------------------------------------------------------------
+
+/// Multi-engine security consensus decision (REQ-RCD-039).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ConsensusDecision {
+    /// Consolidated verdict enforcing pessimistic dominance.
+    pub final_verdict: Verdict,
+    /// Individual verdict emitted by eBPF LMS firewall.
+    pub ebpf_verdict: Verdict,
+    /// Individual verdict emitted by TinyML neural detector.
+    pub tinyml_verdict: Verdict,
+    /// Individual verdict emitted by stateful network conntrack.
+    pub conntrack_verdict: Verdict,
+    /// Fixed-point confidence score in Q8 format (0..=256, where 256 represents 100% engine agreement).
+    pub confidence_q8: u16,
+}
+
+impl ConsensusDecision {
+    /// Returns true if all three security engines reached unanimous agreement.
+    #[must_use]
+    pub const fn is_unanimous(&self) -> bool {
+        self.confidence_q8 == 256
+    }
+
+    /// Returns true if the final aggregated verdict blocks or kills execution.
+    #[must_use]
+    pub const fn is_blocked(&self) -> bool {
+        matches!(self.final_verdict, Verdict::BlockKill)
+    }
+}
+
+/// Multi-Engine Consensus Verdict Aggregator (REQ-RCD-039).
+/// Resolves disparate security verdicts across the eBPF LMS firewall, TinyML classifier,
+/// and stateful network connection tracker using pessimistic security dominance.
+pub struct ConsensusVerdictAggregator;
+
+impl ConsensusVerdictAggregator {
+    /// Aggregates three independent verdicts into a consolidated `ConsensusDecision`.
+    ///
+    /// Pessimistic dominance guarantees that if any engine emits `Verdict::BlockKill`,
+    /// the final decision unconditionally absorbs and emits `Verdict::BlockKill`.
+    #[must_use]
+    pub const fn aggregate(
+        ebpf: Verdict,
+        tinyml: Verdict,
+        conntrack: Verdict,
+    ) -> ConsensusDecision {
+        let interim = merge_verdict(ebpf, tinyml);
+        let final_verdict = merge_verdict(interim, conntrack);
+
+        // Compute engine agreement matches: each engine matching final_verdict adds 1.
+        let mut matches: u16 = 0;
+        if verdict_priority(ebpf) == verdict_priority(final_verdict) {
+            matches += 1;
+        }
+        if verdict_priority(tinyml) == verdict_priority(final_verdict) {
+            matches += 1;
+        }
+        if verdict_priority(conntrack) == verdict_priority(final_verdict) {
+            matches += 1;
+        }
+
+        // Fixed-point Q8 confidence:
+        // 3 matches => 256 (100%)
+        // 2 matches => 170 (66.4%)
+        // 1 match   => 85  (33.2%)
+        let confidence_q8 = if matches == 3 {
+            256
+        } else if matches == 2 {
+            170
+        } else {
+            85
+        };
+
+        ConsensusDecision {
+            final_verdict,
+            ebpf_verdict: ebpf,
+            tinyml_verdict: tinyml,
+            conntrack_verdict: conntrack,
+            confidence_q8,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1387,6 +1474,69 @@ mod tests {
         // 3. Exceeded budget trips error
         assert_eq!(watchdog.check_budget(1501), Err(WatchdogError::DeadlineExceeded));
         assert!(watchdog.is_expired(1501));
+    }
+
+    /// Verification of REQ-RCD-039: Multi-Engine Consensus Verdict Aggregator.
+    #[test]
+    fn test_req_rcd_039_consensus_verdict_aggregator() {
+        // 1. Unanimous Pass
+        let d_pass = ConsensusVerdictAggregator::aggregate(Verdict::Pass, Verdict::Pass, Verdict::Pass);
+        assert_eq!(d_pass.final_verdict, Verdict::Pass);
+        assert_eq!(d_pass.confidence_q8, 256);
+        assert!(d_pass.is_unanimous());
+        assert!(!d_pass.is_blocked());
+
+        // 2. Pessimistic Dominance: single BlockKill absorbs all other verdicts
+        let d_block1 = ConsensusVerdictAggregator::aggregate(Verdict::Pass, Verdict::BlockKill, Verdict::Pass);
+        assert_eq!(d_block1.final_verdict, Verdict::BlockKill);
+        assert_eq!(d_block1.confidence_q8, 85);
+        assert!(!d_block1.is_unanimous());
+        assert!(d_block1.is_blocked());
+
+        let d_block2 = ConsensusVerdictAggregator::aggregate(Verdict::BlockKill, Verdict::Pass, Verdict::Pass);
+        assert_eq!(d_block2.final_verdict, Verdict::BlockKill);
+        assert_eq!(d_block2.confidence_q8, 85);
+
+        let d_block3 = ConsensusVerdictAggregator::aggregate(Verdict::Pass, Verdict::Pass, Verdict::BlockKill);
+        assert_eq!(d_block3.final_verdict, Verdict::BlockKill);
+        assert_eq!(d_block3.confidence_q8, 85);
+
+        // 3. 2-engine agreement on BlockKill
+        let d_2block = ConsensusVerdictAggregator::aggregate(Verdict::BlockKill, Verdict::Pass, Verdict::BlockKill);
+        assert_eq!(d_2block.final_verdict, Verdict::BlockKill);
+        assert_eq!(d_2block.confidence_q8, 170);
+        assert!(d_2block.is_blocked());
+
+        // 4. Unanimous BlockKill
+        let d_ublock = ConsensusVerdictAggregator::aggregate(Verdict::BlockKill, Verdict::BlockKill, Verdict::BlockKill);
+        assert_eq!(d_ublock.final_verdict, Verdict::BlockKill);
+        assert_eq!(d_ublock.confidence_q8, 256);
+        assert!(d_ublock.is_unanimous());
+        assert!(d_ublock.is_blocked());
+
+        // 5. Rollback dominates InspectDeep and Pass
+        let d_roll = ConsensusVerdictAggregator::aggregate(Verdict::Pass, Verdict::Rollback, Verdict::InspectDeep);
+        assert_eq!(d_roll.final_verdict, Verdict::Rollback);
+        assert_eq!(d_roll.confidence_q8, 85);
+
+        // 6. Exhaustive permutation check: bounded confidence & pessimistic dominance
+        let all_verdicts = [Verdict::Pass, Verdict::InspectDeep, Verdict::Rollback, Verdict::BlockKill];
+        for &e in &all_verdicts {
+            for &t in &all_verdicts {
+                for &c in &all_verdicts {
+                    let dec = ConsensusVerdictAggregator::aggregate(e, t, c);
+                    assert!(dec.confidence_q8 >= 85 && dec.confidence_q8 <= 256);
+                    if e == Verdict::BlockKill || t == Verdict::BlockKill || c == Verdict::BlockKill {
+                        assert_eq!(dec.final_verdict, Verdict::BlockKill);
+                        assert!(dec.is_blocked());
+                    }
+                    if e == t && t == c {
+                        assert!(dec.is_unanimous());
+                        assert_eq!(dec.confidence_q8, 256);
+                    }
+                }
+            }
+        }
     }
 }
 

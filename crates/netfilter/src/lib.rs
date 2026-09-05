@@ -503,6 +503,57 @@ pub static nf_ipv6_ops_instance: nf_ipv6_ops = nf_ipv6_ops {
     br_fragment: nf_ip6_br_fragment_stub,
 };
 
+// ---------------------------------------------------------------------------
+// REQ-RCD-038: Netfilter Active Ingress Packet Defense Hook
+// ---------------------------------------------------------------------------
+
+/// Evaluates network packet ingress against the RunuX Core Defenses eBPF firewall (REQ-RCD-038).
+///
+/// Returns 0 if permitted (`Verdict::Pass` or `Verdict::InspectDeep`),
+/// or negative error code (`-EPERM` / -1) if blocked by firewall rules
+/// (Null scan, Xmas scan, SYN-FIN scan, or polymorphic high-entropy payload).
+pub fn runux_netfilter_ingress_check(
+    src: [u8; 4],
+    dst: [u8; 4],
+    flags: u8,
+    payload: &[u8],
+) -> c_int {
+    let verdict = ebpf_firewall::evaluate_packet_ingress(src, dst, flags, payload);
+    match verdict {
+        ebpf_firewall::Verdict::Pass | ebpf_firewall::Verdict::InspectDeep => 0,
+        ebpf_firewall::Verdict::BlockKill | ebpf_firewall::Verdict::Rollback => -1,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ebpf_firewall::{TCP_FLAG_ACK, TCP_FLAG_FIN, TCP_FLAG_PSH, TCP_FLAG_SYN, TCP_FLAG_URG};
+
+    #[test]
+    fn test_req_rcd_038_netfilter_ingress_defense() {
+        let src = [192, 168, 1, 100];
+        let dst = [10, 0, 0, 1];
+
+        // 1. Benign payload with standard ACK | PSH flags passes
+        let benign_payload = b"GET /api/v1/health HTTP/1.1\r\nHost: runux\r\n\r\n";
+        let res_benign = runux_netfilter_ingress_check(src, dst, TCP_FLAG_ACK | TCP_FLAG_PSH, benign_payload);
+        assert_eq!(res_benign, 0, "Benign network packet must pass ingress inspection");
+
+        // 2. Null scan (no flags set) is blocked
+        let res_null = runux_netfilter_ingress_check(src, dst, 0, &[]);
+        assert_eq!(res_null, -1, "Null scan must be dropped with -EPERM (-1)");
+
+        // 3. SYN-FIN scan is blocked
+        let res_syn_fin = runux_netfilter_ingress_check(src, dst, TCP_FLAG_SYN | TCP_FLAG_FIN, &[]);
+        assert_eq!(res_syn_fin, -1, "SYN-FIN scan must be dropped with -EPERM (-1)");
+
+        // 4. Xmas scan (FIN | URG | PSH) is blocked
+        let res_xmas = runux_netfilter_ingress_check(src, dst, TCP_FLAG_FIN | TCP_FLAG_URG | TCP_FLAG_PSH, &[]);
+        assert_eq!(res_xmas, -1, "Xmas scan must be dropped with -EPERM (-1)");
+    }
+}
+
 // Helper functions (extern declarations)
 extern "C" {
     fn ipv6_hdr(skb: *mut c_void) -> *mut ipv6hdr;
