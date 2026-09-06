@@ -1,5 +1,5 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), no_main)]
+#![cfg_attr(target_os = "none", no_std)]
+#![cfg_attr(target_os = "none", no_main)]
 
 extern crate alloc;
 
@@ -15,10 +15,10 @@ use turbo_quant::{TurboQuantConfig, compress_kv};
 // Bare-Metal Allocator Stub
 // ---------------------------------------------------------------------------
 
-#[cfg(not(feature = "std"))]
+#[cfg(target_os = "none")]
 struct DummyAllocator;
 
-#[cfg(not(feature = "std"))]
+#[cfg(target_os = "none")]
 unsafe impl core::alloc::GlobalAlloc for DummyAllocator {
     unsafe fn alloc(&self, _layout: core::alloc::Layout) -> *mut u8 {
         core::ptr::null_mut()
@@ -26,11 +26,11 @@ unsafe impl core::alloc::GlobalAlloc for DummyAllocator {
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: core::alloc::Layout) {}
 }
 
-#[cfg(not(feature = "std"))]
+#[cfg(target_os = "none")]
 #[global_allocator]
 static ALLOCATOR: DummyAllocator = DummyAllocator;
 
-#[cfg(not(feature = "std"))]
+#[cfg(target_os = "none")]
 #[no_mangle]
 pub extern "C" fn rust_eh_personality() {}
 
@@ -59,7 +59,7 @@ impl SymBrainEdgeEngine {
 
     /// Simulate loading the GGUF weights into edge RAM.
     pub fn simulate_weights_load(&self) {
-        #[cfg(feature = "std")]
+        #[cfg(not(target_os = "none"))]
         {
             std::println!("[INFO] Memory-mapping SymBrain v3 GGUF weights into Edge RAM...");
             std::println!("  - Profile: {}", self.config.profile_name);
@@ -69,7 +69,7 @@ impl SymBrainEdgeEngine {
 
     /// Run the end-to-end forward co-inference pipeline.
     pub fn forward_co_inference(&mut self, _prompt: &str) -> String {
-        #[cfg(feature = "std")]
+        #[cfg(not(target_os = "none"))]
         {
             std::println!("\n[INFO] Initializing Forward Co-Inference Trace...");
             std::println!("  - Input Prompt: \"{}\"", _prompt);
@@ -100,7 +100,7 @@ impl SymBrainEdgeEngine {
             size,
         );
 
-        #[cfg(feature = "std")]
+        #[cfg(not(target_os = "none"))]
         {
             std::println!("[SUCCESS] Left Hemisphere (Dense Reasoning) processed candidates:");
             std::println!("  - Weight Format: {:?}", self.config.left.weight_quant);
@@ -131,7 +131,7 @@ impl SymBrainEdgeEngine {
         // Compress the keys and values generated during this sequence step
         let _compressed_kv = compress_kv(&right_activations, &right_output, &tq_config, 0);
 
-        #[cfg(feature = "std")]
+        #[cfg(not(target_os = "none"))]
         {
             std::println!("\n[SUCCESS] Right Hemisphere (Creative Formulation) cached sequence context:");
             std::println!("  - KV Quantizer format: TurboQuant 3-bit");
@@ -150,19 +150,19 @@ impl SymBrainEdgeEngine {
         // Run stable Softmax
         softmax_f32(&mut candidate_scores);
 
-        #[cfg(feature = "std")]
+        #[cfg(not(target_os = "none"))]
         {
             std::println!("\n[SUCCESS] PFC Controller WARS-CI-DFA Routing Complete:");
             std::println!("  - Coordinate Attention Probabilities: [Left Reasoning: {:.2}%, Right Creative: {:.2}%, PFC Threshold: {:.2}%]",
                      candidate_scores[0] * 100.0, candidate_scores[1] * 100.0, candidate_scores[2] * 100.0);
         }
 
-        String::from("Unified boundary layer state: Chi(x) = WeylSpinor(KerrGeodesic) - CurvatureFlow(DFA)")
+        alloc::string::String::from("Unified boundary layer state: Chi(x) = WeylSpinor(KerrGeodesic) - CurvatureFlow(DFA)")
     }
 }
 
 pub fn execute_edge_inference() {
-    #[cfg(feature = "std")]
+    #[cfg(not(target_os = "none"))]
     {
         std::println!("================================================================================");
         std::println!("         SYMBRAIN v3 SWARM BOURBAKI - EDGE CO-INFERENCE DEPLOYMENT RUNTIME");
@@ -178,7 +178,7 @@ pub fn execute_edge_inference() {
     let prompt = "Find the unified boundary layer condition for a Weyl spinor in a Kerr black hole spacetime curvature flow.";
     let _response = engine.forward_co_inference(prompt);
 
-    #[cfg(feature = "std")]
+    #[cfg(not(target_os = "none"))]
     {
         std::println!("\n[INFO] Edge Inference Decoded Output:");
         std::println!("  >> \"{}\"", _response);
@@ -187,21 +187,21 @@ pub fn execute_edge_inference() {
 }
 
 // S-mode bare-metal entry point
-#[cfg(not(feature = "std"))]
+#[cfg(target_os = "none")]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     execute_edge_inference();
     loop {}
 }
 
-#[cfg(not(feature = "std"))]
+#[cfg(target_os = "none")]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
 // Hosted OS entry point
-#[cfg(feature = "std")]
+#[cfg(not(target_os = "none"))]
 fn main() {
     execute_edge_inference();
 }

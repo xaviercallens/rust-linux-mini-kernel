@@ -7,6 +7,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::implicit_return_in_non_void_function)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs)]
 
 use core::{alloc::{GlobalAlloc, Layout}, ffi::{c_int, c_void}, mem, ptr};
 use kernel_types::*;

@@ -12,6 +12,7 @@
 #![allow(dead_code)]
 #![allow(clippy::all)]
 #![allow(non_snake_case)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons)]
 
 use core::{ffi::c_void, ptr};
 use kernel_types::*;

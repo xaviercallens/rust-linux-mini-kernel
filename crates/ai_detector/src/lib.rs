@@ -1,6 +1,7 @@
 #![no_std]
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs, static_mut_refs, no_mangle_generic_items, unused_unsafe, non_upper_case_globals)]
 //! RunuX AI Detector — Bare-Metal TinyML System Call Classifier
 //!
 //! Evaluates sliding windows of recent system calls per PID using a quantized

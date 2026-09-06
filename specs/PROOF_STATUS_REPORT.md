@@ -1,6 +1,6 @@
 # MVK v9.3.1 Proof Status Report
 
-**Generated:** sam. 05 sept. 2026 22:45:58 CEST
+**Generated:** dim. 06 sept. 2026 15:59:34 CEST
 **Lean Version:** Lean (version 4.29.1, x86_64-unknown-linux-gnu, commit f72c35b3f637c8c6571d353742168ab66cc22c00, Release)
 
 ## Summary

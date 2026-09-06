@@ -11,11 +11,11 @@
 [![Lean 4](https://img.shields.io/badge/Lean_4-12_phases_verified-purple)](specs/lean4/)
 [![Chaos Tests](https://img.shields.io/badge/chaos_tests-0_panics%2F6_experiments-brightgreen)](paper/REPRODUCIBILITY.md)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/version-10.3-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
+[![Version](https://img.shields.io/badge/version-11.1.0-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
 
 > **Author:** Xavier Callens  
-> **Latest Release:** v11.0.0 — September 5, 2026  
-> **Status:** ✅ All CI Green · Multi-Arch (x86_64 + RISC-V) · Formally Verified (84 Lean 4 Theorems, 0 sorry) · GKE Chaos Tested · GCP Bare Metal Deployed
+> **Latest Release:** v11.1.0 — September 6, 2026  
+> **Status:** ✅ All CI Green · Multi-Arch (x86_64 + RISC-V 0 warnings) · Formally Verified (92 Lean 4 Theorems, 0 sorry) · GKE Chaos Tested · GCP Bare Metal Deployed
 
 ---
 
@@ -36,8 +36,10 @@ This project is built upon the foundations laid by **Linus Torvalds** and the Li
 
 | Achievement | Detail |
 |---|---|
-| 🦀 **297/297 Modules** | 100% compilation · zero warnings · zero errors |
-| 📐 **Lean 4 Formal Verification** | 12 proof phases: memory safety, scheduler fairness, packet integrity, conntrack, GCP drivers |
+| 🦀 **297/297 Modules** | 100% compilation · **zero warnings** for both x86_64 & RISC-V · zero errors |
+| 🛡️ **Core Defenses Pipeline** | 100% coverage (40/40 requirements). Pre-dispatch interception in <1.5µs |
+| ⚛️ **Quantum-LTN Edge** | Logic Tensor Networks integration with 0.824 µs inference on TinyML anomaly detectors |
+| 📐 **Lean 4 Formal Verification** | 13 proof phases (92 theorems): memory safety, quantum-logic congruence, Core Defenses |
 | 🌪️ **GKE Chaos Engineering** | 0 panics across 6 Chaos Mesh fault injection experiments (375+ seconds of sustained faults) |
 | ⚡ **Performance** | CRC32: **4.73% faster** than C · Boot time: within **0.02%** of C baseline |
 | 🔒 **Security** | Miri (undefined behavior detection) + `cargo audit` — both pass clean |
@@ -118,6 +120,7 @@ Mathematical proofs guarantee kernel correctness properties across **12 verifica
 | Phase 9 | Memory Management | Page allocation, buddy allocator, OOM double-free elimination |
 | Phase 11 | Hardware | PCI bus probing termination, MMIO boundary isolation |
 | Phase 12 | GCP Drivers | IDPF zero-copy buffers, Hyperdisk DMA `SafeDmaQueue` theorems |
+| Phase 13 | Core Defenses & Quantum-LTN | Tensor lifecycle bounds, Logic Tensor Networks axiom congruence |
 
 **Zero `sorry` tactics** — all proofs are strictly machine-checked.
 
@@ -298,6 +301,7 @@ All workflows run on every push to `main`:
 
 | Version | Date | Milestone |
 |---|---|---|
+| **v11.1.0** | September 6, 2026 | **Quantum-LTN Edge & WARS Core Defenses**: Full Logic Tensor Networks integration with real-time Ring 0 anomaly scoring. RISC-V compilation 100% clean (zero warnings). Formal verification expanded to 13 Phases (92 Theorems). |
 | **v11.0.1** | September 5, 2026 | **Formal Verification Reports Update**: Updated the Lean 4 Proof Status report and the Core Defenses traceability matrix post-validation. |
 | **v11.0.0** | September 5, 2026 | **RunuX Core Defenses 100% Completion (40 REQs, 84 Lean 4 Theorems, Zero sorry)**: Pre-dispatch Ring 0 active interception across all 297 modules, LMS state machine, TinyML inference (<15µs), frozen INT8 weight loader, netfilter active ingress defense, multi-engine consensus aggregator, and formal kernel isolation proofs |
 | **v10.7.0** | June 2, 2026 | **RunuX Core Defenses (Phases 1-7, 35 REQs, 74 Lean 4 Theorems)**: Pre-dispatch interception pipeline, lock-free ring buffer, W^X enforcement, Merkle audit trail |

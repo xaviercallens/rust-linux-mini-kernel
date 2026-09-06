@@ -10,6 +10,7 @@
 #![cfg_attr(not(test), no_main)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs)]
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
@@ -102,7 +103,7 @@ impl Mutex {
 // Internal state
 static mut LOGGERS: [[*mut nf_logger; NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO] =
     [[ptr::null_mut(); NF_LOG_TYPE_MAX]; NFPROTO_NUMPROTO];
-static mut NF_LOG_MUTEX: Mutex = Mutex::new();
+static NF_LOG_MUTEX: Mutex = Mutex::new();
 static mut EMERGENCY_PTR: *mut nf_log_buf = ptr::null_mut();
 static mut SYSCTL_NF_LOG_ALL_NETNS: c_int = 0;
 

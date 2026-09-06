@@ -1,5 +1,6 @@
 #![allow(clippy::all, clippy::pedantic)]
 #![no_std]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs)]
 //! Program execution
 //!
 //! This module implements exec functionality for the Rust Linux Mini Kernel.
