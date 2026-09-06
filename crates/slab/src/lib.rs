@@ -2,6 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons)]
 //! SLAB allocator for kernel objects
 //!
 //! Phase 2: Memory Allocator - Object-level allocation

@@ -486,6 +486,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "drm_core"
+version = "10.7.0"
+dependencies = [
+ "gpu_types",
+]
+
+[[package]]
 name = "ebpf_firewall"
 version = "0.1.0"
 dependencies = [
@@ -727,6 +734,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpu_gds"
+version = "10.7.0"
+dependencies = [
+ "gpu_types",
+]
+
+[[package]]
+name = "gpu_ioctl"
+version = "10.7.0"
+dependencies = [
+ "drm_core",
+ "gpu_memory",
+ "gpu_types",
+]
+
+[[package]]
+name = "gpu_memory"
+version = "10.7.0"
+dependencies = [
+ "gpu_types",
+ "iommu_vtd",
+]
+
+[[package]]
+name = "gpu_scheduler"
+version = "10.7.0"
+dependencies = [
+ "gpu_types",
+]
+
+[[package]]
+name = "gpu_types"
+version = "0.1.0"
+dependencies = [
+ "kernel_types",
+]
+
+[[package]]
 name = "gre_demux"
 version = "10.7.0"
 dependencies = [
@@ -846,6 +891,14 @@ version = "0.4.0"
 dependencies = [
  "kernel_types",
  "libc",
+]
+
+[[package]]
+name = "iommu_vtd"
+version = "0.1.0"
+dependencies = [
+ "gpu_types",
+ "kernel_types",
 ]
 
 [[package]]
@@ -1705,6 +1758,16 @@ dependencies = [
  "ipv6_sockglue",
  "kernel_types",
  "udp",
+]
+
+[[package]]
+name = "quantum_ltn"
+version = "0.1.0"
+dependencies = [
+ "ai_runtime",
+ "kernel_types",
+ "sched_fair",
+ "turbo_quant",
 ]
 
 [[package]]

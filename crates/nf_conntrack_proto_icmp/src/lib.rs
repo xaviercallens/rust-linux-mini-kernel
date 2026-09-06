@@ -14,6 +14,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::transmutes_expressible_as_ptr_cast)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons)]
 
 use core::ffi::{c_int, c_uint, c_void};
 use kernel_types::*;

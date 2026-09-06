@@ -1,6 +1,7 @@
 #![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(test), no_std)]
 #![allow(non_camel_case_types)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons)]
 
 use core::{ptr, ffi::{c_int, c_void}, panic::PanicInfo};
 

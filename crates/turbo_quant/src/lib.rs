@@ -2,6 +2,7 @@
 #![cfg_attr(not(test), no_main)]
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs, static_mut_refs, no_mangle_generic_items, unused_unsafe, non_upper_case_globals, unreachable_patterns)]
 //! RunuX TurboQuant — KV-Cache compression for extended LLM context windows
 //!
 //! Implements the TurboQuant algorithm (Google, ICLR 2026) for compressing

@@ -2,6 +2,7 @@
 #![no_std]
 #![warn(clippy::pedantic)]
 #![deny(clippy::all)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons)]
 //! Signal handling
 //!
 //! This module implements signal functionality for the Rust Linux Mini Kernel.

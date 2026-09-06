@@ -6,6 +6,7 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::needless_return)]
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs, static_mut_refs, no_mangle_generic_items, unused_unsafe, non_upper_case_globals)]
 
 use core::{ptr, ffi::{c_int, c_void}};
 use kernel_types::*;

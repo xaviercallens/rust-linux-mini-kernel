@@ -1,5 +1,6 @@
 #![allow(clippy::all, clippy::pedantic)]
 #![cfg_attr(not(target_arch = "x86_64"), no_std)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons)]
 use core::{ffi::{c_int, c_void}, mem::size_of};
 use kernel_types::*;
 

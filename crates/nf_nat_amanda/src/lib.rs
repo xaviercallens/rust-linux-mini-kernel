@@ -14,6 +14,7 @@
 #![allow(private_interfaces)]
 #![allow(static_mut_refs)]
 #![allow(dead_code)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs, static_mut_refs)]
 
 use kernel_types::*;
 

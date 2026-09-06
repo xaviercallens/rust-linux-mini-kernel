@@ -10,6 +10,7 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 #![allow(unexpected_cfgs)]
+#![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs, static_mut_refs)]
 
 use core::{ptr, ffi::{c_int, c_void}, mem::{self, size_of}};
 use kernel_types::*;

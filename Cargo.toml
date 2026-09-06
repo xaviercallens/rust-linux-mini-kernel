@@ -195,6 +195,14 @@ members = [
     "crates/ebpf_firewall",
     "crates/ai_detector",
     "crates/immutable_logs",
+    "crates/gpu_types",
+    "crates/iommu_vtd",
+    "crates/gpu_memory",
+    "crates/drm_core",
+    "crates/gpu_ioctl",
+    "crates/gpu_scheduler",
+    "crates/gpu_gds",
+    "crates/quantum_ltn",
 ]
 
 [workspace.package]

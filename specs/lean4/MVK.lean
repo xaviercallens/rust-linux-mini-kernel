@@ -53,3 +53,10 @@ import MVK.Phase12.GCP_Drivers
 
 -- Runux Core Defenses: Active Defense Pipeline & Kernel Isolation
 import MVK.RunuxDefenses
+
+-- Phase 13: GPU Compute Subsystem, IOMMU DMA Containment & HMM
+import MVK.Phase13.GpuCompute
+
+-- Phase 14: Quantum LTN
+import MVK.QuantumLTN.FuzzyLogic
+import MVK.QuantumLTN.PolarQuant
