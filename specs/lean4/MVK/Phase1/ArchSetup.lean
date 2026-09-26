@@ -63,7 +63,6 @@ theorem init_idempotent (s1 s2 : ArchState) :
   arch_setup_init_spec = pure s2 →
   s1 = s2 := by
   intro h1 h2
-  -- Both calls produce identical states
   exact init_deterministic s1 s2 h1 h2
 
 -- Determinism property: Init always produces same result
