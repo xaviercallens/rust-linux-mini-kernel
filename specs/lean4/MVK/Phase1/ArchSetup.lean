@@ -103,7 +103,23 @@ theorem init_produces_valid_state (state : ArchState) :
   intro h
   unfold valid_arch_state
   intro success_eq
-  sorry -- Proof to be completed
+  -- Extract the concrete result record from the program-level equality `h` by
+  -- evaluating both sides at a witness world and case-splitting on the (opaque)
+  -- outcome of `x86_cli`. The error branch contradicts `h`; the ok branch forces
+  -- `state` to be exactly the literal record returned by `arch_setup_init_spec`,
+  -- whose `interrupts_disabled` field is `true`.
+  have hw : Void IO.RealWorld := Classical.choice inferInstance
+  have hval := congrFun h hw
+  unfold arch_setup_init_spec at hval
+  simp only [Bind.bind, Pure.pure, instMonadEIO._aux_13, instMonadEIO._aux_5, EST.bind, EST.pure] at hval
+  cases hx : x86_cli hw with
+  | ok a w' =>
+      simp only [hx] at hval
+      injection hval with e1 e2
+      rw [← e1]
+  | error e w' =>
+      simp only [hx] at hval
+      injection hval
 
 -- Contract for arch_setup_init function
 structure ArchSetupInitContract where
