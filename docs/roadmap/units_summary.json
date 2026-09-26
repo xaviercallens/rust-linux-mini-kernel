@@ -1,6 +1,10 @@
 {
-  "total": 290,
+  "git.commit": "e65392fe4f79396815fa5c137553671729c84484",
+  "total": 1292,
   "by_type": {
-    "lean_sorry": 290
+    "lean_sorry": 290,
+    "unsafe_safety": 664,
+    "static_mut": 197,
+    "placeholder_triage": 141
   }
 }

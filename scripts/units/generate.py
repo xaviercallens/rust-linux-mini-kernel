@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -201,10 +202,14 @@ def main() -> int:
             (type_dir / f"{safe_id}.json").write_text(json.dumps(u, indent=2) + "\n", encoding="utf-8")
         print(f"{t}: {len(capped)}/{len(units)} cards written to {type_dir}")
 
-    summary_path = REPO_ROOT / "docs" / "roadmap" / "units_summary.json"
-    summary_path.write_text(json.dumps({"total": total, "by_type": summary}, indent=2) + "\n", encoding="utf-8")
     print(f"\nTotal units: {total}")
-    print(f"Summary written to {summary_path}")
+    # Only a full, unfiltered run describes the whole tree; filtered/partial runs
+    # must not overwrite the committed summary.
+    if args.type == "all" and not args.file_contains and not args.limit:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True).stdout.strip()
+        summary_path = REPO_ROOT / "docs" / "roadmap" / "units_summary.json"
+        summary_path.write_text(json.dumps({"git.commit": commit, "total": total, "by_type": summary}, indent=2) + "\n", encoding="utf-8")
+        print(f"Summary written to {summary_path}")
     return 0
 
 
