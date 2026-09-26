@@ -63,8 +63,14 @@ theorem init_idempotent (s1 s2 : ArchState) :
   arch_setup_init_spec = pure s2 →
   s1 = s2 := by
   intro h1 h2
-  -- Both calls produce identical states
-  sorry -- Proof to be completed
+  -- Both calls produce identical states.
+  -- `IO ArchState` reduces to `Void IO.RealWorld → EST.Out IO.Error IO.RealWorld ArchState`,
+  -- so a world witness lets us turn the two program-level equalities into a single
+  -- equality of `EST.Out` values, whose `ok` constructor is injective.
+  have heq : (pure s1 : IO ArchState) = pure s2 := h1.symm.trans h2
+  have hw : Void IO.RealWorld := Classical.choice inferInstance
+  have hval := congrFun heq hw
+  injection hval
 
 -- Determinism property: Init always produces same result
 axiom init_deterministic :
