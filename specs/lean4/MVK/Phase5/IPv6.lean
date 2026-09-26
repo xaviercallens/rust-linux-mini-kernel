@@ -87,6 +87,7 @@ theorem do_ipv6_setsockopt_contract
   (sk : Pointer)
   (h1 : sk ≠ Null) :
   ∃ (ret : c_int), do_ipv6_setsockopt_post ret := by
-  exact ⟨0, sorry⟩
+  refine ⟨0, ?_⟩
+  simp [do_ipv6_setsockopt_post]
 
 end MVK.Phase5.IPv6
