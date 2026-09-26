@@ -238,6 +238,21 @@ theorem phase1_establishes_safety :
   -- Critical invariant: Interrupts are disabled
   state.interrupts_disabled = true := by
   intro state h
-  sorry -- Proof to be completed
+  -- Same technique as `init_produces_valid_state`: evaluate the program-level
+  -- equality `h` at a witness world, case-split on the opaque `x86_cli` outcome,
+  -- discharge the (impossible) error branch, and read off the literal result
+  -- record's `interrupts_disabled` field in the ok branch.
+  have hw : Void IO.RealWorld := Classical.choice inferInstance
+  have hval := congrFun h hw
+  unfold arch_setup_init_spec at hval
+  simp only [Bind.bind, Pure.pure, instMonadEIO._aux_13, instMonadEIO._aux_5, EST.bind, EST.pure] at hval
+  cases hx : x86_cli hw with
+  | ok a w' =>
+      simp only [hx] at hval
+      injection hval with e1 e2
+      rw [← e1]
+  | error e w' =>
+      simp only [hx] at hval
+      injection hval
 
 end MVK.Phase1.ArchSetup
