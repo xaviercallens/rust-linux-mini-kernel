@@ -63,8 +63,14 @@ theorem init_idempotent (s1 s2 : ArchState) :
   arch_setup_init_spec = pure s2 →
   s1 = s2 := by
   intro h1 h2
-  -- Both calls produce identical states
-  sorry -- Proof to be completed
+  -- Both calls produce identical states.
+  -- `IO ArchState` reduces to `Void IO.RealWorld → EST.Out IO.Error IO.RealWorld ArchState`,
+  -- so a world witness lets us turn the two program-level equalities into a single
+  -- equality of `EST.Out` values, whose `ok` constructor is injective.
+  have heq : (pure s1 : IO ArchState) = pure s2 := h1.symm.trans h2
+  have hw : Void IO.RealWorld := Classical.choice inferInstance
+  have hval := congrFun heq hw
+  injection hval
 
 -- Determinism property: Init always produces same result
 axiom init_deterministic :
@@ -97,7 +103,23 @@ theorem init_produces_valid_state (state : ArchState) :
   intro h
   unfold valid_arch_state
   intro success_eq
-  sorry -- Proof to be completed
+  -- Extract the concrete result record from the program-level equality `h` by
+  -- evaluating both sides at a witness world and case-splitting on the (opaque)
+  -- outcome of `x86_cli`. The error branch contradicts `h`; the ok branch forces
+  -- `state` to be exactly the literal record returned by `arch_setup_init_spec`,
+  -- whose `interrupts_disabled` field is `true`.
+  have hw : Void IO.RealWorld := Classical.choice inferInstance
+  have hval := congrFun h hw
+  unfold arch_setup_init_spec at hval
+  simp only [Bind.bind, Pure.pure, instMonadEIO._aux_13, instMonadEIO._aux_5, EST.bind, EST.pure] at hval
+  cases hx : x86_cli hw with
+  | ok a w' =>
+      simp only [hx] at hval
+      injection hval with e1 e2
+      rw [← e1]
+  | error e w' =>
+      simp only [hx] at hval
+      injection hval
 
 -- Contract for arch_setup_init function
 structure ArchSetupInitContract where
@@ -216,6 +238,21 @@ theorem phase1_establishes_safety :
   -- Critical invariant: Interrupts are disabled
   state.interrupts_disabled = true := by
   intro state h
-  sorry -- Proof to be completed
+  -- Same technique as `init_produces_valid_state`: evaluate the program-level
+  -- equality `h` at a witness world, case-split on the opaque `x86_cli` outcome,
+  -- discharge the (impossible) error branch, and read off the literal result
+  -- record's `interrupts_disabled` field in the ok branch.
+  have hw : Void IO.RealWorld := Classical.choice inferInstance
+  have hval := congrFun h hw
+  unfold arch_setup_init_spec at hval
+  simp only [Bind.bind, Pure.pure, instMonadEIO._aux_13, instMonadEIO._aux_5, EST.bind, EST.pure] at hval
+  cases hx : x86_cli hw with
+  | ok a w' =>
+      simp only [hx] at hval
+      injection hval with e1 e2
+      rw [← e1]
+  | error e w' =>
+      simp only [hx] at hval
+      injection hval
 
 end MVK.Phase1.ArchSetup
