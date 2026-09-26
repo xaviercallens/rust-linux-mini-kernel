@@ -121,6 +121,7 @@ COMPLETE_MODULES=(
     "MVK/QuantumLTN/PolarQuant.lean"
     "MVK/QuantumLTN/FuzzyLogic.lean"
     "MVK/Phase2/Compatibility.lean"
+    "MVK/Audit/SpecDefects.lean"
 )
 
 PASSED=0

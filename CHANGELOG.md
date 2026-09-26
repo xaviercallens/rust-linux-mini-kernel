@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [11.3.0] - 2026-09-26
+
+### Added
+- `paper/claims_vs_evidence.tex` / `.pdf`: new preprint, selected for archival publication. It reports the measured claims-vs-evidence audit, the oracle-gated LLM proof-completion workflow, and the wave-1 pilot, and every figure is backed by a checked-in script, data file, or Lean proof.
+- `specs/lean4/MVK/Audit/SpecDefects.lean`: machine-checked proofs that the statements of `arp_send_safety` and `interrupts_disabled_after_init` are false as written. The proofs depend only on `propext`, and the module is gated as complete in `verify_specs.sh`.
+- `docs/roadmap/RESEARCH_DIRECTIONS.md`: workflow fixes derived from the pilot's failure modes, plus seven research directions, each with an exit criterion.
+- `scripts/publish/zenodo_draft.py`, `publish/zenodo_metadata.json`, `publish/hf_dataset/README.md`: archival publishing tooling. It is draft-only by design and never publishes automatically.
+
+### Fixed
+- `docs/roadmap/units_status.csv`: the 6 InitMain obligations were mislabeled `unprovable` and are now `open`. The 2 theorems with machine-checked counterexamples are now `spec_defect_proved`. ARP's tier is corrected to `T1->T2`.
+
+### Security
+- Removed `paper/upload_to_zenodo.py`. It contained a hard-coded Zenodo personal access token, public since commit `071b835` (2026-05-30) and confirmed still valid on 2026-09-26, and it disabled TLS certificate verification. **Removing the file does not remove the token from git history; the token must be revoked on Zenodo.**
+- Flagged `paper/mvk_chaos_benchmarks.tar.gz` (see `docs/roadmap/PAPER_VERIFICATION_TODO.md`): its log names internal employer infrastructure. It is excluded from archival uploads.
+
+---
+
 ## [11.2.0] - 2026-09-26
 
 ### Added
