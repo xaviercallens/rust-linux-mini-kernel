@@ -121,6 +121,7 @@ COMPLETE_MODULES=(
     "MVK/QuantumLTN/PolarQuant.lean"
     "MVK/QuantumLTN/FuzzyLogic.lean"
     "MVK/Phase2/Compatibility.lean"
+    "MVK/Audit/SpecDefects.lean"
 )
 
 PASSED=0
@@ -149,12 +150,21 @@ echo ""
 # Step 4: Count proof obligations
 log_info "Step 4/5: Analyzing proof obligations..."
 
+REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+
 count_sorry() {
     local file=$1
-    # Exclude `--` comment lines: a naive grep here previously false-
-    # positived on e.g. Phase13/GpuCompute.lean's own comment boasting
-    # "zero sorry", which made that file look incomplete when it wasn't.
-    grep -v '^\s*--' "$file" 2>/dev/null | grep -w "sorry" | wc -l | tr -d ' '
+    # Delegate to scripts/lean_tools.py (the counter metrics.py uses) so the
+    # two can never disagree. grep-based counting false-positived twice:
+    # on a `--` comment in GpuCompute.lean and on a `/- -/` docstring in
+    # Audit/SpecDefects.lean.
+    python3 - "$file" "$REPO_ROOT/scripts" <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[2])
+from lean_tools import analyze_file
+print(analyze_file(Path(sys.argv[1])).sorry)
+PY
 }
 
 count_axiom() {
