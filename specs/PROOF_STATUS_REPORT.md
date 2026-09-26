@@ -1,40 +1,56 @@
 # MVK v9.3.1 Proof Status Report
 
-**Generated:** dim. 06 sept. 2026 15:59:34 CEST
+**Generated:** Sat Sep 26 18:28:18 CEST 2026
 **Lean Version:** Lean (version 4.29.1, x86_64-unknown-linux-gnu, commit f72c35b3f637c8c6571d353742168ab66cc22c00, Release)
 
 ## Summary
 
-- **Total Theorems:** 400
-- **Total Axioms:** 127
-- **Total Obligations:** 527
-- **Completed Proofs:** 153
-- **Incomplete (sorry):** 247
-- **Completion:** 29%
+- **Total Theorems:** 432
+- **Total Axioms:** 138
+- **Total Obligations:** 570
+- **Completed Proofs:** 183
+- **Incomplete (sorry):** 249
+- **Completion:** 32%
 
 ## Module Breakdown
 
 | Module | Theorems | Axioms | Sorry | Status |
 |--------|----------|--------|-------|--------|
-| Printk | 4 | 5 | 0 | ✅ Complete |
 | ArchSetup | 4 | 6 | 4 | ⏳ In Progress |
 | InitMain | 6 | 2 | 6 | ⏳ In Progress |
+| Printk | 4 | 5 | 0 | ✅ Complete |
+| Hardware | 2 | 0 | 0 | ✅ Complete |
+| GCP_Drivers | 3 | 0 | 0 | ✅ Complete |
+| GpuCompute | 8 | 0 | 0 | ✅ Complete |
 | Common | 7 | 6 | 0 | ✅ Complete |
+| Compatibility | 0 | 0 | 0 | ✅ Complete |
 | PageAlloc | 14 | 4 | 13 | ⏳ In Progress |
 | Slab | 15 | 3 | 15 | ⏳ In Progress |
 | ConntrackCore | 16 | 12 | 13 | ⏳ In Progress |
+| ConntrackDCCP | 20 | 4 | 17 | ⏳ In Progress |
 | ConntrackGeneric | 15 | 3 | 10 | ⏳ In Progress |
-| ConntrackUDP | 14 | 7 | 10 | ⏳ In Progress |
-| ConntrackTCP | 17 | 10 | 0 | ✅ Complete |
 | ConntrackICMP | 24 | 5 | 16 | ⏳ In Progress |
 | ConntrackICMPv6 | 25 | 6 | 13 | ⏳ In Progress |
 | ConntrackSCTP | 26 | 5 | 23 | ⏳ In Progress |
-| ConntrackDCCP | 20 | 4 | 17 | ⏳ In Progress |
+| ConntrackTCP | 17 | 10 | 0 | ✅ Complete |
+| ConntrackUDP | 14 | 7 | 10 | ⏳ In Progress |
 | NatCore | 30 | 7 | 26 | ⏳ In Progress |
 | NatProto | 37 | 8 | 36 | ⏳ In Progress |
+| ARP | 1 | 0 | 1 | ⏳ In Progress |
+| ICMP | 0 | 2 | 0 | ✅ Complete |
 | AfInet | 13 | 12 | 13 | ⏳ In Progress |
 | AfInet6 | 17 | 9 | 22 | ⏳ In Progress |
+| Tcpv6 | 2 | 0 | 0 | ✅ Complete |
 | FibSemantics | 12 | 13 | 10 | ⏳ In Progress |
+| UDP | 0 | 4 | 0 | ✅ Complete |
+| IPv6 | 8 | 4 | 1 | ⏳ In Progress |
+| Routing | 1 | 0 | 0 | ✅ Complete |
+| Netfilter | 1 | 0 | 0 | ✅ Complete |
+| Sockets | 1 | 0 | 0 | ✅ Complete |
+| Scheduling | 1 | 0 | 0 | ✅ Complete |
+| Memory | 3 | 0 | 0 | ✅ Complete |
+| FuzzyLogic | 0 | 0 | 0 | ✅ Complete |
+| PolarQuant | 1 | 1 | 0 | ✅ Complete |
 | RunuxDefenses | 84 | 0 | 0 | ✅ Complete |
 
 ## Next Steps

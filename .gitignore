@@ -32,3 +32,13 @@ deploy/gke/.terraform/
 target/
 patch_*.py
 build_rs_cov.profraw
+
+# Generated work-unit cards for the v12 oracle-gated workflow
+# (scripts/units/generate.py). Fully reproducible from the tree; only
+# docs/roadmap/units_summary.json (counts) and hand-picked example cards
+# under docs/roadmap/units/examples/ are committed. See
+# docs/roadmap/WORKFLOW_INFRASTRUCTURE.md.
+docs/roadmap/units/lean_sorry/
+docs/roadmap/units/unsafe_safety/
+docs/roadmap/units/static_mut/
+docs/roadmap/units/placeholder_triage/
