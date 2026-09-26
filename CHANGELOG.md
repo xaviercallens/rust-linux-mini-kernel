@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [11.2.0] - 2026-09-26
+
+### Added
+- **v12 truth-and-metrics gate** (`scripts/metrics.py`, `scripts/lean_tools.py`, `scripts/rust_tools.py`): static-analysis measurement of Lean proof debt and Rust code-quality metrics, with a `ratchet` mode that fails CI on regression against a frozen baseline (`docs/roadmap/metrics/metrics.baseline.json`). See `docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md` and `docs/roadmap/WORKFLOW_INFRASTRUCTURE.md`.
+- **Oracle-gated unit workflow** (`scripts/units/generate.py`, `scripts/check_unit.py`): generates per-theorem/per-issue work units and independently verifies a proposed fix — including a theorem-statement-hash check that rejects a proof whose underlying claim was silently weakened, even if the weakened version still type-checks.
+- **Axiom register** (`specs/lean4/AXIOMS.md`) and **placeholder-crate triage** (`docs/roadmap/placeholder_triage.csv`), both generated from the actual tree rather than hand-maintained.
+- `specs/scripts/verify_specs.sh` now auto-discovers all Lean modules (previously hardcoded to 20 of 36, silently undercounting proof debt) and hard-fails if a module already claimed complete regresses to containing `sorry`.
+
+### Fixed
+- **4 Lean theorems** now have real, independently re-verified proofs (previously `sorry`): `do_ipv6_setsockopt_contract` (`specs/lean4/MVK/Phase5/IPv6.lean`), and `init_idempotent`, `init_produces_valid_state`, `phase1_establishes_safety` (`specs/lean4/MVK/Phase1/ArchSetup.lean`). Total open proof obligations: 249 → 245.
+- **2 theorems** (`arp_send_safety` in `ARP.lean`, `interrupts_disabled_after_init` in `ArchSetup.lean`) identified as unprovable-as-stated — genuine specification defects, not proof failures — and flagged for spec review rather than left silently unresolved.
+- `verify_specs.sh`'s sorry-counter previously matched the word "sorry" inside `--` comments (e.g. a comment boasting "zero sorry" in `Phase13/GpuCompute.lean` was itself miscounted as one); now skips comment lines.
+- `paper/runux_paper.tex`: corrected a blanket "zero `sorry` tactics" claim in the abstract and Formal Verification section that did not hold once measured across the full 36-module specification tree (432 theorems, 138 axioms, 245 open at time of writing outside the fully-closed 84-theorem `RunuxDefenses` Ring-0 model). Added a new subsection reporting the oracle-gated proof-completion pilot as a measured methodology contribution.
+
+### Process notes
+- A pilot run of the oracle-gated workflow surfaced a case where a fast-tier (Haiku) attempt silently introduced 6 forbidden axioms while exploring an approach it later abandoned, without disclosing this in its own structured self-report; only caught because the escalated attempt happened to inspect git history. Self-reported completion status is not sufficient on its own — independent, tool-based re-verification of the actual committed diff remains mandatory. See `docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md` section 4 and the pilot writeup in `paper/runux_paper.tex` Section 4.3.
+- CI checks unrelated to this change (Clippy, RISC-V cross-compilation, Build/Boot/Fuzz integration) were failing before this release on `main` itself (verified by reproducing a `printk` test failure directly against the unmodified `e65392f` baseline); they are not caused or worsened by this release.
+
+---
+
 ## [9.3.1] - 2026-05-20
 
 ### Added
