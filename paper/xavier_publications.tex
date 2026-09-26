@@ -83,14 +83,15 @@ All compiled systems software, mathematical proofs, and automated benchmarks are
 \section{Consolidated Publications \& Articles}
 
 \subsection{1. RunuX-AI: Systolic-Aware ML Runtimes}
+\textit{\small Status (2026-09-26): the full paper is quarantined at \texttt{paper/quarantine/runux\_ai\_paper.tex} pending confirmation that \texttt{scripts/run\_benchmarks.sh --simulate-tpu} reproduces the figures below; see \texttt{docs/roadmap/PAPER\_VERIFICATION\_TODO.md}.} \\
 \textbf{Title:} RunuX-AI: A Unified, Memory-Safe Rust Runtime for High-Efficiency Federated LLM Execution across Edge RISC-V and Cloud Systolic TPUs \\
 \textbf{Target Venue:} MLSys '27 / IEEE Transactions on Parallel and Distributed Systems (TPDS) \\
 \textbf{Repository Reference:} Private, \url{github.com/xaviercallens/runux-ai-runtime} \\
 \textbf{Core Contributions:}
 \begin{itemize}
     \item \textbf{Unified Memory-Safe HAL:} Trait-based, compile-time backend generic dispatch spanning RISC-V Vector processors and Cloud TPU PJRT.
-    \item \textbf{PolarQuant \& QJL:} Lossy 3-bit block-wise KV-cache quantization using orthogonal Householder rotations and scale error correction, achieving $<0.05$ reconstruction error.
-    \item \textbf{Systolic-Aware StableHLO Tiling:} Programmatic StableHLO matrix multiplier loops matching TPU v5e's 128$\times$128 MXU boundaries, securing an \textbf{88.0\% occupancy rate} (173.4 TFLOPS).
+    \item \textbf{PolarQuant \& QJL:} Lossy 3-bit block-wise KV-cache quantization using orthogonal Householder rotations and scale error correction, achieving $<0.05$ reconstruction error (simulated).
+    \item \textbf{Systolic-Aware StableHLO Tiling:} Programmatic StableHLO matrix multiplier loops matching TPU v5e's 128$\times$128 MXU boundaries, securing an \textbf{88.0\% occupancy rate} (173.4 TFLOPS) \textbf{under simulation, not measured on physical TPU v5e hardware}.
     \item \textbf{Green AI Speculative Scheduler:} A power-aware sampling scheduler that dynamically balances speculation budgets ($K$) against regional grid carbon intensities (France, USA, China).
 \end{itemize}
 
@@ -102,10 +103,11 @@ All compiled systems software, mathematical proofs, and automated benchmarks are
 \begin{itemize}
     \item \textbf{297 Translated Modules:} First comprehensive, FFI-compatible Rust translation of the core Linux 5.10 LTS networking stack using binary-compatible \texttt{\#[repr(C)]} FFI bindings.
     \item \textbf{High-Fidelity Chaos Testing:} Statistically identical native boot and packet latency, with \textbf{zero panics/oops} under extensive Chaos Mesh injection (partitions, losses, CPU stalls) on GKE.
-    \item \textbf{Lean 4 Formal Verification:} 12 machine-checked proof phases validating buffer bounds safety, routing termination, and header parsing correctness without `sorry` tactics.
+    \item \textbf{Lean 4 Formal Verification:} 432 machine-checked theorems across 36 specification modules (138 axioms, 245 open proof obligations as of 2026-09-26); a dedicated 84-theorem Ring-0 isolation model is fully closed with zero \texttt{sorry} and zero axioms. See \texttt{paper/runux\_paper.tex} \S4 for the measured breakdown and the oracle-gated proof-completion methodology used to reduce the open count.
 \end{itemize}
 
 \subsection{3. MVK: The Bare-Metal Architecture}
+\textit{\small Status (2026-09-26): the full paper is quarantined at \texttt{paper/quarantine/mvk\_scientific\_paper.tex} -- no reproducible \texttt{rdtsc} benchmark harness for the figures below was found in this repository; see \texttt{docs/roadmap/PAPER\_VERIFICATION\_TODO.md}.} \\
 \textbf{Title:} Beyond Legacy Abstractions: A Formally Verified, High-Performance Bare-Metal Rust Architecture (MVK) \\
 \textbf{Target Venue:} ACM SOSP / ACM Transactions on Computer Systems (TOCS) \\
 \textbf{Repository Reference:} Private, \url{github.com/xaviercallens/rust-linux-mini-kernel} \\
@@ -116,7 +118,8 @@ All compiled systems software, mathematical proofs, and automated benchmarks are
     \item \textbf{Zero Latency Drift:} Demonstrates complete immunity to SLAB fragmentation, yielding flatline 45$\mu$s execution loops under 2-hour sustained 100\% CPU stress tests.
 \end{itemize}
 
-\subsection{4. MVK: Cyber-Security & Exploit Eradication}
+\subsection{4. MVK: Cyber-Security \& Exploit Eradication}
+\textit{\small Status (2026-09-26): the full paper is quarantined at \texttt{paper/quarantine/security\_scientific\_paper.tex} -- the ``100\% elimination'' claim is contradicted by a live aliasing bug found this session in \texttt{crates/ai\_detector} and by 722 \texttt{unsafe} blocks workspace-wide with only $\sim$14\% \texttt{SAFETY:} comment coverage; see \texttt{docs/roadmap/PAPER\_VERIFICATION\_TODO.md}.} \\
 \textbf{Title:} The Death of the Kernel Zero-Day: Mathematically Eliminating Spatial and Temporal Memory Vulnerabilities in Bare-Metal Architectures \\
 \textbf{Target Venue:} IEEE Symposium on Security and Privacy (S\&P) / Dependable Systems \\
 \textbf{Repository Reference:} Private, \url{github.com/xaviercallens/rust-linux-mini-kernel} \\
