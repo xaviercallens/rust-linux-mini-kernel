@@ -2,6 +2,8 @@
 **Socrate AI Lab — Board of Reviewers**  
 *Date: May 25, 2026*
 
+> **QUARANTINED — Unverified Provenance.** Withdrawn from active publication on 2026-09-26. No evidence was found in this repository of an independent external review process, reviewer identities, or a review-management system (e.g. HotCRP, OpenReview) backing this document. "Socrate AI Lab" is described elsewhere in this repository as a one-person non-profit founded by the same author as the papers under review, so this cannot presently be represented as an independent peer review. It also praises specific figures (e.g. 88.0% MXU occupancy, TFLOPS numbers) from `runux_ai_paper.tex`, which is itself quarantined in this same directory for lacking a reproducible benchmark artifact. **Do not cite this document as evidence of external peer review.** See `docs/roadmap/PAPER_VERIFICATION_TODO.md`.
+
 ---
 
 ## 📄 Review 1: RunuX-AI Systolic Runtime Paper
