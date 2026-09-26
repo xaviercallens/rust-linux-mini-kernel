@@ -17,13 +17,22 @@ empirical claims the repository can't currently reproduce.
 
 | Document | Status | Basis |
 |---|---|---|
-| `paper/runux_paper.tex` / `.pdf` | Published (this session) | Formal-verification numbers (432 theorems, 138 axioms, 245 open, 84-theorem closed Ring-0 model) cross-checked against `scripts/metrics.py measure` and `specs/PROOF_STATUS_REPORT.md`. The new Section 4.3 pilot data cross-checked against `docs/roadmap/units_status.csv` and this session's independent oracle re-verification of PR #27/#28. Performance/chaos-engineering tables (Section 5–6) are **not** independently re-verified this cycle — see TODO below. |
+| `paper/claims_vs_evidence.tex` / `.pdf` | **Selected for archival publication** | All figures backed by checked-in scripts, data, or Lean proofs; see "Publication candidate" below. |
+| `paper/runux_paper.tex` / `.pdf` | Kept, superseded; Sections 3.3/5/6 open (see TODO) | Formal-verification numbers (432 theorems, 138 axioms, 245 open, 84-theorem closed Ring-0 model) cross-checked against `scripts/metrics.py measure` and `specs/PROOF_STATUS_REPORT.md`. The new Section 4.3 pilot data cross-checked against `docs/roadmap/units_status.csv` and this session's independent oracle re-verification of PR #27/#28. Performance/chaos-engineering tables (Section 5–6) are **not** independently re-verified this cycle — see TODO below. |
 | `paper/xavier_publications.tex` | Published, with caveats | A publication index, not itself a results paper. Item summaries for the quarantined papers must stay consistent with their quarantine status — see TODO below. |
 | `paper/COLLABORATION_PROPOSAL.md` / `.pdf` | Not reviewed | No empirical claims found on a skim; out of scope for this pass. |
 | `paper/REPRODUCIBILITY.md`, `paper/REPRODUCIBILITY_SOP.md` | Not reviewed | Describe a process, not results; out of scope for this pass. |
 
-### TODO on the published paper itself
-- [ ] Re-run and re-verify the Performance Evaluation table (CRC32 throughput, QEMU boot time, TCP throughput, binary size) and the Chaos Mesh table (6 fault scenarios, 375s aggregate) against a live run. These numbers were carried over from the prior release without new measurement this cycle. If no current harness reproduces them, they should move to a caveated status or be quarantined too.
+### Publication candidate (2026-09-26)
+`paper/claims_vs_evidence.tex` / `.pdf` supersedes `runux_paper.tex` as the paper selected for archival publication. Every figure in it is backed by a checked-in script, data file, or Lean proof (`scripts/metrics.py`, `docs/roadmap/metrics/metrics.baseline.json`, `docs/roadmap/units_status.csv`, `specs/lean4/MVK/Audit/SpecDefects.lean`).
+
+### TODO on `runux_paper.tex` (findings from the 2026-09-26 re-check)
+- [ ] **CRC32 "4.73% faster"**: `paper/dataset.json` holds 5 runs per side with overlapping ranges; Welch t = 1.64 — not significant at α = 0.05. Re-run with n ≥ 30 and report a CI, or drop the speedup claim.
+- [ ] **QEMU boot time 5003 vs 5004 ms**: the boot harness targets the i686 `examples/demo_kernel`, not the translated crates. Rescope the claim to the demo kernel or build a real image (see v12 plan WS5).
+- [ ] **TCP throughput ≥95% of C**: no C baseline is recorded (table shows "—"); the verdict is unsupported until one is measured.
+- [ ] **Chaos Mesh "zero panics"**: `run_gke_tests.py` detects panics by grepping the demo kernel's QEMU boot log for the string "panic"; the translated stack is not exercised. Rescope or redesign as a differential test.
+- [ ] **"297/297 modules translated"**: 141 crates are ≤25-LOC placeholders (`scripts/metrics.py`, `rust.placeholder_crates`); rescope to the implemented subset.
+- [ ] **Sensitive content**: `paper/mvk_chaos_benchmarks.tar.gz` (in public history since `a9f8419`) contains `chaos_run.log` lines naming internal employer Helm mirrors and a local SOCKS proxy. Exclude from any archival upload; consider removing from the repository and history (owner decision — history rewrite is destructive).
 - [ ] `xavier_publications.tex` item 1 ("RunuX-AI: Systolic-Aware ML Runtimes") currently states "88.0% occupancy rate (173.4 TFLOPS)" as fact, with no "simulated" qualifier — the source paper (`runux_ai_paper.tex`, now quarantined) does say "under high-fidelity **simulation**". Fix the summary to carry the same qualifier, or remove the figure until real-hardware validated.
 - [ ] `xavier_publications.tex` item 3 ("MVK") repeats the unverified 25.3%/12.2% GCP bare-metal figures from the now-quarantined `mvk_scientific_paper.tex`. Update or remove pending resolution of that quarantine.
 - [ ] `xavier_publications.tex` item 4 repeats the "95% Attack Surface Reduction" and eradication claims from the now-quarantined `security_scientific_paper.tex`. Same treatment.
