@@ -22,6 +22,25 @@ xavier@research.local}
 
 \maketitle
 
+% ============================================================================
+% QUARANTINE NOTICE -- added 2026-09-26, see docs/roadmap/PAPER_VERIFICATION_TODO.md
+% ============================================================================
+\begin{center}
+\fbox{\parbox{0.92\linewidth}{\small
+\textbf{QUARANTINED DRAFT --- Unverified Claims.} This document was withdrawn
+from active publication on 2026-09-26 pending independent verification. No
+reproducible benchmark artifact, dataset, or hardware access log was found in
+this repository to substantiate the specific empirical figures cited below
+(e.g.\ cycle counts, TFLOPS, acceleration factors, VRAM reductions). Some
+figures may originate from simulation modes
+(\texttt{scripts/run\_benchmarks.sh --simulate-*}) rather than the physical
+hardware named in the text. \textbf{Do not cite this document as a validated
+result.} See \texttt{docs/roadmap/PAPER\_VERIFICATION\_TODO.md} for the
+specific claims and what is needed to verify or retract each one.}}
+\end{center}
+\bigskip
+
+
 \begin{abstract}
 For over five decades, the foundational security of operating systems has been compromised by the intrinsic memory unsafety of C and C++. Industry telemetry indicates that $\sim$70\% of high-severity Common Vulnerabilities and Exposures (CVEs) in modern kernels are rooted in spatial and temporal memory violations, such as buffer overflows and use-after-free conditions. In this paper, we present the Minimum Viable Kernel (MVK), a 64-bit bare-metal operating system architecture implemented entirely in \texttt{no\_std} Rust and mathematically verified using the Lean 4 theorem prover. We empirically demonstrate that MVK eliminates 100\% of spatial and temporal memory vulnerabilities at compile time, completely neutralizing the largest class of kernel exploits. Furthermore, we outline a novel security model that isolates unavoidable hardware-interaction boundaries into strictly audited micro-abstractions, guarded by dynamic Undefined Behavior (UB) interpretation (Miri) and formal proofs. Our findings indicate that shifting kernel development to memory-safe, formally verified paradigms provides a militarily superior security posture without conceding computational performance.
 \end{abstract}
