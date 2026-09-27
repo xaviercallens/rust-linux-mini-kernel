@@ -1,7 +1,7 @@
 # RunuX vs. AI-Agent Cyber Attacks — Improvement Plan
 
 **Status:** PLAN ONLY. Nothing in this document has been implemented.
-**Baseline:** `v11.3.0` (pending merge of PR #31), commit `e65392f` for the
+**Baseline:** `v11.3.0` (pending merge of PR #31), commit `041622e` for the
 Core Defenses claims audited below.
 **Execution model:** every workstream here is written as a unit list meant
 to run through `Workflow` with low-tier models (Haiku for generation/

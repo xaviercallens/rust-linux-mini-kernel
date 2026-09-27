@@ -100,7 +100,7 @@ mapfile -t MODULES < <(cd "$SPECS_DIR" && find MVK -name '*.lean' | sort)
 
 # Modules that are declared "complete" (must have zero sorry). Verified by
 # grep against docs/roadmap/metrics/metrics.baseline.json at commit
-# e65392f. Adding a file here that still has sorry, or letting a listed
+# 041622e. Adding a file here that still has sorry, or letting a listed
 # file regress, fails the build -- this is the "anti-weakening" gate for
 # the parts of the spec we already claim are done. Everything else is
 # tracked (via metrics.py) but not yet gated per-file.

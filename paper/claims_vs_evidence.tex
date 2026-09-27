@@ -50,7 +50,7 @@ AI coding agents lower the cost of producing kernel-scale code and the documenta
 \item A pilot evaluation that includes outcomes, costs, and three workflow failure modes, one of them an undisclosed integrity violation by an agent (\S\ref{sec:pilot}).
 \item Machine-checked proofs that two specification statements are false, so no proof of either can exist (\S\ref{sec:defects}).
 \end{enumerate}
-All tools, data, and proofs are released at tag \texttt{v11.2.1} or later of the repository.
+All tools, data, and proofs are released at tag \texttt{v11.3.1} of the repository. The baseline commit \texttt{041622e} is tag \texttt{v11.1.0}; it was \texttt{e65392f} before a 2026-09-27 history rewrite that removed two non-code files, which leaves every reported metric unchanged.
 
 \section{Subject System}
 RunuX is a Cargo workspace of Rust crates that mirror Linux~5.10 subsystems, mostly networking, behind \texttt{\#[repr(C)]} FFI types. Lean~4 specifications live in \texttt{specs/lean4/MVK} and are organized into numbered ``phases.'' A separate 84-theorem model, \texttt{RunuxDefenses.lean}, formalizes a Ring~0 syscall-interception design. Its top-level documentation (\texttt{AGENTS.md}, \texttt{README.md}) and a traceability matrix claimed full compilation, zero warnings, complete \texttt{SAFETY:} justification of \texttt{unsafe} blocks, and zero \texttt{sorry} across all verification phases.
@@ -60,10 +60,10 @@ RunuX is a Cargo workspace of Rust crates that mirror Linux~5.10 subsystems, mos
 We wrote \path{scripts/metrics.py}, which computes metrics by static analysis only, with no \texttt{cargo} or \texttt{lake} invocation. It is fast enough to run on every pull request as a \emph{ratchet}: continuous integration fails if any metric moves in the wrong direction relative to a frozen baseline. The baseline file changes only through a human-run snapshot command, never automatically. Lean analysis strips line and block comments before counting \texttt{sorry}, \texttt{axiom}, and \texttt{theorem}/\texttt{lemma} declarations. Rust analysis counts per-crate lines, \texttt{unsafe} blocks and functions, \texttt{SAFETY:} comments, \texttt{static mut}, blanket lint suppressions, stub markers, and \texttt{extern "C"} functions whose entire body is a constant.
 
 \subsection{Findings}
-Table~\ref{tab:claims} compares documented claims with measurements at commit \texttt{e65392f} (release v11.1.0).
+Table~\ref{tab:claims} compares documented claims with measurements at commit \texttt{041622e} (release v11.1.0).
 
 \begin{table*}[t]
-\caption{Documented claims vs.\ measurement at baseline commit \texttt{e65392f}.}
+\caption{Documented claims vs.\ measurement at baseline commit \texttt{041622e}.}
 \label{tab:claims}
 \small
 \begin{tabular}{p{4.6cm}p{6.8cm}p{5.2cm}}
@@ -182,7 +182,7 @@ Source, scripts (\path{scripts/metrics.py}, \path{scripts/check_unit.py}, \path{
 Measuring an AI-assisted kernel project against its own claims found a large, specific, and fixable gap. Measurement tooling closed part of it, and an LLM proof workflow closed a small further part. The most useful results were not proofs. They were the two specification statements shown to be false, and the agent report that was shown to be incomplete. Both point in the same direction: in AI-assisted verification, what gets trusted should be the artifact and an oracle the agent does not control, never the agent's account of its own work.
 
 \begin{thebibliography}{9}
-\bibitem{RunuXRepo} X.~Callens. \emph{rust-linux-mini-kernel (RunuX)}. \url{https://github.com/xaviercallens/rust-linux-mini-kernel}, tag v11.2.1+, 2026.
+\bibitem{RunuXRepo} X.~Callens. \emph{rust-linux-mini-kernel (RunuX)}. \url{https://github.com/xaviercallens/rust-linux-mini-kernel}, tag v11.3.1, 2026.
 \bibitem{Lean4} L.~de~Moura and S.~Ullrich. \emph{The Lean 4 Theorem Prover and Programming Language}. CADE-28, 2021.
 \bibitem{Aeneas} S.~Ho and J.~Protzenko. \emph{Aeneas: Rust Verification by Functional Translation}. ICFP, 2022.
 \bibitem{seL4} G.~Klein et~al. \emph{seL4: Formal Verification of an OS Kernel}. SOSP, 2009.
