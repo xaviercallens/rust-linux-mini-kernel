@@ -5,9 +5,9 @@ use core::mem::{size_of, align_of};
 fn test_network_address_sizes_and_alignment() {
     // Assert structural sizes match C-ABI expectations for 5.10 LTS networking
     assert_eq!(size_of::<in_addr>(), 16); // 4 bytes IP + pointer mock field on 64-bit systems
-    assert_eq!(size_of::<in6_addr>(), 24); // 16 bytes IP6 + pointer mock field on 64-bit systems
+    assert_eq!(size_of::<in6_addr>(), 16); // 16 bytes IP6 (union of u8/u16/u32 arrays, no padding)
     assert_eq!(align_of::<in_addr>(), 8);
-    assert_eq!(align_of::<in6_addr>(), 8);
+    assert_eq!(align_of::<in6_addr>(), 4);
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn test_protocol_header_sizes() {
     // Assert standard protocol header sizes
     assert_eq!(size_of::<ethhdr>(), 14); // 6 + 6 + 2 bytes
     assert_eq!(size_of::<iphdr>(), 20);  // Standard IPv4 header size is 20 bytes
-    assert_eq!(size_of::<ipv6hdr>(), 56); // 40 bytes standard IPv6 + two 8-byte address padding structures in this mock FFI definition
+    assert_eq!(size_of::<ipv6hdr>(), 40); // Standard IPv6 header size is 40 bytes (8-byte fixed header + 2x16-byte addresses)
     assert_eq!(size_of::<udphdr>(), 8);   // UDP header size is 8 bytes
 }
 
@@ -193,4 +193,3 @@ fn test_iperf3_payload_parsing() {
     assert_eq!(syn_pkt.flags & 0x0002, 0x0002);
     assert_eq!(u32::from_be(synack_pkt.ack_seq), 101);
 }
-
