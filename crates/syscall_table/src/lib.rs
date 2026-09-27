@@ -148,7 +148,7 @@ pub unsafe extern "C" fn syscall_table_init() -> c_int {
 pub unsafe extern "C" fn syscall_table_exit() {}
 
 #[no_mangle]
-pub static mut SYSCALL_TABLE_INITIALIZED: bool = false;
+pub static SYSCALL_TABLE_INITIALIZED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
 /// Pre-dispatch active defense interception hook.
 ///
@@ -292,6 +292,10 @@ mod tests {
         let _ = PROCESS_QUARANTINE.lift_quarantine(pid, true);
         assert!(quarantine_pid(pid));
 
+        // SAFETY: Calling runux_intercept_syscall with these constant arguments is safe.
+        // The function accepts only by-value scalar parameters (u32, u64) and performs no
+        // pointer dereferences on the arguments. The function body safely constructs an array
+        // and passes the values to runux_pre_dispatch_pipeline, which performs only value operations.
         unsafe {
             // Fork should be blocked with -13 (-EACCES) or -1 (-EPERM)
             let res_fork = runux_intercept_syscall(pid, SYS_FORK, 0, 0, 0, 0, 0, 0, 0x400_000);
