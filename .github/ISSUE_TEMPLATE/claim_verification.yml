@@ -1,0 +1,26 @@
+name: Claim verification (possible hallucination)
+description: A number or statement in this repo that no script or artifact backs up.
+labels:
+- type:claim-verification
+body:
+- type: input
+  id: where
+  attributes:
+    label: Where is the claim?
+    placeholder: README.md line 42 / paper/X.tex Table 2
+  validations:
+    required: true
+- type: textarea
+  id: claim
+  attributes:
+    label: The claim, quoted exactly
+  validations:
+    required: true
+- type: textarea
+  id: evidence
+  attributes:
+    label: What you checked
+    render: text
+    description: Commands you ran and their output, or the artifact you looked for and did not find.
+  validations:
+    required: true

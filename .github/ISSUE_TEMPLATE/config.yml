@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas (Discussions)
+    url: https://github.com/xaviercallens/rust-linux-mini-kernel/discussions
+    about: Design discussions, research ideas, help getting started.
+  - name: Report a security vulnerability (private)
+    url: https://github.com/xaviercallens/rust-linux-mini-kernel/security/advisories/new
+    about: Memory-safety bugs, defense bypasses, CI or agent-workflow abuse, leaked secrets.

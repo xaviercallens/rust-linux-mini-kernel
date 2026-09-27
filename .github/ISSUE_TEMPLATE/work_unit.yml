@@ -1,0 +1,43 @@
+name: Work unit (agent-ready)
+description: A small, checkable task with exact files, an oracle command, and an acceptance criterion.
+labels:
+- agent-ready
+body:
+- type: markdown
+  attributes:
+    value: Work units must be checkable by a command, not by opinion. See AGENTS.md for the evidence rules.
+- type: input
+  id: track
+  attributes:
+    label: Roadmap track
+    placeholder: T1 Memory-safety evidence
+  validations:
+    required: true
+- type: textarea
+  id: files
+  attributes:
+    label: Files in scope (exact paths, line numbers if known)
+    render: text
+  validations:
+    required: true
+- type: textarea
+  id: task
+  attributes:
+    label: Task
+  validations:
+    required: true
+- type: textarea
+  id: oracle
+  attributes:
+    label: Oracle command (must exit 0 when done)
+    render: bash
+    placeholder: python3 scripts/check_unit.py --type unsafe_safety --file crates/X/src/lib.rs --crate X --base origin/main
+  validations:
+    required: true
+- type: textarea
+  id: acceptance
+  attributes:
+    label: Acceptance criterion
+    description: Also state what counts as an honest 'could not do it' outcome.
+  validations:
+    required: true

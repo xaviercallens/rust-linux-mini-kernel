@@ -9,10 +9,25 @@
 [![Metrics Ratchet](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/metrics-ratchet.yml/badge.svg)](docs/roadmap/metrics/metrics.baseline.json)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 [![Version](https://img.shields.io/badge/version-11.3.0-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
+[![Contributors welcome](https://img.shields.io/badge/contributors-welcome-brightgreen)](CONTRIBUTING.md)
+[![Agent-ready issues](https://img.shields.io/github/issues/xaviercallens/rust-linux-mini-kernel/agent-ready?label=agent-ready%20issues)](https://github.com/xaviercallens/rust-linux-mini-kernel/issues?q=is%3Aopen+label%3Aagent-ready)
 
 > **Author:** Xavier Callens
 > **Latest Release:** v11.3.0 — September 27, 2026
 > **Status:** actively audited. See [Measured Status](#measured-status-2026-09-26) below for numbers generated from the tree, not asserted by hand.
+
+---
+
+## 🤝 Call for contributors — humans and AI agents
+
+This project is too large and too important for one person. We are asking for help from the **Rust community**, **Lean provers**, **kernel and security engineers**, and **people running AI coding agents** (Claude Code, Google Jules, others) on four goals:
+
+- **Memory-safe infrastructure you can prove:** every `unsafe` block justified, and every theorem honest about what it proves.
+- **Certified software, not claimed software:** a Lean 4 proof or a script behind every number.
+- **Efficient AI through verifiable output:** agents whose work passes an oracle they don't control, so nobody has to redo it.
+- **Systems that hold up against AI-assisted attacks:** defenses measured against adaptive, machine-speed attackers.
+
+**How:** read the [roadmap](ROADMAP.md), pick an [`agent-ready`](https://github.com/xaviercallens/rust-linux-mini-kernel/issues?q=is%3Aopen+label%3Aagent-ready) or [`good first issue`](https://github.com/xaviercallens/rust-linux-mini-kernel/issues?q=is%3Aopen+label%3A%22good+first+issue%22), and follow [CONTRIBUTING.md](CONTRIBUTING.md) (humans) or [AGENTS.md](AGENTS.md) (AI agents). Pull requests from forks are welcome. Every PR runs an anti-hallucination guard ([`scripts/pr_guard.py`](scripts/pr_guard.py)) and the metrics ratchet. Maintainers can hand issues to Claude (`@claude` or the `agent:claude` label) or Jules (`agent:jules`). Found a number with no evidence behind it? Open a *Claim verification* issue. Security issues: [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -229,6 +244,9 @@ This project owes its existence to **Linus Torvalds** and the Linux kernel commu
 
 | Document | Description |
 |---|---|
+| [ROADMAP.md](ROADMAP.md) | **Public roadmap**: tracks, milestones, where to contribute |
+| [CONTRIBUTING.md](CONTRIBUTING.md) / [AGENTS.md](AGENTS.md) | How humans and AI agents contribute; evidence rules |
+| [SECURITY.md](SECURITY.md) | Private vulnerability reporting, including AI-agent attacks and prompt injection |
 | [docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md) | Measured baseline, workstreams, and the low-tier-model workflow design |
 | [docs/roadmap/PAPER_VERIFICATION_TODO.md](docs/roadmap/PAPER_VERIFICATION_TODO.md) | Per-claim status of every paper in this repository |
 | [docs/roadmap/AI_AGENT_DEFENSE_PLAN.md](docs/roadmap/AI_AGENT_DEFENSE_PLAN.md) | Security hardening plan against AI-agent-class attackers |
