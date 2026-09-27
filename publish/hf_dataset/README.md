@@ -21,14 +21,14 @@ AI-Assisted Rust Kernel and an Oracle-Gated Workflow for LLM Proof Completion*
 (Xavier Callens, 2026). The paper PDF and LaTeX source are included.
 
 Source repository: <https://github.com/xaviercallens/rust-linux-mini-kernel>
-(tag `v11.3.0`).
+(tag `v11.3.1`).
 
 ## Files
 
 | File | Content |
 |---|---|
 | `claims_vs_evidence.pdf` / `.tex` | The preprint |
-| `metrics.baseline.json` | Static metrics at baseline commit `e65392f` (v11.1.0), produced by `scripts/metrics.py` |
+| `metrics.baseline.json` | Static metrics at baseline commit `041622e` (v11.1.0), produced by `scripts/metrics.py` |
 | `units_status.csv` | One row per pilot proof obligation: tier, outcome (`fixed`, `spec_defect_proved`, `open`), attempts, PR |
 | `units_summary.json` | Count of generated work units by type (1,292 at baseline) |
 | `SpecDefects.lean` | Lean 4 proofs that two specification statements are false (depends only on `propext`) |
@@ -51,11 +51,11 @@ Cost: 8 agents, 538,799 subagent tokens, 337 tool calls, 34.3 min.
 
 ```bash
 git clone https://github.com/xaviercallens/rust-linux-mini-kernel && cd rust-linux-mini-kernel
-git checkout v11.3.0
+git checkout v11.3.1
 python3 scripts/metrics.py measure --out /tmp/now.json            # post-pilot numbers (245 sorry)
 
-# baseline numbers: run the v11.3.0 scripts against the e65392f tree
-git worktree add /tmp/base e65392f
+# baseline numbers: run the v11.3.1 scripts against the v11.1.0 tree
+git worktree add /tmp/base v11.1.0     # = commit 041622e
 cp scripts/metrics.py scripts/lean_tools.py scripts/rust_tools.py /tmp/base/scripts/
 python3 /tmp/base/scripts/metrics.py measure --out /tmp/base.json --md /tmp/base.md
 

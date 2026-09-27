@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Process notes
 - A pilot run of the oracle-gated workflow surfaced a case where a fast-tier (Haiku) attempt silently introduced 6 forbidden axioms while exploring an approach it later abandoned, without disclosing this in its own structured self-report; only caught because the escalated attempt happened to inspect git history. Self-reported completion status is not sufficient on its own — independent, tool-based re-verification of the actual committed diff remains mandatory. See `docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md` section 4 and the pilot writeup in `paper/runux_paper.tex` Section 4.3.
-- CI checks unrelated to this change (Clippy, RISC-V cross-compilation, Build/Boot/Fuzz integration) were failing before this release on `main` itself (verified by reproducing a `printk` test failure directly against the unmodified `e65392f` baseline); they are not caused or worsened by this release.
+- CI checks unrelated to this change (Clippy, RISC-V cross-compilation, Build/Boot/Fuzz integration) were failing before this release on `main` itself (verified by reproducing a `printk` test failure directly against the unmodified `041622e` baseline); they are not caused or worsened by this release.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Status:** PLAN ONLY. Nothing in this document has been implemented.
 > **Ordering superseded (2026-09-27):** execution order, business rationale, and token budgets now live in [`BUSINESS_CASE_PRIORITIZED_PLAN.md`](BUSINESS_CASE_PRIORITIZED_PLAN.md). The workstream content below is unchanged.
-**Baseline commit:** `e65392f` (v11.1.0), `main` aligned with `origin/main` (0 ahead / 0 behind), measured 2026-09-26.
+**Baseline commit:** `041622e` (v11.1.0), `main` aligned with `origin/main` (0 ahead / 0 behind), measured 2026-09-26.
 **Audience:** maintainers and automated agent workflows. Most work units are sized for low-tier models such as Claude Haiku 4.5.
 
 ---
@@ -297,7 +297,7 @@ These come after WS0–WS5 exit gates. Each one has a verification story, not on
 
 ## 8. Immediate next actions (first 5 working days)
 
-1. Write `scripts/metrics.py` and commit `metrics.baseline.json` from `e65392f` (T1 with a spec, T2 review).
+1. Write `scripts/metrics.py` and commit `metrics.baseline.json` from `041622e` (T1 with a spec, T2 review).
 2. Fix `verify_specs.sh` to fail on live `sorry` in "complete" files and on `lake build` errors. Measure `lean.build`.
 3. Generate unit cards for Lean wave 1 (12 `sorry`) and 20 `SAFETY:` units in `ebpf_firewall`; run the T1 pilot; record KPIs from §4.5.
 4. Open an issue: `ai_detector::activation_slice` aliasing (`&self → &mut`), with a Miri repro test.

@@ -21,14 +21,14 @@
   "license": "cc-by-4.0",
   "access_right": "open",
   "prereserve_doi": true,
-  "version": "v11.3.0",
+  "version": "v11.3.1",
   "language": "eng",
   "related_identifiers": [
     {
-      "identifier": "https://github.com/xaviercallens/rust-linux-mini-kernel/tree/v11.3.0",
+      "identifier": "https://github.com/xaviercallens/rust-linux-mini-kernel/tree/v11.3.1",
       "relation": "isSupplementedBy",
       "resource_type": "software"
     }
   ],
-  "notes": "Experience report / preprint. Supporting data: docs/roadmap/metrics/metrics.baseline.json (baseline metrics at commit e65392f), docs/roadmap/units_status.csv (pilot outcomes), specs/lean4/MVK/Audit/SpecDefects.lean (machine-checked specification defects)."
+  "notes": "Experience report / preprint. Supporting data: docs/roadmap/metrics/metrics.baseline.json (baseline metrics at commit 041622e), docs/roadmap/units_status.csv (pilot outcomes), specs/lean4/MVK/Audit/SpecDefects.lean (machine-checked specification defects)."
 }
