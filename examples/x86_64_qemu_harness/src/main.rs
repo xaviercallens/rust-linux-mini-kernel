@@ -11,6 +11,9 @@
 use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
 
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {}
+
 global_asm!(
     r#"
 .section .multiboot2, "a"
@@ -141,6 +144,18 @@ fn serial_print(text: &str) {
     }
 }
 
+const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+
+/// Print `val`'s low `nibbles * 4` bits as lowercase hex over serial,
+/// with no allocator and no `core::fmt` machinery -- this harness has
+/// neither.
+fn serial_print_hex(val: u32, nibbles: u32) {
+    for i in (0..nibbles).rev() {
+        let nibble = ((val >> (i * 4)) & 0xF) as usize;
+        outb(0x3F8, HEX_DIGITS[nibble]);
+    }
+}
+
 /// QEMU's isa-debug-exit device: exit code = (value << 1) | 1.
 /// value=0x00 -> exit code 1 (success sentinel used by this harness).
 /// value=0x11 -> exit code 35 (panic sentinel).
@@ -176,6 +191,93 @@ pub extern "C" fn kmain() -> ! {
     match kernel_types::SafePageFrame::new(core::ptr::null_mut(), 0) {
         None => serial_print("[PASS] SafePageFrame::new(null) -> None (rejected as required)\n"),
         Some(_) => qemu_exit(0x11),
+    }
+
+    // Real PCI bus enumeration (Configuration Mechanism #1, I/O ports
+    // 0xCF8/0xCFC), genuinely reading hardware config space on every
+    // call. A "1af4:1050" line below means this code actually saw
+    // QEMU's virtio-gpu device on the bus, not an assertion that it
+    // should be there.
+    serial_print("[INFO] Enumerating PCI bus (Configuration Mechanism #1)...\n");
+    let mut devices = [driver_pci_core::PciDeviceInfo {
+        address: driver_pci_core::PciAddress { bus: 0, device: 0, function: 0 },
+        vendor_id: 0,
+        device_id: 0,
+        class: 0,
+        subclass: 0,
+        header_type: 0,
+        multi_function: false,
+    }; driver_pci_probe::MAX_ENUMERATED_DEVICES];
+    // SAFETY: this harness runs at CPL0 in long mode with full I/O port
+    // access (no TSS I/O bitmap restricting it), matching pci_enumerate's
+    // precondition; called exactly once, after boot, before any other
+    // code depends on PCI state.
+    let device_count = unsafe { driver_pci_probe::pci_enumerate(&mut devices) };
+
+    serial_print("[INFO] PCI devices found: ");
+    serial_print_hex(device_count as u32, 2);
+    serial_print("\n");
+
+    let mut found_gpu = false;
+    for dev in &devices[..device_count] {
+        serial_print("  ");
+        serial_print_hex(u32::from(dev.address.bus), 2);
+        serial_print(":");
+        serial_print_hex(u32::from(dev.address.device), 2);
+        serial_print(".");
+        serial_print_hex(u32::from(dev.address.function), 1);
+        serial_print(" vendor=");
+        serial_print_hex(u32::from(dev.vendor_id), 4);
+        serial_print(" device=");
+        serial_print_hex(u32::from(dev.device_id), 4);
+        serial_print(" class=");
+        serial_print_hex(u32::from(dev.class), 2);
+        serial_print(" subclass=");
+        serial_print_hex(u32::from(dev.subclass), 2);
+
+        let is_known_gpu = driver_pci_core::known_gpu_name(dev.vendor_id, dev.device_id);
+        if let Some(name) = is_known_gpu {
+            serial_print(" -- ");
+            serial_print(name);
+            found_gpu = true;
+        } else if dev.is_display_controller() {
+            serial_print(" -- unrecognized display controller");
+            found_gpu = true;
+        }
+        serial_print("\n");
+
+        if is_known_gpu.is_some() || dev.is_display_controller() {
+            // Real BAR-size probe (write all-1s, read back the size
+            // mask, restore original) against this specific device --
+            // the groundwork any real VRAM/MMIO mapping eventually
+            // needs, exercised here against a real (if virtual) GPU.
+            for (i, bar_offset) in [0x10u8, 0x14, 0x18, 0x1C, 0x20, 0x24].iter().enumerate() {
+                // SAFETY: same precondition as pci_enumerate above --
+                // CPL0, full I/O port access, called after enumeration
+                // has already read this exact device successfully.
+                let size = unsafe {
+                    driver_pci_access::pci_bar_size(
+                        dev.address.bus,
+                        dev.address.device,
+                        dev.address.function,
+                        *bar_offset,
+                    )
+                };
+                if size > 0 {
+                    serial_print("    BAR");
+                    serial_print_hex(i as u32, 1);
+                    serial_print(" size=0x");
+                    serial_print_hex(size as u32, 8);
+                    serial_print(" bytes\n");
+                }
+            }
+        }
+    }
+
+    if found_gpu {
+        serial_print("[PASS] At least one display/GPU-class PCI device was enumerated for real\n");
+    } else {
+        serial_print("[INFO] No display/GPU-class PCI device present on this bus (expected without -device virtio-gpu-pci)\n");
     }
 
     serial_print("[SUCCESS] RunuX x86_64 booted successfully inside QEMU (long mode)!\n");

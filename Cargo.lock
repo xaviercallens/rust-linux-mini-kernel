@@ -449,7 +449,6 @@ version = "0.4.0"
 dependencies = [
  "driver_pci_core",
  "kernel_types",
- "libc",
 ]
 
 [[package]]
@@ -457,16 +456,15 @@ name = "driver_pci_core"
 version = "0.4.0"
 dependencies = [
  "kernel_types",
- "libc",
 ]
 
 [[package]]
 name = "driver_pci_probe"
 version = "0.4.0"
 dependencies = [
+ "driver_pci_access",
  "driver_pci_core",
  "kernel_types",
- "libc",
 ]
 
 [[package]]

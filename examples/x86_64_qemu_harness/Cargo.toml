@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 kernel_types = { path = "../../crates/kernel_types" }
+driver_pci_core = { path = "../../crates/driver_pci_core" }
+driver_pci_probe = { path = "../../crates/driver_pci_probe" }
+driver_pci_access = { path = "../../crates/driver_pci_access" }
 
 [profile.dev]
 panic = "abort"

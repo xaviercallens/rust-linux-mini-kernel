@@ -3,6 +3,30 @@
 version = 4
 
 [[package]]
+name = "driver_pci_access"
+version = "0.4.0"
+dependencies = [
+ "driver_pci_core",
+ "kernel_types",
+]
+
+[[package]]
+name = "driver_pci_core"
+version = "0.4.0"
+dependencies = [
+ "kernel_types",
+]
+
+[[package]]
+name = "driver_pci_probe"
+version = "0.4.0"
+dependencies = [
+ "driver_pci_access",
+ "driver_pci_core",
+ "kernel_types",
+]
+
+[[package]]
 name = "kernel_types"
 version = "0.1.0"
 
@@ -10,5 +34,8 @@ version = "0.1.0"
 name = "x86_64_qemu_harness"
 version = "0.1.0"
 dependencies = [
+ "driver_pci_access",
+ "driver_pci_core",
+ "driver_pci_probe",
  "kernel_types",
 ]
