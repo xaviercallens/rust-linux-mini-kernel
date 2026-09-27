@@ -8,3 +8,8 @@ rustflags = [
     "-C", "link-arg=-Tarch/riscv64/link.ld",
     "-C", "target-feature=+m,+a,+f,+d,+c",
 ]
+
+[target.aarch64-unknown-none]
+rustflags = [
+    "-C", "link-arg=-Tarch/aarch64/link.ld",
+]

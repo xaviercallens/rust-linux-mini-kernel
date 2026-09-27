@@ -3,6 +3,14 @@
 version = 4
 
 [[package]]
+name = "aarch64_qemu_harness"
+version = "0.1.0"
+dependencies = [
+ "kernel_types",
+ "runux_aarch64",
+]
+
+[[package]]
 name = "af_inet"
 version = "10.7.0"
 dependencies = [
@@ -1832,6 +1840,13 @@ version = "10.7.0"
 dependencies = [
  "kernel_types",
  "libc",
+]
+
+[[package]]
+name = "runux_aarch64"
+version = "0.1.0"
+dependencies = [
+ "kernel_types",
 ]
 
 [[package]]
