@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [11.3.2] - 2026-09-27
+
+### Changed
+- `CITATION.cff` now cites the published paper (doi:10.5281/zenodo.22985926). It previously cited the quarantined MVK paper with a placeholder ORCID; it now validates against CFF 1.2.0.
+- The README has a DOI badge, and the papers table links the Zenodo record and the Hugging Face dataset.
+- Refreshed `docs/roadmap/metrics/metrics.{json,md}` snapshot at HEAD. The ratchet shows no regressions.
+
+## [11.3.1] - 2026-09-27
+
+### Added
+- Open contribution for Rust developers and AI agents: `AGENTS.md` evidence rules (imported by `CLAUDE.md`), `CONTRIBUTING.md`, public `ROADMAP.md` (6 tracks, measured milestones), `SECURITY.md` with private vulnerability reporting, `CODE_OF_CONDUCT.md`, issue forms (agent-ready work unit, claim verification, bug report), and a PR template requiring oracle output and AI disclosure. Also 19 seed issues (#35-#53).
+- `scripts/pr_guard.py` and `.github/workflows/pr-guard.yml`: a fork-safe gate on every PR. It rejects escape hatches, changed or deleted theorem statements, and unjustified new `unsafe` blocks.
+- Maintainer-triggered agent workflows: `claude.yml` (`@claude` or the `agent:claude` label) and `jules.yml` (the `agent:jules` label). Also `issue-triage.yml`, a Haiku job that can only read issues and apply non-privileged labels, using vendored MIT helpers and a wrapper that refuses maintainer-only labels.
+- Business-case plan (`docs/roadmap/BUSINESS_CASE_PRIORITIZED_PLAN.md`), the Haiku-first `runux-quickwins` workflow, the zero-token dry-run harness, and multi-file `check_unit.py` units.
+
+### Fixed
+- The baseline commit `e65392f` dangled after the history rewrite; references now point to `041622e` (tag `v11.1.0`). Every metric and all 1,292 work units were verified to reproduce exactly before the paper was published on Zenodo (doi:10.5281/zenodo.22985926).
+
 ## [11.3.0] - 2026-09-26
 
 ### Added

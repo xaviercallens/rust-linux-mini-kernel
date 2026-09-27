@@ -1,14 +1,14 @@
 # RunuX Metrics Snapshot
 
-Commit: `e65392fe4f79396815fa5c137553671729c84484`  
-Generated: 2026-09-26T16:13:15.817336+00:00
+Commit: `4fb03aef57577aab3c689859678c535f3b9c53a3`  
+Generated: 2026-09-27T07:13:29.313947+00:00
 
 | Metric | Value | Direction |
 |---|---:|---|
-| `lean.sorry` | 249 | lower_is_better |
+| `lean.sorry` | 245 | lower_is_better |
 | `lean.axiom` | 138 | lower_is_better |
-| `lean.theorem` | 432 | info |
-| `lean.files` | 36 | info |
+| `lean.theorem` | 434 | info |
+| `lean.files` | 37 | info |
 | `lean.extracted_thm` | 0 | higher_is_better |
 | `rust.crates` | 316 | info |
 | `rust.loc` | 53779 | info |
