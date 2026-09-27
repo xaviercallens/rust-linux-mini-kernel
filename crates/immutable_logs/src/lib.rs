@@ -322,6 +322,11 @@ impl SyncMerkleLog {
 
     /// Returns the current monotonic Sequence ID (REQ-RCD-006).
     pub fn current_sequence_id(&self) -> u64 {
+        // SAFETY: `UnsafeCell::get()` returns a non-null, initialized, properly-aligned pointer
+        // to the inner `HeaplessMerkleLog`, which lives as long as `self`; only a shared
+        // reference is taken here (no mutable alias exists), and the Ring 0 cooperative
+        // scheduler guarantees single-core, non-preemptive execution, so no data race is
+        // possible while it is held.
         unsafe {
             let log = &*self.inner.get();
             log.current_sequence_id()
@@ -445,7 +450,15 @@ pub fn constant_time_compare_32(a: &[u8; 32], b: &[u8; 32]) -> bool {
     let mut diff = 0u8;
     for i in 0..32 {
         // Volatile reads prevent short-circuiting or compiler optimization
+        // SAFETY: `&a[i]` is a reference to a byte within a valid initialized array.
+        // The pointer is non-null and properly aligned (u8 has no alignment requirement).
+        // `read_volatile` prevents compiler optimizations that would violate constant-time
+        // guarantees needed for timing-attack resistance (REQ-RCD-028).
         let val_a = unsafe { core::ptr::read_volatile(&a[i]) };
+        // SAFETY: `&b[i]` is a reference to a byte within a valid initialized array.
+        // The pointer is non-null and properly aligned (u8 has no alignment requirement).
+        // `read_volatile` prevents compiler optimizations that would violate constant-time
+        // guarantees needed for timing-attack resistance (REQ-RCD-028).
         let val_b = unsafe { core::ptr::read_volatile(&b[i]) };
         diff |= val_a ^ val_b;
     }
@@ -458,7 +471,15 @@ pub fn constant_time_compare_32(a: &[u8; 32], b: &[u8; 32]) -> bool {
 pub fn constant_time_compare_64(a: &[u8; 64], b: &[u8; 64]) -> bool {
     let mut diff = 0u8;
     for i in 0..64 {
+        // SAFETY: `&a[i]` is a reference to a byte within a valid initialized array.
+        // The pointer is non-null and properly aligned (u8 has no alignment requirement).
+        // `read_volatile` prevents compiler optimizations that would violate constant-time
+        // guarantees needed for timing-attack resistance (REQ-RCD-028).
         let val_a = unsafe { core::ptr::read_volatile(&a[i]) };
+        // SAFETY: `&b[i]` is a reference to a byte within a valid initialized array.
+        // The pointer is non-null and properly aligned (u8 has no alignment requirement).
+        // `read_volatile` prevents compiler optimizations that would violate constant-time
+        // guarantees needed for timing-attack resistance (REQ-RCD-028).
         let val_b = unsafe { core::ptr::read_volatile(&b[i]) };
         diff |= val_a ^ val_b;
     }
