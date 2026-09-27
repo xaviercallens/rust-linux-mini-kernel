@@ -1,7 +1,7 @@
 # RunuX Metrics Snapshot
 
-Commit: `4fb03aef57577aab3c689859678c535f3b9c53a3`  
-Generated: 2026-09-27T07:13:29.313947+00:00
+Commit: `4ea7375bd44365eeec6e3b71b133ab9a3927c351`  
+Generated: 2026-09-27T08:08:16.523073+00:00
 
 | Metric | Value | Direction |
 |---|---:|---|
@@ -11,14 +11,14 @@ Generated: 2026-09-27T07:13:29.313947+00:00
 | `lean.files` | 37 | info |
 | `lean.extracted_thm` | 0 | higher_is_better |
 | `rust.crates` | 316 | info |
-| `rust.loc` | 53779 | info |
+| `rust.loc` | 53829 | info |
 | `rust.blanket_clippy_allow_crates` | 284 | lower_is_better |
 | `rust.lax_allow_crates` | 130 | lower_is_better |
-| `rust.unsafe_blocks` | 723 | info |
+| `rust.unsafe_blocks` | 722 | info |
 | `rust.unsafe_fns` | 1615 | info |
-| `rust.safety_comments` | 101 | info |
-| `rust.safety_ratio` | 0.1397 | higher_is_better |
-| `rust.static_mut` | 197 | lower_is_better |
+| `rust.safety_comments` | 111 | info |
+| `rust.safety_ratio` | 0.1537 | higher_is_better |
+| `rust.static_mut` | 193 | lower_is_better |
 | `rust.stub_marker_lines` | 204 | lower_is_better |
 | `rust.stub_marker_crates` | 86 | lower_is_better |
 | `rust.const_stub_fns` | 259 | lower_is_better |
