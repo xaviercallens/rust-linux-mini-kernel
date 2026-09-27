@@ -1,6 +1,7 @@
 # RunuX v12 "Verified Core": Implementation & Evolution Plan
 
 **Status:** PLAN ONLY. Nothing in this document has been implemented.
+> **Ordering superseded (2026-09-27):** execution order, business rationale, and token budgets now live in [`BUSINESS_CASE_PRIORITIZED_PLAN.md`](BUSINESS_CASE_PRIORITIZED_PLAN.md). The workstream content below is unchanged.
 **Baseline commit:** `e65392f` (v11.1.0), `main` aligned with `origin/main` (0 ahead / 0 behind), measured 2026-09-26.
 **Audience:** maintainers and automated agent workflows. Most work units are sized for low-tier models such as Claude Haiku 4.5.
 

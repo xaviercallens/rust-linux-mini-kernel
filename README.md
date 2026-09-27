@@ -209,6 +209,8 @@ See [CHANGELOG.md](CHANGELOG.md) for full entries. Recent:
 
 Concrete, plan-only documents (nothing below is implemented yet):
 
+- **[`docs/roadmap/BUSINESS_CASE_PRIORITIZED_PLAN.md`](docs/roadmap/BUSINESS_CASE_PRIORITIZED_PLAN.md)** — **start here.** Business case and the low-effort/high-impact ordering of everything below, with token-optimized, Haiku-first workflows (`.claude/workflows/runux-quickwins.js`) gated by an independent verifier.
+
 - **[`docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md`](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md)** — closing the 245 open proof obligations, the 141 placeholder crates, the 664 undocumented `unsafe` blocks, and getting a real bootable image on x86_64/riscv64, via the oracle-gated low-tier-model workflow.
 - **[`docs/roadmap/AI_AGENT_DEFENSE_PLAN.md`](docs/roadmap/AI_AGENT_DEFENSE_PLAN.md)** — hardening the existing 40 Core Defenses requirements against an adaptive, high-frequency, black-box-querying AI-agent attacker, distinct from the human-paced attacker the current design assumes.
 - **[`docs/roadmap/STANDARD_HARDWARE_AI_GPU_PLAN.md`](docs/roadmap/STANDARD_HARDWARE_AI_GPU_PLAN.md)** — getting real PCIe/IOMMU/GPU support (starting with vendor-neutral `virtio-gpu`, not simulated NVIDIA/TPU claims) onto a standard x86_64 server, with the security properties (DMA isolation, VRAM zeroization) proven, not asserted.
