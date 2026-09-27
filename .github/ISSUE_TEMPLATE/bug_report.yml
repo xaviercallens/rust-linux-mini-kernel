@@ -1,0 +1,24 @@
+name: Bug report
+description: Something builds, runs, or proves incorrectly. For security issues use private reporting (SECURITY.md).
+labels:
+- type:bug
+body:
+- type: textarea
+  id: repro
+  attributes:
+    label: Minimal reproduction (commands)
+    render: bash
+  validations:
+    required: true
+- type: textarea
+  id: expected
+  attributes:
+    label: Expected vs. actual output
+  validations:
+    required: true
+- type: input
+  id: commit
+  attributes:
+    label: Commit (git rev-parse HEAD)
+  validations:
+    required: true

@@ -1,24 +1,31 @@
-## Description
-<!-- Please include a summary of the change and which module/issue is fixed. Please also include relevant motivation and context. -->
+## What and why
 
-Fixes # (issue number)
+Closes #
 
-## Type of Change
-<!-- Please delete options that are not relevant. -->
-- [ ] Bug fix (non-breaking change which fixes a compilation error or logic bug)
-- [ ] New feature (new module translation or pipeline addition)
-- [ ] Breaking change (FFI modification that breaks existing dependencies)
-- [ ] Documentation update (module READMEs, kernel integration guides)
+## Evidence (required)
 
-## How Has This Been Tested?
-<!-- Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. -->
-- [ ] `cargo check -p [module]` passes without errors
-- [ ] `cargo check --workspace` passes (or does not regress)
-- [ ] (Optional) Loaded into a QEMU Linux Kernel (`KERNEL_INTEGRATION_GUIDE.md`)
+<!-- Paste the exact commands you ran and their output. A claim without output will not be reviewed. -->
 
-## Checklist:
-- [ ] My code follows the style guidelines of this project (`cargo fmt`)
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas (`// SAFETY:` for unsafe blocks)
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings (`cargo clippy -- -D warnings`)
+```text
+$ python3 scripts/pr_guard.py --base origin/main
+
+$ <the oracle command from the issue>
+
+```
+
+## Checklist
+
+- [ ] Only the files named in the issue are changed
+- [ ] No theorem statement changed or deleted; no new `sorry` / `axiom` / `admit` / `native_decide` / `#[allow]` / `#[ignore]` / `todo!` / `unimplemented!`
+- [ ] Every new or touched `unsafe` block has a specific `// SAFETY:` comment, or is listed below as possible UB
+- [ ] No new numbers in docs without a script that produces them
+
+## Possible UB / could not do honestly
+
+<!-- List unsafe blocks you could not justify, or parts of the task you could not complete without weakening something. This is a valid outcome. -->
+
+## AI assistance
+
+- Agent / tool: <!-- e.g. Claude Code, Google Jules, none -->
+- Model: <!-- e.g. claude-haiku-4-5, gemini-... -->
+- What the agent did vs. what you checked yourself:
