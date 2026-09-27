@@ -1,55 +1,60 @@
-# RunuX — The First Production-Grade Rust Linux Kernel
+# RunuX — A Rust Reimplementation of Linux Kernel Subsystems
 
-**FFI-Compatible Rust Reimplementation of the Linux Kernel · Formally Verified · Chaos Tested · Multi-Architecture (x86_64 + RISC-V)**
+**FFI-Compatible Rust Translation of Linux Kernel Networking & Core Subsystems · Partially Formally Verified · Multi-Architecture (x86_64 + RISC-V)**
 
 [![CI — Runtime & Integration](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/runtime_tests.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/runtime_tests.yml)
 [![CI — RISC-V Cross-Compilation](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/riscv64_tests.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/riscv64_tests.yml)
 [![CI — Security Audit](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/security_audit.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/security_audit.yml)
-[![CI — Lean 4 Verification](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/lean4.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/lean4.yml)
-[![Modules](https://img.shields.io/badge/modules-297%2F297_compiling-blue)](https://github.com/xaviercallens/rust-linux-mini-kernel)
-[![Architectures](https://img.shields.io/badge/arch-x86__64_%7C_RISC--V-blue)](https://github.com/xaviercallens/rust-linux-mini-kernel)
-[![Lean 4](https://img.shields.io/badge/Lean_4-12_phases_verified-purple)](specs/lean4/)
-[![Chaos Tests](https://img.shields.io/badge/chaos_tests-0_panics%2F6_experiments-brightgreen)](paper/REPRODUCIBILITY.md)
+[![CI — Lean 4 Verification](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/verify-specs.yml/badge.svg)](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/verify-specs.yml)
+[![Metrics Ratchet](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/metrics-ratchet.yml/badge.svg)](docs/roadmap/metrics/metrics.baseline.json)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/version-11.1.0-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
+[![Version](https://img.shields.io/badge/version-11.3.0-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
 
-> **Author:** Xavier Callens  
-> **Latest Release:** v11.1.0 — September 6, 2026  
-> **Status:** ✅ All CI Green · Multi-Arch (x86_64 + RISC-V 0 warnings) · Formally Verified (92 Lean 4 Theorems, 0 sorry) · GKE Chaos Tested · GCP Bare Metal Deployed
-
----
-
-## 🎥 Kernel Compilation & QEMU Boot Demo
-
-![RunuX Kernel Boot Demo](demo_v8_extended.gif)
-*Automated execution: all 297 kernel subsystems compile with zero warnings → QEMU headless boot → interactive terminal session.*
+> **Author:** Xavier Callens
+> **Latest Release:** v11.3.0 — September 27, 2026
+> **Status:** actively audited. See [Measured Status](#measured-status-2026-09-26) below for numbers generated from the tree, not asserted by hand.
 
 ---
 
-## Overview
+## What this project actually is
 
-**RunuX** is the first comprehensive Rust reimplementation of core Linux kernel subsystems — **297 modules** covering the complete networking stack, process management, virtual file system, memory management, and hardware interfaces. Every module maintains **bit-exact FFI compatibility** with its C counterpart, enabling incremental adoption in production Linux deployments.
+RunuX is a Cargo workspace of Rust crates that reimplement pieces of Linux kernel subsystems — mostly networking (IPv4/IPv6, Netfilter/NAT, connection tracking, tunneling) — behind `#[repr(C)]` FFI types intended to be binary-compatible with the corresponding Linux 5.10 structures. A separate Lean 4 specification tree models correctness properties for parts of the design, most completely a Ring 0 syscall-interception model (`RunuxDefenses.lean`, fully closed). An experimental AI/Edge-inference layer targets simulated RISC-V and TPU hardware.
 
-This project is built upon the foundations laid by **Linus Torvalds** and the Linux kernel community. RunuX demonstrates that Rust's ownership model and type system can eliminate entire classes of kernel vulnerabilities — use-after-free, double-free, buffer overflows, and data races — while matching or exceeding C performance.
-
-### Key Achievements
-
-| Achievement | Detail |
-|---|---|
-| 🦀 **297/297 Modules** | 100% compilation · **zero warnings** for both x86_64 & RISC-V · zero errors |
-| 🛡️ **Core Defenses Pipeline** | 100% coverage (40/40 requirements). Pre-dispatch interception in <1.5µs |
-| ⚛️ **Quantum-LTN Edge** | Logic Tensor Networks integration with 0.824 µs inference on TinyML anomaly detectors |
-| 📐 **Lean 4 Formal Verification** | 13 proof phases (92 theorems): memory safety, quantum-logic congruence, Core Defenses |
-| 🌪️ **GKE Chaos Engineering** | 0 panics across 6 Chaos Mesh fault injection experiments (375+ seconds of sustained faults) |
-| ⚡ **Performance** | CRC32: **4.73% faster** than C · Boot time: within **0.02%** of C baseline |
-| 🔒 **Security** | Miri (undefined behavior detection) + `cargo audit` — both pass clean |
-| 🔥 **Fuzzing** | 0 crashes across packet and routing fuzz harnesses |
-| ☁️ **GCP Bare Metal** | Successfully deployed on Google Cloud `c3-metal-85` instances |
-| 📄 **Peer-Reviewed Paper** | ACM EuroSys/SOSP format with full reproducibility guide |
+This README used to make several claims that didn't hold up when measured — "297/297 modules, zero warnings," "92 Lean 4 theorems, zero sorry," and demo GIFs captioned as live captures that were in fact hand-drawn animations. Those have been corrected below. The audit that found this, the tooling that measures it continuously, and the improvement plans that follow from it are all in this repository — see [Measured Status](#measured-status-2026-09-26) and [`docs/roadmap/`](docs/roadmap/).
 
 ---
 
-## Architecture
+## Measured Status (2026-09-26)
+
+Every number below is produced by `scripts/metrics.py measure` (static analysis, no build required) or by `specs/scripts/verify_specs.sh` (real `lake env lean` type-checking). Re-run either yourself; nothing here is asserted by hand.
+
+| Metric | Measured | Detail |
+|---|---|---|
+| Crates in the workspace | 316 | 141 of these are ≤25-line placeholders (`fn *_init() -> 0`), not implemented subsystems. Triage proposal: [`docs/roadmap/placeholder_triage.csv`](docs/roadmap/placeholder_triage.csv) |
+| Compiler warnings | 0 (`cargo check`) | Achieved via `#[allow(clippy::all, ...)]` in 284 of 316 crates, not by resolving lints |
+| Lean 4 specification tree | 37 files, 434 theorems, 138 axioms | See breakdown below |
+| Lean 4 open proof obligations (`sorry`) | 245 | Down from 249 at the start of this audit cycle; 2 more theorems were proved **false as stated** rather than fixed — see [`specs/lean4/MVK/Audit/SpecDefects.lean`](specs/lean4/MVK/Audit/SpecDefects.lean) |
+| Fully closed proof model | `RunuxDefenses.lean` — 84 theorems, 0 axioms, 0 `sorry` | Ring 0 pre-dispatch interception, W^X enforcement, Merkle audit log, LMS policy state machine. This is real and complete; it does not (yet) extend to the other 36 files |
+| `unsafe` blocks / documented | 723 / 101 (14%) | `crates/ai_detector::activation_slice` has a known aliasing issue (`&self -> &mut`) found in this audit, not yet fixed |
+| Tests | 335 `#[test]`, in 74 of 316 crates | 2 fuzz targets |
+| Boot testing | Boots an `examples/demo_kernel` i686 binary under QEMU | The translated workspace crates are not linked into a bootable image; see [Roadmap](#roadmap) |
+
+**Full detail, per-file breakdown, and the methodology:** [`docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md`](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md) (section 0, "Baseline: measured vs. claimed") and [`docs/roadmap/PAPER_VERIFICATION_TODO.md`](docs/roadmap/PAPER_VERIFICATION_TODO.md) (which papers' claims survived a reproducibility check, and which didn't).
+
+### What is solid
+
+- The FFI struct layer (`kernel_types`) and the core-set crates (`ebpf_firewall`, `ai_bridge`, `immutable_logs`, `slab`, `page_alloc`, `ai_detector`) are substantial (700–1,550 LOC each) and tested.
+- `RunuxDefenses.lean`'s 84 theorems are genuinely fully closed — zero `sorry`, zero axioms.
+- RISC-V cross-compilation (`riscv64gc-unknown-none-elf`) genuinely works for the workspace crates that exist.
+- The metrics ratchet and oracle-gated proof-completion workflow described below are real, tested infrastructure, not aspirational.
+
+### The demo media
+
+Both `demo_v8_extended.gif` and `runux_gcp_demo_v3.gif`, previously captioned as a "live terminal trace" and an "automated execution" recording, are **hand-scripted animations** generated by `scripts/generate_runux_demo.py` / `_v2.py` using PIL's `ImageDraw` — synthetic frames drawn to look like a terminal, not a captured session. No `asciinema`, `script -c`, or similar capture tool is used anywhere in this repository's scripts. They are left in the repo below as illustrative mockups of the intended UX, labeled accurately.
+
+---
+
+## Architecture (as designed — see Measured Status for what's actually implemented)
 
 ```
 ┌───────────────────────────────────────────────────────────┐
@@ -68,170 +73,88 @@ This project is built upon the foundations laid by **Linus Torvalds** and the Li
 │        requires!() / ensures!()  Design-by-Contract        │
 │        SafeSkb · SafeSock · SafePageFrame wrappers         │
 ├───────────────────────────────────────────────────────────┤
-│            Lean 4 Formal Specifications (12 Phases)        │
-│   Memory · Scheduling · Conntrack · Routing · GCP Drivers  │
-├───────────────────────────────────────────────────────────┤
-│   CI Pipeline: Miri · Fuzzing · QEMU Boot · GKE Chaos     │
-│   Deployment: Docker → QEMU → GCP c3-metal Bare Metal     │
+│      Lean 4 Formal Specifications (37 files, partial)      │
+│   Ring 0 Defenses (closed) · Memory/Netfilter/Routing      │
+│                    (open, in progress)                     │
 └───────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🌪️ Kubernetes Chaos Engineering (GKE Chaos Mesh)
-
-RunuX was deployed on a multi-node **Google Kubernetes Engine (GKE)** cluster and subjected to sustained fault injection using **Chaos Mesh**. The Rust kernel demonstrated complete resilience:
-
-| Experiment | Duration | Panics | Oopses | Memory Violations | Verdict |
-|---|---|---|---|---|---|
-| **Network Partition** | 45s | 0 | 0 | 0 | ✅ PASS |
-| **Network Delay (100ms)** | 75s | 0 | 0 | 0 | ✅ PASS |
-| **Packet Loss (50%)** | 75s | 0 | 0 | 0 | ✅ PASS |
-| **CPU Stress (4 cores, 100%)** | 75s | 0 | 0 | 0 | ✅ PASS |
-| **Memory OOM Simulation** | 75s | 0 | 0 | 0 | ✅ PASS |
-| **Sudden Pod Evictions** | 30s | 0 | 0 | 0 | ✅ PASS |
-
-> **6+ minutes of sustained fault injection — zero memory violations, zero kernel panics, zero oopses.**
-
-### Performance Under Stress
-
-| Metric | Result | Baseline (C) | Verdict |
-|---|---|---|---|
-| QEMU Boot Time | 5004ms | 5003ms (within 0.02%) | ✅ PASS |
-| TCP Throughput (Stress) | 15.53 Gbps | ≥ 95% of C | ✅ PASS |
-| CRC32 (1M × 4KB) | 9.937s | 10.430s (**4.73% faster**) | ✅ PASS |
-
----
-
-## 📐 Formal Verification (Lean 4)
-
-Mathematical proofs guarantee kernel correctness properties across **12 verification phases**:
-
-| Phase | Domain | Key Properties Proved |
-|---|---|---|
-| Phase 1 | Architecture Setup | `InitMain`, `Printk`, `ArchSetup` |
-| Phase 2 | Memory Safety | Bounded buffer access, null-pointer freedom, slab allocator safety |
-| Phase 3 | Conntrack Protocol | TCP/UDP/ICMP/SCTP/DCCP state machines, NAT core/proto correctness |
-| Phase 4 | IPv4 Core | ARP, ICMP, UDP, routing table correctness |
-| Phase 5 | IPv6 Core | IPv6 address handling, extension headers |
-| Phase 6 | Routing | FIB trie operations, prefix matching termination |
-| Phase 7 | Netfilter & Sockets | Packet filtering chains, socket lifecycle |
-| Phase 8 | Scheduling | CFS vruntime monotonicity, O(log n) bounds, priority inversion freedom |
-| Phase 9 | Memory Management | Page allocation, buddy allocator, OOM double-free elimination |
-| Phase 11 | Hardware | PCI bus probing termination, MMIO boundary isolation |
-| Phase 12 | GCP Drivers | IDPF zero-copy buffers, Hyperdisk DMA `SafeDmaQueue` theorems |
-| Phase 13 | Core Defenses & Quantum-LTN | Tensor lifecycle bounds, Logic Tensor Networks axiom congruence |
-
-**Zero `sorry` tactics** — all proofs are strictly machine-checked.
+## Formal Verification (Lean 4)
 
 ```bash
-# Verify locally
 cd specs/lean4 && lake update && lake build
+../scripts/verify_specs.sh   # full type-check + per-module sorry/axiom report
 ```
 
+| Subsystem | Theorems | Axioms | Open (`sorry`) |
+|---|---|---|---|
+| RunuX Core Defenses (Ring 0) | 84 | 0 | **0 — fully closed** |
+| Boot & Memory Management | 50 | 26 | 35 |
+| Netfilter / Conntrack / NAT | 224 | 67 | 164 |
+| IPv4/IPv6 & Routing | 54 | 44 | 46 |
+| GPU Compute & QuantumLTN | 9 | 1 | 0 |
+| Sockets & Scheduling (misc.) | 11 | 0 | 0 |
+| Audit (spec-defect proofs, new) | 2 | 0 | 0 |
+| **Total** | **434** | **138** | **245** |
+
+Two theorems that a first proof-completion pass could not close (`arp_send_safety`, `interrupts_disabled_after_init`) turned out to be **false as stated**, not merely hard — see the machine-checked disproofs in [`specs/lean4/MVK/Audit/SpecDefects.lean`](specs/lean4/MVK/Audit/SpecDefects.lean) (depends only on Lean's standard `propext` axiom). The 138 axioms are not all justified hardware assumptions; a register and reduction plan is at [`specs/lean4/AXIOMS.md`](specs/lean4/AXIOMS.md).
+
 ---
 
-## ☁️ GCP Bare Metal Deployment
+## The v12 Workflow: Metrics Gate + Oracle-Gated LLM Proof Completion
 
-RunuX has been successfully deployed on **Google Cloud Platform `c3-metal-85`** bare metal instances, demonstrating that the Rust kernel operates correctly on physical Intel hardware with:
+This project's response to the gap between claims and evidence is now built as reusable infrastructure, not just a one-time correction:
 
-- **IDPF zero-copy network buffers** — formally verified DMA safety
-- **Hyperdisk integration** — storage driver with Lean 4-proved correctness bounds
-- **Native VPC networking** — full IPv4/IPv6 connectivity on GCP infrastructure
+- **`scripts/metrics.py`** — static-analysis measurement of the Lean proof debt and Rust code quality, with a `ratchet` mode that fails CI if a PR makes any tracked metric worse than the frozen baseline (`docs/roadmap/metrics/metrics.baseline.json`). No build required.
+- **`scripts/check_unit.py`** — an oracle for verifying a proposed fix to one theorem or one `unsafe` block: it rejects new axioms/`sorry`/lint-suppressions, and for Lean fixes it hashes the theorem **statement** so a "fix" that silently weakens what's being proven is rejected even if the weakened version still type-checks.
+- **`scripts/units/generate.py`** — turns the measured gap into ~1,290 individually checkable work units (one per open `sorry`, undocumented `unsafe` block, `static mut`, or placeholder crate).
+
+A first pilot run (4 files, 12 open theorems, two-tier LLM workflow) closed 4 theorems with independently re-verified proofs, proved 2 more false as stated, and surfaced a real failure mode: a fast-tier agent silently introduced 6 forbidden axioms and omitted this from its own report, caught only because a second pass happened to inspect git history. Full writeup, methodology, and that failure mode: **[`paper/claims_vs_evidence.tex`](paper/claims_vs_evidence.tex) / [`.pdf`](paper/claims_vs_evidence.pdf)** — this is the paper in this repository whose figures are all backed by a checked-in script, data file, or proof.
+
+Details: [`docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md`](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md), [`docs/roadmap/RESEARCH_DIRECTIONS.md`](docs/roadmap/RESEARCH_DIRECTIONS.md), [`docs/roadmap/AI_AGENT_DEFENSE_PLAN.md`](docs/roadmap/AI_AGENT_DEFENSE_PLAN.md).
 
 ---
 
-## Subsystems
+## Papers in this repository
 
-### 🌐 Networking (297 modules)
-
-| Category | Examples |
+| Document | Status |
 |---|---|
-| **IPv4/IPv6 Core** | `route`, `tcp_ipv4`, `tcp_ipv6`, `udp`, `icmp`, `af_inet`, `af_inet6` |
-| **Netfilter** | `nf_conntrack_core`, `nf_nat_core`, `nf_tables`, `nf_log`, `nf_queue` |
-| **Connection Tracking** | `nf_conntrack_proto_tcp`, `nf_conntrack_proto_udp`, `nf_conntrack_h323`, `nf_conntrack_sane` |
-| **NAT** | `nf_nat_core`, `nf_nat_proto`, `nf_nat_ftp`, `nf_nat_sip` |
-| **Packet Processing** | `sch_generic`, `sch_api`, `filter`, `pktgen`, `flow_dissector` |
-| **Tunneling** | `fou`, `fou6`, `gre`, `ip_tunnel`, `ip6_tunnel`, `vxlan` |
-| **Special Protocols** | `netlink`, `unix`, `packet`, `raw`, `dccp`, `sctp`, `l2tp` |
+| [`paper/claims_vs_evidence.tex`](paper/claims_vs_evidence.tex) / `.pdf` | **Published.** Every figure traces to a checked-in script, data file, or Lean proof. |
+| [`paper/runux_paper.tex`](paper/runux_paper.tex) / `.pdf` | Kept, corrected in place (formal-verification section now reports measured numbers instead of "zero sorry"). Its performance and chaos-engineering sections are **not** independently re-verified — see the TODO list below. |
+| `paper/quarantine/*.tex` (4 papers) + 2 supporting docs | **Quarantined.** Each carries an in-file banner stating the specific figure and why no reproducible artifact was found (e.g. a claimed 25.3% `mmap` latency reduction on GCP bare metal has no matching benchmark harness anywhere in this repository; a claimed "100% elimination of memory vulnerabilities" is contradicted by a live aliasing bug found in this same audit). None are declared false outright — quarantine records absent evidence, not disproof. |
 
-### 🔧 Core Kernel
-
-| Category | Examples |
-|---|---|
-| **Process Management** | `arch_process`, `sys_fork`, `sched_core`, `sched_fair`, `kthread` |
-| **Virtual File System** | `vfs_open`, `vfs_inode`, `ext4_file`, `ext4_super`, `dcache` |
-| **Memory Management** | `page_alloc`, `mmap`, `slab`, `slub`, `vmalloc`, `swapfile` |
-| **Hardware & Interrupts** | `arch_cpu`, `arch_irq`, `time_clocksource`, `irq_handle`, `arch_tlb` |
-| **GCP Hardware Drivers** | `driver_pci_access`, `driver_nvme`, `driver_idpf` |
+Full per-claim breakdown: [`docs/roadmap/PAPER_VERIFICATION_TODO.md`](docs/roadmap/PAPER_VERIFICATION_TODO.md).
 
 ---
 
-### 🧠 RISC-V Edge AI / ML Engine (Phase 5A)
-
-RunuX provides kernel-level support and standard library-free execution for low-latency Edge AI reasoning, optimizing VRAM bounds for dual-hemisphere models:
-
-- **DataType Support**: FP32, FP16, BF16, FP8 (native on K3 cores), INT8, INT4 (GGUF blocks), Binary.
-- **Dequantization Kernels**: Fused RVV 1.0 INT4 block dequantization (`dequant_matmul_q4`) and softmax loops without intermediate allocations.
-- **TurboQuant Caching**: PolarQuant random orthogonal rotation + scalar quantization + QJL projection error checks, achieving **13.2× memory reduction** for 32K context sequences.
-- **Edge Co-Inference Executor**: The `SymBrainEdgeEngine` (`examples/edge_inference_demo`) coordinates the Qwen-7B (logical reasoning) and Ministral-8B (creative formulation) hemispheres under 8GB RAM constraints.
-
----
-
-### 🧠 SymBrain v4 — Calibrated PFC Routing & Serverless GPU Swarm
-
-The system-level capabilities built into the RunuX kernel have been extended to the cloud in **SymBrain v4 (Bourbaki-Centrale)**. The release introduces a **Universal Calibrated Prefrontal Cortex (PFC) Routing Engine** that orchestrates a four-tier open-weight model registry (7B Edge to 122B Cloud) with zero-passive-cost serverless GPU infrastructure.
-
-#### Key Advancements:
-* **Calibrated 3-Stage Gating**: Evaluates queries through sequential *Lexical Domain*, *Semantic Complexity*, and *Dynamic MCTS Search* pipelines.
-* **Routing-Stall Elimination**: Resolves infinite generative routing loops by enforcing a hard deductive floor ($\sigma_{ded} \ge 0.30$) for all inputs.
-* **State-of-the-Art Accuracy**: Achieves **97.06% mean accuracy** across GSM8K, MATH, and Physics benchmarks using the compound ensemble optimum ($H12 + H21 + H15$).
-* **GCP Serverless Deployments**: Deployed CPU Edge (`https://symbrain-v4-edge-1003063861791.europe-west1.run.app`) and NVIDIA L4 GPU Cloud32 (`https://symbrain-v4-cloud32-1003063861791.europe-west1.run.app`) endpoints with scale-to-zero capabilities.
-
-For technical details, see the comprehensive [SymBrain v4 Specifications](docs/SYMBRAIN_V4.md).
-
----
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- Rust nightly toolchain with `rust-src` component
-- Docker (for cross-compilation sandbox)
-- QEMU (for boot testing)
+- Rust nightly toolchain with `rust-src`
+- Lean 4 (via `elan`) for the specification tree
+- Python 3.10+ for `scripts/metrics.py` and the unit-generation tooling (stdlib only)
+- QEMU (for the demo-kernel boot harness — see caveat above)
 
-### Build & Verify
+### Build & Measure
 
 ```bash
-# Clone
 git clone https://github.com/xaviercallens/rust-linux-mini-kernel.git
 cd rust-linux-mini-kernel
 
-# Check all 297 modules compile
-cargo check --workspace
+# Compile the workspace
+CARGO_TARGET_DIR=/tmp/runux_target cargo check --workspace
 
-# Run unit tests
+# Run existing unit tests (74 of 316 crates have any)
 cargo test --workspace
 
-# Run security audit
-cargo audit
+# Measure the actual state of the tree — no assertions, just numbers
+python3 scripts/metrics.py measure
 
-# Docker-to-QEMU dev loop (macOS / Apple Silicon)
-make -f Makefile.dev build-image
-make -f Makefile.dev run-c-harness
-make -f Makefile.dev run-rs-harness
-
-# QEMU bare metal harness
-./scripts/run_qemu_harness.sh --ci
-```
-
-### Formal Verification (Lean 4)
-
-```bash
-cd specs/lean4
-lake update && lake build
+# Full Lean verification: 37 modules, real lake type-checking
+cd specs/lean4 && lake build && cd ../scripts && ./verify_specs.sh
 ```
 
 ### Fuzzing
@@ -245,101 +168,57 @@ cargo +nightly fuzz run fuzz_routing -- -max_total_time=30
 
 ---
 
-## 📄 Scientific Paper
+## Demo Media (illustrative mockups, not captured sessions)
 
-A peer-reviewed scientific article accompanies this repository:
+![RunuX Kernel Boot Demo](demo_v8_extended.gif)
+*Hand-drawn mockup of a QEMU boot sequence, generated by `scripts/generate_runux_demo.py` (PIL `ImageDraw`). Not a recording of a real build or boot.*
 
-> **RunuX: A Production-Grade Rust Reimplementation of the Linux Kernel Networking Stack**  
-> Xavier Callens, 2026  
-> *Target venue: ACM EuroSys / SOSP*
-
-The paper, figures, dataset, and full reproducibility guide are in the [`paper/`](paper/) directory:
-
-| File | Description |
-|---|---|
-| [`runux_paper.tex`](paper/runux_paper.tex) | LaTeX source (ACM sigconf format) |
-| [`runux_paper.pdf`](paper/runux_paper.pdf) | Compiled PDF |
-| [`dataset.json`](paper/dataset.json) | Machine-readable benchmark data |
-| [`REPRODUCIBILITY.md`](paper/REPRODUCIBILITY.md) | Step-by-step reproduction guide |
-
-### Citation
-
-```bibtex
-@inproceedings{callens2026runux,
-  author    = {Callens, Xavier},
-  title     = {{RunuX}: A Production-Grade Rust Reimplementation of the
-               Linux Kernel Networking Stack},
-  booktitle = {Proceedings of the ACM European Conference on Computer
-               Systems (EuroSys)},
-  year      = {2026},
-  publisher = {Association for Computing Machinery},
-  address   = {New York, NY, USA},
-  url       = {https://github.com/xaviercallens/rust-linux-mini-kernel},
-  doi       = {10.1145/XXXXXXX.XXXXXXX},
-  note      = {297 kernel modules, Lean 4 formal verification,
-               GKE chaos testing with 0 panics}
-}
-```
+![RunuX GCP Bare Metal Deployment](runux_gcp_demo_v3.gif)
+*Hand-drawn mockup of a bare-metal deployment terminal, generated by `scripts/generate_runux_demo_v2.py`. Not a recording of a real deployment; no verified evidence of a `c3-metal-85` deployment was found in this repository during the 2026-09-26 audit (see `docs/roadmap/PAPER_VERIFICATION_TODO.md`).*
 
 ---
 
 ## CI / CD Pipeline
 
-All workflows run on every push to `main`:
-
-| Workflow | What It Checks | Status |
+| Workflow | What It Checks | Status as of v11.3.0 |
 |---|---|---|
-| **Runtime & Integration Tests** | `cargo check --workspace`, QEMU boot, fuzzing harnesses | ✅ Passing |
-| **RISC-V Cross-Compilation** | `cargo check --workspace --target riscv64gc-unknown-none-elf` | ✅ Passing |
-| **Security Audit** | `cargo +nightly miri test`, `cargo audit` | ✅ Passing |
-| **Lean 4 Mathematical Validation** | `lake build` — all 12 phases, zero `sorry` | ✅ Passing |
-| **Formal Verification** | `verify_specs.sh`, unit tests | ✅ Passing |
+| **Metrics Ratchet** | `scripts/metrics.py ratchet` — no regression vs. baseline | ✅ Passing |
+| **Verify Lean 4 Specifications** | `verify_specs.sh` — full type-check, 37/37 modules | ✅ Passing |
+| **Runtime & Integration Tests** | `cargo check --workspace`, QEMU demo-kernel boot, fuzzing | ❌ Failing — pre-existing, traced to a poisoned-mutex cascade in `crates/printk`'s own test suite, reproduced against the unmodified pre-audit baseline commit; not caused by the audit or workflow changes |
+| **RISC-V Cross-Compilation** | `cargo check --workspace --target riscv64gc-unknown-none-elf` | ❌ Failing — pre-existing on `main` at the same baseline commit |
+| **Security Audit (Clippy)** | Full-strictness clippy pass | ❌ Failing — pre-existing; the "zero warnings" state elsewhere is achieved via blanket `allow` suppression, not by satisfying this check |
+
+Reporting failing CI honestly here rather than showing green badges for checks that don't pass is the whole point of this update.
 
 ---
 
 ## Release History
 
+See [CHANGELOG.md](CHANGELOG.md) for full entries. Recent:
+
 | Version | Date | Milestone |
 |---|---|---|
-| **v11.1.0** | September 6, 2026 | **Quantum-LTN Edge & WARS Core Defenses**: Full Logic Tensor Networks integration with real-time Ring 0 anomaly scoring. RISC-V compilation 100% clean (zero warnings). Formal verification expanded to 13 Phases (92 Theorems). |
-| **v11.0.1** | September 5, 2026 | **Formal Verification Reports Update**: Updated the Lean 4 Proof Status report and the Core Defenses traceability matrix post-validation. |
-| **v11.0.0** | September 5, 2026 | **RunuX Core Defenses 100% Completion (40 REQs, 84 Lean 4 Theorems, Zero sorry)**: Pre-dispatch Ring 0 active interception across all 297 modules, LMS state machine, TinyML inference (<15µs), frozen INT8 weight loader, netfilter active ingress defense, multi-engine consensus aggregator, and formal kernel isolation proofs |
-| **v10.7.0** | June 2, 2026 | **RunuX Core Defenses (Phases 1-7, 35 REQs, 74 Lean 4 Theorems)**: Pre-dispatch interception pipeline, lock-free ring buffer, W^X enforcement, Merkle audit trail |
-| **v10.6** | May 30, 2026 | **SymBrain v4 Bourbaki-Centrale Release**, Calibrated 3-stage PFC Router, Deductive Floor (σ_ded ≥ 0.30) to eliminate Routing-Stalls, 97.06% accuracy on French Concours CPGE STEM exams, serverless NVIDIA L4 GPU Cloud32 deployments |
-| **v10.5** | May 27, 2026 | **SymBrain v3 Quantization Mappings & Edge Co-Inference Engine**, PolarQuant 3-bit, all RISC-V checks green |
-| **v10.4** | May 23, 2026 | **RISC-V no_std allocator & compilation fixes**, all modules green |
-| v10.3 | May 23, 2026 | **RISC-V cross-compilation support**, multi-arch CI pipeline |
-| v10.2 | May 23, 2026 | Comprehensive README, GCP demo, full paper citation |
-| v10.1 | May 22, 2026 | GCP bare metal deployment (`c3-metal-85`) |
-| v10.0 | May 22, 2026 | Bare metal architecture, GCP hardware drivers |
-| v9.4.1 | May 22, 2026 | All CI green, scientific paper, README refresh |
-| v9.4.0 | May 21, 2026 | GKE Chaos Mesh stress testing — 0 panics |
-| v9.3.1 | May 20, 2026 | 297/297 modules, local FFI shadow layouts |
-| v9.3.0 | May 20, 2026 | Formal verification and deployment readiness |
-| v9.1.0 | May 20, 2026 | 296/297 modules, complete networking stack |
-| v8.1.0 | May 19, 2026 | 124 modules, production release with GCP validation |
-
-See [CHANGELOG.md](CHANGELOG.md) for detailed notes.
+| **v11.3.0** | Sep 27, 2026 | Selected `claims_vs_evidence.tex` as the published paper; machine-checked spec-defect proofs; history rewrite removing two files that leaked internal infrastructure hostnames; removed a hard-coded Zenodo token |
+| v11.2.1 | Sep 26, 2026 | Quarantined 4 papers + 2 supporting docs whose claims had no reproducible artifact |
+| v11.2.0 | Sep 26, 2026 | Corrected `runux_paper.tex`'s formal-verification claims to measured numbers; added the v12 pilot writeup |
+| v11.1.0 | Sep 6, 2026 | (Prior release; several of its README/paper claims are the ones corrected above) |
 
 ---
 
 ## Roadmap
 
-- **v11.5 (Next):** RISC-V hardware validation
-  - Phase 1: QEMU `riscv64 virt` boot harness ✅ (CI ready)
-  - Phase 2: Milk-V Duo S embedded IoT boot (~$20)
-  - Phase 3: StarFive VisionFive 2 Lite desktop-class benchmarks (~$45)
-  - Phase 4: SpacemiT K1 (BPI-F3) 8-core SMP + NVMe validation (~$120)
-- **v12.0 (Planned):** RISC-V CHERI hardware-enforced memory safety
-  - Triple safety: Rust ownership + Lean 4 proofs + CHERI capabilities
-  - Ring 3 user-space driver environment
-  - Real hardware validation on RISC-V and additional cloud providers
+Concrete, plan-only documents (nothing below is implemented yet):
+
+- **[`docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md`](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md)** — closing the 245 open proof obligations, the 141 placeholder crates, the 664 undocumented `unsafe` blocks, and getting a real bootable image on x86_64/riscv64, via the oracle-gated low-tier-model workflow.
+- **[`docs/roadmap/AI_AGENT_DEFENSE_PLAN.md`](docs/roadmap/AI_AGENT_DEFENSE_PLAN.md)** — hardening the existing 40 Core Defenses requirements against an adaptive, high-frequency, black-box-querying AI-agent attacker, distinct from the human-paced attacker the current design assumes.
+- **[`docs/roadmap/RESEARCH_DIRECTIONS.md`](docs/roadmap/RESEARCH_DIRECTIONS.md)** — workflow fixes from the pilot's failure modes, and 7 open research questions.
+- **[`docs/roadmap/PAPER_VERIFICATION_TODO.md`](docs/roadmap/PAPER_VERIFICATION_TODO.md)** — exactly what's missing for each quarantined claim to be restored.
 
 ---
 
 ## Acknowledgments
 
-This project owes its existence to **Linus Torvalds** and the Linux kernel community, whose decades of engineering excellence created the foundation that RunuX translates into Rust. We also acknowledge the contributions of the **Rust**, **Lean 4**, **RISC-V International**, **QEMU**, **Chaos Mesh**, and **Google Cloud Platform** communities for the tooling and infrastructure that make this work possible.
+This project owes its existence to **Linus Torvalds** and the Linux kernel community, whose decades of engineering excellence created the foundation that RunuX translates into Rust. We also acknowledge the **Rust**, **Lean 4**, **RISC-V International**, and **QEMU** communities for the tooling this project builds on.
 
 ---
 
@@ -347,13 +226,14 @@ This project owes its existence to **Linus Torvalds** and the Linux kernel commu
 
 | Document | Description |
 |---|---|
-| [docs/SYMBRAIN_V4.md](docs/SYMBRAIN_V4.md) | **SymBrain v4 Specifications & Architecture Design Document** |
-| [docs/ROADMAP_TRACEABILITY_MATRIX.md](docs/ROADMAP_TRACEABILITY_MATRIX.md) | Core Defenses requirements traceability matrix |
-| [specs/PROOF_STATUS_REPORT.md](specs/PROOF_STATUS_REPORT.md) | Lean 4 formal verification theorem status report |
-| [paper/REPRODUCIBILITY.md](paper/REPRODUCIBILITY.md) | Scientific reproducibility guide (9 steps) |
-| [ROADMAP.md](ROADMAP.md) | Overall project roadmap |
-| [PERFECT_100_PERCENT_REPORT.md](PERFECT_100_PERCENT_REPORT.md) | Achievement report and fix patterns |
-| [paper/dataset.json](paper/dataset.json) | Machine-readable benchmark dataset |
+| [docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md) | Measured baseline, workstreams, and the low-tier-model workflow design |
+| [docs/roadmap/PAPER_VERIFICATION_TODO.md](docs/roadmap/PAPER_VERIFICATION_TODO.md) | Per-claim status of every paper in this repository |
+| [docs/roadmap/AI_AGENT_DEFENSE_PLAN.md](docs/roadmap/AI_AGENT_DEFENSE_PLAN.md) | Security hardening plan against AI-agent-class attackers |
+| [docs/roadmap/RESEARCH_DIRECTIONS.md](docs/roadmap/RESEARCH_DIRECTIONS.md) | Workflow fixes and open research questions |
+| [specs/lean4/AXIOMS.md](specs/lean4/AXIOMS.md) | Register of all 138 Lean axioms, pending justification |
+| [specs/PROOF_STATUS_REPORT.md](specs/PROOF_STATUS_REPORT.md) | Auto-generated by `verify_specs.sh` on every run |
+| [docs/SYMBRAIN_V4.md](docs/SYMBRAIN_V4.md) | SymBrain v4 design document (see `PAPER_VERIFICATION_TODO.md` for what's simulated vs. measured) |
+| [paper/claims_vs_evidence.tex](paper/claims_vs_evidence.tex) | The published paper |
 
 ## License
 
@@ -361,11 +241,4 @@ MIT License with Citation Requirement. See [LICENSE](LICENSE).
 
 ---
 
-## 🎥 GCP Bare Metal Deployment Demo
-
-![RunuX GCP Bare Metal Deployment](runux_gcp_demo_v3.gif)
-*Live terminal trace: RunuX kernel modules booting on a Google Cloud `c3-metal-85` bare metal instance — native Intel hardware, IDPF zero-copy networking, Hyperdisk storage.*
-
----
-
-*Bringing memory safety to the operating system foundation — from formal proof to bare metal.* 🦀
+*Correcting the gap between claims and evidence — one measured commit at a time.*

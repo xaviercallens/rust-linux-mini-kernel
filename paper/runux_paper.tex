@@ -49,7 +49,7 @@
 % ABSTRACT
 % ============================================================================
 \begin{abstract}
-Memory safety vulnerabilities remain the dominant class of critical security flaws in operating system kernels. We present \textbf{RunuX}, the first comprehensive, FFI-compatible Rust translation of 297 core Linux kernel networking modules, targeting the Linux 5.10 LTS codebase. RunuX achieves 100\% compilation coverage with zero type-integrity warnings through a unified \texttt{kernel\_types} crate providing binary-compatible \texttt{\#[repr(C)]} structures. We validate runtime correctness through (i)~automated QEMU boot testing, (ii)~continuous \texttt{libFuzzer}-based packet injection, and (iii)~sustained fault injection on Google Kubernetes Engine using Chaos Mesh. Across six distinct fault scenarios---network partition, latency injection, packet loss, CPU starvation, memory pressure, and pod eviction---RunuX exhibits \textbf{zero kernel panics} and \textbf{zero oops}. Performance evaluation shows Rust CRC32 checksum throughput exceeding the C baseline by 4.73\%, with QEMU boot time within 0.02\% of the native C kernel. Formal verification using Lean~4 spans 432 theorems and 138 axioms across 36 specification modules; a dedicated Ring~0 isolation model (\texttt{RunuxDefenses}, 84 theorems) is fully closed with zero \texttt{sorry} tactics and zero axioms, while the broader network-stack modules retain 245 open proof obligations, continuously tracked by an automated metrics gate. We additionally report a first pilot of an oracle-gated, multi-tier LLM proof-completion workflow that closed 4 of 16 targeted theorems with independently re-verified proofs and correctly flagged 2 further theorems as unprovable-as-stated---genuine specification defects---rather than fabricating unsound proofs. RunuX demonstrates that a production-grade, memory-safe kernel translation is feasible without sacrificing performance or binary compatibility, and that closing the remaining proof debt can be partially automated under a strict, independently-checked contract.
+Memory safety vulnerabilities remain the dominant class of critical security flaws in operating system kernels. We present \textbf{RunuX}, the first comprehensive, FFI-compatible Rust translation of 297 core Linux kernel networking modules, targeting the Linux 5.10 LTS codebase. RunuX achieves 100\% compilation coverage with zero type-integrity warnings through a unified \texttt{kernel\_types} crate providing binary-compatible \texttt{\#[repr(C)]} structures. We validate runtime correctness through (i)~automated QEMU boot testing, (ii)~continuous \texttt{libFuzzer}-based packet injection, and (iii)~sustained fault injection on Google Kubernetes Engine using Chaos Mesh. Across six distinct fault scenarios---network partition, latency injection, packet loss, CPU starvation, memory pressure, and pod eviction---RunuX exhibits \textbf{zero kernel panics} and \textbf{zero oops}. Performance evaluation shows Rust CRC32 checksum throughput exceeding the C baseline by 4.73\%, with QEMU boot time within 0.02\% of the native C kernel. Formal verification using Lean~4 spans 434 theorems and 138 axioms across 37 specification modules; a dedicated Ring~0 isolation model (\texttt{RunuxDefenses}, 84 theorems) is fully closed with zero \texttt{sorry} tactics and zero axioms, while the broader network-stack modules retain 245 open proof obligations, continuously tracked by an automated metrics gate. We additionally report a first pilot of an oracle-gated, multi-tier LLM proof-completion workflow that closed 4 of 16 targeted theorems with independently re-verified proofs and correctly flagged 2 further theorems as unprovable-as-stated---genuine specification defects---rather than fabricating unsound proofs. RunuX demonstrates that a production-grade, memory-safe kernel translation is feasible without sacrificing performance or binary compatibility, and that closing the remaining proof debt can be partially automated under a strict, independently-checked contract.
 \end{abstract}
 
 \begin{CCSXML}
@@ -93,7 +93,7 @@ We extend our deepest gratitude to \textbf{Linus Torvalds} and the broader \text
 This paper makes the following contributions:
 \begin{enumerate}
     \item \textbf{Complete FFI-compatible translation}: 297/297 Linux networking modules translated to Rust with zero compilation warnings and full \texttt{\#[repr(C)]} binary compatibility (Section~\ref{sec:architecture}).
-    \item \textbf{Formal verification}: 432 machine-checked Lean~4 theorems across 36 modules, including a fully-closed 84-theorem Ring~0 isolation model with zero \texttt{sorry} and zero axioms (Section~\ref{sec:verification}).
+    \item \textbf{Formal verification}: 434 machine-checked Lean~4 theorems across 37 modules, including a fully-closed 84-theorem Ring~0 isolation model with zero \texttt{sorry} and zero axioms (Section~\ref{sec:verification}).
     \item \textbf{Oracle-gated AI-assisted proof completion}: A multi-tier LLM workflow for closing remaining proof obligations under a statement-hash anti-weakening check and independent post-hoc re-verification, evaluated in a 16-theorem pilot (Section~\ref{sec:ai-proof}).
     \item \textbf{Runtime validation}: Automated QEMU boot testing and continuous fuzzing via \texttt{libFuzzer} (Section~\ref{sec:runtime}).
     \item \textbf{Chaos engineering evaluation}: Sustained fault injection on GKE demonstrating zero panics across six fault classes (Section~\ref{sec:chaos}).
@@ -174,7 +174,7 @@ Special Protocols     & 47  & \texttt{dccp}, \texttt{sctp}, \texttt{l2tp}, \text
 \label{sec:verification}
 
 \subsection{Lean 4 Formal Specifications}
-We use Lean~4 (v4.29.1) with the Lake build system to formalize kernel invariants across 36 specification modules spanning boot sequencing, memory allocation, Netfilter/NAT connection tracking, IPv4/IPv6 routing, GPU compute, and the RunuX Core Defenses Ring~0 isolation model. The corpus comprises 432 theorems and 138 axioms; Table~\ref{tab:formal-verification} breaks this down by subsystem, measured directly from the specification tree rather than asserted.
+We use Lean~4 (v4.29.1) with the Lake build system to formalize kernel invariants across 37 specification modules spanning boot sequencing, memory allocation, Netfilter/NAT connection tracking, IPv4/IPv6 routing, GPU compute, the RunuX Core Defenses Ring~0 isolation model, and (new in this revision) machine-checked disproofs of two theorems found false. The corpus comprises 434 theorems and 138 axioms; Table~\ref{tab:formal-verification} breaks this down by subsystem, measured directly from the specification tree rather than asserted.
 
 \begin{table}[t]
 \caption{Formal Verification Coverage by Subsystem}
@@ -185,13 +185,14 @@ We use Lean~4 (v4.29.1) with the Lake build system to formalize kernel invariant
 \textbf{Subsystem} & \textbf{Thms.} & \textbf{Axioms} & \textbf{Open} \\
 \midrule
 RunuX Core Defenses (Ring 0)  & 84  & 0   & 0 \\
-Boot \& Memory Management     & 47  & 20  & 32 \\
-Netfilter / Conntrack / NAT   & 200 & 65  & 174 \\
-IPv4/IPv6 \& Routing          & 65  & 47  & 68 \\
-GPU Compute \& QuantumLTN     & 10  & 1   & 0 \\
-Sockets \& Scheduling (misc.) & 26  & 5   & 0 \\
+Boot \& Memory Management     & 50  & 26  & 35 \\
+Netfilter / Conntrack / NAT   & 224 & 67  & 164 \\
+IPv4/IPv6 \& Routing          & 54  & 44  & 46 \\
+GPU Compute \& QuantumLTN     & 9   & 1   & 0 \\
+Sockets \& Scheduling (misc.) & 11  & 0   & 0 \\
+Audit (spec-defect proofs)    & 2   & 0   & 0 \\
 \midrule
-\textbf{Total}                & \textbf{432} & \textbf{138} & \textbf{245} \\
+\textbf{Total}                & \textbf{434} & \textbf{138} & \textbf{245} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -342,7 +343,7 @@ Pod Kill             & 30\,s  & 0 & 0 & \checkmark \\
 While RunuX demonstrates the feasibility of a comprehensive Rust kernel translation, several limitations remain:
 \begin{itemize}
     \item \textbf{Runtime semantics}: Compilation correctness does not guarantee behavioral equivalence with the C implementation. Full differential testing against the C kernel is future work.
-    \item \textbf{Formal verification coverage}: 432 theorems across 36 modules cover boot, memory management, Ring~0 isolation, and portions of the network stack, but 245 proof obligations remain open (\texttt{sorry}) and 138 axioms are currently declared. Not all 138 represent genuine hardware- or FFI-boundary assumptions; an ongoing audit (Section~\ref{sec:ai-proof}) is converting unjustified axioms to proven lemmas, targeting fewer than 30 remaining, each with a written justification.
+    \item \textbf{Formal verification coverage}: 434 theorems across 37 modules cover boot, memory management, Ring~0 isolation, and portions of the network stack, but 245 proof obligations remain open (\texttt{sorry}) and 138 axioms are currently declared. Not all 138 represent genuine hardware- or FFI-boundary assumptions; an ongoing audit (Section~\ref{sec:ai-proof}) is converting unjustified axioms to proven lemmas, targeting fewer than 30 remaining, each with a written justification.
     \item \textbf{AI-assisted proof completion is not yet reliable unsupervised}: the pilot in Section~\ref{sec:ai-proof} required independent, tool-based re-verification to catch a self-reported completion that did not match the actual committed diff; the workflow is a productivity aid under a strict automated contract, not a substitute for that verification step.
     \item \textbf{Device drivers}: The current scope covers the networking stack; PCIe, NVMe, and GPU drivers are not yet translated.
     \item \textbf{Bare-metal execution}: RunuX boots under QEMU but has not been validated on physical hardware.
