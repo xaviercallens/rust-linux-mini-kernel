@@ -8,7 +8,7 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 #![allow(dead_code, unused_imports, non_camel_case_types, non_snake_case, unused_mut, unused_variables, unused_assignments, unused_attributes, private_interfaces, unused_comparisons, unexpected_cfgs, static_mut_refs, no_mangle_generic_items, unused_unsafe, non_upper_case_globals)]
 
-use core::{ptr, ffi::{c_int, c_void}};
+use core::{ptr, ffi::{c_int, c_void}, cell::UnsafeCell};
 use kernel_types::*;
 
 pub const EINVAL: c_int = 22;
@@ -476,16 +476,25 @@ pub extern "C" fn br_ip6_fragment_wrapper(
     unsafe { br_ip6_fragment(net, sk, skb, data, output) }
 }
 
+// Wrapper type for UnsafeCell to make it Sync for FFI-exposed structures
+pub struct Ipv6OpsCell(UnsafeCell<nf_ipv6_ops>);
+
+// SAFETY: Ipv6OpsCell wraps UnsafeCell<nf_ipv6_ops> which contains only function pointers
+// (which are Copy and Sync). This is necessary for FFI-exposed kernel structures that
+// may be accessed by C code. Interior mutability is provided safely since the pointed
+// data (function pointers) are immutable.
+unsafe impl Sync for Ipv6OpsCell {}
+
 // Static struct nf_ipv6_ops
 #[no_mangle]
-pub static mut ipv6ops: nf_ipv6_ops = nf_ipv6_ops {
+pub static ipv6ops: Ipv6OpsCell = Ipv6OpsCell(UnsafeCell::new(nf_ipv6_ops {
     route_me_harder: ip6_route_me_harder,
     route: __nf_ip6_route,
     fragment: nf_ip6_fragment_stub,
     reroute: nf_ip6_reroute,
     route_input: nf_ip6_route_input_stub,
     br_fragment: br_ip6_fragment_wrapper,
-};
+}));
 
 // Initialization
 #[no_mangle]
