@@ -42,7 +42,7 @@ flowchart LR
 |---|---|---|
 | **M1: Honest core** | Core set (13 crates): every `unsafe` block justified or listed as possible UB; 0 `static mut`; no blanket `#[allow(clippy::all)]`; `ai_detector` aliasing bug fixed. **4/8 crates done** ([#59](../../pull/59), [#61](../../pull/61)-[#63](../../pull/63)); `ai_bridge`/`page_alloc`/`slab` remain, `vmalloc` blocked on [#60](../../issues/60) | T1 |
 | **M2: Spec triage** | All 245 open `sorry` classified; every "false as stated" candidate either disproved in `MVK/Audit/` or reclassified; arithmetic-class obligations closed | T2 |
-| **M3: It boots** | **riscv64 leg done**: `examples/riscv_qemu_harness` boots real `arch/riscv64` code via OpenSBI in QEMU, checked by [`scripts/riscv_boot_test.sh`](scripts/riscv_boot_test.sh) (not yet wired into CI). Remaining: PLIC/Sv39 made real (not print-only), x86_64 leg, and a syscall smoke test | T3 |
+| **M3: It boots** | **riscv64 leg done**: `examples/riscv_qemu_harness` boots real `arch/riscv64` code via OpenSBI in QEMU, checked by [`scripts/riscv_boot_test.sh`](scripts/riscv_boot_test.sh) and independently re-verified on a fresh GCP VM (30/30 boots, [`telemetry`](docs/roadmap/RISCV_BOOT_TELEMETRY.md)); not yet wired into CI. Remaining: PLIC/Sv39 made real (not print-only), x86_64 leg, and a syscall smoke test | T3 |
 | **M4: Safe GPU path** | `virtio-gpu` command → fence completes in QEMU; IOMMU isolation and VRAM zeroization proven in Lean; `fuzz_gpu_commands` clean | T4 |
 | **M5: Agent-grade defense** | Defense pipeline measured at 10³–10⁵ req/s; rejection paths statistically indistinguishable by timing | T5 |
 | **Ongoing** | `scripts/metrics.py ratchet` never regresses; every quarantined paper claim is restored with a script or retracted | T0, T6 |
