@@ -69,6 +69,11 @@ pub extern "C" fn rust_eh_personality() {}
 #[cfg(target_arch = "aarch64")]
 #[no_mangle]
 pub extern "C" fn kmain() -> ! {
+    // SAFETY: `kmain` is called exactly once, by the entry assembly
+    // above, only after BSS has been cleared and a valid stack is set
+    // up in EL1 -- the preconditions every `runux_aarch64` function
+    // called here requires (UART reachable via the identity mapping
+    // QEMU provides by default, PSCI available on `virt`).
     unsafe {
         runux_aarch64::uart_puts("[INFO] Booting RunuX AArch64 QEMU Harness...\n");
         runux_aarch64::uart_puts("[INFO] Reached EL1, active core id: ");
@@ -117,6 +122,9 @@ unsafe fn panic_and_off() -> ! {
 #[cfg(target_arch = "aarch64")]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    // SAFETY: same preconditions as `kmain`'s unsafe block -- the panic
+    // handler only ever runs after boot has already reached EL1 with
+    // UART and PSCI available.
     unsafe { panic_and_off() }
 }
 
