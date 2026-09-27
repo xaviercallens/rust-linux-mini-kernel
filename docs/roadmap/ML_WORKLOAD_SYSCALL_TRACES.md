@@ -117,18 +117,17 @@ python3 scripts/telemetry/ml_trace_analyze.py ~/ml_traces \
   --out docs/roadmap/ml_workload_traces
 ```
 
-## Next round (M4, part 2 -- not started)
+## Next round (M4, part 2) -- done, see `ML_WORKLOAD_FIREWALL_REPLAY.md`
 
-The larger, genuinely open-ended half of M4: compile
-`ebpf_firewall`'s policy engine and `ai_detector`'s classifier as a
-host library, replay these captured traces (and more workload
-variety) through them offline, and measure false-positive rate with a
-confidence interval. Per `TPU_ACCELERATOR_IMPROVEMENT_PLAN.md`'s own
-honesty flag, a high FPR here would be a valid, useful, *publishable*
-negative result, not a failure to avoid -- e.g. the `ioctl`/`mmap`
-pattern noted above is exactly the kind of behavior a classifier never
-trained on TPU/accelerator workloads might flag as anomalous. This
-round intentionally stops short of that to keep this step bounded and
-because the replay-harness engineering (bridging Rust kernel code to
-offline trace replay) is substantial, separate work deserving its own
-scoped pass.
+**Update, same session:** the replay-harness engineering was done.
+`examples/firewall_replay` replays these exact 620,934 real events
+through the real, unmodified `ebpf_firewall::evaluate_syscall` and
+`ai_detector::evaluate_pid_event`. The rule-based firewall layer is
+clean and fully explicable (0.0032% flagged, always the same real
+`memfd_create("xla-jit-exec")` JIT-compilation call). The classifier
+layer's result is more significant than a false-positive-rate number:
+its weights have no evident training provenance anywhere in this
+repository, and its erratic behavior on real, identical-workload
+traffic is consistent with an untrained/arbitrary weight matrix, not a
+fitted model responding to real signal. Full write-up:
+`ML_WORKLOAD_FIREWALL_REPLAY.md`.

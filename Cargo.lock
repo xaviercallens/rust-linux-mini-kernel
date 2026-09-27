@@ -716,6 +716,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "firewall_replay"
+version = "0.1.0"
+dependencies = [
+ "ai_detector",
+ "ebpf_firewall",
+]
+
+[[package]]
 name = "fork"
 version = "0.4.0"
 dependencies = [

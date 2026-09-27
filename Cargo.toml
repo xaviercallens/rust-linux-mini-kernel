@@ -143,6 +143,7 @@ members = [
     "examples/riscv_qemu_harness",
     "examples/aarch64_qemu_harness",
     "examples/pci_probe_userspace",
+    "examples/firewall_replay",
     "examples/edge_inference_demo",
     # Memory Management modules
     "crates/page_alloc",
