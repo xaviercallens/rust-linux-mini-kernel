@@ -145,7 +145,23 @@ at this scale):
 | **M2** — minimal MMIO/BAR mapping + IOMMU-gated DMA groundwork | 10-20 hrs, spread over iteration | **$3-7** (L4) |
 | **M3** — a real minimal compute-submission path (see §5) | genuinely open-ended; not estimated here | scope decision needed before any number is honest |
 
-## 4. Milestone 1 (recommended starting point, currently BLOCKED — see §2.1): prove PR #76's real code against real silicon
+## 4. Milestone 1 — partially achieved via a different resource (TPU, not GPU): see `GPU_REAL_HARDWARE_TELEMETRY.md`
+
+**Update (same day):** with GPU quota confirmed exhausted and region-hopping
+empirically ruled out (§2.1), this project's real (and previously
+unnoticed) Cloud TPU v5e quota (`TPU_LITE_PODSLICE_V5`, separate quota
+pool from Compute Engine GPUs) was used instead. A single spot
+`v5litepod-1` TPU VM let this project's real PCI enumeration code run,
+unmodified, as a privileged userspace process against genuine
+(non-QEMU) hardware for the first time — full results, cost, and scope
+limits in [`GPU_REAL_HARDWARE_TELEMETRY.md`](GPU_REAL_HARDWARE_TELEMETRY.md).
+**This is not a GPU and does not unblock the RTX/T4 goal** — no NVIDIA
+hardware was reached — but it is real progress on the underlying "does
+this code work outside an emulator" question, at near-zero cost. The
+original GPU-specific Milestone 1 plan below remains blocked exactly as
+described in §2.1.
+
+### Original plan (still blocked for GPUs specifically)
 
 Directly continues the verified, merged work in #69-#76 — same
 pattern (fresh VM, real `apt-get`, unmodified script, independent of
