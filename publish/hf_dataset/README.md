@@ -70,4 +70,23 @@ Claude models) under the author's direction.
 
 ## Citation
 
-See the Zenodo record for the DOI once published.
+Published on Zenodo: [10.5281/zenodo.22985926](https://doi.org/10.5281/zenodo.22985926)
+
+```bibtex
+@misc{callens2026claims,
+  author    = {Callens, Xavier},
+  title     = {Claims vs. Evidence: A Measured Audit of an AI-Assisted Rust Kernel
+               and an Oracle-Gated Workflow for LLM Proof Completion},
+  year      = {2026},
+  publisher = {Zenodo},
+  version   = {v11.3.1},
+  doi       = {10.5281/zenodo.22985926},
+  url       = {https://doi.org/10.5281/zenodo.22985926}
+}
+```
+
+## Contributing
+
+The project is open to Rust, Lean, and security contributors and to AI agents:
+see [ROADMAP.md](https://github.com/xaviercallens/rust-linux-mini-kernel/blob/main/ROADMAP.md)
+and [CONTRIBUTING.md](https://github.com/xaviercallens/rust-linux-mini-kernel/blob/main/CONTRIBUTING.md).

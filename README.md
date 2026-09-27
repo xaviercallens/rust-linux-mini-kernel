@@ -9,6 +9,7 @@
 [![Metrics Ratchet](https://github.com/xaviercallens/rust-linux-mini-kernel/actions/workflows/metrics-ratchet.yml/badge.svg)](docs/roadmap/metrics/metrics.baseline.json)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 [![Version](https://img.shields.io/badge/version-11.3.0-green)](https://github.com/xaviercallens/rust-linux-mini-kernel/releases)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22985926.svg)](https://doi.org/10.5281/zenodo.22985926)
 [![Contributors welcome](https://img.shields.io/badge/contributors-welcome-brightgreen)](CONTRIBUTING.md)
 [![Agent-ready issues](https://img.shields.io/github/issues/xaviercallens/rust-linux-mini-kernel/agent-ready?label=agent-ready%20issues)](https://github.com/xaviercallens/rust-linux-mini-kernel/issues?q=is%3Aopen+label%3Aagent-ready)
 
@@ -136,7 +137,7 @@ Details: [`docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md`](docs/roadmap/RUNUX_V12
 
 | Document | Status |
 |---|---|
-| [`paper/claims_vs_evidence.tex`](paper/claims_vs_evidence.tex) / `.pdf` | **Published.** Every figure traces to a checked-in script, data file, or Lean proof. |
+| [`paper/claims_vs_evidence.tex`](paper/claims_vs_evidence.tex) / `.pdf` | **Published** on Zenodo, [doi:10.5281/zenodo.22985926](https://doi.org/10.5281/zenodo.22985926); data on [Hugging Face](https://huggingface.co/datasets/callensxavier/claims-vs-evidence-runux-audit). Every figure traces to a checked-in script, data file, or Lean proof. |
 | [`paper/runux_paper.tex`](paper/runux_paper.tex) / `.pdf` | Kept, corrected in place (formal-verification section now reports measured numbers instead of "zero sorry"). Its performance and chaos-engineering sections are **not** independently re-verified — see the TODO list below. |
 | `paper/quarantine/*.tex` (4 papers) + 2 supporting docs | **Quarantined.** Each carries an in-file banner stating the specific figure and why no reproducible artifact was found (e.g. a claimed 25.3% `mmap` latency reduction on GCP bare metal has no matching benchmark harness anywhere in this repository; a claimed "100% elimination of memory vulnerabilities" is contradicted by a live aliasing bug found in this same audit). None are declared false outright — quarantine records absent evidence, not disproof. |
 
