@@ -40,7 +40,7 @@ flowchart LR
 
 | Milestone | Exit criterion (measured) | Tracks |
 |---|---|---|
-| **M1: Honest core** | Core set (13 crates): every `unsafe` block justified or listed as possible UB; 0 `static mut`; no blanket `#[allow(clippy::all)]`; `ai_detector` aliasing bug fixed | T1 |
+| **M1: Honest core** | Core set (13 crates): every `unsafe` block justified or listed as possible UB; 0 `static mut`; no blanket `#[allow(clippy::all)]`; `ai_detector` aliasing bug fixed. **4/8 crates done** ([#59](../../pull/59), [#61](../../pull/61)-[#63](../../pull/63)); `ai_bridge`/`page_alloc`/`slab` remain, `vmalloc` blocked on [#60](../../issues/60) | T1 |
 | **M2: Spec triage** | All 245 open `sorry` classified; every "false as stated" candidate either disproved in `MVK/Audit/` or reclassified; arithmetic-class obligations closed | T2 |
 | **M3: It boots** | `kernel_image` built from the workspace boots in QEMU on x86_64 and riscv64 and runs a syscall smoke test in CI | T3 |
 | **M4: Safe GPU path** | `virtio-gpu` command → fence completes in QEMU; IOMMU isolation and VRAM zeroization proven in Lean; `fuzz_gpu_commands` clean | T4 |
@@ -52,7 +52,7 @@ flowchart LR
 Run `python3 scripts/metrics.py measure`. As of v11.3.0:
 
 - 245 open `sorry` and 138 axioms across 434 theorems in 37 Lean files
-- 101 undocumented `unsafe` blocks and 10 `static mut` in the 13-crate core set
+- Core set started at 101 undocumented `unsafe` blocks and 10 `static mut` (13 crates). Wave 1 has documented 8 of those 101 (`syscall_table` 1, `kernel_types` 2, `immutable_logs` 5) and removed 4 of the 10 `static mut` (`syscall_table`, `netfilter`, `kernel_types`×2). `netfilter`'s 1 block was correctly flagged as not-yet-justifiable rather than documented ([#64](../../issues/64)); 92 blocks remain in `ai_bridge`/`page_alloc`/`slab`/`vmalloc` — see README → Measured Status for the live count
 - 141 of 316 crates are placeholders
 
 ## Call to action
