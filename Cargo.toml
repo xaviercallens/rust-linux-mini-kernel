@@ -141,6 +141,7 @@ members = [
     "examples/micro_kernel_demo",
     "examples/qemu_harness",
     "examples/riscv_qemu_harness",
+    "examples/aarch64_qemu_harness",
     "examples/edge_inference_demo",
     # Memory Management modules
     "crates/page_alloc",
@@ -186,6 +187,7 @@ members = [
     "crates/cgroup",
     "crates/kernel_tests",
     "arch/riscv64",
+    "arch/aarch64",
     # RISC-V AI/ML runtime crates (Phase 5A)
     "crates/ai_runtime",
     "crates/rvv_simd",
