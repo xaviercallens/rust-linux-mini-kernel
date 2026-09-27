@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 kernel_types = { path = "../kernel_types" }
 driver_pci_core = { path = "../driver_pci_core" }
-libc = "0.2"
+driver_pci_access = { path = "../driver_pci_access" }
 
 [lib]
 crate-type = ["rlib"]
