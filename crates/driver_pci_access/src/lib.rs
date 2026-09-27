@@ -72,18 +72,40 @@ pub unsafe fn pci_config_write32(bus: u8, device: u8, function: u8, offset: u8, 
 /// combining both dwords for the fully general 64-bit case is
 /// unimplemented follow-up work, not silently assumed to work.
 ///
+/// Clears the Command register's I/O- and memory-space decode bits
+/// (offset 0x04, bits 0-1) before writing the BAR and restores them
+/// immediately after, so the temporarily-relocated BAR is never actually
+/// decoded by the device while the write is live. This does not make
+/// the probe safe to call on a device with an active driver bound to
+/// it -- the driver's own in-flight accesses are not synchronized with
+/// this function at all -- it only narrows the window in which a
+/// *bus-mastering* access from the device itself could land on the
+/// bogus address. Callers running outside ring 0 (e.g.
+/// `examples/pci_probe_userspace`) are responsible for checking there
+/// is no bound driver before calling this at all; this function cannot
+/// check that itself (no `#[std]` filesystem access in this `no_std`
+/// crate).
+///
 /// # Safety
 /// Same preconditions as [`pci_config_read32`]/[`pci_config_write32`].
-/// Briefly overwrites the target BAR; on real (non-QEMU) hardware this
-/// should only be done before the device is put into active use, since
-/// a concurrent DMA using the BAR's mapped address could race with the
-/// probe.
+/// The caller must ensure no concurrent access to this device's config
+/// space or BARs can occur while this function runs (e.g. by holding
+/// whatever lock a real kernel's PCI subsystem would hold, or, in a
+/// userspace caller, by confirming via sysfs that no driver is bound).
 #[cfg(target_arch = "x86_64")]
 pub unsafe fn pci_bar_size(bus: u8, device: u8, function: u8, bar_offset: u8) -> u64 {
-    let original = pci_config_read32(bus, device, function, bar_offset);
+    const COMMAND_OFFSET: u8 = 0x04;
+    const DECODE_BITS: u32 = 0x3; // bit0 = I/O space, bit1 = memory space
+
+    let original_command = pci_config_read32(bus, device, function, COMMAND_OFFSET);
+    pci_config_write32(bus, device, function, COMMAND_OFFSET, original_command & !DECODE_BITS);
+
+    let original_bar = pci_config_read32(bus, device, function, bar_offset);
     pci_config_write32(bus, device, function, bar_offset, 0xFFFF_FFFF);
     let mask = pci_config_read32(bus, device, function, bar_offset);
-    pci_config_write32(bus, device, function, bar_offset, original);
+    pci_config_write32(bus, device, function, bar_offset, original_bar);
+
+    pci_config_write32(bus, device, function, COMMAND_OFFSET, original_command);
 
     if mask == 0 {
         return 0;
