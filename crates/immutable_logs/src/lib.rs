@@ -322,12 +322,11 @@ impl SyncMerkleLog {
 
     /// Returns the current monotonic Sequence ID (REQ-RCD-006).
     pub fn current_sequence_id(&self) -> u64 {
-        // SAFETY: `UnsafeCell::get()` returns a non-null, initialized, properly-aligned raw pointer
-        // to the inner `HeaplessMerkleLog`. Dereferencing it with `&*` is safe because:
-        // 1. The pointer is guaranteed non-null by UnsafeCell's invariant.
-        // 2. The memory is initialized and lives as long as self.
-        // 3. Only an immutable reference is created (no mutable alias exists).
-        // 4. Ring 0 cooperative-scheduler context ensures single-core execution with no preemption.
+        // SAFETY: `UnsafeCell::get()` returns a non-null, initialized, properly-aligned pointer
+        // to the inner `HeaplessMerkleLog`, which lives as long as `self`; only a shared
+        // reference is taken here (no mutable alias exists), and the Ring 0 cooperative
+        // scheduler guarantees single-core, non-preemptive execution, so no data race is
+        // possible while it is held.
         unsafe {
             let log = &*self.inner.get();
             log.current_sequence_id()
