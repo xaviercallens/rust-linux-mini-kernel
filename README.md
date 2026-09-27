@@ -211,6 +211,7 @@ Concrete, plan-only documents (nothing below is implemented yet):
 
 - **[`docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md`](docs/roadmap/RUNUX_V12_VERIFIED_CORE_PLAN.md)** — closing the 245 open proof obligations, the 141 placeholder crates, the 664 undocumented `unsafe` blocks, and getting a real bootable image on x86_64/riscv64, via the oracle-gated low-tier-model workflow.
 - **[`docs/roadmap/AI_AGENT_DEFENSE_PLAN.md`](docs/roadmap/AI_AGENT_DEFENSE_PLAN.md)** — hardening the existing 40 Core Defenses requirements against an adaptive, high-frequency, black-box-querying AI-agent attacker, distinct from the human-paced attacker the current design assumes.
+- **[`docs/roadmap/STANDARD_HARDWARE_AI_GPU_PLAN.md`](docs/roadmap/STANDARD_HARDWARE_AI_GPU_PLAN.md)** — getting real PCIe/IOMMU/GPU support (starting with vendor-neutral `virtio-gpu`, not simulated NVIDIA/TPU claims) onto a standard x86_64 server, with the security properties (DMA isolation, VRAM zeroization) proven, not asserted.
 - **[`docs/roadmap/RESEARCH_DIRECTIONS.md`](docs/roadmap/RESEARCH_DIRECTIONS.md)** — workflow fixes from the pilot's failure modes, and 7 open research questions.
 - **[`docs/roadmap/PAPER_VERIFICATION_TODO.md`](docs/roadmap/PAPER_VERIFICATION_TODO.md)** — exactly what's missing for each quarantined claim to be restored.
 
