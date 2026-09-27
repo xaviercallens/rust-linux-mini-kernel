@@ -106,13 +106,20 @@ pub const NVIDIA_VENDOR_ID: u16 = 0x10de;
 /// Red Hat / Qumranet virtio vendor ID (1af4), per
 /// <https://pci-ids.ucw.cz/read/PC/1af4> -- used by QEMU's `virtio-gpu-pci`.
 pub const VIRTIO_VENDOR_ID: u16 = 0x1af4;
-/// Google, Inc. PCI vendor ID (1ae0). Not sourced from pci-ids.ucw.cz
-/// (Google's device IDs largely aren't public there) -- observed
-/// directly via `lspci -nn` on a real GCP `v5litepod-1` TPU VM
-/// (2026-09-27; see `docs/roadmap/GPU_REAL_HARDWARE_TELEMETRY.md`),
-/// where it identified both the TPU accelerator itself
-/// (device `0063`, class `ff00`/vendor-specific) and the gVNIC virtual
-/// NIC (device `0042`).
+/// Google, Inc. PCI vendor ID (1ae0), per
+/// <https://pci-ids.ucw.cz/read/PC/1ae0> (checked directly against the
+/// live database 2026-09-27, not assumed) -- this vendor ID is public
+/// and well-established, not a new discovery. That database lists
+/// device `0042` ("Compute Engine Virtual Ethernet [gVNIC]") and `001f`
+/// (an NVMe device) under this vendor, both observed and matched on a
+/// real GCP `v5litepod-1` TPU VM (2026-09-27). It does **not** list
+/// device `0063` -- the accelerator device also observed on that same
+/// VM (class `ff00`, vendor-specific) -- as of the same check; whether
+/// that specific device ID is genuinely undocumented publicly or simply
+/// not yet added to this registry is not established either way. See
+/// `docs/roadmap/GPU_REAL_HARDWARE_TELEMETRY.md` for the full record,
+/// including the caveat that this was observed through a hypervisor's
+/// PCI presentation to a guest, not confirmed as physical silicon.
 pub const GOOGLE_VENDOR_ID: u16 = 0x1ae0;
 
 /// A small, non-exhaustive table of real NVIDIA GPU PCI IDs relevant to

@@ -1,14 +1,44 @@
-# Real (Non-QEMU) Hardware PCI Verification — GCP TPU VM
+# PCI Verification Against a Production Hypervisor — GCP TPU VM
 
 **Status: real, first of its kind, and narrower than originally
-planned.** `docs/roadmap/GCP_AI_KERNEL_MILESTONE_PLAN.md`'s Milestone 1
-targeted a real NVIDIA GPU (L4 or T4). That path is blocked — this
-project's entire Compute Engine `GPUS_ALL_REGIONS` quota is consumed by
-a pre-existing, unrelated instance, confirmed by both a direct
-`gcloud compute instances create` failure and an automatically-denied
-quota-increase request, and confirmed again empirically by identical
-failures in three separate regions (us-central1, us-west1,
-europe-west4) — see that plan doc's §2.1 for the full record.
+planned — and narrower than this document's own first draft claimed.**
+An initial version of this doc said "real hardware." That was
+imprecise and has been corrected below: what was actually verified is
+RunuX's PCI code against **a production Google Compute Engine
+hypervisor's presentation of PCI devices to a guest VM** — which may
+mix hypervisor-emulated functions (the Intel 440FX/PIIX4 chipset
+devices almost certainly are: those are well-known QEMU/KVM software
+emulation targets, present because GCE's hypervisor is KVM-based) with
+physical functions passed through to the guest. PCI enumeration from
+inside the guest cannot, by itself, tell emulation and passthrough
+apart — that distinction needs a different kind of check (see
+"Corrections" below), not yet done. `docs/roadmap/GCP_AI_KERNEL_MILESTONE_PLAN.md`'s
+Milestone 1 targeted a real NVIDIA GPU (L4 or T4). That path is
+blocked — this project's entire Compute Engine `GPUS_ALL_REGIONS`
+quota is consumed by a pre-existing, unrelated instance, confirmed by
+both a direct `gcloud compute instances create` failure and an
+automatically-denied quota-increase request, and confirmed again
+empirically by identical failures in three separate regions
+(us-central1, us-west1, europe-west4) — see that plan doc's §2.1 for
+the full record.
+
+## Corrections to this document's first draft (2026-09-27, same day)
+
+An independent design review caught three overclaims and one real
+safety bug in the first version of this work. Recorded here rather
+than silently fixed, per this project's own evidence rules:
+
+| First-draft claim | Correction |
+|---|---|
+| "Verified against real, non-QEMU hardware" | Verified against a production hypervisor's *virtual* PCI bus. The 440FX/PIIX4 devices are software-emulated chipset devices, not silicon; whether `1ae0:0063` is passed-through physical hardware or itself an abstraction is not established by PCI enumeration alone. |
+| "A real AMD Milan IOMMU" | A PCI function with vendor `1022` (AMD) and an IOMMU-shaped class code is visible to the guest. Whether that reflects a physical IOMMU exposed to the guest, a virtualized (`vIOMMU`) presentation, or an artifact of GCE's virtual chipset topology is **not established** — "Milan" was a device-ID name lookup, not an observation of silicon. Resolving this needs `dmesg` (does the guest kernel actually initialize AMD-Vi?), `/sys/class/iommu/`, `/sys/kernel/iommu_groups/`, and — most usefully — a control VM of the same machine family *without* a TPU attached, to see if the same function still appears (if so, it's generic to the AMD-based GCE chipset, not TPU-specific). |
+| "Google, Inc. PCI vendor ID (1ae0) ... newly identified" | **False, corrected.** Checked directly against the live PCI ID Repository (`https://pci-ids.ucw.cz/read/PC/1ae0`, 2026-09-27): vendor `1ae0` and device `0042` (gVNIC) are both already public and well-established. Device `0063` specifically was not found in that database as of the same check — that part of the original claim holds, but should never have been stated as "the vendor ID is newly identified," which was wrong. |
+| (bug, not a claim) | The original BAR-sizing code, run from this userspace tool with no synchronization against the Linux kernel's own PCI config-space lock, could corrupt a live, driver-bound device's state — including, in the worst case, the network interface carrying the very SSH session running the tool. It ran once (n=1) and nothing visibly broke, which is not the same as being safe. Fixed in `driver_pci_access::pci_bar_size` (Command-register decode bits are now cleared for the duration of the size probe) and in `examples/pci_probe_userspace` (BAR sizing is opt-in via `--bar-size-unbound`, default is read-only, and every function is checked against sysfs for a bound driver immediately before any write, not just once at startup). |
+
+See `docs/roadmap/GCE_TPU_PCI_TOPOLOGY_TELEMETRY.md` for the follow-up
+work (control-VM comparison, n≥30 stability runs, an independent sysfs
+oracle) that resolves the IOMMU and passthrough-vs-emulation questions
+this correction leaves open.
 
 **What happened instead:** this project also has real, unused quota
 for Cloud TPU v5e (`TPU_LITE_PODSLICE_V5`, both on-demand and spot,
