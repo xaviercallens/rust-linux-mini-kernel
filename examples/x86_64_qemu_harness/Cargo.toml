@@ -1,0 +1,15 @@
+[package]
+name = "x86_64_qemu_harness"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kernel_types = { path = "../../crates/kernel_types" }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[workspace]
