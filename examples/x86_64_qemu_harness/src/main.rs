@@ -194,10 +194,10 @@ pub extern "C" fn kmain() -> ! {
     }
 
     // Real PCI bus enumeration (Configuration Mechanism #1, I/O ports
-    // 0xCF8/0xCFC) -- not a stub. Every device found is a genuine read
-    // from the (possibly emulated) PCI config space; a "1af4:1050"
-    // line below means this code actually saw QEMU's virtio-gpu device
-    // on the bus, not an assertion that it should be there.
+    // 0xCF8/0xCFC), genuinely reading hardware config space on every
+    // call. A "1af4:1050" line below means this code actually saw
+    // QEMU's virtio-gpu device on the bus, not an assertion that it
+    // should be there.
     serial_print("[INFO] Enumerating PCI bus (Configuration Mechanism #1)...\n");
     let mut devices = [driver_pci_core::PciDeviceInfo {
         address: driver_pci_core::PciAddress { bus: 0, device: 0, function: 0 },

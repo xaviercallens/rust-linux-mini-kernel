@@ -38,11 +38,11 @@ pub static DRIVER_PCI_PROBE_INITIALIZED: bool = false;
 pub extern "C" fn pci_probe_device(dev: &SafePciDevice) -> c_int {
     requires!(!dev.as_ptr().is_null(), "Device pointer must not be null");
 
-    // Mock implementation of probe -- see pci_enumerate for the real
-    // bus walk; this C ABI entry point is a placeholder inherited from
-    // the original stub and not yet wired to it (SafePciDevice has no
-    // bus/device/function fields to probe against -- see
-    // driver_pci_access's note on the same limitation).
+    // Mock implementation of probe -- see pci_enumerate below for the
+    // real bus walk; this C ABI entry point still does nothing real
+    // and is not yet wired to it (SafePciDevice has no bus/device/
+    // function fields to probe against -- see driver_pci_access's note
+    // on the same limitation).
 
     ensures!(true, "Probe successful");
     0

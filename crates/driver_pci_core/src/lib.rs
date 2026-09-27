@@ -61,8 +61,8 @@ pub struct PciAddress {
 
 /// Identification and topology fields read directly out of a real
 /// device's configuration-space header (offsets 0x00-0x0F), plus its
-/// address. This is genuinely populated by enumeration, not a stub --
-/// see `driver_pci_probe::pci_enumerate`.
+/// address. Genuinely populated by real bus enumeration -- see
+/// `driver_pci_probe::pci_enumerate`.
 #[derive(Debug, Clone, Copy)]
 pub struct PciDeviceInfo {
     pub address: PciAddress,
