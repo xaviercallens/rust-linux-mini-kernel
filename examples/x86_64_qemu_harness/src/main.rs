@@ -212,7 +212,7 @@ pub extern "C" fn kmain() -> ! {
     // access (no TSS I/O bitmap restricting it), matching pci_enumerate's
     // precondition; called exactly once, after boot, before any other
     // code depends on PCI state.
-    let device_count = unsafe { driver_pci_probe::pci_enumerate(&mut devices) };
+    let device_count = unsafe { driver_pci_probe::pci_enumerate(&driver_pci_access::HardwareIo, &mut devices) };
 
     serial_print("[INFO] PCI devices found: ");
     serial_print_hex(device_count as u32, 2);

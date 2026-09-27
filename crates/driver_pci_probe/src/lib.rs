@@ -7,7 +7,7 @@
 //! Based on Linux kernel drivers/pci
 
 use core::ffi::c_int;
-use driver_pci_core::{PciAddress, PciDeviceInfo, SafePciDevice};
+use driver_pci_core::{PciAddress, PciConfigBackend, PciDeviceInfo, SafePciDevice};
 use kernel_types::{ensures, requires};
 
 /// Module initialization
@@ -75,13 +75,19 @@ pub const MAX_ENUMERATED_DEVICES: usize = 64;
 ///
 /// Returns the number of devices found and written into `out`.
 ///
+/// Generic over `B: PciConfigBackend` so the exact same bus-walk logic
+/// can run against real hardware (`driver_pci_access::HardwareIo`) or
+/// against a captured fixture in test code (see
+/// `tests/replay_gce_tpu_v5e.rs`) -- monomorphized at compile time, no
+/// `dyn`/`alloc` needed, so this remains callable from the `#![no_std]`
+/// kernel boot path.
+///
 /// # Safety
-/// Same preconditions as `driver_pci_access::pci_config_read32`: only
-/// valid on x86_64 with I/O-port access permitted.
+/// Same preconditions as the backend's `read32`: for
+/// `driver_pci_access::HardwareIo`, only valid on x86_64 with I/O-port
+/// access permitted. A replay backend has no such precondition.
 #[cfg(target_arch = "x86_64")]
-pub unsafe fn pci_enumerate(out: &mut [PciDeviceInfo; MAX_ENUMERATED_DEVICES]) -> usize {
-    use driver_pci_access::pci_config_read32;
-
+pub unsafe fn pci_enumerate<B: PciConfigBackend>(backend: &B, out: &mut [PciDeviceInfo; MAX_ENUMERATED_DEVICES]) -> usize {
     let mut count = 0usize;
 
     for bus in 0..=255u16 {
@@ -95,7 +101,7 @@ pub unsafe fn pci_enumerate(out: &mut [PciDeviceInfo; MAX_ENUMERATED_DEVICES]) -
                     break;
                 }
 
-                let id_word = pci_config_read32(bus, device, function, 0x00);
+                let id_word = backend.read32(bus, device, function, 0x00);
                 let vendor_id = (id_word & 0xFFFF) as u16;
                 if vendor_id == 0xFFFF {
                     if function == 0 {
@@ -105,11 +111,11 @@ pub unsafe fn pci_enumerate(out: &mut [PciDeviceInfo; MAX_ENUMERATED_DEVICES]) -
                 }
                 let device_id = (id_word >> 16) as u16;
 
-                let class_word = pci_config_read32(bus, device, function, 0x08);
+                let class_word = backend.read32(bus, device, function, 0x08);
                 let subclass = ((class_word >> 16) & 0xFF) as u8;
                 let class = ((class_word >> 24) & 0xFF) as u8;
 
-                let htype_word = pci_config_read32(bus, device, function, 0x0C);
+                let htype_word = backend.read32(bus, device, function, 0x0C);
                 let raw_header_type = ((htype_word >> 16) & 0xFF) as u8;
                 let multi_function = raw_header_type & 0x80 != 0;
                 let header_type = raw_header_type & 0x7F;

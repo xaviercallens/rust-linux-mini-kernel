@@ -177,7 +177,7 @@ stay unusable per the wall stated up top.
 |---|---|---|---|
 | **M0** | Corrections to the first observation: safety fix in `pci_probe_userspace`, wording fixes, `pci.ids` check | Yes | **Done** |
 | **M1** | Differential harness: n=30 on TPU v5e + AMD control VM, independent sysfs oracle (validated on synthetic data first), CSVs, doc | Yes, one session, <$2 | **Done** |
-| **M2** | Replay backend + CI fixtures: capture campaign data as a checked-in test fixture so `cargo test -p driver_pci_probe` re-verifies this result without cloud access on every PR | Yes | Not started |
+| **M2** | Replay backend + CI fixtures: capture campaign data as a checked-in test fixture so `cargo test -p driver_pci_probe` re-verifies this result without cloud access on every PR | Yes | **Done** -- `driver_pci_core::PciConfigBackend` trait (generic, no `dyn`/`alloc`, works in the `#![no_std]` kernel path), `driver_pci_access::HardwareIo` real-hardware impl, `crates/driver_pci_probe/tests/replay_gce_tpu_v5e.rs` replaying genuine captured config-space bytes from the real TPU VM campaign; validated to actually fail on a deliberately corrupted fixture before trusting it |
 | **M3** | Round 2-3: Intel-family control, other TPU generations/zones as quota allows, inventory expectations file (B) | Each round boundable; total coverage open-ended (quota-dependent) | Not started |
 | **M4** | Candidate C: benign ML syscall traces, offline replay through `ebpf_firewall`/`ai_detector`, FPR with confidence intervals; synthetic attack traces labeled as such | Collection: yes. Usefulness: open-ended | Not started |
 | **M5** | Candidate E: RunuX boots on plain GCE via custom image + serial console | Plain GCE: likely boundable. TPU VM: unconfirmed, possibly not possible | Not started |
