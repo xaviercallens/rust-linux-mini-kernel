@@ -1699,6 +1699,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pci_probe_userspace"
+version = "0.1.0"
+dependencies = [
+ "driver_pci_access",
+ "driver_pci_core",
+ "driver_pci_probe",
+ "kernel_types",
+ "libc",
+]
+
+[[package]]
 name = "percpu"
 version = "0.4.0"
 dependencies = [

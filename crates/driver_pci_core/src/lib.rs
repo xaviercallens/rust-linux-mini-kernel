@@ -106,6 +106,14 @@ pub const NVIDIA_VENDOR_ID: u16 = 0x10de;
 /// Red Hat / Qumranet virtio vendor ID (1af4), per
 /// <https://pci-ids.ucw.cz/read/PC/1af4> -- used by QEMU's `virtio-gpu-pci`.
 pub const VIRTIO_VENDOR_ID: u16 = 0x1af4;
+/// Google, Inc. PCI vendor ID (1ae0). Not sourced from pci-ids.ucw.cz
+/// (Google's device IDs largely aren't public there) -- observed
+/// directly via `lspci -nn` on a real GCP `v5litepod-1` TPU VM
+/// (2026-09-27; see `docs/roadmap/GPU_REAL_HARDWARE_TELEMETRY.md`),
+/// where it identified both the TPU accelerator itself
+/// (device `0063`, class `ff00`/vendor-specific) and the gVNIC virtual
+/// NIC (device `0042`).
+pub const GOOGLE_VENDOR_ID: u16 = 0x1ae0;
 
 /// A small, non-exhaustive table of real NVIDIA GPU PCI IDs relevant to
 /// standard AI-computing hardware, each individually verified against
