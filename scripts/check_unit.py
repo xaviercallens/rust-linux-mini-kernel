@@ -123,23 +123,25 @@ def check_lean_sorry(args: argparse.Namespace) -> tuple[bool, list[str]]:
     return (len(errors) == 0), errors
 
 
+def _check_files_exist(files: list[str]) -> list[str]:
+    return [f"file not found: {f}" for f in files if not (REPO_ROOT / f).exists()]
+
+
 def check_unsafe_safety(args: argparse.Namespace) -> tuple[bool, list[str]]:
-    errors = []
-    file_path = REPO_ROOT / args.file
-    if not file_path.exists():
-        return False, [f"file not found: {args.file}"]
+    errors = _check_files_exist(args.files)
+    if errors:
+        return False, errors
+    errors.extend(check_scope(args.base, args.files))
+    errors.extend(check_forbidden_patterns(args.base, args.files))
 
-    errors.extend(check_scope(args.base, [args.file]))
-    errors.extend(check_forbidden_patterns(args.base, [args.file]))
-
-    text = file_path.read_text(encoding="utf-8", errors="replace")
-    lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if "unsafe {" not in line and not re.search(r"unsafe\s*\{", line):
-            continue
-        window = "\n".join(lines[max(0, i - 5):i])
-        if "SAFETY:" not in window:
-            errors.append(f"unsafe block at {args.file}:{i + 1} still lacks a preceding SAFETY: comment")
+    for f in args.files:
+        lines = (REPO_ROOT / f).read_text(encoding="utf-8", errors="replace").split("\n")
+        for i, line in enumerate(lines):
+            if not re.search(r"unsafe\s*\{", line):
+                continue
+            window = "\n".join(lines[max(0, i - 5):i])
+            if "SAFETY:" not in window:
+                errors.append(f"unsafe block at {f}:{i + 1} still lacks a preceding SAFETY: comment")
 
     if not errors and args.crate:
         proc = run(["cargo", "check", "-p", args.crate])
@@ -150,17 +152,15 @@ def check_unsafe_safety(args: argparse.Namespace) -> tuple[bool, list[str]]:
 
 
 def check_static_mut(args: argparse.Namespace) -> tuple[bool, list[str]]:
-    errors = []
-    file_path = REPO_ROOT / args.file
-    if not file_path.exists():
-        return False, [f"file not found: {args.file}"]
+    errors = _check_files_exist(args.files)
+    if errors:
+        return False, errors
+    errors.extend(check_scope(args.base, args.files))
+    errors.extend(check_forbidden_patterns(args.base, args.files))
 
-    errors.extend(check_scope(args.base, [args.file]))
-    errors.extend(check_forbidden_patterns(args.base, [args.file]))
-
-    text = file_path.read_text(encoding="utf-8", errors="replace")
-    if re.search(r"\bstatic\s+mut\b", text):
-        errors.append(f"{args.file} still contains `static mut`")
+    for f in args.files:
+        if re.search(r"\bstatic\s+mut\b", (REPO_ROOT / f).read_text(encoding="utf-8", errors="replace")):
+            errors.append(f"{f} still contains `static mut`")
 
     if not errors and args.crate:
         proc = run(["cargo", "test", "-p", args.crate])
@@ -180,22 +180,28 @@ CHECKERS = {
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--type", required=True, choices=sorted(CHECKERS))
-    parser.add_argument("--file", required=True, help="repo-relative path to the edited file")
+    parser.add_argument("--file", dest="files", action="append", required=True,
+                        help="repo-relative path to an edited file; repeatable for unsafe_safety/static_mut "
+                             "so one unit can cover a whole crate (scope = exactly these files)")
     parser.add_argument("--theorem", help="theorem/lemma name (lean_sorry units)")
     parser.add_argument("--crate", help="crate name (unsafe_safety / static_mut units)")
     parser.add_argument("--expect-hash", help="expected theorem statement hash, to detect silent weakening")
     parser.add_argument("--base", default="origin/main", help="base ref to diff against")
     args = parser.parse_args()
 
-    if args.type == "lean_sorry" and not args.theorem:
-        parser.error("--theorem is required for --type lean_sorry")
+    if args.type == "lean_sorry":
+        if not args.theorem:
+            parser.error("--theorem is required for --type lean_sorry")
+        if len(args.files) != 1:
+            parser.error("--type lean_sorry takes exactly one --file")
+    args.file = args.files[0]
 
     ok, errors = CHECKERS[args.type](args)
     if ok:
-        print(f"PASS: {args.type} unit for {args.file} ({args.theorem or args.crate})")
+        print(f"PASS: {args.type} unit for {', '.join(args.files)} ({args.theorem or args.crate})")
         return 0
 
-    print(f"FAIL: {args.type} unit for {args.file}", file=sys.stderr)
+    print(f"FAIL: {args.type} unit for {', '.join(args.files)}", file=sys.stderr)
     for e in errors:
         print(f"  - {e}", file=sys.stderr)
     return 1
