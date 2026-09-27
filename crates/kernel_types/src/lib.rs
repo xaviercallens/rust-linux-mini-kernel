@@ -882,11 +882,24 @@ macro_rules! kunit_unsafe_test_suite {
                 }
             )*
 
+            // Wrapper types with explicit Sync implementation for shared static access
+            pub struct _CasesWrapper(pub core::cell::UnsafeCell<[$crate::kunit_case; 1 + [$($case_name),*].len()]>);
+            // SAFETY: The kernel test framework synchronizes access to these statics during test execution.
+            // They are immutable after initialization and accessed only through properly coordinated
+            // mutable pointers, guaranteeing no data races.
+            unsafe impl Sync for _CasesWrapper {}
+
+            pub struct _SuiteWrapper(pub core::cell::UnsafeCell<$crate::kunit_suite>);
+            // SAFETY: The kernel test framework synchronizes access to these statics during test execution.
+            // They are immutable after initialization and accessed only through properly coordinated
+            // mutable pointers, guaranteeing no data races.
+            unsafe impl Sync for _SuiteWrapper {}
+
             // Test cases array, terminated by an empty case
             #[cfg_attr(all(not(test), target_os = "macos"), link_section = "__DATA,kunit_cases")]
             #[cfg_attr(all(not(test), not(target_os = "macos")), link_section = ".kunit_test_cases")]
             #[no_mangle]
-            pub static mut CASES: [$crate::kunit_case; 1 + [$($case_name),*].len()] = [
+            pub static CASES: _CasesWrapper = _CasesWrapper(core::cell::UnsafeCell::new([
                 $(
                     $crate::kunit_case {
                         run_case: Some($case_name),
@@ -899,18 +912,18 @@ macro_rules! kunit_unsafe_test_suite {
                     name: core::ptr::null(),
                     generate_params: core::ptr::null(),
                 }
-            ];
+            ]));
 
             // Test suite definition
             #[cfg_attr(all(not(test), target_os = "macos"), link_section = "__DATA,kunit_suites")]
             #[cfg_attr(all(not(test), not(target_os = "macos")), link_section = ".kunit_test_suites")]
             #[no_mangle]
-            pub static mut SUITE: $crate::kunit_suite = $crate::kunit_suite {
+            pub static SUITE: _SuiteWrapper = _SuiteWrapper(core::cell::UnsafeCell::new($crate::kunit_suite {
                 name: concat!(stringify!($name), "\0").as_ptr() as *const $crate::c_char,
                 init: $init,
                 exit: $exit,
-                test_cases: unsafe { CASES.as_mut_ptr() },
-            };
+                test_cases: CASES.0.get() as *mut $crate::kunit_case,
+            }));
         }
     };
 }

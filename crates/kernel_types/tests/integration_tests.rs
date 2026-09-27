@@ -70,13 +70,17 @@ kunit_unsafe_test_suite!(
 
 #[test]
 fn test_kunit_macro_expansion() {
+    // SAFETY: The generated CASES and SUITE statics are immutable after initialization and persist
+    // for the lifetime of the program. We only dereference them to read their contents, and no data
+    // races can occur since Rust's execution model prevents concurrent mutation of statics within
+    // a single test execution.
     unsafe {
         // Assert the generated array has 3 elements (2 cases + 1 null terminator)
-        assert_eq!(mock_kernel_suite::CASES.len(), 3);
-        
+        assert_eq!((*mock_kernel_suite::CASES.0.get()).len(), 3);
+
         // Assert suite metadata is correctly populated
-        assert!(!mock_kernel_suite::SUITE.name.is_null());
-        assert_eq!(mock_kernel_suite::SUITE.test_cases, mock_kernel_suite::CASES.as_mut_ptr());
+        assert!(!(*mock_kernel_suite::SUITE.0.get()).name.is_null());
+        assert_eq!((*mock_kernel_suite::SUITE.0.get()).test_cases, mock_kernel_suite::CASES.0.get() as *mut _);
     }
 }
 
