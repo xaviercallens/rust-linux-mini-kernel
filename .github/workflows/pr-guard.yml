@@ -1,0 +1,36 @@
+name: PR Guard (anti-hallucination)
+
+# Fork-safe: runs on `pull_request` with read-only permissions and no secrets.
+# Rejects escape hatches (sorry/axiom/admit/native_decide, allow(...), #[ignore],
+# todo!/unimplemented!), changed or deleted Lean theorem statements, and new
+# `unsafe` blocks without a `// SAFETY:` comment. See scripts/pr_guard.py.
+# Maintainer-applied labels relax specific checks: `spec-change`, `guard-override`.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run pr_guard
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          SPEC_CHANGE: ${{ contains(github.event.pull_request.labels.*.name, 'spec-change') }}
+          OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'guard-override') }}
+        run: |
+          ARGS=""
+          if [ "$SPEC_CHANGE" = "true" ]; then ARGS="$ARGS --allow spec-change"; fi
+          if [ "$OVERRIDE" = "true" ]; then ARGS="$ARGS --allow escape-hatch"; fi
+          git fetch -q origin "$BASE_REF"
+          python3 scripts/pr_guard.py --base "origin/$BASE_REF" $ARGS
