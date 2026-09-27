@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [11.3.3] - 2026-09-27
+
+### Added
+- Wave 1 hardening (T1 track): 4 of 8 core crates now have real `SAFETY:` justifications instead of undocumented `unsafe` blocks -- `syscall_table` (#59), `netfilter` (#61, one block honestly left unjustified), `kernel_types` (#63), `immutable_logs` (#62). Every PR independently rebuilt, retested, and checked for downstream FFI-symbol breakage before merging.
+- `docs/roadmap/COMMUNICATION_PLAN.md`: audience/channel plan and ready-to-paste drafts for reaching contributors outside GitHub.
+- `docs/wiki_staging/`: FAQ and Glossary content, ready to push once the repository wiki is initialized (requires one page created via the GitHub web UI first).
+- A welcome announcement posted to GitHub Discussions (#66).
+
+### Fixed
+- `crates/kernel_types`: two test assertions (`in6_addr`/`ipv6hdr` sizes) were asserting values that didn't match the actual struct layout -- `cargo test` was silently failing on unmodified `main`. Found and fixed as a side effect of #63; independently confirmed against the real struct definitions before merging. `kernel_types` now passes 7/7 tests instead of 5/7.
+
+### Findings (tracked as issues)
+- `crates/vmalloc`: test code calls undefined functions `vmalloc()`/`vfree()` and fails to compile under `--tests` (#60). Not caught by `cargo check --workspace` or by `scripts/metrics.py`'s test-count metric, since neither verifies test code actually compiles.
+- `crates/netfilter`: one `unsafe` block (`br_ip6_fragment_wrapper`) could not be soundly justified from the visible code; left uncommented rather than given a fabricated `SAFETY:` comment (#64).
+- `docs/roadmap/RESEARCH_DIRECTIONS.md` A7: the oracle's scope check is file-level, not content-level -- a correct but out-of-scope fix slipped through undetected during review of #63.
+
 ## [11.3.2] - 2026-09-27
 
 ### Changed
