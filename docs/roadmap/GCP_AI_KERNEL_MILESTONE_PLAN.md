@@ -1,9 +1,11 @@
 # RunuX as an AI-Computing Kernel on GCP GPUs — Milestone Plan & Cost Estimate
 
-**Status: PLAN ONLY. Nothing in this document has been implemented or
-purchased.** Every number below comes from a command run in this
-session (`gcloud`) or a cited public source; nothing is asserted by
-hand. See `AGENTS.md` evidence rules.
+**Status: PLAN ONLY, and Milestone 1 is currently BLOCKED.** Nothing
+in this document has been implemented or purchased — and an actual
+attempt to start Milestone 1 (§4) failed for a real, verified reason
+documented in §2.1. Every number below comes from a command run in
+this session (`gcloud`) or a cited public source; nothing is asserted
+by hand. See `AGENTS.md` evidence rules.
 
 **Baseline:** `main` at commit `58f10d0` (PR #76, real PCI enumeration
 verified against QEMU's `virtio-gpu-pci`).
@@ -68,11 +70,63 @@ itself signals a premium/recent SKU. Given comparable high-end GCP GPUs
 
 **Recommendation:** treat **L4** as the real "RTX, low-cost" target —
 it's the actual GPU generation consumer RTX cards share, it's
-genuinely cheap, and it has quota already granted. Pursue **T4** as a
-second, cheaper-still target once its quota is unblocked. Only pursue
+genuinely cheap, and its own per-type quota is already granted. Pursue
+**T4** as a second, cheaper-still target once quota allows. Only pursue
 literal G4/RTX PRO 6000 if you specifically want that SKU despite the
 cost — flagging this mismatch for your decision, not assuming either
 way.
+
+### 2.1 Update (same day): the real blocker is a single project-wide cap, and it cannot self-service-increase
+
+The per-GPU-type quotas in §2 (`NVIDIA_L4_GPUS`, `PREEMPTIBLE_NVIDIA_L4_GPUS`)
+being non-zero was necessary but **not sufficient** — GCP also enforces
+a single, project-wide `GPUS_ALL_REGIONS` cap across *every* GPU type
+combined, and this project's cap is 1, already fully consumed by the
+pre-existing unrelated T4 instance. Confirmed by an actual attempt, not
+inferred:
+
+```
+$ gcloud compute instances create runux-gpu-verify --accelerator=type=nvidia-l4,count=1 ...
+ERROR: (gcloud.compute.instances.create) Could not fetch resource:
+ - Quota 'GPUS_ALL_REGIONS' exceeded.  Limit: 1.0 globally.
+```
+
+A self-service increase request was filed against this exact quota
+(`GPUS-ALL-REGIONS-per-project`, preference id `724275da-95af-44f6-a683-8bc9108d9644`)
+with a human justification and contact email. **It was denied
+automatically within seconds:**
+
+```
+$ gcloud quotas preferences describe 724275da-95af-44f6-a683-8bc9108d9644 ...
+quotaConfig:
+  grantedValue: '1'
+  preferredValue: '3'
+  stateDetail: Quota request denied
+```
+
+This was also not the first attempt — the same quota preference object
+shows a prior `AUTO_ADJUSTER`-originated request to raise it to 3 was
+already denied on 2026-09-26, a day before this session. The automated
+self-service path for this billing account (`Compte facturation xavier
+GCP perso` — a personal account) appears to be exhausted for this
+quota. **Milestone 1 as originally scoped cannot proceed on this GCP
+project without one of:**
+
+1. **A manual Google Cloud support case** requesting the increase by
+   hand — free (Basic support) accounts can still file quota-increase
+   cases, but response time and outcome aren't guaranteed, and this is
+   a real support interaction requiring your account, not something I
+   can do on your behalf beyond drafting the request.
+2. **Freeing the existing instance's GPU** (`socreateai-agora-hermes-node1`,
+   T4, us-east4-b) — not attempted or requested here, since that
+   instance is not part of this project's work and stopping or deleting
+   it is your call entirely, not mine to suggest as a default.
+3. **A different GCP project** with its own, separate default GPU
+   quota (new projects often start with a small nonzero allocation,
+   though this isn't guaranteed either) — if you have one, or are
+   willing to create one solely for this milestone.
+4. **Waiting and retrying later** — quota eligibility can change with
+   more billing history/spend on the account; no defined timeline.
 
 ## 3. Cost estimates (sourced 2026-09-27; reconfirm on the [live pricing calculator](https://cloud.google.com/products/compute/pricing) before any real spend — these are third-party-aggregator estimates, not a quote)
 
@@ -91,7 +145,7 @@ at this scale):
 | **M2** — minimal MMIO/BAR mapping + IOMMU-gated DMA groundwork | 10-20 hrs, spread over iteration | **$3-7** (L4) |
 | **M3** — a real minimal compute-submission path (see §5) | genuinely open-ended; not estimated here | scope decision needed before any number is honest |
 
-## 4. Milestone 1 (recommended starting point): prove PR #76's real code against real silicon
+## 4. Milestone 1 (recommended starting point, currently BLOCKED — see §2.1): prove PR #76's real code against real silicon
 
 Directly continues the verified, merged work in #69-#76 — same
 pattern (fresh VM, real `apt-get`, unmodified script, independent of
@@ -153,8 +207,18 @@ source or firmware documentation this project does not have).
 - Does not create any GCP resource — this document is the proposal
   step you asked for.
 
-## 8. Decision needed from you before Milestone 1 starts
+## 8. Decisions already made, and the one still open
 
-1. Proceed with **L4** as the practical "RTX-class, low-cost" target (recommended), or specifically want **G4/RTX PRO 6000** despite the cost mismatch?
-2. File a **T4 quota-increase request** in parallel (free, no guaranteed timeline) so T4 becomes available too?
-3. Approve the bounded, under-$1, single-VM, immediately-deleted **Milestone 1** spend?
+Resolved in this session: (1) L4 over G4/RTX PRO 6000 — confirmed; (2)
+file a GPU quota-increase request — done, denied automatically within
+seconds (§2.1); (3) approve bounded Milestone 1 spend — approved, but
+blocked, since there is currently no quota to spend against.
+
+**Still open — pick one of the four unblock paths in §2.1:**
+
+1. File a manual Google Cloud support case for the quota increase (I can draft the request; filing and any account verification is yours).
+2. Free the GPU on the pre-existing `socreateai-agora-hermes-node1` instance (your call entirely — I have not touched it and won't without explicit instruction).
+3. Use a different GCP project with its own default quota, if available.
+4. Wait and retry the self-service request later.
+
+Nothing further proceeds on Milestone 1 until one of these is chosen.
