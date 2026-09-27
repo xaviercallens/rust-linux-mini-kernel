@@ -16,6 +16,7 @@ evidence that motivates it and a measurable exit criterion.
 | A4 | T2 re-triages all T1 verdicts, not just `failed` | F2 persisted because T2 was told not to revisit | Measured re-triage flip rate reported per wave |
 | A5 | Red-team corpus for the oracle: weakened statements, smuggled `axiom`, `native_decide`, out-of-scope edits | The anti-weakening hash was tested on 3 synthetic cases only | ≥ 30 injected cases, detection rate reported |
 | A6 | Record per-unit tokens, wall time, and attempts automatically | Pilot cost could only be attributed per file, not per theorem | Per-unit cost columns in `units_status.csv` |
+| A7 | Scope the oracle by content (which hunks relate to the unit's stated task), not only by file | Wave 1 (Rust hardening, 2026-09-27): a T2 escalation on `kernel_types` correctly added SAFETY comments, but also silently rewrote two unrelated test assertions (`in6_addr`/`ipv6hdr` sizes). Independently verified as a real, correct fix for a pre-existing broken test (`cargo test` failed on unmodified `main`) — not a fabrication — but `check_unit.py`'s scope check only verifies the touched *files* are in the unit's allow-list, not that each *hunk* relates to the stated task. A different agent making an equally "helpful" out-of-scope edit could be wrong instead of right, and the oracle would not catch it | A diff-hunk classifier (even a cheap one: hunks touching lines outside a declared line-range budget get flagged for human review) before merge |
 
 ## B. Research directions (publishable questions)
 

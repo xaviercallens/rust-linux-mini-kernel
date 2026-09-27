@@ -11,3 +11,8 @@ lean_sorry::specs/lean4/MVK/Phase1/InitMain.lean::no_panic_before_arch,lean_sorr
 lean_sorry::specs/lean4/MVK/Phase1/InitMain.lean::serial_stays_initialized,lean_sorry,specs/lean4/MVK/Phase1/InitMain.lean,serial_stays_initialized,T1->T2,open,,
 lean_sorry::specs/lean4/MVK/Phase4/ARP.lean::arp_send_safety,lean_sorry,specs/lean4/MVK/Phase4/ARP.lean,arp_send_safety,T1->T2,spec_defect_proved,,
 lean_sorry::specs/lean4/MVK/Phase5/IPv6.lean::do_ipv6_setsockopt_contract,lean_sorry,specs/lean4/MVK/Phase5/IPv6.lean,do_ipv6_setsockopt_contract,T1,fixed,3,https://github.com/xaviercallens/rust-linux-mini-kernel/pull/27
+harden::vmalloc,harden,crates/vmalloc,,,no_change,,
+harden::syscall_table,harden,crates/syscall_table,,T1,pass,,https://github.com/xaviercallens/rust-linux-mini-kernel/pull/59
+harden::netfilter,harden,crates/netfilter,,T1,partial,,https://github.com/xaviercallens/rust-linux-mini-kernel/pull/61
+harden::kernel_types,harden,crates/kernel_types,,T1->T2,pass,,https://github.com/xaviercallens/rust-linux-mini-kernel/pull/63
+harden::immutable_logs,harden,crates/immutable_logs,,T1->T2,pass,,https://github.com/xaviercallens/rust-linux-mini-kernel/pull/62
