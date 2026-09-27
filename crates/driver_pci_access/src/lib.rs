@@ -13,11 +13,28 @@
 //! would need MMCONFIG/ECAM (an ACPI MCFG table lookup) instead.
 
 use core::ffi::c_int;
-use driver_pci_core::SafePciDevice;
+use driver_pci_core::{PciConfigBackend, SafePciDevice};
 use kernel_types::{ensures, requires};
 
 const CONFIG_ADDRESS: u16 = 0xCF8;
 const CONFIG_DATA: u16 = 0xCFC;
+
+/// The real hardware [`PciConfigBackend`]: reads go through
+/// [`pci_config_read32`] (I/O ports `0xCF8`/`0xCFC`). Zero-sized --
+/// exists purely to give the hardware path a name generic callers can
+/// select, alongside a replay/fixture-backed implementation in test
+/// code.
+#[cfg(target_arch = "x86_64")]
+pub struct HardwareIo;
+
+#[cfg(target_arch = "x86_64")]
+impl PciConfigBackend for HardwareIo {
+    /// # Safety
+    /// Same preconditions as [`pci_config_read32`].
+    unsafe fn read32(&self, bus: u8, device: u8, function: u8, offset: u8) -> u32 {
+        pci_config_read32(bus, device, function, offset)
+    }
+}
 
 fn config_address(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
     0x8000_0000

@@ -115,7 +115,7 @@ fn main() {
 
     // SAFETY: iopl(3) above granted this process full I/O port access,
     // satisfying pci_enumerate's precondition; called once, synchronously.
-    let count = unsafe { driver_pci_probe::pci_enumerate(&mut devices) };
+    let count = unsafe { driver_pci_probe::pci_enumerate(&driver_pci_access::HardwareIo, &mut devices) };
     let enum_wall_ns = start.elapsed().as_nanos();
 
     if json {

@@ -156,10 +156,19 @@ python3 scripts/telemetry/pci_diff.py campaign.tar.gz --out docs/roadmap/pci_tel
   open-ended and quota-dependent (this project's GPU quota is already
   known to be exhausted; TPU quota availability elsewhere is
   unconfirmed).
-- **Replay backend + CI fixtures:** capture one of these campaigns'
-  raw config-space data as a checked-in test fixture so
-  `cargo test -p driver_pci_probe` can re-verify this exact result on
-  every PR without needing cloud access. Not yet implemented.
+- **Replay backend + CI fixtures: done, same day.** `driver_pci_core::PciConfigBackend`
+  is a generic trait (`pci_enumerate` is now generic over it, no
+  behavior change on the real hardware path -- re-verified against a
+  real QEMU boot before and after the refactor) implemented by
+  `driver_pci_access::HardwareIo` (real I/O ports) and by a test-only
+  `ReplayBackend` in `crates/driver_pci_probe/tests/replay_gce_tpu_v5e.rs`
+  that serves reads from `tests/fixtures/gce_tpu_v5e_us-west4-a_2026-09-27.txt`
+  -- genuine captured config-space bytes from run 1 of this campaign,
+  not a hand-written approximation. `cargo test -p driver_pci_probe`
+  now re-verifies the exact real-hardware device list (all 8 devices,
+  every vendor/device/class/subclass field) on every run, with no
+  cloud access, and was confirmed to actually fail when the fixture is
+  deliberately corrupted before being trusted.
 - **Round 4 (separate track):** using this same trace-capture
   discipline to replay benign ML-workload syscall traces through
   `ebpf_firewall`/`ai_detector` offline and measure false-positive

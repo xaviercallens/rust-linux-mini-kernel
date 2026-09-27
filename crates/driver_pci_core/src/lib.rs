@@ -29,6 +29,32 @@ pub unsafe extern "C" fn driver_pci_core_exit() {
 #[no_mangle]
 pub static DRIVER_PCI_CORE_INITIALIZED: bool = false;
 
+/// A source of PCI configuration-space dword reads, abstracting over
+/// where those reads actually come from. `driver_pci_access::HardwareIo`
+/// implements this against real I/O ports (`0xCF8`/`0xCFC`); test code
+/// can implement it against a captured fixture instead, so
+/// `driver_pci_probe::pci_enumerate`'s real bus-walk logic can be
+/// exercised in CI without hardware access, using data genuinely
+/// captured from real hardware rather than hand-written fixtures.
+///
+/// Generic (not `dyn`) dispatch is used everywhere this trait is
+/// consumed, so implementors work in `#![no_std]` contexts (the kernel
+/// boot path) without needing `alloc`.
+pub trait PciConfigBackend {
+    /// Read a 32-bit value from PCI configuration space at
+    /// `bus:device.function`, offset `offset` (4-byte aligned).
+    ///
+    /// # Safety
+    /// A real hardware-backed implementation requires the same
+    /// preconditions as `driver_pci_access::pci_config_read32`
+    /// (I/O-port access permitted). A replay/fixture-backed
+    /// implementation has no such precondition, but still declares the
+    /// method `unsafe` so generic code can call it uniformly without
+    /// the backend's identity leaking into the caller's safety
+    /// reasoning.
+    unsafe fn read32(&self, bus: u8, device: u8, function: u8, offset: u8) -> u32;
+}
+
 /// A safe wrapper around raw `pci_dev` pointers.
 #[repr(transparent)]
 pub struct SafePciDevice(*mut core::ffi::c_void);
