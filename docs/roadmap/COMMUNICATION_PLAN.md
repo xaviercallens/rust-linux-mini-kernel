@@ -79,3 +79,18 @@ message on its own:
 Report back after 60 days with real numbers before deciding whether to
 repeat the outreach — this document is itself subject to the same rule as
 everything else here: claims about its effectiveness need evidence.
+
+## 6. Second wave (2026-09-28): "it boots on three architectures" hooks
+
+These need a human to post; nothing here has been posted externally. Every
+claim below is backed by a doc linked in README → Measured Status.
+
+**Hook A — reproducible in 60 seconds (best for r/rust, r/osdev, HN):**
+> Show HN: A Rust kernel harness that boots on x86_64, RISC-V and AArch64 — download three files, run one QEMU command each
+>
+> RunuX boots real long-mode x86_64 (GRUB Multiboot2), RISC-V (OpenSBI) and a from-scratch AArch64 port (EL2→EL1, PSCI). It's a boot harness, not a usable OS — no scheduler, drivers, or userspace — and the README says so. Prebuilt, checksummed images (no toolchain needed): https://github.com/xaviercallens/rust-linux-mini-kernel#try-it-in-60-seconds-boot-runux-on-three-cpu-architectures
+
+**Hook B — negative results (best for HN, Lean Zulip, security lists):**
+> I tried to run my Rust kernel on a Google Cloud TPU VM. What I found: the accelerator PCI function is vfio-pci-bound behind an AMD-Vi IOMMU (n=30, independent sysfs oracle, control VM); my own PCI probe had a real bug that could have corrupted the NIC carrying my SSH session (caught in design review, fixed); the TinyML syscall classifier I'd shipped has untrained weights — not a tuning problem; and a custom GCE boot image reaches SeaBIOS but not past GRUB on Google's SeaBIOS fork. Writeups: docs/roadmap/GCE_TPU_PCI_TOPOLOGY_TELEMETRY.md, ML_WORKLOAD_FIREWALL_REPLAY.md, M5_GCE_CUSTOM_BOOT_ATTEMPT.md
+
+**Where:** r/rust, r/osdev, r/RISCV, r/aarch64 (Hook A); HN, Lean Zulip (Hook B); OSDev forum and wiki "Rust" page; RISC-V International community forum; Google Cloud community (Hook B, TPU angle).

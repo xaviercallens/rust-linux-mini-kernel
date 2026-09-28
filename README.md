@@ -21,6 +21,29 @@
 
 ---
 
+## Try it in 60 seconds: boot RunuX on three CPU architectures
+
+No Rust toolchain, no build, no account. Download a prebuilt image from the public mirror and boot it under QEMU (`sudo apt install qemu-system-x86 qemu-system-arm qemu-system-misc` on Debian/Ubuntu):
+
+```bash
+B=https://storage.googleapis.com/socrateai-datalake-gen-lang-client-0625573011/runux-boot-images
+curl -O $B/runux-riscv64-qemu-harness-v11.3.4 -O $B/runux-aarch64-qemu-harness-v11.3.7 \
+     -O $B/runux-x86_64-v11.3.6-grub-multiboot2.iso -O $B/SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+
+# RISC-V: OpenSBI -> S-mode -> RunuX
+qemu-system-riscv64 -machine virt -nographic -bios default -kernel runux-riscv64-qemu-harness-v11.3.4
+# AArch64: EL2 -> EL1 descent -> RunuX, clean PSCI shutdown
+qemu-system-aarch64 -machine virt -cpu cortex-a72 -nographic -nic none -kernel runux-aarch64-qemu-harness-v11.3.7
+# x86_64: GRUB Multiboot2 -> real 64-bit long-mode switch -> RunuX (Ctrl-A X to quit if it doesn't self-exit)
+qemu-system-x86_64 -cdrom runux-x86_64-v11.3.6-grub-multiboot2.iso -nographic -vga none -nic none \
+  -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot
+```
+
+Each prints `[SUCCESS] RunuX <arch> booted successfully inside QEMU`. What this is and isn't: a boot harness that runs a small slice of real crate code (`kernel_types::SafePageFrame` on x86_64/AArch64) — not a usable OS; it has no scheduler, drivers, or userspace. See [Measured Status](#measured-status-2026-09-26) for exactly what's verified.
+
+---
+
 ## 🤝 Call for contributors — humans and AI agents
 
 This project is too large and too important for one person. We are asking for help from the **Rust community**, **Lean provers**, **kernel and security engineers**, and **people running AI coding agents** (Claude Code, Google Jules, others) on four goals:
